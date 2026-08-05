@@ -11923,7 +11923,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,beam:0.13,moonSpeed:0.5,moonMotion:true,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',cfgV:2};
+    var DEFAULTS={pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,cfgV:3};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
@@ -11942,6 +11942,8 @@ f 2469//2469 2470//2470 2434//2434
       var _cmd2=document.getElementById('cMarqDirEn'); if(_cmd2) _cmd2.checked=(params.marqDirEn<0);
       var _cma2=document.getElementById('cMarqDirAur'); if(_cma2) _cma2.checked=(params.marqDirAur<0);
       setCtl('cMarqSpeed','vMarqSpeed',(params.marqSpeedMult!=null?params.marqSpeedMult:1).toFixed(1));
+      var _cmf=document.getElementById('cMarqFont'); if(_cmf) setCtl('cMarqFont','vMarqFont',params.marqFontSize);
+      var _chs=document.getElementById('cHnSpeed'); if(_chs){ setCtl('cHnSpeed','vHnSpeed',params.hnSpeed.toFixed(2)); setCtl('cHnDensity','vHnDensity',params.hnDensity); setCtl('cHnBright','vHnBright',params.hnBright.toFixed(1)); setCtl('cHnConduit','vHnConduit',params.hnConduit.toFixed(2)); setCtl('cHnFade','vHnFade',params.hnFade.toFixed(2)); }
       if(params.focusMode==='hologram'){ document.getElementById('mHolo').classList.add('on'); document.getElementById('mCam').classList.remove('on'); }
       else { document.getElementById('mCam').classList.add('on'); document.getElementById('mHolo').classList.remove('on'); }
       SHU.scanIntensity.value=params.holoEnabled?params.scanIntensity:0; SHU.fresnelPow.value=params.fresnelPow; SHU.glitch.value=params.glitch?1:0;
@@ -11998,9 +12000,16 @@ f 2469//2469 2470//2470 2434//2434
     try{
       var SP=localStorage.getItem('bric_params');
       if(SP){ var _sp=JSON.parse(SP); Object.assign(params,_sp);
-        // one-time migration: artifact FX defaults changed to "truthful" (off) — reset them if saved before v2
-        if(_sp.cfgV!==2){ ['mfScan','mfFres','mfFreq','mfInt','mfHolo','mfGlitchOn','mfGAmt','mfHot','mfTint'].forEach(function(k){ params[k]=DEFAULTS[k]; }); params.cfgV=2; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
-        applyParams(); }
+        var savedV=_sp.cfgV||0;
+        // migration v2: artifact FX defaults changed to "truthful" (off) — reset if saved before v2
+        if(savedV<2){ ['mfScan','mfFres','mfFreq','mfInt','mfHolo','mfGlitchOn','mfGAmt','mfHot','mfTint'].forEach(function(k){ params[k]=DEFAULTS[k]; }); }
+        // migration v3: real tuned defaults baked in (density/scan/fresnel/focus/holo/HoloNet) — reset any
+        // previously-saved bric_params so returning browsers (this one included) pick up the new tuning
+        // instead of silently overriding it forever via the Object.assign above.
+        if(savedV<3){ ['starCount','planetSpread','objScale','moonSpeed','moonDist','moonScale','focusZoom','zoneSteps','invertYFocus','focusMode','camRotDir','marqDirEn','marqHolo','marqFontSize','scanIntensity','fresnelPow','logoHolo','logoHot','logoTint','mfInt','mfHot','mfTint','bfInt','bfHot','bfTint','hnSpeed','hnDensity','hnConduit','hnFade','hnBright'].forEach(function(k){ params[k]=DEFAULTS[k]; }); }
+        if(savedV<3){ params.cfgV=3; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
+      }
+      applyParams();  // always sync debug-panel DOM to the live params (fresh defaults or restored+migrated), never leaves it on stale baked-in HTML values
       var SS=localStorage.getItem('bric_slots');
       if(SS){ var sd=JSON.parse(SS);
         ['logo','planet','moon'].forEach(function(slot){
