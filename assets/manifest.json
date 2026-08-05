@@ -1,0 +1,43 @@
+{
+  "copySeed": "assets/bric-copy-seed.json",
+  "models": [
+    { "key": "mesh:w0", "path": "assets/models/meta-horizon/meta-logo.svg", "kind": "svg" },
+    { "key": "mesh:moon:w0:0", "path": "assets/models/meta-horizon/duck-of-the-month.glb", "kind": "glb" },
+    { "key": "mesh:moon:w0:1", "path": "assets/models/meta-horizon/brickheadz-zuck.glb", "kind": "glb" },
+    { "key": "mesh:w1", "path": "assets/models/slate-auto/slate-square-icon.svg", "kind": "svg" },
+    { "key": "mesh:moon:w1:0", "path": "assets/models/slate-auto/blank-slate.glb", "kind": "glb" },
+    { "key": "mesh:w2", "path": "assets/models/josh-ai/josh-doghead.svg", "kind": "svg" },
+    { "key": "mesh:moon:w2:0", "path": "assets/models/josh-ai/josh-micros.glb", "kind": "glb" },
+    { "key": "mesh:cv", "path": "assets/models/cv/briefcase.glb", "kind": "glb" },
+    { "key": "cv:ship:glb", "path": "assets/models/cv/nano-venator-ship.glb", "kind": "glb" },
+    { "key": "mesh:contact", "path": "assets/models/holonet/endor-shield.glb", "kind": "glb" },
+    { "key": "mesh:moon:contact:0", "path": "assets/models/holonet/astromech.glb", "kind": "glb" },
+    { "key": "contact:r2:glb", "path": "assets/models/holonet/contact-r2.glb", "kind": "glb" },
+    { "key": "mesh:li", "path": "assets/models/linkedin/linkedin-icon.svg", "kind": "svg" },
+    { "key": "boxmesh:li", "path": "assets/models/linkedin/sig-fig-linkedin.glb", "kind": "glb" },
+    { "key": "mesh:ig", "path": "assets/models/instagram/instagram-icon.svg", "kind": "svg" },
+    { "key": "mesh:p0", "path": "assets/models/playground/minifigure-me/nanofig.glb", "kind": "glb" },
+    { "key": "boxmesh:p0", "path": "assets/models/playground/minifigure-me/nanofig.glb", "kind": "glb" },
+    { "key": "mesh:p1", "path": "assets/models/playground/gift-guru/ribbon.glb", "kind": "glb" },
+    { "key": "boxmesh:p1", "path": "assets/models/playground/gift-guru/present.glb", "kind": "glb" },
+    { "key": "mesh:p2", "path": "assets/models/playground/dinner-decider/utensils.glb", "kind": "glb" },
+    { "key": "boxmesh:p2", "path": "assets/models/playground/dinner-decider/utensils.glb", "kind": "glb" },
+    { "key": "mesh:logo", "path": "assets/models/main/sig-fig-head-logo.glb", "kind": "glb", "textured": true }
+  ],
+  "boxtex": [
+    { "id": "w0", "face": "front", "path": "assets/models/meta-horizon/boxtex-front.jpg" },
+    { "id": "w0", "face": "back", "path": "assets/models/meta-horizon/boxtex-back.jpg" },
+    { "id": "w1", "face": "front", "path": "assets/models/slate-auto/boxtex-front.jpg" },
+    { "id": "w1", "face": "back", "path": "assets/models/slate-auto/boxtex-back.jpg" },
+    { "id": "w2", "face": "front", "path": "assets/models/josh-ai/boxtex-front.jpg" },
+    { "id": "w2", "face": "back", "path": "assets/models/josh-ai/boxtex-back.jpg" }
+  ],
+  "images": [
+    { "key": "igfeed:0", "path": "assets/images/instagram/ig-1-cat-eyes.jpg" },
+    { "key": "igfeed:1", "path": "assets/images/instagram/ig-2-henry-handsome.jpg" },
+    { "key": "igfeed:2", "path": "assets/images/instagram/ig-3-fiscal-responsibility.jpg" },
+    { "key": "igfeed:3", "path": "assets/images/instagram/ig-4-ramen-cannibal.jpg" },
+    { "key": "igfeed:4", "path": "assets/images/instagram/ig-5-zoom-outfits.jpg" },
+    { "key": "igfeed:5", "path": "assets/images/instagram/ig-6-meet-my-son.jpg" }
+  ]
+}
