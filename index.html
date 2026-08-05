@@ -11777,12 +11777,16 @@ f 2469//2469 2470//2470 2434//2434
     })();
 
     // Restore overrides from IndexedDB on boot.
+    // MW DEBUG: every branch below used to end in a silent .catch(function(){}) — any exception thrown
+    // while applying a restored mesh (bad geometry, a null group, etc.) vanished with zero console output,
+    // which is why the fresh-visitor "planets render as plain spheres" bug was invisible for so long.
+    // Every catch now logs id + error so the real failure (if any) is visible in devtools on next load.
     (function restoreOverrides(){
       if(!window.BRICStore) return;
       editIds.forEach(function(id){
         BRICStore.get('mesh:'+id).then(function(rec){ if(!rec) return;
           if(rec.kind==='obj'){ applyMeshTo(id,parseUploadedOBJ(rec.text,meshRadiusFor(id))); planetMeshOvr[id]={kind:'obj',name:rec.name}; }
-          else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,meshRadiusFor(id),rec.depth||0.3,rec.axis||'z'); if(g){ applyMeshTo(id,g); planetMeshOvr[id]={kind:'svg',name:rec.name}; } }
+          else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,meshRadiusFor(id),rec.depth||0.3,rec.axis||'z'); if(g){ applyMeshTo(id,g); planetMeshOvr[id]={kind:'svg',name:rec.name}; } else { console.warn('[mw-restore] parseSVGGeo returned null for',id,rec.name); } }
           else if(rec.kind==='glb'){
             if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } }); }
             else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
@@ -11791,12 +11795,12 @@ f 2469//2469 2470//2470 2434//2434
             if(id==='logo'){ applyTexturedGLBToLogo(group); planetMeshOvr.logo={kind:'step',name:rec.name}; }
             else { var g3=mergeGroupGeo(group,meshRadiusFor(id)); if(g3){ applyMeshTo(id,g3); planetMeshOvr[id]={kind:'step',name:rec.name}; } }
           }); }
-        }).catch(function(){});
-        BRICStore.get('tex:'+id).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(id,rec.dataURL,false); }).catch(function(){});
-        BRICStore.get('boxtex:'+id).then(function(rec){ if(rec){ BOX_FACES.forEach(function(f){ if(rec[f]) applyTextureTo(id,rec[f],true,f); }); } }).catch(function(){});
+        }).catch(function(err){ console.error('[mw-restore] mesh:'+id,err); });
+        BRICStore.get('tex:'+id).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(id,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] tex:'+id,err); });
+        BRICStore.get('boxtex:'+id).then(function(rec){ if(rec){ BOX_FACES.forEach(function(f){ if(rec[f]) applyTextureTo(id,rec[f],true,f); }); } }).catch(function(err){ console.error('[mw-restore] boxtex:'+id,err); });
         // FOCUS-VIEW BOX REPLACEMENT: cache the record; applied on focus (or now, if already focused on this box).
         BRICStore.get('boxmesh:'+id).then(function(rec){ if(!rec) return; boxOvrData[id]=rec; boxOvr[id]={kind:rec.kind,name:rec.name};
-          if(focused&&focused.userData.id===id&&focused.userData._matBak) applyBoxReplacementFromData(id); }).catch(function(){});
+          if(focused&&focused.userData.id===id&&focused.userData._matBak) applyBoxReplacementFromData(id); }).catch(function(err){ console.error('[mw-restore] boxmesh:'+id,err); });
       });
       // moon (artifact) mesh + texture overrides
       planets.forEach(function(grp){ grp.userData.moons.forEach(function(m){ var mid=m.userData.editId;
@@ -11805,8 +11809,8 @@ f 2469//2469 2470//2470 2434//2434
           else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,0.12,rec.depth||0.3,rec.axis||'z'); if(g) m.geometry=g; }
           else if(rec.kind==='glb') loadGLBScene(rec.buffer,function(scene){ if(scene) applyGLBSceneToMoon(mid,scene); });
           else if(rec.kind==='step') parseSTEP(rec.buffer,function(group){ if(group) applyGLBSceneToMoon(mid,group); });
-        }).catch(function(){});
-        BRICStore.get('tex:'+mid).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(mid,rec.dataURL,false); }).catch(function(){});
+        }).catch(function(err){ console.error('[mw-restore] moon mesh:'+mid,err); });
+        BRICStore.get('tex:'+mid).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(mid,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] moon tex:'+mid,err); });
       }); });
     })();
 
@@ -12200,9 +12204,18 @@ f 2469//2469 2470//2470 2434//2434
 
   <!-- ════════ EDIT MODE: persistent override store (IndexedDB) ════════
        Binary overrides (mesh source + bitmaps) live in IndexedDB (no ~5MB cap).
-       Small copy overrides live in localStorage. Exposed as window.BRICStore. -->
+       Small copy overrides live in localStorage. Exposed as window.BRICStore.
+       MW BUGFIX: this used to unconditionally reassign window.BRICStore with a brand-new instance
+       (fresh, unopened `dbp`), with no guard. Since script tags run in document order but the
+       SVGLoader/GLTFLoader/DracoLoader chain that gates bootHolotable() loads asynchronously, this
+       created a genuine race: on a slow/cold load this block would overwrite the seed script's
+       already-primed BRICStore (defined ~line 1576) BEFORE bootHolotable()/restoreOverrides() ran,
+       silently swapping in a disconnected instance and causing fresh visitors to sometimes see
+       default spheres instead of their real planet icons. Now guarded exactly like the first
+       definition so whichever runs first wins and stays — no mid-boot swap. -->
   <script>
   (function(){
+    if(window.BRICStore) return;   // seed script (~line 1576) already defined it — never clobber
     var DB='bric_overrides', STORE='ovr', ver=1, dbp=null;
     function open(){ if(dbp) return dbp; dbp=new Promise(function(res,rej){
       var r=indexedDB.open(DB,ver);
