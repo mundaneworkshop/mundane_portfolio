@@ -1140,7 +1140,7 @@
       <div class="ctl"><label>Logo fresnel <b id="vLogoFresnel">1.8</b></label><input type="range" id="cLogoFresnel" min="0.5" max="4" step="0.1" value="1.8"></div>
       <div class="ctl"><label>Logo scan freq <b id="vLogoScanFreq">14</b></label><input type="range" id="cLogoScanFreq" min="2" max="60" step="1" value="14"></div>
       <div class="ctl"><label>Logo FX intensity <b id="vLogoFxInt">1.0</b></label><input type="range" id="cLogoFxInt" min="0" max="3" step="0.05" value="1.0"></div>
-      <div class="ctl"><label>Logo holographic <b id="vLogoHolo">0.0</b></label><input type="range" id="cLogoHolo" min="0" max="1" step="0.05" value="0.0"></div>
+      <div class="ctl"><label>Logo holographic <b id="vLogoHolo">1.0</b></label><input type="range" id="cLogoHolo" min="0" max="1" step="0.05" value="1.0"></div>
       <div class="ctl"><label>Logo clip bottom <b id="vLogoClip">0.00</b></label><input type="range" id="cLogoClip" min="0" max="0.45" step="0.01" value="0.00"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cLogoGlitch" checked> Logo glitch</label></div>
       <div class="ctl"><label>Logo glitch amt <b id="vLogoGlitchAmt">0.25</b></label><input type="range" id="cLogoGlitchAmt" min="0" max="1" step="0.05" value="0.25"></div>
@@ -9266,7 +9266,7 @@ f 2469//2469 2470//2470 2434//2434
     var logoGlitchOn=true, logoGlitchAmt=0.25;
     var logoHot={value:new THREE.Color(0xEAFEFB)};   // FX overlay (glow) color
     var logoTint={value:new THREE.Color(0xffffff)};  // base tint multiply (recolor the whole logo)
-    var logoHolo={value:0};   // 0 = solid textured, 1 = translucent hologram
+    var logoHolo={value:1};   // 0 = solid textured, 1 = translucent hologram
     var logoMats=[];          // the textured-logo materials (so holo toggle can flip transparency)
     // Reusable holo-FX sets (independent per object type). Logo aliases the existing logo uniforms.
     var FX_LOGO={scan:logoScan,fres:logoFresnel,scanFreq:logoScanFreq,fxInt:logoFxInt,glitch:logoGlitch,hot:logoHot,tint:logoTint,holo:logoHolo};
@@ -11919,7 +11919,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={pixel:2,levels:24,starCount:600,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.6,beam:0.13,moonSpeed:1.0,moonMotion:true,focusZoom:1.0,zoneSteps:8,wheelInvert:false,invertY:true,focusMode:'camera',autoRotate:true,camRotDir:1,marqDirEn:1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:false,marqFontSize:58,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.7,fresnelPow:1.8,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#EAFEFB',logoTint:'#ffffff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:0,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:0,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#EAFEFB',mfTint:'#ffffff',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:0,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#EAFEFB',bfTint:'#ffffff',cfgV:2};
+    var DEFAULTS={pixel:2,levels:24,starCount:600,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.6,beam:0.13,moonSpeed:1.0,moonMotion:true,focusZoom:1.0,zoneSteps:8,wheelInvert:false,invertY:true,focusMode:'camera',autoRotate:true,camRotDir:1,marqDirEn:1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:false,marqFontSize:58,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.7,fresnelPow:1.8,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#EAFEFB',logoTint:'#ffffff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:0,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#EAFEFB',mfTint:'#ffffff',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:0,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#EAFEFB',bfTint:'#ffffff',cfgV:2};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
