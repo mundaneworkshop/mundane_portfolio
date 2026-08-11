@@ -1084,6 +1084,7 @@
     <div id="breadcrumb"><span class="home" id="homeBtn">⌂ Mundane Workshop</span> <span id="crumbpath"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
+      <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
       <button class="tbtn admin-only" id="editBtn">✎ edit</button>
       <button class="tbtn admin-only" id="debugBtn">⚙ debug</button>
       <button class="tbtn admin-only" id="hideUIBtn">⊘ hide ui</button>
@@ -11833,6 +11834,46 @@ f 2469//2469 2470//2470 2434//2434
         try{ localStorage.setItem('bric_boxtex', JSON.stringify(bt)); }catch(e){ console.warn('boxtex too large for localStorage', e); }
         toast('state saved ✓');
       } catch(e){ toast('save failed · '+e.message); }
+    });
+
+    // ── export config: dump live tuned params as a diff against the DEFAULTS baked into source,
+    // downloaded as JSON. This is the "promote edit-mode tuning to code" workflow — read the `diff`
+    // block to see exactly what changed since the last promotion, update `var params={...}` and
+    // `var DEFAULTS={...}` in index.html to match, then bump cfgV in both places + the `savedV<N`
+    // check in the bric_params restore block so returning visitors (with an older saved blob) migrate
+    // to the new values instead of silently overriding them forever. See commit b2a5f2f for why this
+    // migration step matters — skipping it is exactly the bug that prompted building this button.
+    document.getElementById('exportBtn').addEventListener('click',function(){
+      function downloadJSON(obj){
+        var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+        var url=URL.createObjectURL(blob), a=document.createElement('a');
+        var ts=new Date().toISOString().replace(/[:.]/g,'-');
+        a.href=url; a.download='bric-config-export-'+ts+'.json';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+        toast('config exported ✓ · '+obj.changedFieldCount+' field'+(obj.changedFieldCount===1?'':'s')+' differ from source');
+      }
+      try{
+        var diff={}, changedCount=0;
+        Object.keys(params).forEach(function(k){
+          var pv=params[k], dv=DEFAULTS[k];
+          if(JSON.stringify(pv)!==JSON.stringify(dv)){ diff[k]={inSource:dv, tunedNow:pv}; changedCount++; }
+        });
+        var sd={}; ['logo','planet','moon'].forEach(function(slot){ sd[slot]={depth:slotDepth[slot],axis:slotAxis[slot],svgTxt:slotSvgTxt[slot]||null}; });
+        var payload={
+          exportedAt:new Date().toISOString(),
+          note:"diff = fields where the live tuned params differ from DEFAULTS currently in index.html. Empty diff means nothing to promote. fullParams is a complete snapshot/backup regardless. binaryOverrideKeys lists per-object mesh/texture overrides stored in IndexedDB (BRICStore) — this export does not include their binary content, just which ids have one set.",
+          changedFieldCount:changedCount,
+          diff:diff,
+          fullParams:params,
+          copyOverrides:(typeof copyOvr!=='undefined'?copyOvr:{}),
+          slotOverrides:sd
+        };
+        if(typeof BRICStore!=='undefined' && BRICStore.keys){
+          BRICStore.keys().then(function(ks){ payload.binaryOverrideKeys=ks; downloadJSON(payload); })
+            .catch(function(){ payload.binaryOverrideKeys=[]; downloadJSON(payload); });
+        } else { payload.binaryOverrideKeys=[]; downloadJSON(payload); }
+      } catch(e){ toast('export failed · '+e.message); }
     });
 
     // ── holo planet controls ──────────────────────────────────────────────
