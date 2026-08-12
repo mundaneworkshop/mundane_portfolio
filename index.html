@@ -1543,12 +1543,15 @@
 
   <!-- HANDOFF: authoring-mode bootstrap. Runs synchronously (before the 3D engine loads) so the
        admin toolbar (save/edit/debug/hide-ui) never flashes for regular visitors. Visit once with
-       ?edit=1 to unlock authoring for this browser (persisted in localStorage); ?edit=0 relocks. -->
+       ?edit=1 to unlock authoring for this browser (persisted in localStorage); ?edit=0 relocks.
+       ?admintoken=YOUR_TOKEN similarly persists the HoloNet admin-delete token for this browser —
+       same value you put in Vercel as HOLONET_ADMIN_TOKEN. Visit once, never appears in the URL again. -->
   <script>
   (function(){
     try{
       var qp=new URLSearchParams(location.search);
       if(qp.has('edit')){ localStorage.setItem('mw_author', qp.get('edit')!=='0' ? '1' : '0'); }
+      if(qp.has('admintoken')){ localStorage.setItem('mw_admintoken', qp.get('admintoken')); }
       if(localStorage.getItem('mw_author')==='1') document.body.classList.add('author-mode');
     }catch(e){}
   })();
@@ -10404,13 +10407,27 @@ f 2469//2469 2470//2470 2434//2434
       if(links){ var nph=0.5+0.5*Math.sin(t*3), nr=3+2*nph; msgCtx.globalAlpha=0.55*holonetT; msgCtx.strokeStyle='#C8AAFF'; msgCtx.lineWidth=1; msgCtx.strokeRect(Math.round(holonetNode.x/P-nr),Math.round(holonetNode.y/P-nr),Math.round(nr*2),Math.round(nr*2)); msgCtx.globalAlpha=1; } }
     var modalMsg=null, modalOpenedAt=0;
     function openMsgModal(m){ modalMsg=m; document.getElementById('mmName').textContent=m.name||'Anonymous'; document.getElementById('mmBody').textContent=m.msg||''; document.getElementById('msgModal').classList.add('show'); modalOpenedAt=Date.now(); }
-    // Local-only: hides the star from THIS browser's view. Messages are shared/public now (Supabase-backed),
-    // so there's no client-side delete that could touch other visitors' view even if we wanted one — real
-    // deletion is a deliberately separate, admin-gated action (for now: the Supabase dashboard directly).
-    function deleteMessage(m){ if(!m) return; var i=messages.indexOf(m); if(i>=0) messages.splice(i,1);
-      if(m.el&&m.el.parentNode) m.el.parentNode.removeChild(m.el);
-      document.getElementById('msgModal').classList.remove('show');
-      if(typeof toast==='function') toast('hidden from your view · delete for real in the Supabase dashboard'); }
+    // Real, permanent delete — removes the row from Supabase for every visitor. Only reachable via the
+    // admin-only "Delete message" button, but the button itself isn't the security boundary: the request
+    // carries an admin token that /api/holonet-delete checks server-side against HOLONET_ADMIN_TOKEN.
+    // Without a valid token (set once per browser via ?admintoken=… → localStorage) this always 401s.
+    function deleteMessage(m){
+      if(!m) return;
+      if(!confirm('Delete this transmission for everyone? This can\'t be undone.')) return;
+      var token; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
+      if(!token){ if(typeof toast==='function') toast('no admin token set on this browser · visit ?admintoken=YOUR_TOKEN once'); return; }
+      if(!m.id){ if(typeof toast==='function') toast('nothing to delete — this message has no id'); return; }
+      fetch('/api/holonet-delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({id:m.id})})
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
+        .then(function(res){
+          if(!res.ok){ if(typeof toast==='function') toast('delete failed · '+(res.body&&res.body.error||'try again')); return; }
+          var i=messages.indexOf(m); if(i>=0) messages.splice(i,1);
+          if(m.el&&m.el.parentNode) m.el.parentNode.removeChild(m.el);
+          document.getElementById('msgModal').classList.remove('show');
+          if(typeof toast==='function') toast('transmission deleted ✓');
+        })
+        .catch(function(e){ if(typeof toast==='function') toast('delete failed · '+e.message); });
+    }
     (function wireMsgModal(){ var x=document.getElementById('mmX'), mm=document.getElementById('msgModal'), del=document.getElementById('mmDelete');
       if(x) x.addEventListener('click',function(){ mm.classList.remove('show'); });
       if(mm) mm.addEventListener('click',function(e){ if(e.target===mm && Date.now()-modalOpenedAt>350) mm.classList.remove('show'); });   // ignore the click that opened it
