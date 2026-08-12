@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<!-- HoloNet backend: Supabase JS (UMD → window.supabase.createClient). Publishable key is safe to ship client-side by design; RLS on the messages table restricts it to read-only on approved rows. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --bg:#070c0c; --line:#5ABFB8; --line-dim:rgba(90,191,184,.5); --holo:#AAF5EE;
@@ -1365,7 +1367,7 @@
     <div class="mm-top"><span class="mm-kick" id="mmKick">Incoming transmission</span><span class="mm-x" id="mmX">✕</span></div>
     <div class="mm-from">From</div><div class="mm-name" id="mmName"></div>
     <div class="mm-body" id="mmBody"></div>
-    <button class="mm-del" id="mmDelete">⌫ Delete message</button>
+    <button class="mm-del admin-only" id="mmDelete" title="Hides this star from your view only — delete for real via the Supabase dashboard">⌫ Delete message</button>
   </div></div>
 
   <!-- MERGE Stage 2: case-study DOM layer — kit box + instruction booklet (focus panel) -->
@@ -10250,10 +10252,24 @@ f 2469//2469 2470//2470 2434//2434
       var name=(document.getElementById('ctName').value||'Anonymous').trim();
       var msg=(document.getElementById('ctMsg').value||'').trim();
       if(!msg){ if(typeof toast==='function') toast('add a message first'); return; }
+      var sb=document.getElementById('ctSend'); if(sb && sb.disabled) return;   // already sending / cooldown
+      if(sb) sb.disabled=true;
       document.getElementById('ctName').value=''; document.getElementById('ctMsg').value='';
       document.getElementById('ctName').dispatchEvent(new Event('input')); document.getElementById('ctMsg').dispatchEvent(new Event('input'));   // reset counters
+      var pos=msgScatterPos();   // suggested position — server sanity-checks and is the final authority on what's stored
       goHome();   // exit console → galaxy; launch + reframe play over the starfield
-      launchTransmission(function(){ var m=addMessage(name,msg); if(typeof toast==='function') toast('transmission pinned ✓'); focusMessageStar(m); });
+      launchTransmission(function(){
+        fetch('/api/holonet-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,msg:msg,x:pos.x,y:pos.y,z:pos.z})})
+          .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
+          .then(function(res){
+            if(!res.ok){ if(typeof toast==='function') toast('transmission failed · '+(res.body&&res.body.error||'try again')); return; }
+            var m=pinMessage(res.body.message);
+            if(typeof toast==='function') toast('transmission pinned ✓');
+            if(m) focusMessageStar(m);
+          })
+          .catch(function(e){ if(typeof toast==='function') toast('transmission failed · '+e.message); })
+          .then(function(){ setTimeout(function(){ if(sb) sb.disabled=false; },8000); });   // brief cooldown either way
+      });
     }
     // Spin the uploaded model fast around Y, then launch it up off-screen. Falls back to the R@ trundle if no model.
     function launchTransmission(done){
@@ -10292,8 +10308,10 @@ f 2469//2469 2470//2470 2434//2434
       },{once:true,capture:true});
     }
 
-    // —— Message stars: visitor transmissions pinned in galaxy space (local-only for now; backend on R3F rebuild) ——
+    // —— Message stars: visitor transmissions pinned in galaxy space, shared across all visitors via Supabase ——
     var messages=[];
+    var SB_URL='https://ynfkjppwpcnxuvjqmsun.supabase.co', SB_KEY='sb_publishable_F-J3YhAcVl62xre8rW94HQ_QuddWwQF';   // publishable key — safe client-side, RLS restricts it to read-only on approved rows
+    var _sb=(window.supabase && window.supabase.createClient) ? window.supabase.createClient(SB_URL,SB_KEY) : null;
     function msgInnerR(){ return Math.max(PLATE+1.5, 4.0*params.planetSpread+1.5); }   // ring sits BEYOND the baseplate AND the planet placement zone
     function msgScatterPos(){ var a=Math.random()*Math.PI*2, r=msgInnerR()+Math.random()*4.0, y=0.3+Math.random()*3.2; return {x:Math.cos(a)*r,y:y,z:Math.sin(a)*r}; }
     function makeBeacon(m){ var el=document.createElement('div'); el.className='msgbeacon'; el.innerHTML='<span class="mb-ring"></span><span class="mb-dot"></span>';
@@ -10301,14 +10319,26 @@ f 2469//2469 2470//2470 2434//2434
       el.addEventListener('mouseenter',function(){ hoveredMsg=m; showMsgHover(m); });
       el.addEventListener('mouseleave',function(){ if(hoveredMsg===m){ hoveredMsg=null; hideMsgHover(); } });
       document.getElementById('msgStars').appendChild(el); m.el=el; m._v=new THREE.Vector3(m.x,m.y,m.z); }
-    function addMessage(name,msg){ var p=msgScatterPos(); var m={name:name,msg:msg,x:p.x,y:p.y,z:p.z,t:Date.now()}; messages.push(m); makeBeacon(m); saveMessages(); return m; }
-    function saveMessages(){ try{ localStorage.setItem('mw_messages',JSON.stringify(messages.filter(function(m){return !m.demo;}).map(function(m){return {name:m.name,msg:m.msg,x:m.x,y:m.y,z:m.z,t:m.t};}))); }catch(e){} }
-    function loadMessages(){ var raw; try{ raw=localStorage.getItem('mw_messages'); }catch(e){}
-      if(raw){ try{ JSON.parse(raw).forEach(function(d){ var m={name:d.name,msg:d.msg,x:d.x,y:d.y,z:d.z,t:d.t}; messages.push(m); makeBeacon(m); }); }catch(e){} }
-      var migrated=false, inner=msgInnerR();   // push any older stars that landed inside the baseplate out to the ring
-      messages.forEach(function(m){ if(Math.sqrt(m.x*m.x+m.z*m.z)<inner){ var p=msgScatterPos(); m.x=p.x; m.y=p.y; m.z=p.z; if(m._v)m._v.set(p.x,p.y,p.z); migrated=true; } });
-      if(migrated) saveMessages();
-      if(!messages.length){ [{name:'Aria T.',msg:'Your holotable made me grin out loud. Strong hire signal.'},{name:'Devin K.',msg:'How did you pull off the brick cascade? I need to know.'}].forEach(function(d){ var p=msgScatterPos(); var m={name:d.name,msg:d.msg,x:p.x,y:p.y,z:p.z,t:Date.now(),demo:true}; messages.push(m); makeBeacon(m); }); }
+    // pin a message record we already have — from the initial Supabase load, our own fresh submit response, or a
+    // realtime INSERT event. De-duped by id since a submit response and its own realtime echo can both arrive.
+    function pinMessage(d){ if(!d) return null; if(d.id && messages.some(function(m){return m.id===d.id;})) return null;
+      var m={id:d.id,name:d.name,msg:d.msg,x:d.x,y:d.y,z:d.z,t:d.created_at?new Date(d.created_at).getTime():Date.now(),demo:!!d.demo};
+      messages.push(m); makeBeacon(m); return m; }
+    function seedDemoMessages(){ [{name:'Aria T.',msg:'Your holotable made me grin out loud. Strong hire signal.'},{name:'Devin K.',msg:'How did you pull off the brick cascade? I need to know.'}].forEach(function(d){
+      var p=msgScatterPos(); pinMessage({name:d.name,msg:d.msg,x:p.x,y:p.y,z:p.z,demo:true}); }); }
+    function subscribeHoloNet(){ if(!_sb || !_sb.channel) return;
+      _sb.channel('messages-inserts').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'approved=eq.true'},function(payload){
+        var m=pinMessage(payload.new); if(m && typeof toast==='function') toast('new transmission received');
+      }).subscribe();
+    }
+    function loadMessages(){
+      if(!_sb){ console.warn('[holonet] Supabase client unavailable — showing demo messages only'); seedDemoMessages(); return; }
+      _sb.from('messages').select('*').eq('approved',true).order('created_at',{ascending:true}).then(function(res){
+        if(res.error){ console.error('[holonet] load failed',res.error); seedDemoMessages(); return; }
+        var rows=res.data||[];
+        if(rows.length){ rows.forEach(pinMessage); } else { seedDemoMessages(); }
+        subscribeHoloNet();
+      });
     }
     var msgVisible=true; try{ msgVisible=localStorage.getItem('mw_msgvis')!=='0'; }catch(e){}
     (function(){ var b=document.getElementById('msgToggle'); if(!b) return;
@@ -10377,9 +10407,13 @@ f 2469//2469 2470//2470 2434//2434
       if(links){ var nph=0.5+0.5*Math.sin(t*3), nr=3+2*nph; msgCtx.globalAlpha=0.55*holonetT; msgCtx.strokeStyle='#C8AAFF'; msgCtx.lineWidth=1; msgCtx.strokeRect(Math.round(holonetNode.x/P-nr),Math.round(holonetNode.y/P-nr),Math.round(nr*2),Math.round(nr*2)); msgCtx.globalAlpha=1; } }
     var modalMsg=null, modalOpenedAt=0;
     function openMsgModal(m){ modalMsg=m; document.getElementById('mmName').textContent=m.name||'Anonymous'; document.getElementById('mmBody').textContent=m.msg||''; document.getElementById('msgModal').classList.add('show'); modalOpenedAt=Date.now(); }
+    // Local-only: hides the star from THIS browser's view. Messages are shared/public now (Supabase-backed),
+    // so there's no client-side delete that could touch other visitors' view even if we wanted one — real
+    // deletion is a deliberately separate, admin-gated action (for now: the Supabase dashboard directly).
     function deleteMessage(m){ if(!m) return; var i=messages.indexOf(m); if(i>=0) messages.splice(i,1);
-      if(m.el&&m.el.parentNode) m.el.parentNode.removeChild(m.el); saveMessages();
-      document.getElementById('msgModal').classList.remove('show'); if(typeof toast==='function') toast('message deleted'); }
+      if(m.el&&m.el.parentNode) m.el.parentNode.removeChild(m.el);
+      document.getElementById('msgModal').classList.remove('show');
+      if(typeof toast==='function') toast('hidden from your view · delete for real in the Supabase dashboard'); }
     (function wireMsgModal(){ var x=document.getElementById('mmX'), mm=document.getElementById('msgModal'), del=document.getElementById('mmDelete');
       if(x) x.addEventListener('click',function(){ mm.classList.remove('show'); });
       if(mm) mm.addEventListener('click',function(e){ if(e.target===mm && Date.now()-modalOpenedAt>350) mm.classList.remove('show'); });   // ignore the click that opened it
