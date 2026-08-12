@@ -10324,19 +10324,16 @@ f 2469//2469 2470//2470 2434//2434
     function pinMessage(d){ if(!d) return null; if(d.id && messages.some(function(m){return m.id===d.id;})) return null;
       var m={id:d.id,name:d.name,msg:d.msg,x:d.x,y:d.y,z:d.z,t:d.created_at?new Date(d.created_at).getTime():Date.now(),demo:!!d.demo};
       messages.push(m); makeBeacon(m); return m; }
-    function seedDemoMessages(){ [{name:'Aria T.',msg:'Your holotable made me grin out loud. Strong hire signal.'},{name:'Devin K.',msg:'How did you pull off the brick cascade? I need to know.'}].forEach(function(d){
-      var p=msgScatterPos(); pinMessage({name:d.name,msg:d.msg,x:p.x,y:p.y,z:p.z,demo:true}); }); }
     function subscribeHoloNet(){ if(!_sb || !_sb.channel) return;
       _sb.channel('messages-inserts').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'approved=eq.true'},function(payload){
         var m=pinMessage(payload.new); if(m && typeof toast==='function') toast('new transmission received');
       }).subscribe();
     }
     function loadMessages(){
-      if(!_sb){ console.warn('[holonet] Supabase client unavailable — showing demo messages only'); seedDemoMessages(); return; }
+      if(!_sb){ console.warn('[holonet] Supabase client unavailable — no messages loaded'); return; }
       _sb.from('messages').select('*').eq('approved',true).order('created_at',{ascending:true}).then(function(res){
-        if(res.error){ console.error('[holonet] load failed',res.error); seedDemoMessages(); return; }
-        var rows=res.data||[];
-        if(rows.length){ rows.forEach(pinMessage); } else { seedDemoMessages(); }
+        if(res.error){ console.error('[holonet] load failed',res.error); return; }
+        (res.data||[]).forEach(pinMessage);   // genuinely empty table = genuinely empty starfield, no fake placeholder messages
         subscribeHoloNet();
       });
     }
