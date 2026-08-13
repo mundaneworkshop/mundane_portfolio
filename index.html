@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- ROUTING: pages now load at nested paths (/work/<slug>, /work/<slug>/<moon-slug>, /cv, /holonet) via the
+     vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
+     would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
+<base href="/" />
 <title>Mundane Workshop · Holotable prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -557,6 +561,13 @@
     margin: -8px 0 14px;
   }
   .manual-subtitle.inline-edit-on:empty::before{ content:attr(data-ph); opacity:.4; }
+  /* ── URL slug row: permalink shown/edited under the title (projects + moons); hidden when no slug applies (e.g. CV nodes) ── */
+  .manual-slug { display:none; align-items:baseline; gap:0; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.02em; color:rgba(26,21,18,0.4); margin:-8px 0 14px; }
+  .manual-slug.show { display:flex; }
+  .manual-slug-prefix { white-space:nowrap; }
+  .manual-slug-val { color:#B86C0A; }
+  .manual-slug-val.inline-edit-on { outline:1px dashed rgba(184,108,10,.35); outline-offset:2px; padding:0 2px; cursor:text; }
+  .manual-slug-val.inline-edit-on:empty::before{ content:'permalink…'; opacity:.5; }
   .manual-framing {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 14px; line-height: 1.6;
@@ -1162,6 +1173,7 @@
     <div class="dbg-ctx" id="dbg-cv">
       <div class="menudiv"></div>
       <div class="ctl sec"><label style="color:var(--holo)">CV · route</label></div>
+      <div class="ctl"><label>URL slug</label><input type="text" id="cCvSlug" class="hexin" style="width:140px" placeholder="cv"></div>
       <div class="ctl"><label>Ship speed <b id="vCvShipSpd">3.0</b></label><input type="range" id="cCvShipSpd" min="0.5" max="14" step="0.5" value="3"></div>
       <div class="ctl"><label>Travel ease <b id="vCvShipEase">2.0</b></label><input type="range" id="cCvShipEase" min="1" max="5" step="0.1" value="2"></div>
       <div class="ctl"><label>Ship facing <b id="vCvShipYaw">270°</b></label><input type="range" id="cCvShipYaw" min="0" max="270" step="90" value="270"></div>
@@ -1219,6 +1231,7 @@
     <div class="dbg-ctx" id="dbg-holonet">
       <div class="menudiv"></div>
       <div class="ctl sec"><label>Uploaded model · HoloNet</label></div>
+      <div class="ctl"><label>URL slug</label><input type="text" id="cHolonetSlug" class="hexin" style="width:140px" placeholder="holonet"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGlbHolo"> Holo FX</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGlbPixel"> Pixelize (global)</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGlbPost"> Posterize (global)</label></div>
@@ -1485,6 +1498,7 @@
         <div class="manual-page page-left">
           <div class="manual-title"><!--CMS:title-->Design System Rebuild</div>
           <div class="manual-subtitle"><!--CMS:subtitle--></div>
+          <div class="manual-slug"><!--CMS:slug (editable permalink)--><span class="manual-slug-prefix"></span><span class="manual-slug-val"></span></div>
           <div class="manual-framing"><!--CMS:framing-->Consolidating five product surfaces onto a single token architecture, shipped in 9 months without a feature freeze.</div>
           <div class="manual-tags"><!--CMS:tags[] -->
             <div class="manual-tag">Product Design</div>
@@ -1870,6 +1884,9 @@
       z.hidden=!!z.hidden; (z.planets||[]).forEach(function(p){ p.hidden=!!p.hidden; }); });
     // Editable menu title (h2). Persisted as 'menuTitle'.
     var menuTitle=(_bootCopy['menuTitle']!=null&&_bootCopy['menuTitle']!=='')?_bootCopy['menuTitle']:'Projects';
+    // Single-slug routes for the two bespoke views (CV route, HoloNet comm console) — editable in their Edit Mode panels.
+    var cvSlug=(_bootCopy['cvSlug']!=null&&_bootCopy['cvSlug']!=='')?_bootCopy['cvSlug']:'cv';
+    var holonetSlug=(_bootCopy['holonetSlug']!=null&&_bootCopy['holonetSlug']!=='')?_bootCopy['holonetSlug']:'holonet';
     // Only NON-hidden zones get a radial wedge; wedge weight = its non-hidden planet count (min 1).
     function modelVisibleZones(){ return galaxyModel.filter(function(z){ return !z.hidden; }); }
     function zonePlanetWeight(z){ var n=(z.planets||[]).filter(function(p){ return !p.hidden; }).length; return Math.max(1,n); }
@@ -9415,6 +9432,19 @@ f 2469//2469 2470//2470 2434//2434
       li:{kind:'social',kicker:'Social',title:'LinkedIn',body:'Placeholder. This planet deep-links to the LinkedIn profile.'},
       ig:{kind:'social',kicker:'Social',title:'Instagram',body:'Placeholder. This planet deep-links to the Instagram profile.'}
     };
+    // ══════ URL SLUGS: shareable, deep-linkable addresses ── /work/<project>, /work/<project>/<moon>, /cv, /holonet ══════
+    function slugify(s){ return (s||'').toString().toLowerCase().trim()
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60); }
+    // picks a slug that doesn't collide with `taken` (sibling slugs at the same URL level) — appends -2, -3, … as needed
+    function uniqueSlug(base,taken){ var s=slugify(base)||'untitled', n=2;
+      while(taken.indexOf(s)>=0){ s=(slugify(base)||'untitled')+'-'+n; n++; } return s; }
+    function setRoute(path){ try{ if(location.pathname!==path) history.pushState({},'',path); }catch(e){} }
+    // every OTHER project's current slug (auto-assigning one to any project that doesn't have one yet, same rule applyData/edit uses) — used to keep a manually-typed slug unique
+    function takenProjectSlugs(excludeId){ var out=[];
+      Object.keys(CASES).forEach(function(pid){ if(pid===excludeId) return; var c=CASES[pid]; if(!c) return; out.push(c.slug||slugify(c.title||pid)); });
+      return out; }
+    function takenMoonSlugs(grp,excludeMesh){ var out=[]; (grp&&grp.userData&&grp.userData.moons||[]).forEach(function(mm){ if(mm===excludeMesh) return;
+      var meta=getMoonMeta(mm); out.push(meta.slug||slugify(meta.title||'')); }); return out; }
     function zoneSpot(zoneId){ var z=zoneById[zoneId]; var m=(z.a1-z.a0)*0.12;
       var ang=z.a0+m+rng()*((z.a1-z.a0)-2*m); var rad=1.3+rng()*2.7; var y=0.7+rng()*2.6; var jx=rng()*0.5-0.25, jz=rng()*0.5-0.25;
       return {ang:ang,rad:rad,y:y,jx:jx,jz:jz}; }
@@ -9694,7 +9724,11 @@ f 2469//2469 2470//2470 2434//2434
     function setMoonLabel(m){ if(m.userData.label) m.userData.label.textContent=getMoonMeta(m).title; }
     function moonDataForBooklet(m){
       var meta=getMoonMeta(m);
+      var _pid=focused?focused.userData.id:null, _pc=_pid?CASES[_pid]:null;
+      var _projSlug=_pc?(_pc.slug||slugify(_pc.title||_pid)):'';
       return { artifact:true, title:meta.title, framing:meta.desc, tags:[], cta:meta.cta, ctaUrl:meta.ctaUrl, ctaHidden:!!meta.ctaHidden, links:meta.links, edit:editMode,
+        slug:(meta.slug||slugify(meta.title||'')), slugPrefix:'/work/'+_projSlug+'/',
+        onEditSlug:function(v){ var s=uniqueSlug(v,takenMoonSlugs(focused,m)); meta.slug=s; persistCopy(); showMoonManual(m); if(focusedMoon===m) setRoute('/work/'+_projSlug+'/'+s); },
         onCta:function(){ if(meta.ctaUrl && meta.ctaUrl!=='#') window.open(meta.ctaUrl,'_blank'); },
         onAddLink:function(){ meta.links.push({label:'New link',url:'#'}); persistCopy(); showMoonManual(m); },
         onDelLink:function(i){ meta.links.splice(i,1); persistCopy(); showMoonManual(m); },
@@ -9720,12 +9754,15 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof cvRouteActive!=='undefined' && cvRouteActive){ delete copyOvr['cvview']; persistCopy(); cvOverview(); if(typeof toast==='function') toast('view reset'); return; }
       var k=camViewKey(); if(!k) return; delete copyOvr[k]; persistCopy();
       focusYaw=0; focusPitch=0.28; focusPanY=0; params.focusZoom=1.0; focusBaseR=focusedMoon?MOONFRAME.boxR:FOCUSFRAME.boxR; setFocusCam(); if(typeof toast==='function') toast('view reset'); }
-    function focusMoon(m){ focusedMoon=m; focusYaw=0; focusPitch=0.28; focusPanY=0; focusBaseR=MOONFRAME.boxR; setFocusCam(); applyCamView('camview:'+m.userData.editId); showMoonManual(m); }
+    function focusMoon(m){ focusedMoon=m; focusYaw=0; focusPitch=0.28; focusPanY=0; focusBaseR=MOONFRAME.boxR; setFocusCam(); applyCamView('camview:'+m.userData.editId); showMoonManual(m);
+      if(focused){ var _pid=focused.userData.id, _pc=CASES[_pid]; var _ps=_pc?(_pc.slug||slugify(_pc.title||_pid)):_pid;
+        var _meta=getMoonMeta(m); var _ms=_meta.slug||slugify(_meta.title||''); setRoute('/work/'+_ps+'/'+_ms); } }
     function unfocusMoon(){ if(!focusedMoon) return; focusedMoon=null;
       focusYaw=0; focusPitch=0.28; focusPanY=0; focusBaseR=FOCUSFRAME.boxR; setFocusCam();
       camLook.set(0,FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,0);
       if(focused){ var id=focused.userData.id; if(window.CS && CS.showBooklet) CS.showBooklet(projectDataForBooklet(id));
-        setCrumb('case:'+id,[{text:(CASES[id]&&CASES[id].title)||'',bold:true}]); } }
+        setCrumb('case:'+id,[{text:(CASES[id]&&CASES[id].title)||'',bold:true}]);
+        var c=CASES[id]; setRoute('/work/'+(c?(c.slug||slugify(c.title||id)):id)); } }
     function openCase(id){ var grp=planetById(id); if(!grp)return; var c=CASES[id];
       if(!c){ c=CASES[id]={kind:'work',kicker:'Case file',title:(grp.userData.labelTitle?grp.userData.labelTitle.textContent:id),body:'New world. Add your case study here in Edit Mode.'}; }
       focusPlanet(grp,grp.userData);
@@ -9749,6 +9786,7 @@ f 2469//2469 2470//2470 2434//2434
       document.getElementById('cs-root').classList.add('cs-focus-panel');
       if(window.CS && CS.showBooklet) CS.showBooklet(projectDataForBooklet(id));
       setCrumb('case:'+id,[{text:c.title,bold:true}]);
+      setRoute('/work/'+(c.slug||slugify(c.title||id)));
       updateCpMeshUI(id); }
     function openLockedPanel(id){ var grp=planetById(id); if(!grp)return;
       // Playground / encrypted planets now open the SAME focus treatment as charted projects — kit box + booklet
@@ -9784,7 +9822,8 @@ f 2469//2469 2470//2470 2434//2434
       document.getElementById('cs-root').classList.remove('cs-focus-panel');   // MERGE Stage 2: exit booklet focus panel
       document.getElementById('cs-root').classList.remove('active'); if(window.CS) CS.reset();
       var _igf2=document.getElementById('ig-feed'); if(_igf2) _igf2.classList.remove('show');   // hide ig polaroid feed on exit
-      if(typeof refreshEditPanel==='function') refreshEditPanel(); }
+      if(typeof refreshEditPanel==='function') refreshEditPanel();
+      setRoute('/'); }
 
     // ══════ BESPOKE FOCUS VIEWS: CV (build manual) + Contact / HoloNet (comm console) ══════
     var contactFocusEl=document.getElementById('contactFocus');
@@ -9806,8 +9845,8 @@ f 2469//2469 2470//2470 2434//2434
       document.body.classList.remove('mw-altfocus');
     }
     function crumbTitle(grp,fb){ return (grp.userData.labelTitle&&grp.userData.labelTitle.textContent)||fb; }
-    function openCV(id){ var grp=planetById(id); if(!grp) return; enterCVRoute(grp); setCrumb('case:'+id,[{text:crumbTitle(grp,'CV'),bold:true}]); }
-    function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); }
+    function openCV(id){ var grp=planetById(id); if(!grp) return; enterCVRoute(grp); setCrumb('case:'+id,[{text:crumbTitle(grp,'CV'),bold:true}]); setRoute('/'+cvSlug); }
+    function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
 
 
     // ══════ CV — 3D HYPERSPACE ROUTE (branchable tree; CV focus view) ══════
@@ -10128,6 +10167,11 @@ f 2469//2469 2470//2470 2434//2434
         var r=new FileReader(); r.onload=function(e){ var buf=e.target.result; cvSetShip(buf); if(window.BRICStore) BRICStore.set('cv:ship:glb',{kind:'glb',buffer:buf,name:f.name}); if(typeof toast==='function') toast('ship model ✓'); }; r.readAsArrayBuffer(f); });
       function lsGet(k,d){ try{ var v=localStorage.getItem(k); return v==null?d:v; }catch(e){ return d; } }
       function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+      // URL slug for the whole CV route (single slug — nodes stay in-page, not individually addressable)
+      var cvSlugEl=document.getElementById('cCvSlug');
+      if(cvSlugEl){ cvSlugEl.value=cvSlug;
+        cvSlugEl.addEventListener('blur',function(){ var s=slugify(cvSlugEl.value)||'cv'; if(s===holonetSlug) s='cv'; cvSlug=s; cvSlugEl.value=s; copyOvr['cvSlug']=s; persistCopy(); if(typeof cvRouteActive!=='undefined' && cvRouteActive) setRoute('/'+cvSlug); });
+        cvSlugEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); cvSlugEl.blur(); } }); }
       // ship travel speed (persisted)
       var sp=parseFloat(lsGet('mw_cvshipspd','5'))||5; params.cvShipSpeed=sp;
       var spEl=document.getElementById('cCvShipSpd'), spOut=document.getElementById('vCvShipSpd');
@@ -10215,6 +10259,12 @@ f 2469//2469 2470//2470 2434//2434
     }
     function viewerSlots(){ return [document.getElementById('ctFigSlot')]; }
     function refreshViewerPixel(){ viewerSlots().forEach(function(s){ if(s&&s._glbApplyPixel) s._glbApplyPixel(glbPixel); }); }
+    (function wireHolonetSlug(){
+      var el=document.getElementById('cHolonetSlug'); if(!el) return; el.value=holonetSlug;
+      el.addEventListener('blur',function(){ var s=slugify(el.value)||'holonet'; if(s===cvSlug) s='holonet'; holonetSlug=s; el.value=s; copyOvr['holonetSlug']=s; persistCopy();
+        if(document.body.classList.contains('mw-altfocus') && !(typeof cvRouteActive!=='undefined' && cvRouteActive)) setRoute('/'+holonetSlug); });
+      el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+    })();
     (function wireGlbFx(){
       var ch=document.getElementById('cGlbHolo'), cp=document.getElementById('cGlbPixel'), cpo=document.getElementById('cGlbPost');
       if(ch) ch.checked=glbHoloFx; if(cp) cp.checked=glbPixel; if(cpo) cpo.checked=glbPost;
@@ -11691,7 +11741,7 @@ f 2469//2469 2470//2470 2434//2434
     });
     // restore saved per-project copy (title/body/kicker/snapshot/tags/cta/marquee) → CASES + nav/planet labels
     Object.keys(CASES).forEach(function(id){
-      ['kicker','title','body','snapshot','tags','cta','ctaUrl','ctaHidden','marquee','extraLinks'].forEach(function(f){ var k='case:'+id+':'+f; if(copyOvr[k]!=null){ CASES[id][f]=copyOvr[k];
+      ['kicker','title','body','snapshot','tags','cta','ctaUrl','ctaHidden','marquee','extraLinks','slug'].forEach(function(f){ var k='case:'+id+':'+f; if(copyOvr[k]!=null){ CASES[id][f]=copyOvr[k];
         if(f==='title'){ var b=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(b)b.textContent=copyOvr[k];
           var g=planetById(id); if(g&&g.userData.labelTitle){ g.userData.labelTitle.textContent=copyOvr[k]; } }
       } });
@@ -11703,6 +11753,8 @@ f 2469//2469 2470//2470 2434//2434
       return { artifact:false, kind:c.kind, kicker:c.kicker, title:c.title, framing:c.body,
         snapshot:(c.snapshot||[]), tags:(c.tags||[]), cta:c.cta, ctaUrl:c.ctaUrl, ctaHidden:!!c.ctaHidden, external:(c.kind==='social'), edit:editMode,
         extraLinks:(c.extraLinks||[]),
+        slug:(c.slug||slugify(c.title||id)), slugPrefix:'/work/',
+        onEditSlug:function(v){ var s=uniqueSlug(v,takenProjectSlugs(id)); saveCaseField(id,'slug',s); reShowProject(id); if(focused&&focused.userData.id===id) setRoute('/work/'+s); },
         onEditTag:function(i,v){ if(c.tags&&c.tags[i]!=null){ c.tags[i]=v; saveCaseField(id,'tags',c.tags); } },
         onAddTag:function(){ c.tags=c.tags||[]; c.tags.push('New tag'); saveCaseField(id,'tags',c.tags); reShowProject(id); },
         onDelTag:function(i){ if(c.tags){ c.tags.splice(i,1); saveCaseField(id,'tags',c.tags); reShowProject(id); } },
@@ -12271,6 +12323,35 @@ f 2469//2469 2470//2470 2434//2434
         camera.layers.mask=_m; renderer.autoClear=true; scene.background=_bg;
       }
     }
+    // ── ROUTING: resolve whatever URL the page loaded with (deep link) and react to browser back/forward.
+    // Click-driven navigation (activate/openCase/openCV/openContact/focusMoon/goHome) already calls setRoute()
+    // itself via pushState, which does NOT fire popstate — so this listener only runs on deep links and
+    // actual back/forward, never as a side-effect of in-app clicks. ──
+    function applyRouteFromLocation(){
+      try{
+        var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+        if(!parts.length){ if(focused || (typeof cvRouteActive!=='undefined'&&cvRouteActive) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
+        var seg0=parts[0];
+        if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
+        if(seg0===holonetSlug){ var gho=planetById('contact'); if(gho) activate(gho.userData); return; }
+        if(seg0!=='work' || !parts[1]) return;   // only /work/<slug>[/<moon-slug>] resolves beyond this point
+        var projSeg=parts[1], moonSeg=parts[2];
+        var pid=null;
+        Object.keys(CASES).forEach(function(id){ var c=CASES[id]; if(!pid && c && (c.slug||slugify(c.title||id))===projSeg) pid=id; });
+        if(!pid) return;   // unknown slug — leave the galaxy home rather than guessing
+        var grp=planetById(pid); if(!grp) return;
+        if(!focused || focused.userData.id!==pid) activate(grp.userData);
+        if(moonSeg && grp.userData.moons && grp.userData.moons.length){
+          for(var i=0;i<grp.userData.moons.length;i++){
+            var mm=grp.userData.moons[i], meta=getMoonMeta(mm);
+            if((meta.slug||slugify(meta.title||''))===moonSeg){ if(focusedMoon!==mm) focusMoon(mm); break; }
+          }
+        } else if(focusedMoon){ unfocusMoon(); }
+      }catch(e){ console.warn('[route]',e); }
+    }
+    applyRouteFromLocation();
+    window.addEventListener('popstate',applyRouteFromLocation);
+
     animate();
   }
 
@@ -12425,6 +12506,23 @@ f 2469//2469 2470//2470 2434//2434
         _subEl.onblur=_subEdit?function(){ data.onSubtitle(_subEl.textContent.replace(/\s+$/,'')); }:null;
         _subEl.onkeydown=_subEdit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); _subEl.blur(); } }:null;
       }
+      // URL slug row — only rendered when the caller supplies one (projects + moons; not CV nodes, which share one slug for the whole route)
+      var _slugRow=manualScene.querySelector('.manual-slug');
+      if(_slugRow){
+        var _hasSlug=(data.slug!=null);
+        _slugRow.classList.toggle('show',_hasSlug);
+        if(_hasSlug){
+          var _pfx=_slugRow.querySelector('.manual-slug-prefix'); if(_pfx) _pfx.textContent=data.slugPrefix||'/';
+          var _val=_slugRow.querySelector('.manual-slug-val');
+          if(_val){
+            if(document.activeElement!==_val) _val.textContent=data.slug||'';
+            var _slugEdit=!!(data.edit && data.onEditSlug);
+            _val.contentEditable=_slugEdit?'true':'false'; _val.classList.toggle('inline-edit-on',_slugEdit);
+            _val.onblur=_slugEdit?function(){ if(data.onEditSlug) data.onEditSlug(_val.textContent.replace(/\s+$/,'')); }:null;
+            _val.onkeydown=_slugEdit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); _val.blur(); } }:null;
+          }
+        }
+      }
       setText('.manual-framing', data.framing || data.body);
       // optional kicker (booklet has no kicker node by default; create none)
       var tagWrap=manualScene.querySelector('.manual-tags');
@@ -12569,6 +12667,46 @@ f 2469//2469 2470//2470 2434//2434
       }
     }
 
+    // ── shared: measure + position the booklet so its visible content — whichever page runs
+    // longer, the left page's CTA/divider or the right page's snapshot+links — stays on-screen.
+    // Anchored by content BOTTOM, so it adapts upward as content grows (e.g. more links added in
+    // Edit Mode). If content is tall enough that even pinning near the top can't fit it, the page
+    // columns fall back to an internal scrollbar — html/body never scroll (see overflow:hidden),
+    // so this is the only way to reach content that runs past the fold. ──
+    var BOOK_MIN_TOP_PCT=6;   // never let the book's top edge go above 6% of viewport height
+    function _positionManualBook(){
+      var H=window.innerHeight, breath=44;
+      var bRect=manualBook.getBoundingClientRect(), bTop=bRect.top;
+      var cta=manualBook.querySelector('.page-left .manual-cta');
+      var ctaRect=cta?cta.getBoundingClientRect():null;
+      var leftBottom;
+      if(ctaRect && ctaRect.height>0){ leftBottom=ctaRect.bottom; }
+      else { var _dv=manualBook.querySelector('.page-left .manual-divider'); var _dvr=_dv?_dv.getBoundingClientRect():null; leftBottom=(_dvr && _dvr.bottom>0)?_dvr.bottom:(bTop+bRect.height); }
+      // the right page (snapshot grid + extra links) can run past the left — measure its true
+      // last-content bottom too, so a tall link list isn't anchored off an assumption that only
+      // holds when the left page's CTA happens to be the tallest thing in the book.
+      var pr=manualBook.querySelector('.page-right'), rightBottom=leftBottom;
+      if(pr){
+        var prLast=pr.lastElementChild;
+        while(prLast && prLast.lastElementChild && prLast.getBoundingClientRect().height===0){ prLast=prLast.lastElementChild; }
+        var prRect=prLast?prLast.getBoundingClientRect():null;
+        if(prRect && prRect.height>0) rightBottom=Math.max(rightBottom, prRect.bottom);
+      }
+      var anchorBottom=Math.max(leftBottom, rightBottom);
+      var ctaOffset=anchorBottom-bTop;
+      var bookTop=Math.round(H-breath-ctaOffset);
+      var minTop=Math.round(H*BOOK_MIN_TOP_PCT/100);
+      var pageEls=[manualBook.querySelector('.page-left'), manualBook.querySelector('.page-right')];
+      if(bookTop<minTop){
+        var avail=Math.max(160, H-minTop-breath);
+        pageEls.forEach(function(p){ if(p){ p.style.maxHeight=avail+'px'; p.style.overflowY='auto'; } });
+        bookTop=minTop;
+      } else {
+        pageEls.forEach(function(p){ if(p){ p.style.maxHeight=''; p.style.overflowY=''; } });
+      }
+      manualScene.style.top=(bookTop/H*100).toFixed(2)+'%';
+    }
+
     // ── PUBLIC: open the focus panel (SOURCE step 2 layout) ──
     function openFocus(data){
       phase='focus';
@@ -12595,20 +12733,10 @@ f 2469//2469 2470//2470 2434//2434
       manualScene.classList.add('visible');
 
       requestAnimationFrame(function(){
-        // MERGE: booklet stays the focus panel — anchor it to the bottom via CTA measure-fit.
+        // MERGE: booklet stays the focus panel — anchor it to the bottom via CTA measure-fit,
+        // adapting upward (or falling back to an internal scroll) when the right page runs long.
         // The kit box position+zoom is now owned by the holotable animate() loop (pins onto the planet).
-        var cta=manualBook.querySelector('.page-left .manual-cta');
-        var bRect=manualBook.getBoundingClientRect(), bTop=bRect.top;
-        var ctaRect=cta?cta.getBoundingClientRect():null;
-        // Anchor the booklet by the bottom of its visible content. CTA visible → CTA bottom. CTA hidden →
-        // the content divider (so the blank lower page clips off the window bottom instead of floating the
-        // short content up). Last resort: the booklet height.
-        var _anchorBottom;
-        if(ctaRect && ctaRect.height>0){ _anchorBottom=ctaRect.bottom; }
-        else { var _dv=manualBook.querySelector('.page-left .manual-divider'); var _dvr=_dv?_dv.getBoundingClientRect():null; _anchorBottom=(_dvr && _dvr.bottom>0)?_dvr.bottom:(bTop+bRect.height); }
-        var ctaOffset=_anchorBottom-bTop;
-        var bookTop=Math.round(H-breath-ctaOffset);
-        manualScene.style.top=(bookTop/H*100).toFixed(2)+'%';
+        _positionManualBook();
 
         // WebGL moons replace the DOM art-chip moons in focus
         arts.forEach(function(a){ a.classList.remove('visible'); });
@@ -12636,18 +12764,9 @@ f 2469//2469 2470//2470 2434//2434
       manualScene.classList.add('visible');
 
       requestAnimationFrame(function(){
-        // anchor booklet to the bottom third via CTA measure-fit (keeps CTA on-screen)
-        var cta=manualBook.querySelector('.page-left .manual-cta');
-        var bRect=manualBook.getBoundingClientRect(), bTop=bRect.top;
-        var ctaRect=cta?cta.getBoundingClientRect():null;
-        // Anchor by the bottom of visible content: CTA bottom, else the divider (so the blank lower page
-        // clips off the window instead of floating the short content up), else booklet height.
-        var _anchorBottom;
-        if(ctaRect && ctaRect.height>0){ _anchorBottom=ctaRect.bottom; }
-        else { var _dv=manualBook.querySelector('.page-left .manual-divider'); var _dvr=_dv?_dv.getBoundingClientRect():null; _anchorBottom=(_dvr && _dvr.bottom>0)?_dvr.bottom:(bTop+bRect.height); }
-        var ctaOffset=_anchorBottom-bTop;
-        var bookTop=Math.round(H-breath-ctaOffset);
-        manualScene.style.top=(bookTop/H*100).toFixed(2)+'%';
+        // anchor booklet to the bottom third via CTA measure-fit (keeps CTA on-screen); adapts
+        // upward — or falls back to an internal scroll — when the right page's content runs long.
+        _positionManualBook();
         arts.forEach(function(a){ a.classList.remove('visible'); });
       });
     }
