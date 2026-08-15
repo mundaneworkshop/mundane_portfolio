@@ -469,7 +469,8 @@
     50%     { transform: translate(var(--mx,400px), 12px)  scale(var(--as,1)); }
   }
 
-  /* ── INSTRUCTION MANUAL ── */
+  /* ── INSTRUCTION MANUAL — single bracketed panel (redesigned Aug 2026, replaces the two-page paper
+     spread; see docs/project-history/ for the design exploration). Tokens come from #cs-root above. ── */
   #manual-scene {
     position: absolute;
     top: 50%; left: 50%;
@@ -487,20 +488,12 @@
     width: 60vw;
     max-width: 1040px;
     min-width: 580px;
-    display: flex;
     position: relative;
-    transform-style: preserve-3d;
+    background: var(--bg);
+    background-image: radial-gradient(circle, var(--teal-ghost) 1px, transparent 1px);
+    background-size: 15px 15px;
     transform: rotateX(20deg);
     transform-origin: top center;
-  }
-  #manual-book::before {
-    content: '';
-    position: absolute;
-    left: 50%; top: 0; bottom: 0;
-    width: 14px;
-    transform: translateX(-50%) translateZ(1px);
-    background: linear-gradient(90deg, rgba(0,0,0,0.32), rgba(0,0,0,0.08) 45%, rgba(0,0,0,0.08) 55%, rgba(0,0,0,0.32));
-    z-index: 10;
   }
   #manual-book::after {
     content: '';
@@ -509,147 +502,133 @@
     pointer-events: none;
     z-index: -1;
   }
+  /* corner brackets — built into the container, no continuous border around the panel */
+  .mb-corner { position: absolute; width: 26px; height: 26px; pointer-events: none; }
+  .mb-corner.tl { top: 0; left: 0; border-top: 1.5px solid var(--teal-dim); border-left: 1.5px solid var(--teal-dim); }
+  .mb-corner.tr { top: 0; right: 0; border-top: 1.5px solid var(--teal-dim); border-right: 1.5px solid var(--teal-dim); }
+  .mb-corner.bl { bottom: 0; left: 0; border-bottom: 1.5px solid var(--teal-dim); border-left: 1.5px solid var(--teal-dim); }
+  .mb-corner.br { bottom: 0; right: 0; border-bottom: 1.5px solid var(--teal-dim); border-right: 1.5px solid var(--teal-dim); }
   .manual-page {
-    flex: 1;
-    background: #F5F1E8;
     padding: 30px 34px;
     min-height: 320px;
     position: relative;
-    overflow: hidden;
-    backface-visibility: hidden;
-  }
-  .page-left {
-    transform-origin: right center;
-    transform: rotateY(13deg);
-    background: linear-gradient(90deg, #EFEADF 0%, #F5F1E8 18%);
-    clip-path: polygon(
-      0 10px, 5px 10px, 5px 5px, 10px 5px, 10px 0,
-      100% 0, 100% 100%,
-      10px 100%, 10px calc(100% - 5px), 5px calc(100% - 5px),
-      5px calc(100% - 10px), 0 calc(100% - 10px)
-    );
-  }
-  .page-right {
-    transform-origin: left center;
-    transform: rotateY(-13deg);
-    background: linear-gradient(270deg, #EFEADF 0%, #F5F1E8 18%);
-    clip-path: polygon(
-      0 0, calc(100% - 10px) 0, calc(100% - 10px) 5px,
-      calc(100% - 5px) 5px, calc(100% - 5px) 10px, 100% 10px,
-      100% calc(100% - 10px), calc(100% - 5px) calc(100% - 10px),
-      calc(100% - 5px) calc(100% - 5px), calc(100% - 10px) calc(100% - 5px),
-      calc(100% - 10px) 100%, 0 100%
-    );
   }
   .manual-kicker {
     font-family: var(--f-m); font-size: 10px;
     text-transform: uppercase; letter-spacing: 0.16em;
-    color: rgba(26,122,114,0.7);
+    color: var(--teal-dim);
     margin-bottom: 10px;
   }
   .manual-title {
-    font-family: 'Chakra Petch', sans-serif;
+    font-family: var(--f-d);
     font-size: 26px; font-weight: 700;
-    color: #1A1512; line-height: 1.05;
+    color: var(--c-primary); line-height: 1.05;
     letter-spacing: -0.01em;
     margin-bottom: 14px;
   }
   .manual-subtitle {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--f-m);
     font-size: 12px; letter-spacing: 1px;
-    color: rgba(26,21,18,0.55); text-transform: uppercase;
+    color: var(--c-dim); text-transform: uppercase;
     margin: -8px 0 14px;
   }
   .manual-subtitle.inline-edit-on:empty::before{ content:attr(data-ph); opacity:.4; }
   /* ── URL slug row: permalink shown/edited under the title (projects + moons); hidden when no slug applies (e.g. CV nodes) ── */
-  .manual-slug { display:none; align-items:baseline; gap:0; font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.02em; color:rgba(26,21,18,0.4); margin:-8px 0 14px; }
+  .manual-slug { display:none; align-items:baseline; gap:0; font-family:var(--f-m); font-size:11px; letter-spacing:.02em; color:var(--c-dim); margin:-8px 0 14px; }
   .manual-slug.show { display:flex; }
   .manual-slug-prefix { white-space:nowrap; }
-  .manual-slug-val { color:#B86C0A; }
-  .manual-slug-val.inline-edit-on { outline:1px dashed rgba(184,108,10,.35); outline-offset:2px; padding:0 2px; cursor:text; }
+  .manual-slug-val { color:var(--teal-edge); }
+  .manual-slug-val.inline-edit-on { outline:1px dashed var(--teal-dim); outline-offset:2px; padding:0 2px; cursor:text; }
   .manual-slug-val.inline-edit-on:empty::before{ content:'permalink…'; opacity:.5; }
   .manual-framing {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px; line-height: 1.6;
-    color: rgba(26,21,18,0.6);
+    font-family: var(--f-m);
+    font-size: 12px; line-height: 1.6;
+    color: var(--c-secondary);
     margin-bottom: 16px;
+    max-width: 88%;
   }
   .manual-tags { display: flex; gap: 6px; flex-wrap: wrap; }
   .manual-tag {
     font-family: var(--f-m); font-size: 10px;
     text-transform: uppercase; letter-spacing: 0.1em;
-    color: rgba(184,108,10,0.8);
-    background: rgba(184,108,10,0.08);
-    border: 1px solid rgba(184,108,10,0.2);
+    color: var(--c-primary);
+    background: transparent;
+    border: 1px solid rgba(240,237,232,0.2);
     padding: 4px 8px;
   }
   .manual-divider {
-    height: 1px;
-    background: rgba(26,21,18,0.1);
-    margin: 16px 0;
+    height: 0;
+    border-top: 1px dashed var(--border-dim);
+    margin: 14px 0;
   }
   .manual-body {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--f-b);
     font-size: 13px; line-height: 1.6;
-    color: rgba(26,21,18,0.5);
+    color: var(--c-secondary);
   }
   .manual-meta {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--f-m);
     font-size: 11px; line-height: 1.6;
-    color: rgba(26,21,18,0.4);
+    color: var(--c-dim);
     margin-bottom: 14px;
   }
-  /* Borders live on the CELLS (right+bottom) + the grid's top/left edge — so an empty slot simply
-     omits its borders and opens to the page, with no full-table outline around it. */
+  /* meta rows — dashed underline between each, key left / value right (was a bordered 2-col grid) */
   .snap-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 0;
-    border-top: 1px solid rgba(26,21,18,0.1);
-    border-left: 1px solid rgba(26,21,18,0.1);
-    margin-bottom: 10px;
+    display: flex; flex-direction: column;
+    margin-bottom: 16px;
   }
   .snap-cell {
-    background: rgba(255,255,255,0.6);
-    padding: 11px 12px;
-    display: flex; flex-direction: column; gap: 3px;
-    border-right: 1px solid rgba(26,21,18,0.1);
-    border-bottom: 1px solid rgba(26,21,18,0.1);
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border-dim);
   }
-  /* odd snapshot row → empty slot: no fill, no outer borders (active neighbours still draw the shared lines) */
-  .snap-cell.snap-filler { background: transparent; border-right: none; border-bottom: none; }
+  .snap-cell:last-child { border-bottom: none; }
+  /* odd snapshot row → empty slot: was a grid-filler, meaningless in a single-column list */
+  .snap-cell.snap-filler { display: none; }
   .snap-cell-k {
-    font-family: var(--f-m); font-size: 9px;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    color: rgba(26,21,18,0.4);
+    font-family: var(--f-m); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--c-dim);
+    flex-shrink: 0;
   }
   .snap-cell-v {
-    font-family: var(--f-b); font-size: 14px; font-weight: 500;
-    color: #1A1512; line-height: 1.3;
+    font-family: var(--f-m); font-size: 11.5px;
+    color: var(--c-primary); line-height: 1.3;
+    text-align: right;
   }
+  /* the one row that's a headline, not a fact — same treatment as the box's own .snap-v.highlight */
   .snap-cell-v.amber {
-    font-family: var(--f-m); font-size: 18px; font-weight: 700;
-    color: #B86C0A;
+    font-family: var(--f-d); font-size: 14px; font-weight: 700;
+    color: var(--amber);
+    text-shadow: 0 0 8px rgba(233,167,62,.28);
   }
-  /* ── ARTIFACT (moon) right-page: bulleted links instead of the snapshot grid ── */
-  .snap-grid.links-mode { display:block; background:none; border:none; }
-  .manual-links { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  /* ── ARTIFACT (moon) mode: link buttons take the snapshot grid's place entirely ── */
+  .snap-grid.links-mode { display:block; }
+  .manual-links { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
   .manual-link {
-    display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
-    font-family: 'Space Grotesk', sans-serif; font-size:13px; line-height:1.5;
-    color:#1A1512; padding:7px 0; border-bottom:1px solid rgba(26,21,18,0.08);
-    text-decoration:none; cursor:pointer; transition: color .15s, padding-left .15s;
+    display:inline-flex; align-items:center; gap:8px; flex:0 0 auto; width:fit-content;
+    font-family: var(--f-m); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--teal-edge); background:var(--teal-ghost); border:1px solid var(--teal-dim);
+    padding:8px 14px; clip-path:var(--clip-step);
+    text-decoration:none; cursor:pointer; transition: background .15s, border-color .15s;
   }
-  .manual-link:hover { color:#B86C0A; padding-left:4px; }
-  .manual-link::before { content:'◍'; color:#B86C0A; font-size:10px; }
-  .manual-link .ml-x { margin-left:auto; color:rgba(26,21,18,0.35); font-size:14px; cursor:pointer; opacity:0; }
+  .manual-link:hover { background:rgba(120,224,214,.13); border-color:var(--teal); }
+  .manual-link::before {
+    content:'';
+    width:13px; height:13px; flex-shrink:0;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain;
+  }
+  .manual-link .ml-x { margin-left:4px; color:var(--c-dim); font-size:14px; cursor:pointer; opacity:0; }
   .manual-link:hover .ml-x { opacity:1; }
   .manual-links .link-add {
-    margin-top:8px; background:rgba(184,108,10,.08); border:1px dashed rgba(184,108,10,.4);
-    color:#B86C0A; font-family:var(--f-m); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
-    padding:6px 10px; cursor:pointer;
+    background:var(--amber-ghost); border:1px dashed var(--amber-dim);
+    color:var(--amber); font-family:var(--f-m); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    padding:8px 14px; cursor:pointer; clip-path:var(--clip-step);
   }
-  .manual-extralinks { display:none; margin-top:14px; border-top:1px solid rgba(26,21,18,0.12); padding-top:12px; }
-  .manual-extralinks .ml-h { font-family:'Space Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:rgba(26,21,18,0.5); margin:0 0 6px; }
+  .manual-extralinks { display:none; margin-top:14px; border-top:1px dashed var(--border-dim); padding-top:12px; }
+  .manual-extralinks .ml-h { font-family:var(--f-m); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--c-dim); margin:0 0 8px; }
   .manual-cta {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap;
@@ -658,18 +637,18 @@
   .manual-cta-btn {
     font-family: var(--f-m); font-size: 12px;
     text-transform: uppercase; letter-spacing: 0.12em;
-    color: #1A0F02; background: #E9A73E;
+    color: #1A0F02; background: var(--amber);
     border: none; padding: 10px 22px; cursor: pointer;
     clip-path: var(--clip-step);   /* match the stepped-corner buttons used everywhere else */
     transition: background 0.15s;
   }
-  .manual-cta-btn:hover { background: #F0B848; }
+  .manual-cta-btn:hover { background: var(--amber-hot); }
   /* HANDOFF: case studies aren't built yet — see window.CASE_STUDY_CTA_ENABLED */
-  .manual-cta-btn.disabled { background: rgba(26,21,18,0.12); color: rgba(26,21,18,0.4); cursor: not-allowed; pointer-events: none; }
-  .manual-cta-btn.disabled:hover { background: rgba(26,21,18,0.12); }
+  .manual-cta-btn.disabled { background: rgba(240,237,232,0.12); color: rgba(240,237,232,0.35); cursor: not-allowed; pointer-events: none; }
+  .manual-cta-btn.disabled:hover { background: rgba(240,237,232,0.12); }
   .manual-cta-note {
     font-family: var(--f-m); font-size: 10px;
-    color: rgba(26,21,18,0.4); letter-spacing: 0.08em;
+    color: var(--c-dim); letter-spacing: 0.08em;
   }
   /* ════════ /MERGE Stage 2 ════════ */
 
@@ -1490,12 +1469,15 @@
       <div id="drag-hint">Drag to spin · view the back</div>
     </div><!-- /box-scene -->
 
-    <!-- INSTRUCTION MANUAL (focus panel) — CMS-driven text nodes -->
+    <!-- INSTRUCTION MANUAL (focus panel) — CMS-driven text nodes. Single bracketed panel (Aug 2026
+         redesign) — was a two-page paper spread; see docs/project-history/ for the design exploration.
+         applyData() populates all of this via manualScene.querySelector(...), unscoped to any
+         page-left/page-right split, so this flat structure is a drop-in replacement. -->
     <div id="manual-scene">
       <div id="manual-book">
+        <div class="mb-corner tl"></div><div class="mb-corner tr"></div><div class="mb-corner bl"></div><div class="mb-corner br"></div>
 
-        <!-- LEFT PAGE — project overview -->
-        <div class="manual-page page-left">
+        <div class="manual-page">
           <div class="manual-title"><!--CMS:title-->Design System Rebuild</div>
           <div class="manual-subtitle"><!--CMS:subtitle--></div>
           <div class="manual-slug"><!--CMS:slug (editable permalink)--><span class="manual-slug-prefix"></span><span class="manual-slug-val"></span></div>
@@ -1507,13 +1489,6 @@
             <div class="manual-tag">0→1</div>
           </div>
           <div class="manual-divider"></div>
-          <div class="manual-cta">
-            <button class="manual-cta-btn" onclick="window.enterCaseStudy&&window.enterCaseStudy()"><!--CMS:ctaLabel-->Case study coming soon</button>
-          </div>
-        </div>
-
-        <!-- RIGHT PAGE — snapshot -->
-        <div class="manual-page page-right">
           <div class="snap-grid"><!--CMS:snapshot[] (key/value pairs)-->
             <div class="snap-cell"><div class="snap-cell-k">Role</div><div class="snap-cell-v">Senior Designer<br>System Lead</div></div>
             <div class="snap-cell"><div class="snap-cell-k">Timeline</div><div class="snap-cell-v">Jan–Sep 2024<br>9 months</div></div>
@@ -1522,7 +1497,10 @@
             <div class="snap-cell"><div class="snap-cell-k">Platforms</div><div class="snap-cell-v">Web · iOS<br>Android</div></div>
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
-          <div class="manual-extralinks"></div><!-- external links below the table (case-study projects + CV nodes) -->
+          <div class="manual-cta">
+            <button class="manual-cta-btn" onclick="window.enterCaseStudy&&window.enterCaseStudy()"><!--CMS:ctaLabel-->Case study coming soon</button>
+          </div>
+          <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
 
       </div>
@@ -12667,42 +12645,28 @@ f 2469//2469 2470//2470 2434//2434
       }
     }
 
-    // ── shared: measure + position the booklet so its visible content — whichever page runs
-    // longer, the left page's CTA/divider or the right page's snapshot+links — stays on-screen.
-    // Anchored by content BOTTOM, so it adapts upward as content grows (e.g. more links added in
-    // Edit Mode). If content is tall enough that even pinning near the top can't fit it, the page
-    // columns fall back to an internal scrollbar — html/body never scroll (see overflow:hidden),
-    // so this is the only way to reach content that runs past the fold. ──
+    // ── shared: measure + position the booklet so its visible content stays on-screen. Anchored
+    // by content BOTTOM, so it adapts upward as content grows (e.g. more links added in Edit
+    // Mode). If content is tall enough that even pinning near the top can't fit it, the panel
+    // falls back to an internal scrollbar — html/body never scroll (see overflow:hidden), so
+    // this is the only way to reach content that runs past the fold.
+    // (Single flat panel since the Aug 2026 redesign — was a two-page spread needing a
+    // left-vs-right Math.max() of two independently-measured columns; now it's one normal-flow
+    // column, so the panel's own rendered height already IS the content bottom.) ──
     var BOOK_MIN_TOP_PCT=6;   // never let the book's top edge go above 6% of viewport height
     function _positionManualBook(){
       var H=window.innerHeight, breath=44;
-      var bRect=manualBook.getBoundingClientRect(), bTop=bRect.top;
-      var cta=manualBook.querySelector('.page-left .manual-cta');
-      var ctaRect=cta?cta.getBoundingClientRect():null;
-      var leftBottom;
-      if(ctaRect && ctaRect.height>0){ leftBottom=ctaRect.bottom; }
-      else { var _dv=manualBook.querySelector('.page-left .manual-divider'); var _dvr=_dv?_dv.getBoundingClientRect():null; leftBottom=(_dvr && _dvr.bottom>0)?_dvr.bottom:(bTop+bRect.height); }
-      // the right page (snapshot grid + extra links) can run past the left — measure its true
-      // last-content bottom too, so a tall link list isn't anchored off an assumption that only
-      // holds when the left page's CTA happens to be the tallest thing in the book.
-      var pr=manualBook.querySelector('.page-right'), rightBottom=leftBottom;
-      if(pr){
-        var prLast=pr.lastElementChild;
-        while(prLast && prLast.lastElementChild && prLast.getBoundingClientRect().height===0){ prLast=prLast.lastElementChild; }
-        var prRect=prLast?prLast.getBoundingClientRect():null;
-        if(prRect && prRect.height>0) rightBottom=Math.max(rightBottom, prRect.bottom);
-      }
-      var anchorBottom=Math.max(leftBottom, rightBottom);
-      var ctaOffset=anchorBottom-bTop;
+      var bRect=manualBook.getBoundingClientRect();
+      var ctaOffset=bRect.height;
       var bookTop=Math.round(H-breath-ctaOffset);
       var minTop=Math.round(H*BOOK_MIN_TOP_PCT/100);
-      var pageEls=[manualBook.querySelector('.page-left'), manualBook.querySelector('.page-right')];
+      var page=manualBook.querySelector('.manual-page');
       if(bookTop<minTop){
         var avail=Math.max(160, H-minTop-breath);
-        pageEls.forEach(function(p){ if(p){ p.style.maxHeight=avail+'px'; p.style.overflowY='auto'; } });
+        if(page){ page.style.maxHeight=avail+'px'; page.style.overflowY='auto'; }
         bookTop=minTop;
       } else {
-        pageEls.forEach(function(p){ if(p){ p.style.maxHeight=''; p.style.overflowY=''; } });
+        if(page){ page.style.maxHeight=''; page.style.overflowY=''; }
       }
       manualScene.style.top=(bookTop/H*100).toFixed(2)+'%';
     }
