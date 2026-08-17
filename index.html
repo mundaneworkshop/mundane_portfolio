@@ -171,6 +171,8 @@
     --c-primary:  rgba(240,237,232,0.92);
     --c-secondary:rgba(240,237,232,0.5);
     --c-dim:      rgba(240,237,232,0.3);
+    /* instruction-manual panel FX — tunable live via Debug → Focus view → Instruction manual */
+    --mb-alpha:    0.88;
     --f-d: 'Chakra Petch', sans-serif;
     --f-b: 'Space Grotesk', sans-serif;
     --f-m: 'Space Mono', monospace;
@@ -489,8 +491,8 @@
     max-width: 1040px;
     min-width: 580px;
     position: relative;
-    background: var(--bg);
-    background-image: radial-gradient(circle, var(--teal-ghost) 1px, transparent 1px);
+    background: rgba(14,15,18,var(--mb-alpha));
+    background-image: radial-gradient(circle, var(--border-dim) 1px, transparent 1px);
     background-size: 15px 15px;
     transform: rotateX(20deg);
     transform-origin: top center;
@@ -547,7 +549,7 @@
     margin-bottom: 16px;
     max-width: 88%;
   }
-  .manual-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .manual-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
   .manual-tag {
     font-family: var(--f-m); font-size: 10px;
     text-transform: uppercase; letter-spacing: 0.1em;
@@ -555,11 +557,6 @@
     background: transparent;
     border: 1px solid rgba(240,237,232,0.2);
     padding: 4px 8px;
-  }
-  .manual-divider {
-    height: 0;
-    border-top: 1px dashed var(--border-dim);
-    margin: 14px 0;
   }
   .manual-body {
     font-family: var(--f-b);
@@ -578,13 +575,22 @@
     margin-bottom: 16px;
   }
   .snap-cell {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    display: flex; align-items: center; gap: 8px;
     padding: 7px 0;
-    border-bottom: 1px dashed var(--border-dim);
   }
-  .snap-cell:last-child { border-bottom: none; }
   /* odd snapshot row → empty slot: was a grid-filler, meaningless in a single-column list */
   .snap-cell.snap-filler { display: none; }
+  .snap-cell.dragging { opacity: .4; }
+  .snap-cell.drag-over { background-color: rgba(120,224,214,.08); }
+  .snap-handle {
+    flex-shrink: 0; cursor: grab; color: var(--c-dim); font-size: 12px; line-height: 1;
+    user-select: none; touch-action: none;
+  }
+  .snap-handle:active { cursor: grabbing; }
+  .snap-del {
+    flex-shrink: 0; cursor: pointer; color: var(--c-dim); font-size: 14px; line-height: 1; opacity: .6;
+  }
+  .snap-del:hover { opacity: 1; color: var(--amber); }
   .snap-cell-k {
     font-family: var(--f-m); font-size: 10px;
     text-transform: uppercase; letter-spacing: 0.1em;
@@ -592,6 +598,7 @@
     flex-shrink: 0;
   }
   .snap-cell-v {
+    flex: 1; min-width: 0;
     font-family: var(--f-m); font-size: 11.5px;
     color: var(--c-primary); line-height: 1.3;
     text-align: right;
@@ -627,7 +634,7 @@
     color:var(--amber); font-family:var(--f-m); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
     padding:8px 14px; cursor:pointer; clip-path:var(--clip-step);
   }
-  .manual-extralinks { display:none; margin-top:14px; border-top:1px dashed var(--border-dim); padding-top:12px; }
+  .manual-extralinks { display:none; margin-top:18px; }
   .manual-extralinks .ml-h { font-family:var(--f-m); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--c-dim); margin:0 0 8px; }
   .manual-cta {
     display: flex; align-items: center; justify-content: space-between;
@@ -674,6 +681,9 @@
   body.mw-planet:not(.mw-altfocus) canvas{cursor:crosshair}
   body.mw-planet.box-hovered:not(.mw-altfocus) canvas{cursor:pointer}
   body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #msgToggle{opacity:0;pointer-events:none}
+  /* messages-visible toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
+     in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views */
+  body.mw-planet #msgToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
   /* ── CV 3D hyperspace route (drag to orbit; details reuse #manual-scene) ── */
   #cvRouteLayer{position:absolute;inset:0;z-index:16;display:none;pointer-events:none}   /* labels capture clicks; the canvas underneath stays draggable */
   #cvRouteLayer.show{display:block}
@@ -1204,6 +1214,9 @@
       <div class="ctl"><label>FX color</label><input type="color" id="cBfHot" value="#EAFEFB"><input type="text" id="cBfHotHex" value="#EAFEFB" class="hexin"></div>
       <div class="ctl"><label>Box tint</label><input type="color" id="cBfTint" value="#ffffff"><input type="text" id="cBfTintHex" value="#ffffff" class="hexin"></div>
       <div class="ctl" style="font-size:8px;color:rgba(240,237,232,.45);letter-spacing:1px">Side marquee is now PER-PROJECT — focus a project, ✎ edit the box.</div>
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label>Instruction manual</label></div>
+      <div class="ctl"><label>Panel opacity <b id="vMbAlpha">0.88</b></label><input type="range" id="cMbAlpha" min="0.4" max="1" step="0.02" value="0.88"></div>
     </div><!-- /#dbg-planet -->
 
     <!-- ── HoloNet / Contact view ── -->
@@ -1488,7 +1501,6 @@
             <div class="manual-tag">Scale</div>
             <div class="manual-tag">0→1</div>
           </div>
-          <div class="manual-divider"></div>
           <div class="snap-grid"><!--CMS:snapshot[] (key/value pairs)-->
             <div class="snap-cell"><div class="snap-cell-k">Role</div><div class="snap-cell-v">Senior Designer<br>System Lead</div></div>
             <div class="snap-cell"><div class="snap-cell-k">Timeline</div><div class="snap-cell-v">Jan–Sep 2024<br>9 months</div></div>
@@ -10157,7 +10169,8 @@ f 2469//2469 2470//2470 2434//2434
         onDelTag:function(i){ var t=cvTagArr(m); t.splice(i,1); m.tags=t.join(' · '); cvPersist(); cvShowBooklet(id); },
         onEditSnap:function(i,field,val){ if(m.snapshot&&m.snapshot[i]){ m.snapshot[i][field]=val; cvPersist(); } },
         onAddSnap:function(){ m.snapshot=m.snapshot||[]; m.snapshot.push({k:'Label',v:'Value'}); cvPersist(); cvShowBooklet(id); },
-        onDelSnap:function(){ if(m.snapshot&&m.snapshot.length){ m.snapshot.pop(); cvPersist(); cvShowBooklet(id); } },
+        onDelSnap:function(i){ if(m.snapshot&&m.snapshot[i]!=null){ m.snapshot.splice(i,1); cvPersist(); cvShowBooklet(id); } },
+        onReorderSnap:function(from,to){ if(m.snapshot&&m.snapshot[from]!=null){ var moved=m.snapshot.splice(from,1)[0]; m.snapshot.splice(to,0,moved); cvPersist(); cvShowBooklet(id); } },
         extraLinks:(m.links||[]),
         onAddExtraLink:function(){ m.links=m.links||[]; m.links.push({label:'New link',url:'#'}); cvPersist(); cvShowBooklet(id); },
         onDelExtraLink:function(i){ if(m.links){ m.links.splice(i,1); cvPersist(); cvShowBooklet(id); } },
@@ -10919,6 +10932,13 @@ f 2469//2469 2470//2470 2434//2434
     bind('cMoonScale','vMoonScale',function(v){ params.moonScale=v; },2);
     bind('cZoom','vZoom',function(v){ params.focusZoom=v; if(focused) setFocusCam(); },1);
     bind('cZone','vZone',function(v){ params.zoneSteps=v; rebuildZones(); });
+    // Instruction-manual panel FX (background opacity + vertical scanlines) — pure CSS, pushed via
+    // custom properties on #cs-root rather than a shader uniform. See --mb-* in the #cs-root token block.
+    if(params.mbAlpha==null) params.mbAlpha=0.88;
+    function applyManualFx(){ var cs=document.getElementById('cs-root'); if(!cs) return;
+      cs.style.setProperty('--mb-alpha',params.mbAlpha); }
+    bind('cMbAlpha','vMbAlpha',function(v){ params.mbAlpha=v; applyManualFx(); },2);
+    applyManualFx();
     document.getElementById('cWheel').addEventListener('change',function(){ params.wheelInvert=this.checked; });
     document.getElementById('cMoon').addEventListener('change',function(){ params.moonMotion=this.checked; });
     document.getElementById('cInvert').addEventListener('change',function(){ params.invertY=this.checked; });
@@ -11827,7 +11847,8 @@ f 2469//2469 2470//2470 2434//2434
         onDelTag:function(i){ if(c.tags){ c.tags.splice(i,1); saveCaseField(id,'tags',c.tags); reShowProject(id); } },
         onEditSnap:function(i,field,val){ if(c.snapshot&&c.snapshot[i]){ c.snapshot[i][field]=val; saveCaseField(id,'snapshot',c.snapshot); } },
         onAddSnap:function(){ c.snapshot=c.snapshot||[]; c.snapshot.push({k:'Label',v:'Value'}); saveCaseField(id,'snapshot',c.snapshot); reShowProject(id); },
-        onDelSnap:function(){ if(c.snapshot&&c.snapshot.length){ c.snapshot.pop(); saveCaseField(id,'snapshot',c.snapshot); reShowProject(id); } },
+        onDelSnap:function(i){ if(c.snapshot&&c.snapshot[i]!=null){ c.snapshot.splice(i,1); saveCaseField(id,'snapshot',c.snapshot); reShowProject(id); } },
+        onReorderSnap:function(from,to){ if(c.snapshot&&c.snapshot[from]!=null){ var moved=c.snapshot.splice(from,1)[0]; c.snapshot.splice(to,0,moved); saveCaseField(id,'snapshot',c.snapshot); reShowProject(id); } },
         onAddExtraLink:function(){ c.extraLinks=c.extraLinks||[]; c.extraLinks.push({label:'New link',url:'#'}); saveCaseField(id,'extraLinks',c.extraLinks); reShowProject(id); },
         onDelExtraLink:function(i){ if(c.extraLinks){ c.extraLinks.splice(i,1); saveCaseField(id,'extraLinks',c.extraLinks); reShowProject(id); } },
         onEditExtraLink:function(i,v){ if(c.extraLinks&&c.extraLinks[i]){ c.extraLinks[i].label=v; saveCaseField(id,'extraLinks',c.extraLinks); } },
@@ -12131,7 +12152,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,cfgV:3};
+    var DEFAULTS={pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
@@ -12140,6 +12161,8 @@ f 2469//2469 2470//2470 2434//2434
       setCtl('cGrid','vGrid',params.gridOpacity.toFixed(2)); setCtl('cSpread','vSpread',params.planetSpread.toFixed(1)); setCtl('cObjScale','vObjScale',(params.objScale!=null?params.objScale:1).toFixed(2)); setCtl('cMoonSpd','vMoonSpd',params.moonSpeed.toFixed(1)); setCtl('cMoonDist','vMoonDist',(params.moonDist!=null?params.moonDist:1).toFixed(2)); setCtl('cMoonScale','vMoonScale',(params.moonScale!=null?params.moonScale:1).toFixed(2)); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); setCtl('cZone','vZone',params.zoneSteps);
       rt.setSize(Math.floor(W/params.pixel),Math.floor(H/params.pixel)); postMat.uniforms.levels.value=params.levels;
       rebuildZones(); buildStars(); drawStuds(); beamHoloPer.opBase.value=params.beam; studFad.base=params.gridOpacity; applySpread();
+      setCtl('cMbAlpha','vMbAlpha',(params.mbAlpha!=null?params.mbAlpha:0.88).toFixed(2));
+      if(typeof applyManualFx==='function') applyManualFx();
       document.getElementById('cWheel').checked=params.wheelInvert;
       document.getElementById('cMoon').checked=params.moonMotion;
       document.getElementById('cInvert').checked=params.invertY;
@@ -12573,10 +12596,12 @@ f 2469//2469 2470//2470 2434//2434
         _subEl.onblur=_subEdit?function(){ data.onSubtitle(_subEl.textContent.replace(/\s+$/,'')); }:null;
         _subEl.onkeydown=_subEdit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); _subEl.blur(); } }:null;
       }
-      // URL slug row — only rendered when the caller supplies one (projects + moons; not CV nodes, which share one slug for the whole route)
+      // URL slug row — only rendered when the caller supplies one (projects + moons; not CV nodes, which
+      // share one slug for the whole route), and only shown in Edit Mode — it's a permalink editing
+      // affordance for the author, not something a visitor needs to see under every project title.
       var _slugRow=manualScene.querySelector('.manual-slug');
       if(_slugRow){
-        var _hasSlug=(data.slug!=null);
+        var _hasSlug=(data.slug!=null && data.edit);
         _slugRow.classList.toggle('show',_hasSlug);
         if(_hasSlug){
           var _pfx=_slugRow.querySelector('.manual-slug-prefix'); if(_pfx) _pfx.textContent=data.slugPrefix||'/';
@@ -12611,8 +12636,17 @@ f 2469//2469 2470//2470 2434//2434
       }
       if(Array.isArray(data.snapshot) && !data.links){
         var grid=manualScene.querySelector('.snap-grid');
-        if(grid){ grid.className='snap-grid'; grid.innerHTML=''; data.snapshot.forEach(function(p,i){
+        if(grid){ grid.className='snap-grid'; grid.innerHTML=''; var _snapDragFrom=null;
+          data.snapshot.forEach(function(p,i){
           var cell=document.createElement('div'); cell.className='snap-cell';
+          if(data.edit){
+            // drag handle — reorders via HTML5 DnD; lives outside the contentEditable k/v spans so
+            // dragging never fights with selecting/editing their text.
+            var handle=document.createElement('span'); handle.className='snap-handle'; handle.textContent='⠿'; handle.title='Drag to reorder'; handle.draggable=true;
+            handle.addEventListener('dragstart',function(e){ _snapDragFrom=i; cell.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; try{ e.dataTransfer.setData('text/plain',String(i)); }catch(err){} });
+            handle.addEventListener('dragend',function(){ cell.classList.remove('dragging'); _snapDragFrom=null; });
+            cell.appendChild(handle);
+          }
           var k=document.createElement('div'); k.className='snap-cell-k'; k.textContent=p.k||'';
           var v=document.createElement('div'); v.className='snap-cell-v'+(p.amber?' amber':''); v.innerHTML=p.v||'';
           if(data.edit){
@@ -12621,13 +12655,20 @@ f 2469//2469 2470//2470 2434//2434
             v.addEventListener('blur',function(){ if(data.onEditSnap) data.onEditSnap(i,'v',v.innerHTML.replace(/\s+$/,'')); });
             [k,v].forEach(function(el){ el.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); el.blur(); } }); });
           }
-          cell.appendChild(k); cell.appendChild(v); grid.appendChild(cell);
+          cell.appendChild(k); cell.appendChild(v);
+          if(data.edit){
+            var del=document.createElement('span'); del.className='snap-del'; del.textContent='×'; del.title='Remove this row';
+            del.addEventListener('click',function(e){ e.stopPropagation(); if(data.onDelSnap) data.onDelSnap(i); });
+            cell.appendChild(del);
+            cell.addEventListener('dragover',function(e){ if(_snapDragFrom==null) return; e.preventDefault(); e.dataTransfer.dropEffect='move'; cell.classList.add('drag-over'); });
+            cell.addEventListener('dragleave',function(){ cell.classList.remove('drag-over'); });
+            cell.addEventListener('drop',function(e){ e.preventDefault(); cell.classList.remove('drag-over'); if(_snapDragFrom!=null && _snapDragFrom!==i && data.onReorderSnap) data.onReorderSnap(_snapDragFrom,i); });
+          }
+          grid.appendChild(cell);
         });
-          if(data.snapshot.length % 2 === 1){ var filler=document.createElement('div'); filler.className='snap-cell snap-filler'; grid.appendChild(filler); }   // odd count → invisible empty slot
-          if(data.edit){ var sbar=document.createElement('div'); sbar.style.cssText='grid-column:1 / -1;display:flex;gap:6px;margin-top:4px';
-            var addc=document.createElement('button'); addc.type='button'; addc.className='link-add'; addc.textContent='+ cell'; addc.onclick=function(){ if(data.onAddSnap) data.onAddSnap(); };
-            var delc=document.createElement('button'); delc.type='button'; delc.className='link-add'; delc.textContent='– cell'; delc.onclick=function(){ if(data.onDelSnap) data.onDelSnap(); };
-            sbar.appendChild(addc); sbar.appendChild(delc); grid.appendChild(sbar); }
+          if(data.snapshot.length % 2 === 1){ var filler=document.createElement('div'); filler.className='snap-cell snap-filler'; grid.appendChild(filler); }   // odd count → invisible empty slot (CSS hides it)
+          if(data.edit){ var addc=document.createElement('button'); addc.type='button'; addc.className='link-add'; addc.style.marginTop='4px'; addc.textContent='+ cell';
+            addc.addEventListener('click',function(){ if(data.onAddSnap) data.onAddSnap(); }); grid.appendChild(addc); }
         }
       }
       // Non-artifact view: if we're coming back from an artifact (links-mode), restore the default snapshot grid.
@@ -12650,7 +12691,7 @@ f 2469//2469 2470//2470 2434//2434
               x.addEventListener('click',function(e){ e.stopPropagation(); if(data.onDelLink) data.onDelLink(i); }); row.appendChild(x);
               // destination (href) editor — appears under the label in Edit Mode
               var urlIn=document.createElement('input'); urlIn.type='text'; urlIn.value=l.url||''; urlIn.placeholder='https://…  (link destination)';
-              urlIn.className='ml-url'; urlIn.style.cssText='flex:1 0 100%;margin-top:4px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:#1A1512;background:rgba(26,21,18,.05);border:1px solid rgba(26,21,18,.22);padding:4px 7px;border-radius:2px';
+              urlIn.className='ml-url'; urlIn.style.cssText='flex:1 0 100%;margin-top:4px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:var(--c-primary);background:rgba(240,237,232,.05);border:1px solid rgba(240,237,232,.22);padding:4px 7px;border-radius:2px';
               urlIn.addEventListener('input',function(){ if(data.onEditLinkUrl) data.onEditLinkUrl(i,urlIn.value); });
               urlIn.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); urlIn.blur(); } });
               row.appendChild(urlIn);
@@ -12680,7 +12721,7 @@ f 2469//2469 2470//2470 2434//2434
             if(data.edit){ var x=document.createElement('span'); x.className='ml-x'; x.textContent='×';
               x.addEventListener('click',function(e){ e.stopPropagation(); if(data.onDelExtraLink) data.onDelExtraLink(i); }); row.appendChild(x);
               var urlIn=document.createElement('input'); urlIn.type='text'; urlIn.value=l.url||''; urlIn.placeholder='https://…  (link destination)'; urlIn.className='ml-url';
-              urlIn.style.cssText='flex:1 0 100%;margin-top:4px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:#1A1512;background:rgba(26,21,18,.05);border:1px solid rgba(26,21,18,.22);padding:4px 7px;border-radius:2px';
+              urlIn.style.cssText='flex:1 0 100%;margin-top:4px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:var(--c-primary);background:rgba(240,237,232,.05);border:1px solid rgba(240,237,232,.22);padding:4px 7px;border-radius:2px';
               urlIn.addEventListener('input',function(){ if(data.onEditExtraLinkUrl) data.onEditExtraLinkUrl(i,urlIn.value); });
               urlIn.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); urlIn.blur(); } });
               row.appendChild(urlIn); }
