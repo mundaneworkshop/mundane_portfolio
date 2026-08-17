@@ -6,6 +6,7 @@ Jason Hsin's portfolio site — a WebGL "galaxy" of clickable project planets (T
 
 - **`index.html`** is the entire site: ~13,000 lines, ~660KB, single file. No build step, no bundler, no framework. Several `<script>` blocks inline. This is a deliberate choice made early in the project, not an oversight — see `docs/project-history/homepage-holotable-prototype.md` for the original architecture decision.
 - **`api/holonet-submit.js`** and **`api/holonet-delete.js`** are two Vercel serverless functions backing the HoloNet (contact) feature — a Supabase-backed shared message board. `holonet-schema.sql` is the table schema.
+- **`api/content-save.js`** is a third Vercel serverless function backing server-authoritative content sync for the in-page CMS (see "Content sync backend" below). `content-schema.sql` is its table schema.
 - **`vercel.json`** has one rewrite rule: an SPA fallback so `/work/<slug>` and similar client-routed paths don't 404 on a hard refresh.
 - **`package.json`** only lists the two serverless function's dependencies (`@supabase/supabase-js`, `resend`) — there's no build/dev script because the frontend needs none.
 
@@ -17,8 +18,8 @@ The site has its own in-page CMS, not a separate admin panel:
 
 - **`?edit=1`** in the URL sets `localStorage.mw_author` and adds `body.author-mode` — this only controls whether the editing toolbar is *visible*. It does **not** make anything editable by itself.
 - The toolbar's **Edit Mode** toggle (`editMode` JS variable) is what makes fields `contentEditable`. Gotcha: while Edit Mode is on, clicking a planet **selects it for mesh editing** instead of opening its booklet. To edit a project's booklet content, open the project first in normal mode, *then* toggle Edit Mode.
-- Small text/config overrides persist to `localStorage` under the key `bric_copy` (the `copyOvr` object), via `window.BRICStore.getCopy()`/`setCopy()`.
-- Binary overrides (uploaded meshes, images, GLBs) persist to IndexedDB via the rest of `window.BRICStore`'s API.
+- Small text/config overrides persist to `localStorage` under the key `bric_copy` (the `copyOvr` object), via `window.BRICStore.getCopy()`/`setCopy()`. As of Aug 2026 this is also synced server-side (see "Content sync backend" below) — `bric_copy` is still the source `persistCopy()` writes to and every reader reads from, it's just no longer the *only* copy of the truth.
+- Binary overrides (uploaded meshes, images, GLBs) persist to IndexedDB via the rest of `window.BRICStore`'s API — these are NOT part of the server sync (much larger payloads, different problem; still local-only, same as always).
 - Standing product rule (`docs/project-history/maximize-customization.md`): treat every tunable — debug slider, baked constant, magic number — as something that should be exposed as editable content, not hardcoded. Don't ask whether an existing tunable should be editable; assume yes.
 
 ## Known landmarks in index.html (grep these, don't assume line numbers stay put)
@@ -43,6 +44,22 @@ The two `api/holonet-*.js` serverless functions need these set in the Vercel pro
 - `HOLONET_ADMIN_TOKEN` — required for message deletion; the client's admin-only delete button is a convenience, this server-side token check is the actual security boundary.
 
 The Supabase project URL is hardcoded in both function files (not a secret — it's also embedded client-side).
+
+## Content sync backend (adopted Aug 2026)
+
+Before this, every in-page CMS edit (title/description/tags/snapshot rows/links/CTA/camera views/marquee text/galaxy layout — anything that used to only live in `copyOvr`/`bric_copy`) persisted to `localStorage` in whichever browser made the edit, full stop. No other visitor, device, or environment ever saw it. `content_overrides` (schema in `content-schema.sql`) is a flat `key -> value` mirror of `copyOvr`'s own shape — one row per top-level `copyOvr` key, no per-feature schema, so any new key the client ever starts writing round-trips through this table with zero migration.
+
+**No new environment variables** — reuses `SUPABASE_SECRET_KEY` and `HOLONET_ADMIN_TOKEN` from the HoloNet section above. `HOLONET_ADMIN_TOKEN` was always a general site admin token in practice (the client already persists it under the generic key `mw_admintoken`, not a HoloNet-specific one) — this just gives it a second consumer.
+
+**Reads happen two different ways in this file, on purpose** — don't "simplify" this into one pattern without reading why first:
+- *Writes* always go through a serverless function using the secret key (`api/holonet-submit.js`, `api/holonet-delete.js`, `api/content-save.js`) — this is the actual security boundary, since RLS on both tables has no anon/authenticated write policy at all.
+- *Reads* happen directly from the client using the separate publishable key, restricted by RLS to SELECT-only — `loadMessages()` does this for `messages`, and `reconcileServerContent()` (in the pre-boot IIFE, alongside `seedOne`/`seedCopy`, around line 1577) does the same for `content_overrides`. This avoids an extra Vercel round-trip for something that's genuinely public, read-only data.
+
+**Boot-order matters here.** `reconcileServerContent()` is wired into the existing `window.__mwSeedReady` promise chain (the same one `bootHolotable()` already waits on before running at all) — specifically so the server's data lands in `localStorage['bric_copy']` *before* `bootHolotable()`'s first (and only) read of it. `galaxyModel`/zone geometry get baked synchronously from that first read; patching `copyOvr` after boot would leave stale zone geometry no amount of re-rendering fixes. If you're ever tempted to move this reconcile to run "after" boot for perceived simplicity, re-read this — it was a real bug caught during design review, not a hypothetical.
+
+**Merge rule**: `localStorage['bric_copy_syncedAt']` tracks this browser's own last successful reconcile-or-save. If the server's newest row is newer than that, the server wins outright. Only if the server hasn't changed since this browser's last sync (true on a first-ever boot post-deploy, since the table starts empty) does local win — and only then does it get pushed up via `api/content-save`. This is deliberately NOT "admin token present → local always wins": that would let a second, stale admin browser (e.g. an old phone still carrying a months-old `?admintoken=`) clobber newer edits made from a different device on its next boot, since it has no way to know it's the stale one.
+
+**One-time step after first deploy**: visit the live site once from the browser holding your actual, current content (the one you've been editing in) — this triggers the "local wins, push up" path above and seeds the (initially empty) `content_overrides` table from what's already in that browser's `bric_copy`. Confirm rows appear in the Supabase Table Editor afterward. After that, every visitor (including a fresh incognito window, including you on a different device) sees it.
 
 ## Deployment
 

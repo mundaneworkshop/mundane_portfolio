@@ -1621,24 +1621,84 @@
     // visitors see the finished content, not placeholders. Only runs if this browser has no copy
     // overrides yet at all — never overwrites an existing 'bric_copy' (e.g. the author's own edits).
     function seedCopy(path){
-      if(!path) return null;
+      // always returns a promise (never a bare null) — reconcileServerContent() below chains directly
+      // off this return value, and .then() on a bare null throws.
+      if(!path) return Promise.resolve(null);
       var existing=null; try{ existing=localStorage.getItem('bric_copy'); }catch(e){}
-      if(existing!=null && existing!=='{}' ) return null;
+      if(existing!=null && existing!=='{}' ) return Promise.resolve(null);
       return fetch(path).then(function(r){ return r.ok ? r.text() : null; })
         .then(function(text){ if(text){ try{ localStorage.setItem('bric_copy',text); }catch(e){ console.warn('[mw-seed] copy save failed',e); } } })
         .catch(function(err){ console.warn('[mw-seed] copy seed failed',err); });
     }
+    // Reconcile local 'bric_copy' against the server-authoritative content_overrides table — unlike
+    // seedCopy() above (which only ever fills an EMPTY local cache once), this runs on EVERY boot, for
+    // every visitor, since the goal is everyone seeing current content, not just first-timers. Reads
+    // directly from the client with the publishable key (same split HoloNet already uses: writes go
+    // through a serverless function with the secret key, reads happen straight from the client, RLS
+    // restricts this key to SELECT-only) — supabase-js is already loaded in <head> before this IIFE runs.
+    //
+    // Merge rule: compare the server's newest row against localStorage['bric_copy_syncedAt'] (this
+    // browser's own last successful reconcile-or-save). If the server has changed more recently than
+    // that, the server wins outright — this browser's local copy gets replaced. Only when the server
+    // hasn't changed since our last sync (true on a first-ever migration boot, since the table starts
+    // empty) does local win, and only then do we push it up. This is NOT the same as "admin token present
+    // → local always wins": that would let a second, stale admin browser (e.g. an old phone still
+    // carrying ?admintoken= from months ago) clobber newer edits made from a different device, since it
+    // has no way to know it's the stale one. Comparing against this browser's OWN last-synced timestamp
+    // fixes that — the stale phone's syncedAt is old, so the server (which changed more recently, from
+    // the other device) correctly wins there instead.
+    function reconcileServerContent(){
+      return new Promise(function(resolve){
+        var TIMEOUT_MS=2200, settled=false;
+        function done(){ if(settled) return; settled=true; resolve(); }
+        var timer=setTimeout(function(){ console.warn('[mw-seed] content reconcile timed out — continuing with local copy'); done(); },TIMEOUT_MS);
+        if(!(window.supabase && window.supabase.createClient)){ clearTimeout(timer); done(); return; }
+        var CO_SB_URL='https://ynfkjppwpcnxuvjqmsun.supabase.co', CO_SB_KEY='sb_publishable_F-J3YhAcVl62xre8rW94HQ_QuddWwQF';
+        var coSb=window.supabase.createClient(CO_SB_URL,CO_SB_KEY);
+        coSb.from('content_overrides').select('key,value,updated_at').then(function(res){
+          clearTimeout(timer); if(settled) return;
+          if(res.error){ console.warn('[mw-seed] content reconcile failed',res.error); done(); return; }
+          var rows=res.data||[];
+          var serverMax=0;
+          rows.forEach(function(r){ var t=Date.parse(r.updated_at); if(!isNaN(t) && t>serverMax) serverMax=t; });
+          var syncedAtRaw=null; try{ syncedAtRaw=localStorage.getItem('bric_copy_syncedAt'); }catch(e){}
+          var syncedAt=syncedAtRaw?Date.parse(syncedAtRaw):0;
+          var serverChanged = rows.length>0 && (!syncedAtRaw || serverMax>syncedAt);
+          if(serverChanged){
+            var merged={}; rows.forEach(function(r){ merged[r.key]=r.value; });
+            if(window.BRICStore) BRICStore.setCopy(merged);
+            try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
+            done();
+          } else {
+            // nothing new server-side since our last sync (or the table is still empty) — this browser's
+            // local copy is authoritative; push it up so the server converges. For the admin's own
+            // browser on first load after this feature ships, this is what silently migrates existing
+            // edits into the server store, with no manual export step.
+            var local=(window.BRICStore&&BRICStore.getCopy)?BRICStore.getCopy():{};
+            var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
+            if(token && local && Object.keys(local).length){
+              fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:local})})
+                .then(function(){ try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){} })
+                .catch(function(err){ console.warn('[mw-seed] content push failed',err); });
+            }
+            done();
+          }
+        }).catch(function(err){ clearTimeout(timer); console.warn('[mw-seed] content reconcile failed',err); done(); });
+      });
+    }
     window.__mwSeedReady = fetch('assets/manifest.json').then(function(r){ return r.ok ? r.json() : null; })
       .then(function(manifest){
-        if(!manifest) return null;
+        if(!manifest) return reconcileServerContent();
         var jobs=[];
         (manifest.models||[]).forEach(function(e){ jobs.push(seedOne(e,false)); });
         (manifest.images||[]).forEach(function(e){ jobs.push(seedOne(e,true)); });
         jobs.push(seedBoxTex(manifest.boxtex));
-        // Copy must land in localStorage before bootHolotable() reads it synchronously — do it first.
-        return seedCopy(manifest.copySeed).then(function(){ return Promise.all(jobs); });
+        // Copy must land in localStorage before bootHolotable() reads it synchronously — do it first: the
+        // static seed baseline, then reconcile against the server (which overrides it once real
+        // server-side content exists, or pulls this browser's local edits up if it's the admin's own).
+        return seedCopy(manifest.copySeed).then(reconcileServerContent).then(function(){ return Promise.all(jobs); });
       })
-      .catch(function(err){ console.warn('[mw-seed] manifest load failed — continuing without pre-seeded assets', err); return null; });
+      .catch(function(err){ console.warn('[mw-seed] manifest load failed — continuing without pre-seeded assets', err); return reconcileServerContent(); });
   })();
   </script>
 
@@ -11613,7 +11673,36 @@ f 2469//2469 2470//2470 2434//2434
     copyOvr['galaxyModel']=galaxyModel;   // keep the persisted copy pointed at the live model so any save writes current structure
     // one-time cleanup: the CV route's manual reuse had overwritten the cv planet's case title/body (e.g. "Senior Product Designer"). Clear it so the "CV" label returns; the guard in commitInline prevents recurrence.
     try{ if(!localStorage.getItem('mw_cvtitlefix2')){ var _ch=false; ['title','body','kicker','snapshot','tags'].forEach(function(f){ var k='case:cv:'+f; if(copyOvr[k]!=null){ delete copyOvr[k]; _ch=true; } }); if(_ch && window.BRICStore) BRICStore.setCopy(copyOvr); localStorage.setItem('mw_cvtitlefix2','1'); } }catch(e){}
-    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); }
+    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); scheduleContentSave(); }
+    // Push copyOvr to the server-authoritative content_overrides table — debounced (so a burst of edits,
+    // e.g. dragging a slider that fires persistCopy() on every 'input' tick, doesn't spam the endpoint),
+    // with an in-flight lock plus a single trailing re-fire (not just overlapping requests): if a save is
+    // requested while one's already in flight, it's marked pending and re-sent once the in-flight one
+    // settles, using copyOvr's state AT THAT LATER MOMENT — this stops a slow response plus rapid edits
+    // from letting two saves race and land out of order, where the staler one landing last would silently
+    // regress a newer edit. Gated on an admin token being present so regular visitors' browsers never even
+    // attempt this (a free client-side skip before the server would 401 it anyway).
+    var _csTimer=null, _csInFlight=false, _csPending=false;
+    function scheduleContentSave(){
+      var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
+      if(!token) return;
+      clearTimeout(_csTimer);
+      _csTimer=setTimeout(runContentSave,800);
+    }
+    function runContentSave(){
+      if(_csInFlight){ _csPending=true; return; }
+      var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
+      if(!token) return;
+      _csInFlight=true;
+      fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:copyOvr})})
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
+        .then(function(res){
+          if(!res.ok){ if(typeof toast==='function') toast('content sync failed · '+(res.body&&res.body.error||'try again')); return; }
+          try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
+        })
+        .catch(function(e){ if(typeof toast==='function') toast('content sync failed · '+e.message); })
+        .then(function(){ _csInFlight=false; if(_csPending){ _csPending=false; runContentSave(); } });
+    }
     // ── GALAXY DEFAULT VIEW: persist the resting camera (tilt / zoom / rotation) so the map opens at a chosen framing ──
     function saveGalCam(){ copyOvr['galcam']={elev:camElev,zoom:camZoom,rot:manualRot}; persistCopy(); if(typeof toast==='function') toast('galaxy default view saved'); }
     // Always boot the galaxy view from the SAVED default (or factory default) — any unsaved drag/zoom change is discarded on reload.
