@@ -10217,7 +10217,13 @@ f 2469//2469 2470//2470 2434//2434
       var n=null; for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].id===cvSelId){ n=cvNodes[i]; break; } } if(!n) return;
       var s=projWorld(n.pos); if(!s.vis) return;
       var cx=s.x/P, cy=s.y/P, rgb=hexRgb(cvPulseColor||'#F0D080'), baseR=Math.max(2,(cvPulseSize||22)/2/P), dur=Math.max(0.3,cvPulseDur||1.6);
-      for(var k=0;k<2;k++){ var ph=((t/dur)+k*0.5)%1, rr=baseR*(0.5+1.4*ph), a=(0.7*(1-ph)).toFixed(3); if(rr<0.5) continue;
+      // projWorld() can briefly return a non-finite x/y right after a cold /cv boot, before the camera has
+      // been positioned into CV space — createRadialGradient throws hard on a non-finite value, and since
+      // this runs before renderer.render() in animate()'s per-frame body, an uncaught throw here silently
+      // skips rendering EVERY frame from then on (the whole scene freezes, not just this pulse). Guard instead
+      // of letting one bad projection frame take down the entire render loop for the rest of the session.
+      if(!isFinite(cx)||!isFinite(cy)) return;
+      for(var k=0;k<2;k++){ var ph=((t/dur)+k*0.5)%1, rr=baseR*(0.5+1.4*ph), a=(0.7*(1-ph)).toFixed(3); if(rr<0.5||!isFinite(rr)) continue;
         var g=cvFxCtx.createRadialGradient(cx,cy,0,cx,cy,rr);
         g.addColorStop(0,'rgba('+rgb+',0)'); g.addColorStop(0.34,'rgba('+rgb+',0)'); g.addColorStop(0.56,'rgba('+rgb+','+a+')'); g.addColorStop(0.84,'rgba('+rgb+',0)'); g.addColorStop(1,'rgba('+rgb+',0)');
         cvFxCtx.globalAlpha=1; cvFxCtx.fillStyle=g; cvFxCtx.beginPath(); cvFxCtx.arc(cx,cy,rr,0,6.2832); cvFxCtx.fill();
@@ -10472,7 +10478,8 @@ f 2469//2469 2470//2470 2434//2434
       void msgHoverEl.offsetWidth; msgHoverEl.style.transition='width .32s steps(22)'; msgHoverEl.style.width=msgHoverFW+'px'; }
     function hideMsgHover(){ if(msgHoverEl) msgHoverEl.style.display='none'; }
     function hexRgb(h){ h=(h||'#AAF5EE').replace('#',''); if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2]; var n=parseInt(h,16); if(isNaN(n)) n=0xAAF5EE; return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255); }
-    function drawMsgDot(lx,ly,isNew,t){ var c=msgColor||'#AAF5EE', br=(msgBright==null?1:Math.max(0,msgBright)), rgb=hexRgb(c);
+    function drawMsgDot(lx,ly,isNew,t){ if(!isFinite(lx)||!isFinite(ly)) return;   // lx/ly come from projWorld() — see the matching guard in cvDrawPulse for why a bad projection must never reach createRadialGradient
+      var c=msgColor||'#AAF5EE', br=(msgBright==null?1:Math.max(0,msgBright)), rgb=hexRgb(c);
       var ph=0.5+0.5*Math.sin(t*1.9+lx*0.3), base=isNew?1.7:1.0;   // 0..1 breathing
       var gr=Math.max(2,(4.5+br*4.5)*base*(0.35+1.25*ph));   // STRONG swing ~0.35x..1.6x so the bands visibly expand/contract
       var ga=Math.min(1,(0.45+0.6*ph)*br);                   // alpha breathes too
@@ -12370,8 +12377,14 @@ f 2469//2469 2470//2470 2434//2434
     applyHiddenVisibility();                          // hide any soft-deleted planets in prod view
     if(_reenterEdit) setEditMode(true);               // re-enter Edit Mode after a structural reload
 
-    var clock=new THREE.Clock();
+    var clock=new THREE.Clock(); var _animateErrLogged=false;
     function animate(){ requestAnimationFrame(animate); if(csPaused) return;   // MERGE: freeze during case-study takeover
+      // Everything below (camera/label/FX updates) is wrapped so a single bad frame — e.g. a projection
+      // returning non-finite while the camera is mid-transition, the exact bug that broke a cold /cv load —
+      // can never again silently skip renderer.render() for the rest of the session. Without this, a per-frame
+      // exception anywhere in the update pass leaves the canvas frozen on a stale frame forever, since the
+      // render calls sit at the end of this same function body, after everything that can throw.
+      try{
       var t=clock.getElapsedTime();
       // ── 3D box-open driver (time-based; see startBoxOpen / buildKitFlaps) ──
       if(boxOpenStart!==null && focused){
@@ -12490,6 +12503,10 @@ f 2469//2469 2470//2470 2434//2434
         renderer.autoClear=false; renderer.clearDepth();
         renderer.render(scene,camera);                     // draws only the box (layer 1), crisp
         camera.layers.mask=_m; renderer.autoClear=true; scene.background=_bg;
+      }
+      } catch(err){
+        if(!_animateErrLogged){ _animateErrLogged=true; console.error('[animate] per-frame update threw — scene would otherwise freeze permanently from here on; falling back to a bare render',err); }
+        try{ renderer.render(scene,camera); }catch(e2){}   // best-effort — keep the canvas alive even if this frame's state update was incomplete
       }
     }
     // ── ROUTING: resolve whatever URL the page loaded with (deep link) and react to browser back/forward.
