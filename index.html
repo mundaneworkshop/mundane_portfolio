@@ -11897,9 +11897,19 @@ f 2469//2469 2470//2470 2434//2434
       var mp=document.getElementById('marqueePanel'); if(mp) mp.style.display=(editMode && !focused)?'block':'none';
       document.body.classList.toggle('edit-focus', !!(editMode && focused));
     }
-    // Seed CASES for locked/playground planets up front (they used to be created lazily on focus, AFTER this
-    // defaults+restore pass — so their saved manual edits never got reloaded). Now they share the same pipeline.
-    planets.forEach(function(p){ var id=p.userData.id; if(p.userData.locked && !CASES[id]){ CASES[id]={kind:'work',kicker:'Signal encrypted',title:'??? · undiscovered',body:'This sector remains uncharted. Add the case study here in Edit Mode.'}; } });
+    // Seed CASES for EVERY planet that the static CASES literal doesn't define (locked ones, and the whole
+    // Playground group — p0/p1/p2 are absent from that literal) up front, because both the defaults pass and
+    // the copyOvr restore pass below only iterate Object.keys(CASES). Anything not present by now never gets
+    // its saved title/body/cta/tags/snapshot re-applied: it gets created lazily on focus in openCase()
+    // instead, which runs long after this, so it renders placeholder copy forever while the real edits sit
+    // unused in storage. This previously only covered `locked` planets — the Playground projects are NOT
+    // locked, so they silently lost every manual edit on reload. Defaults here mirror openCase()'s own lazy
+    // fallback exactly, so a project with no overrides looks identical to before.
+    planets.forEach(function(p){ var id=p.userData.id; if(CASES[id]) return;
+      CASES[id]= p.userData.locked
+        ? {kind:'work',kicker:'Signal encrypted',title:'??? · undiscovered',body:'This sector remains uncharted. Add the case study here in Edit Mode.'}
+        : {kind:'work',kicker:'Case file',title:(p.userData.labelTitle?p.userData.labelTitle.textContent:id),body:'New world. Add your case study here in Edit Mode.'};
+    });
     // Per-project right-page (snapshot) + CTA defaults — each project owns its own copy now.
     var SNAP_DEF=[{k:'Role',v:'Senior Designer<br>System Lead'},{k:'Timeline',v:'Jan–Sep 2024<br>9 months'},{k:'Outcome',v:'↑ 60%',amber:true},{k:'Impact on',v:'Eng velocity'},{k:'Platforms',v:'Web · iOS<br>Android'},{k:'Libraries',v:'5 → 1'}];
     Object.keys(CASES).forEach(function(id){ var c=CASES[id];
