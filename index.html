@@ -12782,12 +12782,12 @@ f 2469//2469 2470//2470 2434//2434
         ctaBtn.onkeydown=data.edit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); } }:null;
 
         if(ctaWrap){ var ht=ctaWrap.querySelector('.cta-hide');
-          if(data.edit){ if(!ht){ ht=document.createElement('button'); ht.type='button'; ht.className='cta-hide manual-cta-note'; ht.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(26,21,18,.35);padding:4px 8px'; ctaWrap.appendChild(ht); }
+          if(data.edit){ if(!ht){ ht=document.createElement('button'); ht.type='button'; ht.className='cta-hide manual-cta-note'; ht.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(240,237,232,.35);padding:4px 8px'; ctaWrap.appendChild(ht); }
               ht.textContent=hidden?'＋ show CTA':'⊘ hide CTA'; ht.onclick=function(e){ e.stopPropagation(); if(data.onCtaHide) data.onCtaHide(!hidden); }; }
           else if(ht){ ht.remove(); } }
         // Active/disabled toggle — marks this specific CTA "coming soon" (or reactivates it) independently of any other
         if(ctaWrap){ var at=ctaWrap.querySelector('.cta-lock');
-          if(data.edit && data.onCtaActive){ if(!at){ at=document.createElement('button'); at.type='button'; at.className='cta-lock manual-cta-note'; at.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(26,21,18,.35);padding:4px 8px'; ctaWrap.appendChild(at); }
+          if(data.edit && data.onCtaActive){ if(!at){ at=document.createElement('button'); at.type='button'; at.className='cta-lock manual-cta-note'; at.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(240,237,232,.35);padding:4px 8px'; ctaWrap.appendChild(at); }
               at.textContent=active?'⊘ disable CTA':'＋ activate CTA'; at.onclick=function(e){ e.stopPropagation(); if(data.onCtaActive) data.onCtaActive(!active); }; }
           else if(at){ at.remove(); } }
         // CTA target URL — editable in Edit Mode for any CTA (moons/CV/social always; work cases too, so a
@@ -12795,7 +12795,7 @@ f 2469//2469 2470//2470 2434//2434
         if(ctaWrap){ var cu=ctaWrap.querySelector('.cta-url');
           if(data.edit && data.onCtaUrl){
             if(!cu){ cu=document.createElement('input'); cu.type='text'; cu.className='cta-url'; cu.placeholder='https://…  (CTA destination)';
-              cu.style.cssText='flex:1 0 100%;margin-top:6px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:#1A1512;background:rgba(26,21,18,.05);border:1px solid rgba(26,21,18,.22);padding:4px 7px;border-radius:2px';
+              cu.style.cssText='flex:1 0 100%;margin-top:6px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:var(--c-primary);background:rgba(240,237,232,.05);border:1px solid rgba(240,237,232,.22);padding:4px 7px;border-radius:2px';
               cu.addEventListener('input',function(){ if(data.onCtaUrl) data.onCtaUrl(cu.value); });
               cu.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); cu.blur(); } });
               ctaWrap.appendChild(cu); }
