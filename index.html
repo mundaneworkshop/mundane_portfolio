@@ -52,6 +52,10 @@
   /* Save = primary action — lit amber fill */
   #saveBtn{background:var(--a4);border-color:var(--a4);color:var(--on-brand);font-weight:700}
   #saveBtn:hover{background:var(--amber-hot);border-color:var(--amber-hot);color:var(--on-brand)}
+  /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
+     "on" class had no visual rule at all, so there was no way to tell edit mode was active from the
+     button itself; meshModeBtn needs this even more since its state changes what a click DOES. */
+  .tbtn.on{background:var(--a4);border-color:var(--a4);color:var(--on-brand)}
   /* Unsynced content edits pending — saveBtn is always lit by default, so a text change alone is easy to miss;
      the pulse gives it motion so "you have something to save" reads at a glance, not just on close reading. */
   #saveBtn.dirty{animation:saveDirtyPulse 1.4s ease-in-out infinite}
@@ -1096,6 +1100,7 @@
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
       <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
       <button class="tbtn admin-only" id="editBtn">✎ edit</button>
+      <button class="tbtn admin-only" id="meshModeBtn" title="When on, clicking a project/artifact selects it for mesh/box editing instead of opening its content">⛭ mesh select</button>
       <button class="tbtn admin-only" id="debugBtn">⚙ debug</button>
       <button class="tbtn admin-only" id="hideUIBtn">⊘ hide ui</button>
       <div id="wordmark">Mundane Workshop</div>
@@ -9604,6 +9609,11 @@ f 2469//2469 2470//2470 2434//2434
     var _logoOccMeshes=[];   // logo meshes for occlusion — rebuilt each frame, shared with updateMsgStars
     var zoneHits=ZONES.map(function(z){return z.mesh;});
     var hovered=null, focused=null, focusedMoon=null, autoRotate=true, activeZone=null, focusAmount=0, editMode=false;
+    // Explicit opt-in for mesh/box editing while in Edit Mode — off by default, so a plain click navigates
+    // (opens the booklet) just like normal mode. Previously EVERY click in Edit Mode was hijacked into mesh
+    // selection, which made "click a different project to check on it" silently reinterpret as "select this
+    // project's kit box for structural editing" — confusing, and easy to mistake for a lost content edit.
+    var meshSelectMode=false;
     // ── kit box hover overlay ──
     // The "view case study" hover affordance mirrors the manual CTA's per-project active/disabled state
     // (CASES[id].ctaActive, editable in the booklet — see projectDataForBooklet). window.CASE_STUDY_CTA_ENABLED
@@ -9721,7 +9731,7 @@ f 2469//2469 2470//2470 2434//2434
         if(cvAtNode){ cvOverview(); }   // node → back out to overview; at overview, empty clicks do nothing (stay draggable; exit via breadcrumb)
         return;
       }
-      if(editMode){ ray.setFromCamera(mouse,camera);   // EDIT MODE: click SELECTS (no zoom); panel edits galaxy mesh; "Open kit box" for faces
+      if(editMode && meshSelectMode){ ray.setFromCamera(mouse,camera);   // EDIT MODE + mesh select: click SELECTS (no zoom); panel edits galaxy mesh; "Open kit box" for faces
         var tgts=focused?editHits.concat(focused.userData.moons):editHits;   // moons selectable while focused
         var eh=ray.intersectObjects(tgts,false);
         if(!eh.length){ if(moonSel){ moonSel=null; refreshEditPanel(); } else if(focused){ goHome(); } else { clearSel(); refreshEditPanel(); } return; }
@@ -11716,8 +11726,11 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof applyHiddenVisibility==='function') applyHiddenVisibility();
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
       if(typeof setInlineEditing==='function') setInlineEditing(on);
-      if(typeof updateSyncBanner==='function') updateSyncBanner(); }
+      if(typeof updateSyncBanner==='function') updateSyncBanner();
+      if(!on) setMeshSelectMode(false); }   // don't leave the "clicks select mesh" trap armed for next time Edit Mode opens
     var _eb=document.getElementById('editBtn'); if(_eb) _eb.addEventListener('click',function(){ setEditMode(!editMode); });
+    function setMeshSelectMode(on){ meshSelectMode=on; var b=document.getElementById('meshModeBtn'); if(b) b.classList.toggle('on',on); }
+    var _mmb=document.getElementById('meshModeBtn'); if(_mmb) _mmb.addEventListener('click',function(){ setMeshSelectMode(!meshSelectMode); });
     // After a structural (zone/planet) change we reload; this flag re-enters Edit Mode at the END of boot so the designer isn't kicked to prod view.
     var _reenterEdit=false; try{ if(sessionStorage.getItem('mw_reedit')){ sessionStorage.removeItem('mw_reedit'); _reenterEdit=true; } }catch(e){}
     var _vsb=document.getElementById('viewSetBtn'); if(_vsb) _vsb.addEventListener('click',saveCamView);
