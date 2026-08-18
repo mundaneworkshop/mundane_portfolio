@@ -11314,7 +11314,12 @@ f 2469//2469 2470//2470 2434//2434
           side:THREE.DoubleSide,
           fog:false
         });
-        if(hasMap){ if(THREE.LinearEncoding!==undefined) bm.map.encoding=THREE.LinearEncoding; bm.map.needsUpdate=true; }
+        // WEBGL1 NPOT GUARD: exported decal PNGs are almost never power-of-two, and the glTF sampler
+        // asks for REPEAT wrap + mipmap filtering. WebGL2 handles that fine, but on a WebGL1 context
+        // (older/low-power devices, some mobile browsers) an NPOT texture with REPEAT/mipmaps is
+        // "incomplete" and can render as solid-color or garbled blocks instead of the print. Decals are
+        // viewed at fixed scale and never tile, so clamp+non-mip is safe and sidesteps the hazard outright.
+        if(hasMap){ bm.map.wrapS=bm.map.wrapT=THREE.ClampToEdgeWrapping; bm.map.minFilter=THREE.LinearFilter; bm.map.generateMipmaps=false; if(THREE.LinearEncoding!==undefined) bm.map.encoding=THREE.LinearEncoding; bm.map.needsUpdate=true; }
         bm.clippingPlanes=[logoClipPlane];   // bottom-trim (stud) when the slider is raised
         o.layers.enable(LOGO_LAYER);         // so the depth pre-pass can render the logo in isolation
         addLogoFx(bm, hasMap); o.material=bm; bm.needsUpdate=true; logoMats.push(bm);
@@ -11341,7 +11346,11 @@ f 2469//2469 2470//2470 2434//2434
       //   2. The brick colour is resolved by: name match (Mecabricks) → NEAREST solid brick (any
       //      exporter) → white. NEVER the decal material's own colour (exporters often leave it black).
       //   3. Solid colours are lifted linear→sRGB so they match the prints (no colour management here).
-      // If you touch this, keep all three or the black-background bug returns for non-Mecabricks GLBs.
+      //   4. Decal maps are forced ClampToEdge + non-mipmap (see "WEBGL1 NPOT GUARD" below) — exported
+      //      decal PNGs are NPOT and the glTF sampler defaults to REPEAT+mipmap, which WebGL1 treats as
+      //      an incomplete texture and can render as garbled blocks instead of black — a distinct symptom
+      //      from rules 1-3 but the same family of bug (reported Aug 17 2026 on prod, meta-horizon moon).
+      // If you touch this, keep all four or the background/garbling bug returns for non-Mecabricks GLBs.
       // ╚════════════════════════════════════════════════════════════════════════════════════════════╝
       scene.updateMatrixWorld(true);
       var brickCols={}, solids=[];
@@ -11363,7 +11372,13 @@ f 2469//2469 2470//2470 2434//2434
         baseCol.setRGB(Math.pow(baseCol.r,1/2.2), Math.pow(baseCol.g,1/2.2), Math.pow(baseCol.b,1/2.2));
         var bm=new THREE.MeshBasicMaterial({ map:hasMap?src.map:null, color:baseCol,
           side:isH?THREE.FrontSide:THREE.DoubleSide, fog:false, transparent:isH, depthWrite:!isH });
-        if(hasMap&&THREE.LinearEncoding!==undefined){ bm.map.encoding=THREE.LinearEncoding; bm.map.needsUpdate=true; }
+        // WEBGL1 NPOT GUARD (4th rule — see REGRESSION GUARD above): exported decal PNGs are almost never
+        // power-of-two, and the glTF sampler asks for REPEAT wrap + mipmap filtering. WebGL2 is fine with
+        // that, but on a WebGL1 context (older/low-power devices, some mobile browsers) an NPOT texture
+        // with REPEAT/mipmaps is "incomplete" and can render as solid-color or garbled blocks instead of
+        // the print — a DIFFERENT failure mode than rules 1-3 (garbled, not black). Decals are viewed at
+        // fixed scale and never tile, so clamp+non-mip is safe and sidesteps the hazard outright.
+        if(hasMap){ bm.map.wrapS=bm.map.wrapT=THREE.ClampToEdgeWrapping; bm.map.minFilter=THREE.LinearFilter; bm.map.generateMipmaps=false; if(THREE.LinearEncoding!==undefined) bm.map.encoding=THREE.LinearEncoding; bm.map.needsUpdate=true; }
         addFx(bm, fx, hasMap); if(fx===FX_MOON) bm.__fxMoon=true; o.material=bm;   // compositeAlpha=hasMap → decal painted over brick colour
       }});
       return grp;
