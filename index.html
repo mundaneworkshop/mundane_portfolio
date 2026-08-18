@@ -1020,7 +1020,7 @@
 
   <!-- EDIT MODE: shared hidden file input + active-mode banner -->
   <input type="file" id="editFile" accept=".obj,.glb,.gltf,.svg,.stp,.step,image/*" style="display:none">
-  <div id="editBanner" style="display:none;position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:40;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0E0F12;background:#E9A73E;padding:5px 14px;border-radius:2px">✎ edit mode — click an object to select · edit it in the panel</div>
+  <div id="editBanner" style="display:none;position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:40;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0E0F12;background:#E9A73E;padding:5px 14px;border-radius:2px;max-width:min(620px,90vw);text-align:center;box-sizing:border-box">✎ edit mode — click an object to select · edit it in the panel</div>
   <!-- Save the current focus framing as this project/artifact's default view (Edit Mode, in focus). Drag + scroll to frame, then Set. -->
   <div id="viewSet" style="display:none;position:fixed;top:130px;left:50%;transform:translateX(-50%);z-index:46;gap:6px;align-items:center;font-family:'Space Mono',monospace">
     <button id="viewSetBtn" class="tbtn" style="background:rgba(14,15,18,.94);border:1px solid #E9A73E;color:#E9A73E;padding:6px 12px;font-size:10px;letter-spacing:1px">⊕ Set default view</button>
@@ -11704,7 +11704,8 @@ f 2469//2469 2470//2470 2434//2434
       document.body.classList.toggle('editing',on);   // reveals menu +/- zone & planet controls + dimmed hidden items
       if(typeof applyHiddenVisibility==='function') applyHiddenVisibility();
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
-      if(typeof setInlineEditing==='function') setInlineEditing(on); }
+      if(typeof setInlineEditing==='function') setInlineEditing(on);
+      if(typeof updateSyncBanner==='function') updateSyncBanner(); }
     var _eb=document.getElementById('editBtn'); if(_eb) _eb.addEventListener('click',function(){ setEditMode(!editMode); });
     // After a structural (zone/planet) change we reload; this flag re-enters Edit Mode at the END of boot so the designer isn't kicked to prod view.
     var _reenterEdit=false; try{ if(sessionStorage.getItem('mw_reedit')){ sessionStorage.removeItem('mw_reedit'); _reenterEdit=true; } }catch(e){}
@@ -11725,26 +11726,49 @@ f 2469//2469 2470//2470 2434//2434
     // from letting two saves race and land out of order, where the staler one landing last would silently
     // regress a newer edit. Gated on an admin token being present so regular visitors' browsers never even
     // attempt this (a free client-side skip before the server would 401 it anyway).
-    var _csTimer=null, _csInFlight=false, _csPending=false;
+    var _csTimer=null, _csInFlight=false, _csPending=false, _csLastFailMsg=null;
+    var _editBannerDefaultText='✎ edit mode — click an object to select · edit it in the panel';
+    // Persistent (not fading-toast) warning for the two ways an edit can silently fail to reach the server:
+    // no admin token on this browser at all (scheduleContentSave/runContentSave below both no-op rather than
+    // error, by design, so nothing else would ever surface this), or the last sync attempt itself failing
+    // (bad/expired token, server misconfigured, network). Repurposes the existing always-visible editBanner
+    // (swaps its text/color) rather than adding a second overlay — the top-center strip above y96 is the only
+    // screen real estate in Edit Mode that isn't already claimed by the marquee/properties/view panels, and
+    // editBanner already owns it. Re-evaluated on every edit-mode toggle and after every save attempt.
+    function updateSyncBanner(){
+      var el=document.getElementById('editBanner'); if(!el || !editMode) return;
+      var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
+      if(!token){
+        el.textContent='⚠ no admin token on this browser — edits are LOCAL ONLY and WILL BE LOST on refresh · visit ?admintoken=YOUR_TOKEN once';
+        el.style.background='#8a1f1f'; el.style.color='#fff'; el.style.border='1px solid #ff6b6b';
+      } else if(_csLastFailMsg){
+        el.textContent='⚠ content sync failed — edits are NOT reaching the server · '+_csLastFailMsg;
+        el.style.background='#8a1f1f'; el.style.color='#fff'; el.style.border='1px solid #ff6b6b';
+      } else {
+        el.textContent=_editBannerDefaultText;
+        el.style.background='#E9A73E'; el.style.color='#0E0F12'; el.style.border='';
+      }
+    }
     function scheduleContentSave(){
       var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-      if(!token) return;
+      if(!token){ updateSyncBanner(); return; }
       clearTimeout(_csTimer);
       _csTimer=setTimeout(runContentSave,800);
     }
     function runContentSave(){
       if(_csInFlight){ _csPending=true; return; }
       var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-      if(!token) return;
+      if(!token){ updateSyncBanner(); return; }
       _csInFlight=true;
       fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:copyOvr})})
         .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
         .then(function(res){
-          if(!res.ok){ if(typeof toast==='function') toast('content sync failed · '+(res.body&&res.body.error||'try again')); return; }
+          if(!res.ok){ _csLastFailMsg=(res.body&&res.body.error)||'try again'; if(typeof toast==='function') toast('content sync failed · '+_csLastFailMsg); return; }
+          _csLastFailMsg=null;
           try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
         })
-        .catch(function(e){ if(typeof toast==='function') toast('content sync failed · '+e.message); })
-        .then(function(){ _csInFlight=false; if(_csPending){ _csPending=false; runContentSave(); } });
+        .catch(function(e){ _csLastFailMsg=e.message; if(typeof toast==='function') toast('content sync failed · '+e.message); })
+        .then(function(){ _csInFlight=false; updateSyncBanner(); if(_csPending){ _csPending=false; runContentSave(); } });
     }
     // ── GALAXY DEFAULT VIEW: persist the resting camera (tilt / zoom / rotation) so the map opens at a chosen framing ──
     function saveGalCam(){ copyOvr['galcam']={elev:camElev,zoom:camZoom,rot:manualRot}; persistCopy(); if(typeof toast==='function') toast('galaxy default view saved'); }
