@@ -638,7 +638,7 @@
   .manual-extralinks .ml-h { font-family:var(--f-m); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--c-dim); margin:0 0 8px; }
   .manual-cta {
     display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap;
+    flex-wrap: wrap; gap: 6px;
     margin-top: 16px;
   }
   .manual-cta-btn {
@@ -650,7 +650,7 @@
     transition: background 0.15s;
   }
   .manual-cta-btn:hover { background: var(--amber-hot); }
-  /* HANDOFF: case studies aren't built yet — see window.CASE_STUDY_CTA_ENABLED */
+  /* per-CTA active/disabled state (data.ctaActive) — 'work' cases default from window.CASE_STUDY_CTA_ENABLED but can be overridden per project; only applied outside Edit Mode so a disabled CTA stays editable */
   .manual-cta-btn.disabled { background: rgba(240,237,232,0.12); color: rgba(240,237,232,0.35); cursor: not-allowed; pointer-events: none; }
   .manual-cta-btn.disabled:hover { background: rgba(240,237,232,0.12); }
   .manual-cta-note {
@@ -9597,11 +9597,11 @@ f 2469//2469 2470//2470 2434//2434
     var zoneHits=ZONES.map(function(z){return z.mesh;});
     var hovered=null, focused=null, focusedMoon=null, autoRotate=true, activeZone=null, focusAmount=0, editMode=false;
     // ── kit box hover overlay ──
-    // HANDOFF (Jul 9): case studies aren't built yet, so the "view case study" hover affordance and the
-    // manual's CTA button are both switched off — driven by window.CASE_STUDY_CTA_ENABLED (set once,
-    // globally, in the bootstrap script near the top of <body> so the manual/CS module can read it too).
-    // Flip that one flag to true once the case-study pages are live. The face restriction below
-    // (front/back only) is left in place so it's correct the moment this flips.
+    // The "view case study" hover affordance mirrors the manual CTA's per-project active/disabled state
+    // (CASES[id].ctaActive, editable in the booklet — see projectDataForBooklet). window.CASE_STUDY_CTA_ENABLED
+    // (set once, globally, in the bootstrap script near the top of <body>) only supplies the default for
+    // projects that haven't been explicitly toggled. The face restriction below (front/back only) stays
+    // correct regardless of that state.
     var _BOX_CTA_FACES={4:1,5:1};   // materialIndex 4=+Z front, 5=-Z back — matches _FACE below; sides (0-3) carry the marquee ribbon, never the CTA
     var boxHoverFace=-1;
     var _boxHoverLbl=document.getElementById('box-hover-label');
@@ -9627,7 +9627,8 @@ f 2469//2469 2470//2470 2434//2434
       if(!focused||focused.userData.hit!==mesh) return;
       if(!_BOX_CTA_FACES[fi]){ clearBoxHover(); return; }   // side faces (marquee ribbon) never show the CTA — front/back only
       var pud=focused.userData;
-      if(pud.kind==='work' && !window.CASE_STUDY_CTA_ENABLED){ clearBoxHover(); return; }   // case studies aren't built yet — see flag above
+      if(pud.kind==='work'){ var _pc=CASES[pud.id]; var _pcActive=_pc?!!_pc.ctaActive:!!window.CASE_STUDY_CTA_ENABLED;   // per-project active/disabled — see projectDataForBooklet
+        if(!_pcActive){ clearBoxHover(); return; } }
       boxHoverFace=fi;
       var fc=_FACE[fi];
       // position + orientation in world space
@@ -9763,11 +9764,11 @@ f 2469//2469 2470//2470 2434//2434
     var MOONFRAME={ boxR:0.78 };   // camera distance when a single artifact is focused (smaller = closer)
     function moonMetaKey(m){ return 'artmeta:'+m.userData.editId; }
     function getMoonMeta(m){
-      var k=moonMetaKey(m); if(copyOvr[k]) return copyOvr[k];
+      var k=moonMetaKey(m); if(copyOvr[k]){ if(copyOvr[k].ctaActive==null) copyOvr[k].ctaActive=true; return copyOvr[k]; }
       var pp=m.userData.editId.split(':'), pid=pp[1], idx=+pp[2];
       var nm=(SUBS[pid]&&SUBS[pid][idx])||('Artifact '+(idx+1));
       var meta={ title:nm, desc:'Placeholder artifact. Describe this sub-section, then link out to the relevant screens, prototypes, or docs.',
-        cta:'OPEN ARTIFACT →', ctaUrl:'#', ctaHidden:false,
+        cta:'OPEN ARTIFACT →', ctaUrl:'#', ctaHidden:false, ctaActive:true,
         links:[{label:'Primary link',url:'#'},{label:'Secondary link',url:'#'}] };
       copyOvr[k]=meta; return meta;   // held in-memory; only persisted once edited
     }
@@ -9776,7 +9777,7 @@ f 2469//2469 2470//2470 2434//2434
       var meta=getMoonMeta(m);
       var _pid=focused?focused.userData.id:null, _pc=_pid?CASES[_pid]:null;
       var _projSlug=_pc?(_pc.slug||slugify(_pc.title||_pid)):'';
-      return { artifact:true, title:meta.title, framing:meta.desc, tags:[], cta:meta.cta, ctaUrl:meta.ctaUrl, ctaHidden:!!meta.ctaHidden, links:meta.links, edit:editMode,
+      return { artifact:true, title:meta.title, framing:meta.desc, tags:[], cta:meta.cta, ctaUrl:meta.ctaUrl, ctaHidden:!!meta.ctaHidden, ctaActive:(meta.ctaActive==null?true:!!meta.ctaActive), links:meta.links, edit:editMode,
         slug:(meta.slug||slugify(meta.title||'')), slugPrefix:'/work/'+_projSlug+'/',
         onEditSlug:function(v){ var s=uniqueSlug(v,takenMoonSlugs(focused,m)); meta.slug=s; persistCopy(); showMoonManual(m); if(focusedMoon===m) setRoute('/work/'+_projSlug+'/'+s); },
         onCta:function(){ if(meta.ctaUrl && meta.ctaUrl!=='#') window.open(meta.ctaUrl,'_blank'); },
@@ -9786,7 +9787,8 @@ f 2469//2469 2470//2470 2434//2434
         onEditLinkUrl:function(i,v){ if(meta.links[i]){ meta.links[i].url=v; persistCopy(); } },
         onCtaLabel:function(v){ meta.cta=v; persistCopy(); },
         onCtaUrl:function(v){ meta.ctaUrl=v; persistCopy(); },
-        onCtaHide:function(h){ meta.ctaHidden=h; persistCopy(); showMoonManual(m); } };
+        onCtaHide:function(h){ meta.ctaHidden=h; persistCopy(); showMoonManual(m); },
+        onCtaActive:function(v){ meta.ctaActive=v; persistCopy(); showMoonManual(m); } };
     }
     function showMoonManual(m){
       if(window.CS && CS.showBooklet) CS.showBooklet(moonDataForBooklet(m));
@@ -10161,7 +10163,7 @@ f 2469//2469 2470//2470 2434//2434
     function cvDataForBooklet(id){ var m=cvNodeById(id)||{};
       var em=(typeof editMode!=='undefined')&&editMode;
       return { artifact:false, kind:'util', kicker:m.kicker, title:m.title, subtitle:m.sub, framing:m.body,
-        snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:'Download CV (PDF)', ctaUrl:(m.ctaUrl==null?'#':m.ctaUrl), ctaHidden:false, external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
+        snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:(m.cta==null?'Download CV (PDF)':m.cta), ctaUrl:(m.ctaUrl==null?'#':m.ctaUrl), ctaHidden:!!m.ctaHidden, ctaActive:(m.ctaActive==null?true:!!m.ctaActive), external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
         onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.open(m.ctaUrl,'_blank','noopener'); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
         onSubtitle:function(v){ m.sub=v; cvPersist(); cvRefreshNodeLabel(id); },
         onEditTag:function(i,v){ var t=cvTagArr(m); if(t[i]!=null){ t[i]=v; m.tags=t.join(' · '); cvPersist(); } },
@@ -10176,7 +10178,9 @@ f 2469//2469 2470//2470 2434//2434
         onDelExtraLink:function(i){ if(m.links){ m.links.splice(i,1); cvPersist(); cvShowBooklet(id); } },
         onEditExtraLink:function(i,v){ if(m.links&&m.links[i]){ m.links[i].label=v; cvPersist(); } },
         onEditExtraLinkUrl:function(i,v){ if(m.links&&m.links[i]){ m.links[i].url=v; cvPersist(); } },
-        onCtaLabel:function(){}, onCtaUrl:function(v){ m.ctaUrl=v; cvPersist(); }, onCtaHide:function(){} };
+        onCtaLabel:function(v){ m.cta=v; cvPersist(); }, onCtaUrl:function(v){ m.ctaUrl=v; cvPersist(); },
+        onCtaHide:function(h){ m.ctaHidden=h; cvPersist(); cvShowBooklet(id); },
+        onCtaActive:function(v){ m.ctaActive=v; cvPersist(); cvShowBooklet(id); } };
     }
     function cvShowBooklet(id){ var cs=document.getElementById('cs-root'); if(cs) cs.classList.add('cs-focus-panel'); if(window.CS && CS.showBooklet) CS.showBooklet(cvDataForBooklet(id)); }
     var _cvUp=new THREE.Vector3();
@@ -11836,14 +11840,17 @@ f 2469//2469 2470//2470 2434//2434
       if(!c.snapshot) c.snapshot=SNAP_DEF.map(function(o){ return {k:o.k,v:o.v,amber:!!o.amber}; });
       if(!c.tags) c.tags=['Product Design','Design Systems','Scale','0→1'];
       var _soc=(c.kind==='social');
-      if(c.cta==null) c.cta=_soc?(id==='ig'?'OPEN INSTAGRAM ↗':id==='li'?'OPEN LINKEDIN ↗':'OPEN LINK ↗'):'VIEW CASE STUDY →';
+      // 'work' cases default active/disabled from the legacy global flag (preserves today's "coming soon" look
+      // for every existing project); every other kind (social planets) has always been active, so it stays that way.
+      if(c.ctaActive==null) c.ctaActive=(c.kind!=='work')||!!window.CASE_STUDY_CTA_ENABLED;
+      if(c.cta==null) c.cta=_soc?(id==='ig'?'OPEN INSTAGRAM ↗':id==='li'?'OPEN LINKEDIN ↗':'OPEN LINK ↗'):(c.ctaActive?'VIEW CASE STUDY →':'Case study coming soon');
       if(c.ctaUrl==null) c.ctaUrl=_soc?(id==='ig'?'https://instagram.com/':id==='li'?'https://linkedin.com/':'#'):'#';
       if(c.ctaHidden==null) c.ctaHidden=false;
       if(!c.marquee) c.marquee=Object.assign({},MARQ_DEF);
     });
     // restore saved per-project copy (title/body/kicker/snapshot/tags/cta/marquee) → CASES + nav/planet labels
     Object.keys(CASES).forEach(function(id){
-      ['kicker','title','body','snapshot','tags','cta','ctaUrl','ctaHidden','marquee','extraLinks','slug'].forEach(function(f){ var k='case:'+id+':'+f; if(copyOvr[k]!=null){ CASES[id][f]=copyOvr[k];
+      ['kicker','title','body','snapshot','tags','cta','ctaUrl','ctaHidden','ctaActive','marquee','extraLinks','slug'].forEach(function(f){ var k='case:'+id+':'+f; if(copyOvr[k]!=null){ CASES[id][f]=copyOvr[k];
         if(f==='title'){ var b=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(b)b.textContent=copyOvr[k];
           var g=planetById(id); if(g&&g.userData.labelTitle){ g.userData.labelTitle.textContent=copyOvr[k]; } }
       } });
@@ -11853,7 +11860,7 @@ f 2469//2469 2470//2470 2434//2434
     function reShowProject(id){ if(window.CS && CS.showBooklet) CS.showBooklet(projectDataForBooklet(id)); }
     function projectDataForBooklet(id){ var c=CASES[id]||{};
       return { artifact:false, kind:c.kind, kicker:c.kicker, title:c.title, framing:c.body,
-        snapshot:(c.snapshot||[]), tags:(c.tags||[]), cta:c.cta, ctaUrl:c.ctaUrl, ctaHidden:!!c.ctaHidden, external:(c.kind==='social'), edit:editMode,
+        snapshot:(c.snapshot||[]), tags:(c.tags||[]), cta:c.cta, ctaUrl:c.ctaUrl, ctaHidden:!!c.ctaHidden, ctaActive:!!c.ctaActive, external:(c.kind==='social'), edit:editMode,
         extraLinks:(c.extraLinks||[]),
         slug:(c.slug||slugify(c.title||id)), slugPrefix:'/work/',
         onEditSlug:function(v){ var s=uniqueSlug(v,takenProjectSlugs(id)); saveCaseField(id,'slug',s); reShowProject(id); if(focused&&focused.userData.id===id) setRoute('/work/'+s); },
@@ -11871,7 +11878,9 @@ f 2469//2469 2470//2470 2434//2434
         onCta:function(){ if(c.ctaUrl && c.ctaUrl!=='#') window.open(c.ctaUrl,'_blank','noopener'); },
         onCtaLabel:function(v){ saveCaseField(id,'cta',v); },
         onCtaUrl:function(v){ saveCaseField(id,'ctaUrl',v); },
-        onCtaHide:function(h){ saveCaseField(id,'ctaHidden',h); reShowProject(id); } };
+        onCtaHide:function(h){ saveCaseField(id,'ctaHidden',h); reShowProject(id); },
+        // activating a still-placeholder label swaps it to a real default; a custom label already in place is left alone
+        onCtaActive:function(v){ saveCaseField(id,'ctaActive',v); if(v&&(!c.cta||c.cta==='Case study coming soon')) saveCaseField(id,'cta','VIEW CASE STUDY →'); reShowProject(id); } };
     }
     // ── PLANET LABEL EDITING: title + secondary (small) line are click-to-edit on the canvas in Edit Mode ──
     var labelEditNodes=[];
@@ -12747,38 +12756,44 @@ f 2469//2469 2470//2470 2434//2434
             exAdd.addEventListener('click',function(){ if(data.onAddExtraLink) data.onAddExtraLink(); }); exUl.appendChild(exAdd); }
         } else { exWrap.style.display='none'; exWrap.innerHTML=''; }
       }
-      // CTA: per-project / per-artifact label + behaviour + hide toggle + inline edit
+      // CTA: per-project / per-artifact label + behaviour + hide/active toggles + inline edit + target URL.
+      // "Active/disabled" replaces the old hardcoded case-study lock — every CTA (work case, social case,
+      // artifact, CV node) carries its own ctaActive now, instead of a single global flag deciding for all
+      // of them; the flag only supplies the DEFAULT for 'work' cases that haven't been touched (see the
+      // CASES defaults pass). Edit mode always stays fully interactive (rename/URL/toggle) regardless of
+      // the current active state, so a "coming soon" CTA can still be configured before it's switched on.
       var ctaWrap=manualScene.querySelector('.manual-cta');
       var ctaBtn=manualScene.querySelector('.manual-cta-btn');
       if(ctaBtn){
-        // HANDOFF (Jul 9): case studies aren't built yet — lock the CTA to a disabled
-        // "coming soon" state for 'work' kind projects until window.CASE_STUDY_CTA_ENABLED flips true.
-        var csLocked = (data.kind==='work' && !window.CASE_STUDY_CTA_ENABLED);
+        var active=(data.ctaActive!=null)?!!data.ctaActive:(data.kind!=='work'||!!window.CASE_STUDY_CTA_ENABLED);
+        var locked=!active;
         var hidden=!!data.ctaHidden;
         if(ctaWrap) ctaWrap.style.display=(hidden && !data.edit)?'none':'flex';   // fully hidden unless editing
-        ctaBtn.classList.toggle('disabled',csLocked);
-        if(csLocked){
-          ctaBtn.textContent='Case study coming soon';
-          ctaBtn.style.opacity=hidden?0.4:1;
-          ctaBtn.onclick=null;
-          ctaBtn.contentEditable='false'; ctaBtn.classList.remove('inline-edit-on');
-          ctaBtn.onblur=null; ctaBtn.onkeydown=null;
-        } else {
-          if(data.cta!=null) ctaBtn.textContent=data.cta;
-          ctaBtn.style.opacity=hidden?0.4:1;
-          if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
-          else { ctaBtn.onclick=function(){ if(!data.edit && window.enterCaseStudy) window.enterCaseStudy(); }; }
-          ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
-          ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
-          ctaBtn.onkeydown=data.edit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); } }:null;
-        }
+        ctaBtn.classList.toggle('disabled', locked && !data.edit);   // dead-for-visitors styling only applies outside edit mode
+        if(data.cta!=null) ctaBtn.textContent=data.cta;
+        ctaBtn.style.opacity = hidden?0.4:(locked?0.6:1);
+        if(locked){ ctaBtn.onclick=null; }
+        else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
+        else { ctaBtn.onclick=function(){ if(data.edit) return;
+            if(data.ctaUrl && data.ctaUrl!=='#') window.open(data.ctaUrl,'_blank','noopener');   // an explicit URL overrides the internal case-study takeover
+            else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
+        ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
+        ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
+        ctaBtn.onkeydown=data.edit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); } }:null;
+
         if(ctaWrap){ var ht=ctaWrap.querySelector('.cta-hide');
           if(data.edit){ if(!ht){ ht=document.createElement('button'); ht.type='button'; ht.className='cta-hide manual-cta-note'; ht.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(26,21,18,.35);padding:4px 8px'; ctaWrap.appendChild(ht); }
               ht.textContent=hidden?'＋ show CTA':'⊘ hide CTA'; ht.onclick=function(e){ e.stopPropagation(); if(data.onCtaHide) data.onCtaHide(!hidden); }; }
           else if(ht){ ht.remove(); } }
-        // CTA target URL — editable in Edit Mode wherever the CTA opens a link (social planets + artifacts); persisted per-instance
+        // Active/disabled toggle — marks this specific CTA "coming soon" (or reactivates it) independently of any other
+        if(ctaWrap){ var at=ctaWrap.querySelector('.cta-lock');
+          if(data.edit && data.onCtaActive){ if(!at){ at=document.createElement('button'); at.type='button'; at.className='cta-lock manual-cta-note'; at.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(26,21,18,.35);padding:4px 8px'; ctaWrap.appendChild(at); }
+              at.textContent=active?'⊘ disable CTA':'＋ activate CTA'; at.onclick=function(e){ e.stopPropagation(); if(data.onCtaActive) data.onCtaActive(!active); }; }
+          else if(at){ at.remove(); } }
+        // CTA target URL — editable in Edit Mode for any CTA (moons/CV/social always; work cases too, so a
+        // project can point straight at a live URL instead of — or ahead of — the internal case-study takeover)
         if(ctaWrap){ var cu=ctaWrap.querySelector('.cta-url');
-          if(data.edit && data.onCtaUrl && (data.external||data.artifact)){
+          if(data.edit && data.onCtaUrl){
             if(!cu){ cu=document.createElement('input'); cu.type='text'; cu.className='cta-url'; cu.placeholder='https://…  (CTA destination)';
               cu.style.cssText='flex:1 0 100%;margin-top:6px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:#1A1512;background:rgba(26,21,18,.05);border:1px solid rgba(26,21,18,.22);padding:4px 7px;border-radius:2px';
               cu.addEventListener('input',function(){ if(data.onCtaUrl) data.onCtaUrl(cu.value); });
