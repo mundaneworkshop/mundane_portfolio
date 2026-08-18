@@ -10161,8 +10161,8 @@ f 2469//2469 2470//2470 2434//2434
     function cvDataForBooklet(id){ var m=cvNodeById(id)||{};
       var em=(typeof editMode!=='undefined')&&editMode;
       return { artifact:false, kind:'util', kicker:m.kicker, title:m.title, subtitle:m.sub, framing:m.body,
-        snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:'Download CV (PDF)', ctaUrl:'#', ctaHidden:false, external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
-        onCta:function(){ if(typeof toast==='function') toast('CV PDF — wire to your file on the R3F build'); },
+        snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:'Download CV (PDF)', ctaUrl:(m.ctaUrl==null?'#':m.ctaUrl), ctaHidden:false, external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
+        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.open(m.ctaUrl,'_blank','noopener'); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
         onSubtitle:function(v){ m.sub=v; cvPersist(); cvRefreshNodeLabel(id); },
         onEditTag:function(i,v){ var t=cvTagArr(m); if(t[i]!=null){ t[i]=v; m.tags=t.join(' · '); cvPersist(); } },
         onAddTag:function(){ var t=cvTagArr(m); t.push('New tag'); m.tags=t.join(' · '); cvPersist(); cvShowBooklet(id); },
@@ -10176,7 +10176,7 @@ f 2469//2469 2470//2470 2434//2434
         onDelExtraLink:function(i){ if(m.links){ m.links.splice(i,1); cvPersist(); cvShowBooklet(id); } },
         onEditExtraLink:function(i,v){ if(m.links&&m.links[i]){ m.links[i].label=v; cvPersist(); } },
         onEditExtraLinkUrl:function(i,v){ if(m.links&&m.links[i]){ m.links[i].url=v; cvPersist(); } },
-        onCtaLabel:function(){}, onCtaUrl:function(){}, onCtaHide:function(){} };
+        onCtaLabel:function(){}, onCtaUrl:function(v){ m.ctaUrl=v; cvPersist(); }, onCtaHide:function(){} };
     }
     function cvShowBooklet(id){ var cs=document.getElementById('cs-root'); if(cs) cs.classList.add('cs-focus-panel'); if(window.CS && CS.showBooklet) CS.showBooklet(cvDataForBooklet(id)); }
     var _cvUp=new THREE.Vector3();
