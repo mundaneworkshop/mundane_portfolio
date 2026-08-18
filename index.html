@@ -52,6 +52,10 @@
   /* Save = primary action — lit amber fill */
   #saveBtn{background:var(--a4);border-color:var(--a4);color:var(--on-brand);font-weight:700}
   #saveBtn:hover{background:var(--amber-hot);border-color:var(--amber-hot);color:var(--on-brand)}
+  /* Unsynced content edits pending — saveBtn is always lit by default, so a text change alone is easy to miss;
+     the pulse gives it motion so "you have something to save" reads at a glance, not just on close reading. */
+  #saveBtn.dirty{animation:saveDirtyPulse 1.4s ease-in-out infinite}
+  @keyframes saveDirtyPulse{0%,100%{box-shadow:0 0 0 2px #ff6b6b}50%{box-shadow:0 0 0 5px rgba(255,107,107,.35)}}
   /* HANDOFF: authoring-only controls (save/edit/debug/hide-ui). Regular visitors never see these —
      hidden unless body has .author-mode, which is set once by the small bootstrap script placed
      just above the main scene script, from a ?edit=1 URL param, persisted to localStorage so it
@@ -11717,59 +11721,73 @@ f 2469//2469 2470//2470 2434//2434
     copyOvr['galaxyModel']=galaxyModel;   // keep the persisted copy pointed at the live model so any save writes current structure
     // one-time cleanup: the CV route's manual reuse had overwritten the cv planet's case title/body (e.g. "Senior Product Designer"). Clear it so the "CV" label returns; the guard in commitInline prevents recurrence.
     try{ if(!localStorage.getItem('mw_cvtitlefix2')){ var _ch=false; ['title','body','kicker','snapshot','tags'].forEach(function(f){ var k='case:cv:'+f; if(copyOvr[k]!=null){ delete copyOvr[k]; _ch=true; } }); if(_ch && window.BRICStore) BRICStore.setCopy(copyOvr); localStorage.setItem('mw_cvtitlefix2','1'); } }catch(e){}
-    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); scheduleContentSave(); }
-    // Push copyOvr to the server-authoritative content_overrides table — debounced (so a burst of edits,
-    // e.g. dragging a slider that fires persistCopy() on every 'input' tick, doesn't spam the endpoint),
-    // with an in-flight lock plus a single trailing re-fire (not just overlapping requests): if a save is
-    // requested while one's already in flight, it's marked pending and re-sent once the in-flight one
-    // settles, using copyOvr's state AT THAT LATER MOMENT — this stops a slow response plus rapid edits
-    // from letting two saves race and land out of order, where the staler one landing last would silently
-    // regress a newer edit. Gated on an admin token being present so regular visitors' browsers never even
-    // attempt this (a free client-side skip before the server would 401 it anyway).
-    var _csTimer=null, _csInFlight=false, _csPending=false, _csLastFailMsg=null;
+    // persistCopy() writes to localStorage (BRICStore.setCopy) synchronously on every edit — that part was
+    // never the problem, it's reliable. What used to also live here was an auto-push to the server on a
+    // debounced timer, which is what caused edits to go missing: refresh (or close the tab) within the 800ms
+    // debounce window, or while the fetch was still in flight, and the push simply never happened, silently.
+    // Server sync is now explicit-only, via the SAVE button (see saveBtn's handler below) — persistCopy() just
+    // marks the in-memory state dirty so the button/banner can say so.
+    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); markContentDirty(); }
+    var _csInFlight=false, _csDirty=false, _csLastFailMsg=null;
     var _editBannerDefaultText='✎ edit mode — click an object to select · edit it in the panel';
-    // Persistent (not fading-toast) warning for the two ways an edit can silently fail to reach the server:
-    // no admin token on this browser at all (scheduleContentSave/runContentSave below both no-op rather than
-    // error, by design, so nothing else would ever surface this), or the last sync attempt itself failing
-    // (bad/expired token, server misconfigured, network). Repurposes the existing always-visible editBanner
-    // (swaps its text/color) rather than adding a second overlay — the top-center strip above y96 is the only
-    // screen real estate in Edit Mode that isn't already claimed by the marquee/properties/view panels, and
-    // editBanner already owns it. Re-evaluated on every edit-mode toggle and after every save attempt.
+    function markContentDirty(){ _csDirty=true; updateSaveBtnState(); updateSyncBanner(); }
+    function updateSaveBtnState(){
+      var b=document.getElementById('saveBtn'); if(!b) return;
+      b.classList.toggle('dirty',_csDirty);
+      b.textContent=_csDirty?'⬇ save · unsynced edits':'⬇ save';
+    }
+    // Persistent (not fading-toast) warning for the ways content edits can fail to reach the server: no admin
+    // token on this browser at all (pushContentSave() below no-ops rather than erroring, by design, so nothing
+    // else would ever surface this), or the last sync attempt itself failing (bad/expired token, server
+    // misconfigured, network). Repurposes the existing always-visible editBanner (swaps its text/color) rather
+    // than adding a second overlay — the top-center strip above y96 is the only screen real estate in Edit Mode
+    // that isn't already claimed by the marquee/properties/view panels, and editBanner already owns it.
+    // Re-evaluated on every edit-mode toggle, every edit, and after every save attempt.
     function updateSyncBanner(){
       var el=document.getElementById('editBanner'); if(!el || !editMode) return;
       var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-      if(!token){
-        el.textContent='⚠ no admin token on this browser — edits are LOCAL ONLY and WILL BE LOST on refresh · visit ?admintoken=YOUR_TOKEN once';
+      if(!token && _csDirty){
+        el.textContent='⚠ no admin token on this browser — edits are LOCAL ONLY · click SAVE (it will tell you it can\'t sync) or visit ?admintoken=YOUR_TOKEN once';
         el.style.background='#8a1f1f'; el.style.color='#fff'; el.style.border='1px solid #ff6b6b';
       } else if(_csLastFailMsg){
         el.textContent='⚠ content sync failed — edits are NOT reaching the server · '+_csLastFailMsg;
         el.style.background='#8a1f1f'; el.style.color='#fff'; el.style.border='1px solid #ff6b6b';
+      } else if(_csDirty){
+        el.textContent='✎ edit mode — unsynced changes · click SAVE (top right) to push them to the server';
+        el.style.background='#E9A73E'; el.style.color='#0E0F12'; el.style.border='';
       } else {
         el.textContent=_editBannerDefaultText;
         el.style.background='#E9A73E'; el.style.color='#0E0F12'; el.style.border='';
       }
     }
-    function scheduleContentSave(){
+    // Explicit, manual server push — called only from saveBtn's click handler. Returns a promise resolving to
+    // {ok, skipped, reason} so the caller can toast a specific outcome instead of a generic "saved".
+    function pushContentSave(){
       var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-      if(!token){ updateSyncBanner(); return; }
-      clearTimeout(_csTimer);
-      _csTimer=setTimeout(runContentSave,800);
-    }
-    function runContentSave(){
-      if(_csInFlight){ _csPending=true; return; }
-      var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-      if(!token){ updateSyncBanner(); return; }
+      if(!token){ updateSyncBanner(); return Promise.resolve({ok:false,skipped:true,reason:'no admin token set on this browser'}); }
+      if(!_csDirty){ return Promise.resolve({ok:true,skipped:true,reason:'nothing to sync'}); }
+      if(_csInFlight){ return Promise.resolve({ok:false,skipped:true,reason:'a save is already in progress'}); }
       _csInFlight=true;
-      fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:copyOvr})})
+      return fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:copyOvr})})
         .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
         .then(function(res){
-          if(!res.ok){ _csLastFailMsg=(res.body&&res.body.error)||'try again'; if(typeof toast==='function') toast('content sync failed · '+_csLastFailMsg); return; }
-          _csLastFailMsg=null;
+          if(!res.ok){ _csLastFailMsg=(res.body&&res.body.error)||'try again'; return {ok:false,reason:_csLastFailMsg}; }
+          _csLastFailMsg=null; _csDirty=false;
           try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
+          return {ok:true};
         })
-        .catch(function(e){ _csLastFailMsg=e.message; if(typeof toast==='function') toast('content sync failed · '+e.message); })
-        .then(function(){ _csInFlight=false; updateSyncBanner(); if(_csPending){ _csPending=false; runContentSave(); } });
+        .catch(function(e){ _csLastFailMsg=e.message; return {ok:false,reason:e.message}; })
+        .then(function(res){ _csInFlight=false; updateSaveBtnState(); updateSyncBanner(); return res; });
     }
+    // Warn on navigating away with unsynced edits — only when there's actually something the SAVE button could
+    // fix (a token is set); without one, the persistent red banner above already covers it, so this would just
+    // be a redundant nag on every navigation during a no-token editing session.
+    window.addEventListener('beforeunload',function(e){
+      if(!_csDirty) return;
+      var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e2){}
+      if(!token) return;
+      e.preventDefault(); e.returnValue='';
+    });
     // ── GALAXY DEFAULT VIEW: persist the resting camera (tilt / zoom / rotation) so the map opens at a chosen framing ──
     function saveGalCam(){ copyOvr['galcam']={elev:camElev,zoom:camZoom,rot:manualRot}; persistCopy(); if(typeof toast==='function') toast('galaxy default view saved'); }
     // Always boot the galaxy view from the SAVED default (or factory default) — any unsaved drag/zoom change is discarded on reload.
@@ -12056,6 +12074,10 @@ f 2469//2469 2470//2470 2434//2434
     })();
 
     // ── global save ──────────────────────────────────────────────────────────
+    // Local state (params/slots/mesh overrides/box textures) always writes to localStorage synchronously here —
+    // that was never at risk. copyOvr's server push, on the other hand, is now ONLY triggered from this click
+    // (see persistCopy()/pushContentSave() above) — no more auto-sync-on-edit, so there's no debounce window or
+    // in-flight request that a refresh can race and silently drop. This is the one button that saves everything.
     document.getElementById('saveBtn').addEventListener('click',function(){
       try{
         localStorage.setItem('bric_params',JSON.stringify(params));
@@ -12072,8 +12094,13 @@ f 2469//2469 2470//2470 2434//2434
         // MERGE Stage 2: persist per-project box-face textures (images may exceed quota — guard separately)
         var bt={}; Object.keys(planetBoxTex).forEach(function(id){ var o=planetBoxTex[id]; var rec={}; BOX_FACES.forEach(function(f){ if(o[f+'Src']) rec[f]=o[f+'Src']; }); bt[id]=rec; });
         try{ localStorage.setItem('bric_boxtex', JSON.stringify(bt)); }catch(e){ console.warn('boxtex too large for localStorage', e); }
-        toast('state saved ✓');
-      } catch(e){ toast('save failed · '+e.message); }
+      } catch(e){ toast('save failed · '+e.message); return; }
+      if(typeof pushContentSave!=='function'){ toast('state saved ✓'); return; }
+      pushContentSave().then(function(res){
+        if(!res || res.ok && !res.skipped){ toast('state saved ✓ · content synced'); return; }
+        if(res.skipped && res.ok){ toast('state saved ✓'); return; }               // nothing dirty to sync
+        toast('state saved ✓ · content NOT synced · '+(res.reason||'try again'));
+      });
     });
 
     // ── export config: dump live tuned params as a diff against the DEFAULTS baked into source,
