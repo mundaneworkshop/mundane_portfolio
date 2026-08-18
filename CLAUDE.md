@@ -75,7 +75,7 @@ Deployed on Vercel. Pushing to `main` should trigger a deploy if Vercel's git in
 4. GitHub auto-generates a compare/PR link on push — open a PR even solo; it gives a diff view before anything lands on `main`, which matters a lot in a single 13k-line file where it's easy to lose track of exactly what changed.
 5. Merge after review.
 
-No `gh` CLI was set up in either of the environments this was developed in so far — PRs were opened via the GitHub web compare-link flow, which needs no CLI.
+As of Aug 18 2026, `gh` is installed and authenticated (account `mundaneworkshop`) in the Claude Code environment — use `gh pr create` directly instead of the web compare-link flow. (Earlier sessions had no `gh` CLI and used the web flow instead; if `gh auth status` fails in a future environment, fall back to that.)
 
 ## Where the rest of the context lives
 
