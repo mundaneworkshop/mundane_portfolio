@@ -7,7 +7,42 @@
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
      would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
 <base href="/" />
-<title>Mundane Workshop · Holotable prototype</title>
+
+<!-- SITE METADATA — edit everything in this block to change how the site presents itself
+     (browser tab, favicon, search/social previews). Not part of the in-page CMS — this is
+     static per-deploy config, not per-visitor content, so it lives here rather than in
+     copyOvr/content_overrides. Add new meta tags here as needed; nothing else references them. -->
+<title>Mundane Workshop · Jason Hsin · Product Designer</title>
+<meta name="description" content="Jason Hsin: staff product designer building delightful consumer experiences." />
+<!-- favicon: TODO — add <link rel="icon" href="assets/favicon.svg" /> once the custom design is ready -->
+<meta name="theme-color" content="#070c0c" />
+<link rel="canonical" href="https://www.mundanework.shop/" />
+<meta property="og:title" content="Mundane Workshop · Jason Hsin · Product Designer" />
+<meta property="og:description" content="Jason Hsin: staff product designer building delightful consumer experiences." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.mundanework.shop/" />
+<meta name="twitter:card" content="summary" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Jason Hsin",
+  "jobTitle": "Staff Product Designer",
+  "description": "Jason Hsin: staff product designer building delightful consumer experiences.",
+  "url": "https://www.mundanework.shop/",
+  "sameAs": [
+    "https://www.linkedin.com/in/jason-hsin-00378837/",
+    "https://www.instagram.com/jas0n_0n_a_bike/"
+  ]
+}
+</script>
+
+<!-- HIGH PRIORITY TODO (manual — needs Jason's input/visuals, do not fill with placeholder copy):
+     - og:image (+ twitter:image): 1200x630 share-card image. No visual asset exists for this yet.
+     - robots meta (index, follow): explicit opt-in once ready to be publicly indexed.
+     - twitter:title / twitter:description: explicit X/Twitter card copy (currently falls back to og:*). -->
+<!-- /SITE METADATA -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
