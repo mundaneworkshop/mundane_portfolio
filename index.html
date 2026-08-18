@@ -650,6 +650,10 @@
     transition: background 0.15s;
   }
   .manual-cta-btn:hover { background: var(--amber-hot); }
+  /* .inline-edit-on:hover/:focus (generic affordance for editable text sitting directly on the page) strips
+     the background down to a near-transparent tint — fine for plain text, but this is a solid button with
+     dark text, so that would make it unreadable against the page. Keep it opaque while editing. */
+  .manual-cta-btn.inline-edit-on:hover, .manual-cta-btn.inline-edit-on:focus { background: var(--amber-hot); }
   /* per-CTA active/disabled state (data.ctaActive) — 'work' cases default from window.CASE_STUDY_CTA_ENABLED but can be overridden per project; only applied outside Edit Mode so a disabled CTA stays editable */
   .manual-cta-btn.disabled { background: rgba(240,237,232,0.12); color: rgba(240,237,232,0.35); cursor: not-allowed; pointer-events: none; }
   .manual-cta-btn.disabled:hover { background: rgba(240,237,232,0.12); }
@@ -12779,7 +12783,12 @@ f 2469//2469 2470//2470 2434//2434
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
         ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
-        ctaBtn.onkeydown=data.edit?function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); } }:null;
+        // ctaBtn is a real <button> — browsers treat Space as its native activation key (like a click),
+        // which eats the keystroke before contentEditable ever sees it. Insert the space manually instead.
+        ctaBtn.onkeydown=data.edit?function(e){
+          if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); }
+          else if(e.key===' '){ e.preventDefault(); document.execCommand('insertText',false,' '); }
+        }:null;
 
         if(ctaWrap){ var ht=ctaWrap.querySelector('.cta-hide');
           if(data.edit){ if(!ht){ ht=document.createElement('button'); ht.type='button'; ht.className='cta-hide manual-cta-note'; ht.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(240,237,232,.35);padding:4px 8px'; ctaWrap.appendChild(ht); }
