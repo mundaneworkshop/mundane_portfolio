@@ -9683,15 +9683,14 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
         if(Math.abs(dx)>2||Math.abs(dy)>2)dragMoved=true; var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert
-        if(cvRouteActive){ if(e.shiftKey){ cvLookTarget.y=clamp(cvLookTarget.y - sy*dy*0.02, -3, 9); cvYaw-=dx*0.006; }   // SHIFT-drag = pan the lane up/down (Y)
-          else { cvYaw-=dx*0.006; cvPitch=clamp(cvPitch+sy*dy*0.006,-0.15,1.35); } }   // CV route: drag orbits the lane
+        if(MWSub.active){ MWSub.active.orbit.drag(dx,dy,e.shiftKey,sy); }   // sub-scene: drag orbits, SHIFT-drag pans Y
         else if(focused){
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
           else { focusYaw-=dx*0.006; focusPitch=clamp(focusPitch+syF*dy*0.006,-0.25,1.45); }
         }
         else { manualRot+=dx*0.004; camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });
     renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
-      if(cvRouteActive){ cvRadius=clamp(cvRadius+dir*0.9,3,24); }   // CV route: scroll zooms the orbit
+      if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
       else { camZoom=clamp(camZoom+dir*0.06,0.4,2.2); } },{passive:false});
     function setHot(id,on){ var b=document.querySelector('.navbtn[data-planet="'+id+'"]'); if(b)b.classList.toggle('hot',on); }
@@ -9724,13 +9723,7 @@ f 2469//2469 2470//2470 2434//2434
       setHovered(grp);
       if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
     renderer.domElement.addEventListener('click',function(){ if(dragMoved)return;
-      if(typeof cvRouteActive!=='undefined' && cvRouteActive){   // CV route: click a node sphere to focus it; click empty backs out (node→overview, overview→exit)
-        ray.setFromCamera(mouse,camera);
-        var nh=ray.intersectObjects(cvNodes.map(function(n){return n.hit||n.mesh;}),false);
-        if(nh.length){ var hid=null; for(var ci=0;ci<cvNodes.length;ci++){ if(cvNodes[ci].hit===nh[0].object||cvNodes[ci].mesh===nh[0].object){ hid=cvNodes[ci].id; break; } } if(hid){ selectCV(hid); return; } }
-        if(cvAtNode){ cvOverview(); }   // node → back out to overview; at overview, empty clicks do nothing (stay draggable; exit via breadcrumb)
-        return;
-      }
+      if(MWSub.active){ MWSub.active.click(); return; }   // a sub-scene owns the canvas: pick a node, else back out one level
       if(editMode && meshSelectMode){ ray.setFromCamera(mouse,camera);   // EDIT MODE + mesh select: click SELECTS (no zoom); panel edits galaxy mesh; "Open kit box" for faces
         var tgts=focused?editHits.concat(focused.userData.moons):editHits;   // moons selectable while focused
         var eh=ray.intersectObjects(tgts,false);
@@ -9818,10 +9811,10 @@ f 2469//2469 2470//2470 2434//2434
     function camViewKey(){ if(focusedMoon) return 'camview:'+focusedMoon.userData.editId; if(focused) return 'camview:'+focused.userData.id; return null; }
     function applyCamView(key){ var v=copyOvr[key]; if(v){ if(v.yaw!=null)focusYaw=v.yaw; if(v.pitch!=null)focusPitch=v.pitch; if(v.zoom!=null)params.focusZoom=v.zoom; if(v.panY!=null)focusPanY=v.panY; setFocusCam(); } }
     function saveCamView(){
-      if(typeof cvRouteActive!=='undefined' && cvRouteActive){ copyOvr['cvview']={yaw:cvYaw,pitch:cvPitch,radius:cvRadius,lookY:cvLookTarget.y}; persistCopy(); if(typeof toast==='function') toast('default view saved'); return; }
+      if(MWSub.active){ MWSub.active.orbit.saveView(); if(typeof toast==='function') toast('default view saved'); return; }
       var k=camViewKey(); if(!k) return; copyOvr[k]={yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,panY:focusPanY}; persistCopy(); if(typeof toast==='function') toast('default view saved'); }
     function resetCamView(){
-      if(typeof cvRouteActive!=='undefined' && cvRouteActive){ delete copyOvr['cvview']; persistCopy(); cvOverview(); if(typeof toast==='function') toast('view reset'); return; }
+      if(MWSub.active){ MWSub.active.orbit.clearView(); if(MWSub.active.onBack) cvOverview(); if(typeof toast==='function') toast('view reset'); return; }
       var k=camViewKey(); if(!k) return; delete copyOvr[k]; persistCopy();
       focusYaw=0; focusPitch=0.28; focusPanY=0; params.focusZoom=1.0; focusBaseR=focusedMoon?MOONFRAME.boxR:FOCUSFRAME.boxR; setFocusCam(); if(typeof toast==='function') toast('view reset'); }
     function focusMoon(m){ focusedMoon=m; focusYaw=0; focusPitch=0.28; focusPanY=0; focusBaseR=MOONFRAME.boxR; setFocusCam(); applyCamView('camview:'+m.userData.editId); showMoonManual(m);
@@ -9908,10 +9901,7 @@ f 2469//2469 2470//2470 2434//2434
       var fs=document.getElementById('ctFigSlot'); if(fs&&fs._glbStop) fs._glbStop();   // stop the mini GLB viewer (perf)
       var t=document.getElementById('r2Trundle'); if(t) t.classList.remove('show');
       var m=document.getElementById('msgModal'); if(m) m.classList.remove('show');
-      if(typeof cvRouteActive!=='undefined' && cvRouteActive){ cvRouteActive=false; if(cvRouteGroup) cvRouteGroup.visible=false; galaxy.visible=true;
-        var cm=document.getElementById('cvRouteCtl'); if(cm) cm.classList.remove('show');
-        var cl=document.getElementById('cvRouteLayer'); if(cl) cl.classList.remove('show');
-        document.body.classList.remove('mw-cvroute'); }
+      if(MWSub.active) MWSub.active.exit();   // hands the canvas back to the galaxy and clears its DOM furniture
       document.body.classList.remove('mw-altfocus');
     }
     function crumbTitle(grp,fb){ return (grp.userData.labelTitle&&grp.userData.labelTitle.textContent)||fb; }
@@ -10092,6 +10082,9 @@ f 2469//2469 2470//2470 2434//2434
         if(grp.userData.moonGrp) grp.userData.moonGrp.visible = false;
         if(grp.userData.hit) grp.userData.hit.visible = false;
       }
+      // Quiet the galaxy: suppress hover/auto-rotate and clear any artifact focus, so the
+      // galaxy's own camera branches stand down while this scene owns the view.
+      focused = grp || null; autoRotate = false; focusedMoon = null;
       galaxy.visible = false;
       this.group.visible = true;
       this.active = true;
@@ -10129,7 +10122,7 @@ f 2469//2469 2470//2470 2434//2434
     };
 
     // ══════ CV — 3D HYPERSPACE ROUTE (branchable tree; CV focus view) ══════
-    var cvRouteActive=false, cvRouteGroup=null, cvLaneGroup=null, cvShipGroup=null, cvShipModel=null, cvNodes=[], cvSelId=null, cvData=null, cvAtNode=false, cvRootLabel='';
+    var cvLaneGroup=null, cvShipGroup=null, cvShipModel=null, cvNodes=[], cvSelId=null, cvData=null, cvAtNode=false, cvRootLabel='';
     var cvFxCanvas=null, cvFxCtx=null, cvPulseColor='#F0D080', cvPulseSize=22, cvPulseDur=1.6;   // active-node pulse drawn on a low-res canvas (pixelated like message stars)
     var cvGlimmerAmp=0.18;   // node glimmer — HSL lightness swing amplitude (0=off)
     var cvBobAmp=0.04, cvShipRestY=null;   // ship idle bob amplitude + anchored rest Y
@@ -10137,9 +10130,19 @@ f 2469//2469 2470//2470 2434//2434
     function cvEaseInOut(t,p){ t=Math.max(0,Math.min(1,t)); if(p<=1) return t; return t<0.5?0.5*Math.pow(2*t,p):1-0.5*Math.pow(2*(1-t),p); }
     var cvShipNodeId=null, cvShipTravel=null, cvShipLastT=0, cvShipYaw=Math.PI/2;   // ship travels the lane between nodes on select; cvShipYaw = model facing offset
     var cvShipLastDir=new THREE.Vector3(0,0,1);   // last direction of travel — used for static orientation on arrival
-    // Orbit camera state (drag = yaw/pitch, wheel = radius); fed to the cvRouteActive branch in the animate loop.
-    var cvLookTarget=new THREE.Vector3(0,1,-3.5), cvYaw=0.5, cvPitch=0.28, cvRadius=16;
-    var CV_OVERVIEW={look:new THREE.Vector3(0,1,-3.5), yaw:0.5, pitch:0.28, radius:16};
+    // Orbit camera state now lives in the shared rig (MWOrbit, above). What used to be
+    // CV_OVERVIEW is the rig's `home` framing, and 'cvview' its saved-default-view key.
+    var cvOrbit=new MWOrbit({look:new THREE.Vector3(0,1,-3.5), yaw:0.5, pitch:0.28, radius:16, viewKey:'cvview'},
+                            {pitch:[-0.15,1.35], radius:[3,24], panY:[-3,9]});
+    // The CV route AS a sub-scene. Only enter/exit and the camera live in the primitive;
+    // everything CV-specific below (branching tree, ship, pulse FX) stays exactly where it was.
+    var cvScene=new MWSubScene({
+      id:'cvroute', bodyClass:'mw-cvroute', layerId:'cvRouteLayer', ctlId:'cvRouteCtl', orbit:cvOrbit,
+      hits:function(){ return cvNodes.map(function(n){ return n.hit||n.mesh; }); },
+      hitId:function(o){ for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].hit===o||cvNodes[i].mesh===o) return cvNodes[i].id; } return null; },
+      onPick:function(id){ selectCV(id); },
+      onBack:function(){ if(cvAtNode) cvOverview(); }   // node → overview; at overview, empty clicks do nothing (exit via breadcrumb)
+    });
     // Career nodes (tree): parent = the node this one connects from (null = root). branch=true for off-path nodes.
     var CV_DEFAULT=[
       {id:'c0',parent:null,title:'BFA · Industrial Design',sub:'Origin · point of departure',kicker:'Education',body:'Where the route began — physical things, then a course plotted to pixels.',tags:'',pos:[-2.0,1.2,-11]},
@@ -10170,8 +10173,8 @@ f 2469//2469 2470//2470 2434//2434
     function buildCVRoute(){
       cvLoad();
       if(!cvShipNodeId){ cvShipNodeId=cvLatestId(); }   // ship starts at the latest node in the chain
-      if(!cvRouteGroup){
-        cvRouteGroup=new THREE.Group(); scene.add(cvRouteGroup); cvRouteGroup.visible=false;
+      var cvRouteGroup=cvScene.ensureGroup();
+      if(!cvLaneGroup){   // contents built once; cvLaneGroup is the "already built" marker
         var pts=[]; for(var i=0;i<700;i++){ pts.push((Math.random()-0.5)*80,(Math.random()-0.5)*50,(Math.random()-0.5)*80); }
         var sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
         cvRouteGroup.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fe6df,size:0.06,transparent:true,opacity:0.7,depthWrite:false,fog:false})));
@@ -10331,45 +10334,29 @@ f 2469//2469 2470//2470 2434//2434
     }
     function enterCVRoute(grp){
       buildCVRoute();
-      focused=grp; autoRotate=false; focusedMoon=null;        // suppress galaxy hover; camera driven by cvRouteActive branch
-      grp.userData.moonGrp.visible=false; grp.userData.hit.visible=false;
-      galaxy.visible=false; cvRouteGroup.visible=true; cvRouteActive=true;
-      document.body.classList.add('mw-altfocus','mw-cvroute');
-      document.getElementById('cvRouteLayer').classList.add('show');
-      document.getElementById('cvRouteCtl').classList.add('show');
+      cvScene.enter(grp);   // galaxy hides, route shows, camera handed to cvOrbit
       cvRootLabel=crumbTitle(grp,'CV');
       var _latest=cvLatestId();
       if(_latest) selectCV(_latest);   // latest is the active node (booklet, breadcrumb, gold/pulse)
       cvFitOverview();   // ...but the DEFAULT CAMERA frames the WHOLE route (auto-fit), not dollied into the node
     }
-    // Camera-only: frame the whole route's bounding box so spread/variegated layouts stay in view. Angle from saved view, else default.
+    // Camera-only: frame the whole route's bounding box so spread/variegated layouts stay in
+    // view. fitPoints() ends by restoring a saved default view over the auto-fit — including the
+    // Jul 9 2026 all-four-fields guard, which now lives in MWOrbit.restoreSaved().
     function cvFitOverview(){
-      if(cvData&&cvData.length){
-        var mnx=1e9,mny=1e9,mnz=1e9,mxx=-1e9,mxy=-1e9,mxz=-1e9;
-        cvData.forEach(function(n){ var p=n.pos; if(p[0]<mnx)mnx=p[0]; if(p[0]>mxx)mxx=p[0]; if(p[1]<mny)mny=p[1]; if(p[1]>mxy)mxy=p[1]; if(p[2]<mnz)mnz=p[2]; if(p[2]>mxz)mxz=p[2]; });
-        cvLookTarget.set((mnx+mxx)/2,(mny+mxy)/2,(mnz+mxz)/2);
-        var dx=mxx-mnx,dy=mxy-mny,dz=mxz-mnz, diag=Math.sqrt(dx*dx+dy*dy+dz*dz), fov=(camera.fov||48)*Math.PI/180;
-        cvRadius=Math.max(6,(diag*0.5)/Math.tan(fov/2)*1.15+2.5);   // fit the bounding sphere + padding
-      } else { cvLookTarget.copy(CV_OVERVIEW.look); cvRadius=CV_OVERVIEW.radius; }
-      cvYaw=CV_OVERVIEW.yaw; cvPitch=CV_OVERVIEW.pitch;
-      // BUGFIX (Jul 9): previously only yaw/pitch were restored here, so a saved zoom (radius) or
-      // pan (lookY) from "Set default view" got silently overwritten by the auto-fit above on every
-      // re-entry/reload — the angle "stuck" but zoom/pan always snapped back. Restore all four together.
-      var v=copyOvr&&copyOvr['cvview'];
-      if(v){ if(v.yaw!=null)cvYaw=v.yaw; if(v.pitch!=null)cvPitch=v.pitch; if(v.radius!=null)cvRadius=v.radius; if(v.lookY!=null)cvLookTarget.y=v.lookY; }
+      cvOrbit.fitPoints(cvData&&cvData.length ? cvData.map(function(n){ return n.pos; }) : null);
     }
     function cvOverview(){ cvFitOverview();   // frame the whole route (holds it in view regardless of variegation)
       cvAtNode=false; cvSelId=null; cvMarkLabels();
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');   // hide the node booklet at overview level
       if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);
     }
-    function cvFlyTo(node){ if(!node) return; cvRadius=4.4;   // keep current yaw/pitch → dolly in
-      // center the node vertically in the gap between the top of the window and the top of the manual panel
-      var H=window.innerHeight, ms=document.getElementById('manual-scene'), r=ms?ms.getBoundingClientRect():null;
-      var mTop=(r && r.height>4 && r.top>0)? r.top : H*0.60;
-      var visH=2*cvRadius*Math.tan((camera.fov*Math.PI/180)/2);
-      var off=((mTop*0.5 - H*0.5)/H)*visH;   // aim below the node so it rises into the upper gap
-      cvLookTarget.set(node.pos[0], node.pos[1]+off, node.pos[2]);
+    function cvFlyTo(node){ if(!node) return;
+      // ORDER MATTERS: dolly in first — panelGapOffset() measures against the NEW radius, so
+      // setting it afterwards would frame the node against the old zoom.
+      cvOrbit.radius=4.4;   // keep current yaw/pitch
+      var off=cvOrbit.panelGapOffset(document.getElementById('manual-scene'));   // node rises into the gap above the manual
+      cvOrbit.flyTo(node.pos, null, off);
     }
     function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFlyTo(n); cvShipGoTo(id); cvShowBooklet(id); cvMarkLabels();
       if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level
@@ -10411,7 +10398,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function cvShowBooklet(id){ var cs=document.getElementById('cs-root'); if(cs) cs.classList.add('cs-focus-panel'); if(window.CS && CS.showBooklet) CS.showBooklet(cvDataForBooklet(id)); }
     var _cvUp=new THREE.Vector3();
-    function cvUpdateLabels(){ if(!cvRouteActive) return;
+    function cvUpdateLabels(){ if(!cvScene.active) return;
       cvNodes.forEach(function(n){ var s=projWorld(n.pos); if(!s.vis){ n.lbl.style.display='none'; return; }
         _cvUp.set(n.pos.x,n.pos.y+0.34,n.pos.z); var st=projWorld(_cvUp);   // project the node's radius → on-screen size, so the label clears the sphere at any zoom
         var off=Math.max(18, Math.abs(s.y-st.y)+14);
@@ -10419,7 +10406,7 @@ f 2469//2469 2470//2470 2434//2434
       });
     }
     // Per-node glimmer — oscillates HSL lightness + halo opacity independently per node via random phase offset.
-    function cvUpdateNodes(t){ if(!cvRouteActive||!cvNodes.length) return;
+    function cvUpdateNodes(t){ if(!cvScene.active||!cvNodes.length) return;
       cvNodes.forEach(function(n){ if(n.data.disabled||n.id===cvSelId) return;   // skip selected — cvMarkLabels owns its gold color
         var g=cvGlimmerAmp, ph=n.glimmerPhase, sw=g*Math.sin(t*1.4+ph);
         n.mesh.material.color.setHSL(0.491,0.62,Math.max(0.3,Math.min(0.97,0.67+sw)));
@@ -10428,7 +10415,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     // Active-node pulse — drawn on the low-res #cvFxCanvas (pixelated + posterized, like the message stars) instead of CSS.
     function cvSetupFxCanvas(){ cvFxCanvas=document.getElementById('cvFxCanvas'); if(!cvFxCanvas) return; cvFxCtx=cvFxCanvas.getContext('2d'); var P=Math.max(1,Math.round(params.pixel||1)); cvFxCanvas.width=Math.max(1,Math.ceil(W/P)); cvFxCanvas.height=Math.max(1,Math.ceil(H/P)); }
-    function cvDrawPulse(t){ if(!cvRouteActive) return; if(!cvFxCtx){ cvSetupFxCanvas(); if(!cvFxCtx) return; }
+    function cvDrawPulse(t){ if(!cvScene.active) return; if(!cvFxCtx){ cvSetupFxCanvas(); if(!cvFxCtx) return; }
       var P=Math.max(1,Math.round(params.pixel||1));
       if(cvFxCanvas.width!==Math.ceil(W/P)||cvFxCanvas.height!==Math.ceil(H/P)){ cvFxCanvas.width=Math.ceil(W/P); cvFxCanvas.height=Math.ceil(H/P); }
       cvFxCtx.clearRect(0,0,cvFxCanvas.width,cvFxCanvas.height);
@@ -10458,7 +10445,7 @@ f 2469//2469 2470//2470 2434//2434
       // URL slug for the whole CV route (single slug — nodes stay in-page, not individually addressable)
       var cvSlugEl=document.getElementById('cCvSlug');
       if(cvSlugEl){ cvSlugEl.value=cvSlug;
-        cvSlugEl.addEventListener('blur',function(){ var s=slugify(cvSlugEl.value)||'cv'; if(s===holonetSlug) s='cv'; cvSlug=s; cvSlugEl.value=s; copyOvr['cvSlug']=s; persistCopy(); if(typeof cvRouteActive!=='undefined' && cvRouteActive) setRoute('/'+cvSlug); });
+        cvSlugEl.addEventListener('blur',function(){ var s=slugify(cvSlugEl.value)||'cv'; if(s===holonetSlug) s='cv'; cvSlug=s; cvSlugEl.value=s; copyOvr['cvSlug']=s; persistCopy(); if(cvScene.active) setRoute('/'+cvSlug); });
         cvSlugEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); cvSlugEl.blur(); } }); }
       // ship travel speed (persisted)
       var sp=parseFloat(lsGet('mw_cvshipspd','5'))||5; params.cvShipSpeed=sp;
@@ -10550,7 +10537,7 @@ f 2469//2469 2470//2470 2434//2434
     (function wireHolonetSlug(){
       var el=document.getElementById('cHolonetSlug'); if(!el) return; el.value=holonetSlug;
       el.addEventListener('blur',function(){ var s=slugify(el.value)||'holonet'; if(s===cvSlug) s='holonet'; holonetSlug=s; el.value=s; copyOvr['holonetSlug']=s; persistCopy();
-        if(document.body.classList.contains('mw-altfocus') && !(typeof cvRouteActive!=='undefined' && cvRouteActive)) setRoute('/'+holonetSlug); });
+        if(document.body.classList.contains('mw-altfocus') && !(cvScene.active)) setRoute('/'+holonetSlug); });
       el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
     })();
     (function wireGlbFx(){
@@ -12035,7 +12022,7 @@ f 2469//2469 2470//2470 2434//2434
     var inlineNodes=[];
     function commitInline(n){
       var v=n.el.innerText.replace(/\s+$/,'');
-      if(n.caseField && typeof cvRouteActive!=='undefined' && cvRouteActive){   // CV route: route title/body edits to the selected NODE (not the cv planet's case)
+      if(n.caseField && cvScene.active){   // CV route: route title/body edits to the selected NODE (not the cv planet's case)
         var _nd=(typeof cvNodeById==='function')?cvNodeById(cvSelId):null;
         if(_nd){ if(n.caseField==='title')_nd.title=v; else if(n.caseField==='body')_nd.body=v; cvPersist(); cvRefreshNodeLabel(cvSelId); }
         return; }
@@ -12072,7 +12059,7 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof syncMenuEditable==='function') syncMenuEditable();   // idx (number/?) + menu title editable in Edit Mode
       updateMarqueePanel();
       if(focusedMoon) showMoonManual(focusedMoon);   // re-render artifact links with/without edit affordances
-      else if(typeof cvRouteActive!=='undefined' && cvRouteActive){ if(cvSelId) cvShowBooklet(cvSelId); }   // CV route: re-render the NODE booklet (not the cv project)
+      else if(cvScene.active){ if(cvSelId) cvShowBooklet(cvSelId); }   // CV route: re-render the NODE booklet (not the cv project)
       else if(focused && typeof reShowProject==='function') reShowProject(focused.userData.id);   // re-render project snapshot/CTA edit affordances
     }
 
@@ -12642,7 +12629,7 @@ f 2469//2469 2470//2470 2434//2434
         if(_rib.material && _rib.material.map){ var _sgn=_mqc.reverse?-1:1; _rib.material.map.offset.x=((_rib.material.map.offset.x + _sgn*(_mqc.speed||0)*0.01)%1 + 1)%1; }
       }
       if(autoRotate) manualRot+=0.0011*params.spin*params.camRotDir; galaxy.rotation.y=manualRot;
-      if(cvRouteActive){ var _cp=Math.cos(cvPitch),_sp=Math.sin(cvPitch); camPos.set(cvLookTarget.x+Math.sin(cvYaw)*_cp*cvRadius, cvLookTarget.y+_sp*cvRadius, cvLookTarget.z+Math.cos(cvYaw)*_cp*cvRadius); camLook.copy(cvLookTarget); }   // CV route — orbit (drag/wheel); existing lerp smooths it
+      if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it
       else if(msgFocusActive){ msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
       else if(!focused){ var oy=(HOME_POS.y-HOME_LOOK.y)*camZoom, oz=(HOME_POS.z-HOME_LOOK.z)*camZoom; camPos.set(0,HOME_LOOK.y+oy+camElev,HOME_LOOK.z+oz); camLook.copy(HOME_LOOK); }
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
@@ -12748,7 +12735,7 @@ f 2469//2469 2470//2470 2434//2434
     function applyRouteFromLocation(){
       try{
         var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
-        if(!parts.length){ if(focused || (typeof cvRouteActive!=='undefined'&&cvRouteActive) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
+        if(!parts.length){ if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
         if(seg0===holonetSlug){ var gho=planetById('contact'); if(gho) activate(gho.userData); return; }
