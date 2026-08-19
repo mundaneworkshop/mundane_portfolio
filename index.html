@@ -930,6 +930,12 @@
   }
   #cascade.run  { opacity: 1; visibility: visible; }
   #cascade.fade { opacity: 0; transition: opacity 0.7s ease 0.15s; }
+  /* REDUCED MOTION: one opaque scrim instead of ~600 tumbling bricks. The design language
+     names ambient holo motion as the top accessibility risk in the system and requires it be
+     fully disabled rather than slowed, so this is a plain cross-fade — same timeline, same
+     callbacks, no motion. The delayed visibility flip lets the fade-OUT actually play. */
+  #cascade.reduced     { background: var(--bg); transition: opacity 0.42s ease, visibility 0s linear 0.42s; }
+  #cascade.reduced.run { opacity: 1; visibility: visible; transition: opacity 0.42s ease; }
 
   .block {
     position: absolute;
@@ -10730,9 +10736,21 @@ f 2469//2469 2470//2470 2434//2434
     }
     function setBoxHoloState(){ var isH=FX_BOX.holo.value>0.001;
       if(focused&&Array.isArray(focused.userData.hit.material)){ focused.userData.hit.material.forEach(function(m){ if(m&&m.__fxBox){ m.transparent=isH; m.depthWrite=!isH; m.side=isH?THREE.FrontSide:THREE.DoubleSide; m.needsUpdate=true; } }); } }
-    function enterCaseStudy(){
-      // MERGE Stage 3 + 3D OPEN: the box now opens IN THE CANVAS first, then we freeze
-      // the canvas and hand off to the DOM cascade + page takeover (NOT the DOM box-open).
+    // opts.freeze  — whether the WebGL loop is frozen once the curtain is closed.
+    //                Default TRUE, which is the behaviour this has always had: the DOM page
+    //                takeover is static, so there is nothing to keep rendering behind it.
+    //                The case-study constellation will pass FALSE, because there the canvas
+    //                IS the destination — the cascade covers a scene SWAP, not a shutdown.
+    //                (See docs/project-history/case-study-direction.md: the old "WebGL pauses
+    //                on full takeover" rule was written before that was on the table.)
+    // opts.hooks   — passed straight through to runCascade(); see its comment for
+    //                onCurtainClosed / onDone.
+    function enterCaseStudy(opts){
+      opts = opts || {};
+      var freeze = (opts.freeze !== false);
+      var hooks  = opts.hooks || {};
+      // MERGE Stage 3 + 3D OPEN: the box now opens IN THE CANVAS first, then we hand off to
+      // the DOM cascade + page takeover (NOT the DOM box-open).
       if(focused){
         // (1) drop the booklet focus panel so the 3D open is unobstructed
         document.getElementById('cs-root').classList.remove('cs-focus-panel');
@@ -10740,15 +10758,24 @@ f 2469//2469 2470//2470 2434//2434
         startBoxOpen();
         // (3) once the 3D open finishes, freeze the canvas + run ONLY the DOM cascade/page
         setTimeout(function(){
-          csPaused=true;
           document.getElementById('cs-root').classList.add('active');
-          if(window.CS){ (CS.showCascade ? CS.showCascade() : CS.enterTransition()); }
+          // Freeze at the CURTAIN, not here — stopping the loop before the bricks cover the
+          // screen would visibly hitch the box-open. Chaining off onCurtainClosed also means
+          // a caller that passes freeze:false gets its swap on exactly the same beat.
+          var chained = {
+            onCurtainClosed: function(){ if(freeze) csPaused=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); },
+            onDone: hooks.onDone
+          };
+          if(window.CS){ (CS.showCascade ? CS.showCascade(chained) : CS.enterTransition(chained)); }
         }, 1500);   // TUNE: should be ≥ BOXOPEN.total*1000 so the 3D open completes first
       } else {
         // no focused box → just reveal the DOM layer (legacy path)
         var cs=document.getElementById('cs-root'); if(cs){ cs.classList.remove('cs-focus-panel'); cs.classList.add('active'); }
-        if(window.CS){ (CS.showCascade ? CS.showCascade() : CS.enterTransition()); }
-        setTimeout(function(){ csPaused=true; }, 1200);
+        var chained0 = {
+          onCurtainClosed: function(){ if(freeze) csPaused=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); },
+          onDone: hooks.onDone
+        };
+        if(window.CS){ (CS.showCascade ? CS.showCascade(chained0) : CS.enterTransition(chained0)); }
       }
     }
     window.enterCaseStudy=enterCaseStudy;   // MERGE Stage 2: booklet CTA triggers the takeover
@@ -12996,7 +13023,7 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     // ── PUBLIC: begin the open sequence (SOURCE step 4 box-open only) ──
-    function enterTransition(){
+    function enterTransition(hooks){
       phase='transition';
       clearTimeout(nudgeT);
       dragHint.classList.remove('show');
@@ -13015,13 +13042,13 @@ f 2469//2469 2470//2470 2434//2434
       // (c)+(d): once the box has opened (~1.1s), the LEGO blocks cascade in,
       //          fill the viewport, reveal the case-study page, then fall away.
       clearCascadeTimers();
-      cascadeTimers.push(setTimeout(function(){ runCascade(cascadeStyle); }, 1100));
+      cascadeTimers.push(setTimeout(function(){ runCascade(cascadeStyle, hooks); }, 1100));
     }
 
     // ── PUBLIC: cascade-only handoff (the 3D box-open already happened in the canvas) ──
     // Skips the DOM box-open (rotateZ + #end-lid). Hides the DOM box + manual scenes and
     // runs straight to: bricks cascade in → fill → reveal #page-takeover → bricks fall away.
-    function showCascade(){
+    function showCascade(hooks){
       phase='transition';
       clearTimeout(nudgeT);
       dragHint.classList.remove('show');
@@ -13030,7 +13057,7 @@ f 2469//2469 2470//2470 2434//2434
       if(manualScene){ manualScene.classList.remove('visible'); manualScene.style.opacity='0'; }
       arts.forEach(function(a){ a.classList.remove('visible'); });
       clearCascadeTimers();
-      runCascade(cascadeStyle);
+      runCascade(cascadeStyle, hooks);
     }
 
     // ── PUBLIC: reset everything back to focus defaults ──
@@ -13060,7 +13087,7 @@ f 2469//2469 2470//2470 2434//2434
       arts.forEach(function(a){ a.classList.remove('visible'); });
       // MERGE Stage 3: tear down the cascade + page takeover so back-out fully resets
       clearCascadeTimers();
-      cascadeEl.className=''; cascadeEl.innerHTML='';
+      cascadeEl.className=''; cascadeEl.innerHTML='';   // clears both the brick pile and the reduced-motion scrim
       pageTakeover.classList.remove('visible');
       boxScene.style.opacity='1';
     }
@@ -13165,7 +13192,29 @@ f 2469//2469 2470//2470 2434//2434
       return rows;
     }
 
-    function runCascade(styleName) {
+    // Does this visitor want motion suppressed? The design language treats ambient holo
+    // motion as the single largest accessibility risk in the system and requires it be
+    // FULLY DISABLED, not merely slowed — so reduced motion gets a plain cross-fade of the
+    // same total duration rather than a gentler cascade.
+    function prefersReducedMotion(){
+      try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+      catch(e){ return false; }
+    }
+
+    // The cascade is a CURTAIN, not just an animation: for one stretch in the middle the
+    // bricks cover the viewport completely, and whatever is behind them can be swapped
+    // without the visitor seeing it. `hooks` is how a caller uses that:
+    //
+    //   onCurtainClosed()  fired at maximum coverage, before the reveal. Rebuild the world
+    //                      here — this is the only moment nothing behind the curtain is
+    //                      visible. The caller gets CFG.hold ms of cover after it fires.
+    //   onDone()           fired once the last brick has left the screen.
+    //
+    // Both are optional and both fire on the reduced-motion path too, at the same times, so
+    // no caller ever has to branch on the visitor's motion preference.
+    function runCascade(styleName, hooks) {
+      hooks = hooks || {};
+      if(prefersReducedMotion()) return runCascadeReduced(hooks);
       buildCascade(styleName);
       void cascadeEl.offsetWidth;                    // flush layout before animating
       cascadeEl.classList.add('run');
@@ -13180,6 +13229,9 @@ f 2469//2469 2470//2470 2434//2434
       var fallMs   = CFG.fall * 1000;
       var fillDone = maxDelay + fallMs;
       var exitStart = fillDone + CFG.hold;
+      // CURTAIN CLOSED: every brick has landed, so the viewport is fully covered. Anything
+      // swapped from here until exitStart happens unseen.
+      if(hooks.onCurtainClosed) cascadeTimers.push(setTimeout(hooks.onCurtainClosed, fillDone));
       cascadeTimers.push(setTimeout(function(){
         boxScene.style.opacity = '0';
         pageTakeover.classList.add('visible');
@@ -13190,7 +13242,36 @@ f 2469//2469 2470//2470 2434//2434
         exitMax = Math.max(exitMax, ed);
         cascadeTimers.push(setTimeout(function(){ b.classList.add('out'); }, ed));
       });
-      cascadeTimers.push(setTimeout(function(){ cascadeEl.classList.remove('run'); }, exitMax + fallMs + 120));
+      cascadeTimers.push(setTimeout(function(){
+        cascadeEl.classList.remove('run');
+        if(hooks.onDone) hooks.onDone();
+      }, exitMax + fallMs + 120));
+    }
+
+    // Reduced-motion equivalent: no bricks, no tumbling — an opaque scrim fades in, the
+    // swap happens behind it, the page is revealed, the scrim fades out. Deliberately kept
+    // on the SAME timeline as the full cascade so onCurtainClosed/onDone land at comparable
+    // moments and any caller-side sequencing still works.
+    function runCascadeReduced(hooks){
+      var FADE = 420, COVER = Math.max(300, CFG.hold);
+      cascadeEl.className = 'style-' + cascadeStyle + ' reduced';
+      cascadeEl.innerHTML = '';
+      void cascadeEl.offsetWidth;
+      cascadeEl.classList.add('run');
+      cascadeTimers.push(setTimeout(function(){
+        if(hooks.onCurtainClosed) hooks.onCurtainClosed();
+      }, FADE));
+      cascadeTimers.push(setTimeout(function(){
+        boxScene.style.opacity = '0';
+        pageTakeover.classList.add('visible');
+      }, FADE + COVER));
+      cascadeTimers.push(setTimeout(function(){
+        cascadeEl.classList.remove('run');
+      }, FADE + COVER + 60));
+      cascadeTimers.push(setTimeout(function(){
+        cascadeEl.className = '';
+        if(hooks.onDone) hooks.onDone();
+      }, FADE + COVER + FADE + 60));
     }
 
     window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset };
