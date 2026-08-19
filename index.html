@@ -864,6 +864,7 @@
   body.mw-cvroute #dbg-cv{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-planet{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-cascade{display:block}
+  body.mw-planet:not(.mw-altfocus) #dbg-casestudy{display:block}
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
   /* Hide Case Files nav chrome while editing in focus view */
@@ -1300,6 +1301,17 @@
     </div><!-- /#dbg-planet -->
 
     <!-- ── HoloNet / Contact view ── -->
+    <!-- ── Case study (chapter ring) ──
+         Two ways in, because they serve different jobs: the full entry when you want to see
+         the transition, and a direct jump when you are iterating on the ring itself and do not
+         want to sit through a 7-second cascade on every reload. -->
+    <div class="dbg-ctx" id="dbg-casestudy">
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Case study · chapter ring</label></div>
+      <button class="resetbtn" id="cCsPreview">▶ Preview case study (with cascade)</button>
+      <button class="resetbtn" id="cCsRing">⛶ Open chapter ring (skip cascade)</button>
+    </div><!-- /#dbg-casestudy -->
+
     <!-- ── Brick cascade (case-study transition) ──
          Standing rule (docs/project-history/maximize-customization.md): no tunable stays
          baked. These were previously constants in the CS module with a "no debug panel"
@@ -10219,6 +10231,11 @@ f 2469//2469 2470//2470 2434//2434
       var c = this._el(this.ctlId);   if(c) c.classList.remove('show');
       var l = this._el(this.layerId); if(l) l.classList.remove('show');
       if(this.bodyClass) document.body.classList.remove(this.bodyClass);
+      // Symmetric with enter(), which adds this. Leaving it behind hides every panel scoped
+      // to :not(.mw-altfocus) — so backing out of a sub-scene straight to the project focus
+      // silently stripped the authoring controls. altFocusCleanup() also removes it on the CV
+      // path; removing it twice is a harmless no-op.
+      document.body.classList.remove('mw-altfocus');
       return true;
     };
     // Canvas click while this scene owns it: pick a node, else back out one level.
@@ -11672,6 +11689,20 @@ f 2469//2469 2470//2470 2434//2434
       if(prev) prev.addEventListener('click',function(){ csStep(-1); });
       if(next) next.addEventListener('click',function(){ csStep(1); });
       if(ring) ring.addEventListener('click',function(){ csOverview(); });
+
+      // Authoring shortcuts (Edit Mode panel), so previewing never needs the dev console.
+      var pv=document.getElementById('cCsPreview'), dj=document.getElementById('cCsRing');
+      function currentProject(){ return focused && focused.userData && focused.userData.id; }
+      if(pv) pv.addEventListener('click',function(){
+        var pid=currentProject();
+        if(!pid || !CASES[pid]){ if(typeof toast==='function') toast('focus a project first'); return; }
+        openCaseStudyRoute(pid);
+      });
+      if(dj) dj.addEventListener('click',function(){
+        var pid=currentProject();
+        if(!pid || !CASES[pid]){ if(typeof toast==='function') toast('focus a project first'); return; }
+        csEnterFromProject(pid);   // straight to the ring — no box-open, no cascade
+      });
     })();
 
     // ── keyboard ───────────────────────────────────────────────────────────────
