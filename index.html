@@ -709,6 +709,28 @@
   }
   /* ════════ /MERGE Stage 2 ════════ */
 
+  /* ── CASE STUDY CONSTELLATION: chapter ring labels + stepper ── */
+  #csRouteLayer{position:absolute;inset:0;z-index:6;pointer-events:none;display:none}
+  #csRouteLayer.show{display:block}
+  .cschlbl{position:absolute;transform:translate(-50%,0);display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:4px 6px;cursor:pointer;pointer-events:auto;text-align:center}   /* sits BELOW its node */
+  .cschlbl-n{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:#6b8a85}
+  .cschlbl-t{font-family:var(--display);font-weight:500;font-size:12px;letter-spacing:.5px;color:#cfe8e3;
+    text-transform:uppercase;white-space:nowrap}
+  .cschlbl:hover .cschlbl-t{color:var(--holo)}
+  .cschlbl.sel .cschlbl-t{color:var(--amber)}
+  .cschlbl.sel .cschlbl-n{color:var(--amber-hot)}
+  #csRouteCtl{position:absolute;left:16px;top:64px;z-index:8;display:none;gap:6px;align-items:center;flex-wrap:wrap;pointer-events:auto}
+  #csRouteCtl.show{display:flex}
+  #csStepper{display:flex;gap:3px;flex-wrap:wrap}
+  .cs-step{width:26px;height:24px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:10px;color:var(--line);background:var(--panel);
+    border:1px solid var(--border);cursor:pointer;clip-path:var(--clip-step);transition:.15s}
+  .cs-step:hover{color:var(--holo);border-color:var(--line)}
+  .cs-step.on{background:var(--amber);color:var(--on-brand);border-color:var(--amber);font-weight:700}
+  /* the galaxy's own chrome stands down while a case study owns the canvas */
+  body.mw-casestudy #menu, body.mw-casestudy #hint{display:none}
+
   /* ── TOAST ── */
   #toast{position:absolute;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:30;opacity:0;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--holo);transition:.35s}
 
@@ -842,6 +864,7 @@
   body.mw-cvroute #dbg-cv{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-planet{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-cascade{display:block}
+  body.mw-planet:not(.mw-altfocus) #dbg-casestudy{display:block}
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
   /* Hide Case Files nav chrome while editing in focus view */
@@ -980,7 +1003,9 @@
     position: absolute;
     width: 0; height: 0;
     transform: translateY(-125vh) rotate(var(--spin0, 0deg));
-    transition: transform var(--fall, 0.62s) cubic-bezier(0.30,1.30,0.55,1);
+    /* The second control point is the landing BOUNCE — >1 overshoots and settles back.
+       Exposed as --casc-bounce so it can be tuned from the debug panel. */
+    transition: transform var(--fall, 0.62s) cubic-bezier(0.30, var(--casc-bounce, 1.30), 0.55, 1);
     will-change: transform;
   }
   .block.landed { transform: translateY(0) rotate(var(--spin1, 0deg)); }
@@ -1054,16 +1079,19 @@
   #cascade.style-voxel .stud { display: none; }
 
   /* Variant C — HOLO */
-  #cascade.style-holo .fc { background: rgba(120,224,214,0.16); border: 1px solid rgba(170,245,238,0.42); }
-  #cascade.style-holo .fc.top { background: rgba(120,224,214,0.32); border-color: rgba(170,245,238,0.7); }
-  #cascade.style-holo .fc.front, #cascade.style-holo .fc.back { box-shadow: inset 0 0 12px rgba(120,224,214,0.20); }
+  /* Holo faces derive every tint from one authored colour (--casc-holo, set by the debug
+     panel), so the whole cascade can be recoloured from a single swatch. --casc-edge is the
+     lighter rim, derived in JS. */
+  #cascade.style-holo .fc { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 16%, transparent); border: 1px solid color-mix(in srgb, var(--casc-edge,#AAF5EE) 42%, transparent); }
+  #cascade.style-holo .fc.top { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 32%, transparent); border-color: color-mix(in srgb, var(--casc-edge,#AAF5EE) 70%, transparent); }
+  #cascade.style-holo .fc.front, #cascade.style-holo .fc.back { box-shadow: inset 0 0 12px color-mix(in srgb, var(--casc-holo,#78E0D6) 20%, transparent); }
   #cascade.style-holo .fc.top::after {
     content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(180deg, transparent 0, transparent 2px, rgba(170,245,238,0.16) 2px, rgba(170,245,238,0.16) 3px);
+    background: repeating-linear-gradient(180deg, transparent 0, transparent 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 3px);
   }
   #cascade.style-holo .stud {
-    background: rgba(120,224,214,0.55); border: 1px solid #EAFEFB; border-radius: 32%;
-    box-shadow: 0 0 8px rgba(120,224,214,0.5);
+    background: color-mix(in srgb, var(--casc-holo,#78E0D6) 55%, transparent); border: 1px solid #EAFEFB; border-radius: 32%;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--casc-holo,#78E0D6) 50%, transparent);
   }
 </style>
 </head>
@@ -1278,6 +1306,17 @@
     </div><!-- /#dbg-planet -->
 
     <!-- ── HoloNet / Contact view ── -->
+    <!-- ── Case study (chapter ring) ──
+         Two ways in, because they serve different jobs: the full entry when you want to see
+         the transition, and a direct jump when you are iterating on the ring itself and do not
+         want to sit through a 7-second cascade on every reload. -->
+    <div class="dbg-ctx" id="dbg-casestudy">
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Case study · chapter ring</label></div>
+      <button class="resetbtn" id="cCsPreview">▶ Preview case study (with cascade)</button>
+      <button class="resetbtn" id="cCsRing">⛶ Open chapter ring (skip cascade)</button>
+    </div><!-- /#dbg-casestudy -->
+
     <!-- ── Brick cascade (case-study transition) ──
          Standing rule (docs/project-history/maximize-customization.md): no tunable stays
          baked. These were previously constants in the CS module with a "no debug panel"
@@ -1296,6 +1335,12 @@
       <div class="ctl"><label>Random spread <b id="vCasRandDelay">460</b></label><input type="range" id="cCasRandDelay" min="0" max="1200" step="20" value="460"></div>
       <div class="ctl"><label>Curved pieces <b id="vCasCurve">11</b></label><input type="range" id="cCasCurve" min="0" max="30" step="1" value="11"></div>
       <div class="ctl"><label>Hang time <b id="vCasHold">600</b></label><input type="range" id="cCasHold" min="0" max="2000" step="50" value="600"></div>
+      <div class="ctl"><label>Start delay <b id="vCasStart">160</b></label><input type="range" id="cCasStart" min="0" max="900" step="20" value="160"></div>
+      <div class="ctl"><label>Landing bounce <b id="vCasBounce">1.30</b></label><input type="range" id="cCasBounce" min="1" max="2.2" step="0.05" value="1.3"></div>
+      <div class="ctl"><label>Exit spread <b id="vCasExitSpread">0.70</b></label><input type="range" id="cCasExitSpread" min="0" max="2" step="0.05" value="0.7"></div>
+      <div class="ctl"><label>Exit stagger <b id="vCasExitStagger">0.35</b></label><input type="range" id="cCasExitStagger" min="0" max="2" step="0.05" value="0.35"></div>
+      <div class="ctl"><label>Holo tint</label><input type="color" id="cCasHolo" value="#78E0D6"><input type="text" id="cCasHoloHex" value="#78E0D6" class="hexin"></div>
+      <div class="ctl"><label>Voxel tint</label><input type="color" id="cCasVox" value="#E9A73E"><input type="text" id="cCasVoxHex" value="#E9A73E" class="hexin"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cCasVoxel"> Amber voxel bricks (default: teal holo)</label></div>
       <button class="resetbtn" id="cCasPreview">▶ Preview cascade</button>
       <button class="resetbtn" id="cCasReset">⟲ Reset cascade defaults</button>
@@ -1417,6 +1462,14 @@
 
 
   <!-- ░░ CV — 3D hyperspace route: drag to orbit, click a node label. Details reuse the project manual (#manual-scene). ░░ -->
+  <div id="csRouteLayer"></div>
+  <div id="csRouteCtl">
+    <button class="cvr-pill" id="csPrev" title="Previous chapter (←)">◄</button>
+    <div id="csStepper"></div>
+    <button class="cvr-pill" id="csNext" title="Next chapter (→)">►</button>
+    <button class="cvr-pill" id="csRingBtn">⛶ Chapter ring</button>
+    <span class="cvr-pill cvr-hint">← → chapters · esc back · drag orbit · scroll zoom</span>
+  </div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
     <button class="cvr-pill" id="cvmOverview">⛶ Route overview</button>
@@ -1591,7 +1644,7 @@
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
           <div class="manual-cta">
-            <button class="manual-cta-btn" onclick="window.enterCaseStudy&&window.enterCaseStudy()"><!--CMS:ctaLabel-->Case study coming soon</button>
+            <button class="manual-cta-btn" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -9574,7 +9627,10 @@ f 2469//2469 2470//2470 2434//2434
     function takenProjectSlugs(excludeId){ var out=[];
       Object.keys(CASES).forEach(function(pid){ if(pid===excludeId) return; var c=CASES[pid]; if(!c) return; out.push(c.slug||slugify(c.title||pid)); });
       return out; }
-    function takenMoonSlugs(grp,excludeMesh){ var out=[]; (grp&&grp.userData&&grp.userData.moons||[]).forEach(function(mm){ if(mm===excludeMesh) return;
+    // 'case' is RESERVED: /work/<project>/case is the case-study route and occupies the same
+    // URL slot as an artifact slug, so seeding it here makes uniqueSlug() hand out 'case-2'
+    // instead and an artifact can never shadow the case study.
+    function takenMoonSlugs(grp,excludeMesh){ var out=['case']; (grp&&grp.userData&&grp.userData.moons||[]).forEach(function(mm){ if(mm===excludeMesh) return;
       var meta=getMoonMeta(mm); out.push(meta.slug||slugify(meta.title||'')); }); return out; }
     function zoneSpot(zoneId){ var z=zoneById[zoneId]; var m=(z.a1-z.a0)*0.12;
       var ang=z.a0+m+rng()*((z.a1-z.a0)-2*m); var rad=1.3+rng()*2.7; var y=0.7+rng()*2.6; var jx=rng()*0.5-0.25, jz=rng()*0.5-0.25;
@@ -9805,7 +9861,7 @@ f 2469//2469 2470//2470 2434//2434
         if(focusedMoon){ unfocusMoon(); return; }   // click off the artifact → back to the project manual
         // click the kit box face (when hover affordance is active) → enter case study
         if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
-          clearBoxHover(); enterCaseStudy(); return; }
+          clearBoxHover(); openCaseStudyRoute(); return; }
         goHome(); return; }
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
@@ -10074,9 +10130,21 @@ f 2469//2469 2470//2470 2434//2434
       this.look.set(pos[0], pos[1] + (offsetY || 0), pos[2]);
     };
 
+    // Frame `pos` so it lands `frac` of the way down the viewport (0 = top, 0.5 = centre).
+    //
+    // Prefer this over panelGapOffset() when opening something for the FIRST time. That helper
+    // measures the manual panel's real position — correct once the panel has settled, useless
+    // while it is still transitioning in: the panel is off-screen at that moment, so the gap
+    // computes as zero and the subject frames dead centre, behind the panel about to slide up
+    // over it. That is a real bug the chapter ring hit on its first deep link.
+    MWOrbit.prototype.frameAt = function(pos, frac){
+      var visH = 2 * this.radius * Math.tan((camera.fov * Math.PI / 180) / 2);
+      this.look.set(pos[0], pos[1] - (0.5 - frac) * visH, pos[2]);
+    };
+
     // How far the look target must shift for `pos` to sit centred in the gap between the
     // top of the window and the top of a bottom-anchored panel. Pulled out of the CV
-    // route's fly-to so the ring's chapter focus frames identically under the manual.
+    // route's fly-to; still correct for re-selection, where the panel is already settled.
     MWOrbit.prototype.panelGapOffset = function(panelEl){
       var H = window.innerHeight;
       var r = panelEl ? panelEl.getBoundingClientRect() : null;
@@ -10133,6 +10201,7 @@ f 2469//2469 2470//2470 2434//2434
       this.onPick = cfg.onPick || null;
       this.onBack = cfg.onBack || null;
       this.build = cfg.build || null;
+      this.onExit = cfg.onExit || null;   // scene-specific teardown (state reset, extra DOM)
       this.group = null;
       this.active = false;
     }
@@ -10165,6 +10234,7 @@ f 2469//2469 2470//2470 2434//2434
     // Hand the canvas back to the galaxy. Safe to call when not active.
     MWSubScene.prototype.exit = function(){
       if(!this.active) return false;
+      if(this.onExit) this.onExit();
       this.active = false;
       if(MWSub.active === this) MWSub.active = null;
       if(this.group) this.group.visible = false;
@@ -10172,6 +10242,11 @@ f 2469//2469 2470//2470 2434//2434
       var c = this._el(this.ctlId);   if(c) c.classList.remove('show');
       var l = this._el(this.layerId); if(l) l.classList.remove('show');
       if(this.bodyClass) document.body.classList.remove(this.bodyClass);
+      // Symmetric with enter(), which adds this. Leaving it behind hides every panel scoped
+      // to :not(.mw-altfocus) — so backing out of a sub-scene straight to the project focus
+      // silently stripped the authoring controls. altFocusCleanup() also removes it on the CV
+      // path; removing it twice is a harmless no-op.
+      document.body.classList.remove('mw-altfocus');
       return true;
     };
     // Canvas click while this scene owns it: pick a node, else back out one level.
@@ -11003,10 +11078,17 @@ f 2469//2469 2470//2470 2434//2434
     //                on full takeover" rule was written before that was on the table.)
     // opts.hooks   — passed straight through to runCascade(); see its comment for
     //                onCurtainClosed / onDone.
+    // opts.domTakeover — whether the static DOM case-study page is revealed and #cs-root
+    //                    captures clicks. Default TRUE (today's behaviour). The chapter ring
+    //                    passes FALSE: it rebuilds the CANVAS behind the curtain instead, and
+    //                    #cs-root must stay click-through or it would swallow every canvas
+    //                    interaction in the new scene.
     function enterCaseStudy(opts){
       opts = opts || {};
       var freeze = (opts.freeze !== false);
-      var hooks  = opts.hooks || {};
+      var domTakeover = (opts.domTakeover !== false);
+      var hooks  = Object.assign({}, opts.hooks || {});
+      hooks.showTakeover = domTakeover;
       // MERGE Stage 3 + 3D OPEN: the box now opens IN THE CANVAS first, then we hand off to
       // the DOM cascade + page takeover (NOT the DOM box-open).
       if(focused){
@@ -11016,23 +11098,24 @@ f 2469//2469 2470//2470 2434//2434
         startBoxOpen();
         // (3) once the 3D open finishes, freeze the canvas + run ONLY the DOM cascade/page
         setTimeout(function(){
-          document.getElementById('cs-root').classList.add('active');
+          if(domTakeover) document.getElementById('cs-root').classList.add('active');
           // Freeze at the CURTAIN, not here — stopping the loop before the bricks cover the
           // screen would visibly hitch the box-open. Chaining off onCurtainClosed also means
           // a caller that passes freeze:false gets its swap on exactly the same beat.
-          var chained = {
-            onCurtainClosed: function(){ if(freeze) csPaused=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); },
-            onDone: hooks.onDone
-          };
+          // Start from `hooks` so flags like showTakeover survive; only WRAP onCurtainClosed.
+          // Rebuilding this object from scratch silently dropped showTakeover, and a caller
+          // asking for no DOM page still got one.
+          var chained = Object.assign({}, hooks, {
+            onCurtainClosed: function(){ if(freeze) csPaused=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); }
+          });
           if(window.CS){ (CS.showCascade ? CS.showCascade(chained) : CS.enterTransition(chained)); }
         }, 1500);   // TUNE: should be ≥ BOXOPEN.total*1000 so the 3D open completes first
       } else {
         // no focused box → just reveal the DOM layer (legacy path)
-        var cs=document.getElementById('cs-root'); if(cs){ cs.classList.remove('cs-focus-panel'); cs.classList.add('active'); }
-        var chained0 = {
-          onCurtainClosed: function(){ if(freeze) csPaused=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); },
-          onDone: hooks.onDone
-        };
+        var cs=document.getElementById('cs-root'); if(cs){ cs.classList.remove('cs-focus-panel'); if(domTakeover) cs.classList.add('active'); }
+        var chained0 = Object.assign({}, hooks, {
+          onCurtainClosed: function(){ if(freeze) csPaused=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); }
+        });
         if(window.CS){ (CS.showCascade ? CS.showCascade(chained0) : CS.enterTransition(chained0)); }
       }
     }
@@ -11364,6 +11447,287 @@ f 2469//2469 2470//2470 2434//2434
     // EDIT MODE: the global mesh panel was removed. Mesh/bitmap overrides now happen
     // per-object: toggle Edit, then click any object (planet / logo / focused box) to
     // upload .obj/.glb/.svg/bitmap. (Geometry builders above are reused below.)
+    // ══════ CASE STUDY CONSTELLATION — chapter ring (L2) + chapter focus (L3) ══════
+    //
+    // The SECOND sub-scene (the CV route was the first, and the primitive was extracted from
+    // it for exactly this). A project's case study is a small galaxy of its own: the project's
+    // object at the hub, its chapters evenly spaced on a flat ring around it.
+    //
+    // Entered through the brick cascade from the project focus view. The cascade's
+    // onCurtainClosed fires at full brick coverage — that is when the galaxy is swapped for
+    // this scene, unseen. Crucially the canvas is NOT frozen (enterCaseStudy freeze:false):
+    // here the case study IS the canvas. The "WebGL pauses on full takeover" rule in
+    // docs/project-history/case-study-direction.md predates this view and does not apply to it.
+    //
+    // SCOPE (02a): scene, navigation, routing. Chapter PROSE, per-chapter meshes, the uploaded
+    // hub object and the flat read-mode fallback come next, once the written content exists.
+    // Chapters currently render their default titles and an unwritten-yet placeholder.
+
+    // The ten chapters, in order — the structure locked in case-study-direction.md. The
+    // numbering is a real sequence a reader is meant to walk, which is why labels carry it.
+    var CS_CH_DEFAULT=[
+      {id:'snapshot',      title:'Snapshot',                 phase:'Setup'},
+      {id:'problem',       title:'The problem',              phase:'Framing'},
+      {id:'success',       title:'What success meant',       phase:'Framing'},
+      {id:'constraints',   title:'Constraints & trade-offs', phase:'Framing'},
+      {id:'approach',      title:'Approach',                 phase:'Execution'},
+      {id:'collaboration', title:'Collaboration map',        phase:'Execution'},
+      {id:'system',        title:'Design system / patterns', phase:'Execution'},
+      {id:'shipped',       title:'What shipped',             phase:'Outcome'},
+      {id:'impact',        title:'Impact',                   phase:'Outcome'},
+      {id:'learnings',     title:'Next / learnings',         phase:'Outcome'}
+    ];
+    var CS_RING={ radius:6.4, nodeR:0.20, hubR:0.85, y:0, chapterZoom:4.2, chapterFrac:0.28 };
+
+    var csPid=null, csNodes=[], csSelIdx=-1, csAtChapter=false, csHub=null, csRootLabel='';
+    var _csUp=new THREE.Vector3();
+
+    // Per-project chapter list. Hidden chapters are SOFT-deleted — kept in storage, skipped
+    // here — exactly like galaxyModel's zones and planets, and the ring re-spaces around
+    // whatever survives. So a project with no design-system chapter reads 1..9 with no gap in
+    // it, rather than a ring with a hole where chapter 7 should be.
+    function csChapters(pid){
+      var hid=(typeof copyOvr!=='undefined' && copyOvr['cscase:'+pid+':hidden'])||[];
+      return CS_CH_DEFAULT.filter(function(c){ return hid.indexOf(c.id)<0; });
+    }
+    function csSlugIndex(pid,slug){ var l=csChapters(pid); for(var i=0;i<l.length;i++){ if(l[i].id===slug) return i; } return -1; }
+
+    // Evenly spaced on a FLAT circle. Chapter 1 sits at the ring's FRONT — nearest the camera,
+    // so the reader's eye starts at the beginning — and the sequence runs clockwise on screen,
+    // so "next" is always the same direction. (+z is toward the camera, hence +sin for i=0.)
+    function csNodePos(i,n){
+      var a=(Math.PI/2)-(i/n)*Math.PI*2;
+      return [Math.cos(a)*CS_RING.radius, CS_RING.y, Math.sin(a)*CS_RING.radius];
+    }
+
+    var csScene=new MWSubScene({
+      id:'casestudy', bodyClass:'mw-casestudy', layerId:'csRouteLayer', ctlId:'csRouteCtl',
+      orbit:new MWOrbit({look:new THREE.Vector3(0,0.6,0), yaw:0, pitch:0.62, radius:16},
+                        {pitch:[0.06,1.45], radius:[4,30], panY:[-4,8]}),
+      hits:function(){ return csNodes.map(function(n){ return n.hit; }); },
+      hitId:function(o){ for(var i=0;i<csNodes.length;i++){ if(csNodes[i].hit===o) return i; } return null; },
+      onPick:function(i){ csSelect(i); },
+      onBack:function(){ if(csAtChapter) csOverview(); },  // chapter → ring; at the ring, empty clicks do nothing (exit via breadcrumb/Esc)
+      onExit:function(){
+        var cs=document.getElementById('cs-root');
+        if(cs){ cs.classList.remove('cs-focus-panel'); cs.classList.remove('active'); }
+        csAtChapter=false; csSelIdx=-1; csPid=null;
+      }
+    });
+
+    function csBuildRing(pid){
+      var g=csScene.ensureGroup();
+      for(var k=g.children.length-1;k>=0;k--){   // wipe the previous project's ring
+        var o=g.children[k]; g.remove(o);
+        if(o.geometry) o.geometry.dispose();
+        if(o.material && o.material.dispose) o.material.dispose();
+      }
+      var layer=document.getElementById('csRouteLayer');
+      Array.prototype.slice.call(layer.querySelectorAll('.cschlbl')).forEach(function(el){ el.remove(); });
+      csNodes=[];
+      var list=csChapters(pid), n=list.length;
+
+      var pts=[]; for(var s=0;s<700;s++){ pts.push((Math.random()-0.5)*90,(Math.random()-0.5)*60,(Math.random()-0.5)*90); }
+      var sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+      g.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fe6df,size:0.06,transparent:true,opacity:0.6,depthWrite:false,fog:false})));
+
+      // Faint guide circle on the plane, so the arrangement reads as a deliberate ring rather
+      // than as scattered points that happen to be equidistant.
+      var ring=[]; for(var a=0;a<=128;a++){ var t=(a/128)*Math.PI*2; ring.push(new THREE.Vector3(Math.cos(t)*CS_RING.radius,CS_RING.y,Math.sin(t)*CS_RING.radius)); }
+      g.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ring), new THREE.LineBasicMaterial({color:0x2f6f69,transparent:true,opacity:0.6,fog:false})));
+
+      // Hub — the project's own object. 02a draws a holo placeholder; an uploaded logo / image
+      // / GLB replaces it next, reusing the focus-view box-replacement uploader.
+      csHub=new THREE.Mesh(new THREE.IcosahedronGeometry(CS_RING.hubR,1),
+              new THREE.MeshBasicMaterial({color:0x78E0D6,wireframe:true,transparent:true,opacity:0.45,fog:false}));
+      csHub.position.set(0,CS_RING.y+0.95,0); g.add(csHub);
+
+      list.forEach(function(ch,i){
+        var p=csNodePos(i,n);
+        var mesh=new THREE.Mesh(new THREE.SphereGeometry(CS_RING.nodeR,20,20),
+                   new THREE.MeshBasicMaterial({color:0x78E0D6,fog:false}));
+        mesh.position.set(p[0],p[1],p[2]); g.add(mesh);
+        mesh.add(new THREE.Mesh(new THREE.SphereGeometry(CS_RING.nodeR*1.8,14,14),
+                   new THREE.MeshBasicMaterial({color:0x5ABFB8,transparent:true,opacity:0.16,depthWrite:false,fog:false})));
+        // Generous invisible click target — the sphere is small at ring-overview zoom.
+        var hit=new THREE.Mesh(new THREE.SphereGeometry(0.62,10,10),
+                   new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,fog:false}));
+        hit.position.copy(mesh.position); g.add(hit);
+        var lbl=document.createElement('div'); lbl.className='cschlbl';
+        lbl.innerHTML='<div class="cschlbl-n"></div><div class="cschlbl-t"></div>';
+        lbl.querySelector('.cschlbl-n').textContent=(i+1<10?'0':'')+(i+1);
+        lbl.querySelector('.cschlbl-t').textContent=ch.title;
+        (function(idx){ lbl.addEventListener('click',function(e){ e.stopPropagation(); csSelect(idx); }); })(i);
+        layer.appendChild(lbl);
+        csNodes.push({ch:ch,mesh:mesh,hit:hit,lbl:lbl,pos:mesh.position});
+      });
+      csBuildStepper();
+    }
+
+    // The 1..N stepper is the instruction-manual nav from the original direction, flattened:
+    // the right rail became this strip plus the ring itself.
+    function csBuildStepper(){
+      var st=document.getElementById('csStepper'); if(!st) return;
+      st.innerHTML='';
+      csNodes.forEach(function(n,i){
+        var b=document.createElement('button');
+        b.className='cs-step'; b.type='button';
+        b.textContent=(i+1<10?'0':'')+(i+1);
+        b.title=n.ch.title;
+        b.addEventListener('click',function(){ csSelect(i); });
+        st.appendChild(b);
+      });
+    }
+
+    function csMark(){
+      csNodes.forEach(function(n,i){
+        var on=(i===csSelIdx);
+        n.lbl.classList.toggle('sel',on);
+        if(n.mesh.material) n.mesh.material.color.setHex(on?0xF0D080:0x78E0D6);
+        var halo=n.mesh.children&&n.mesh.children[0];
+        if(halo&&halo.material) halo.material.color.setHex(on?0xE9A73E:0x5ABFB8);
+      });
+      var st=document.getElementById('csStepper');
+      if(st) Array.prototype.forEach.call(st.children,function(b,i){ b.classList.toggle('on',i===csSelIdx); });
+    }
+
+    function csUpdateLabels(){
+      if(!csScene.active) return;
+      csNodes.forEach(function(n){
+        var s=projWorld(n.pos);
+        if(!s.vis){ n.lbl.style.display='none'; return; }
+        _csUp.set(n.pos.x,n.pos.y+CS_RING.nodeR*1.8,n.pos.z);
+        var st=projWorld(_csUp);
+        var off=Math.max(16,Math.abs(s.y-st.y)+12);   // clear the sphere at any zoom
+        n.lbl.style.display='flex'; n.lbl.style.left=s.x+'px'; n.lbl.style.top=(s.y+off)+'px';
+      });
+    }
+
+    // ── content ────────────────────────────────────────────────────────────────
+    // Reads per-chapter overrides written by the authoring flow. Until a chapter is written it
+    // renders its default title with an explicit "not written yet" line rather than pretending.
+    function csDataForBooklet(ch,i){
+      var key='csch:'+csPid+':'+ch.id+':';
+      function g(f,d){ var v=(typeof copyOvr!=='undefined')?copyOvr[key+f]:null; return (v!=null&&v!=='')?v:d; }
+      return { artifact:false, kind:'util',
+        kicker:g('kicker','Bag '+((i+1<10?'0':'')+(i+1))+' of '+csNodes.length+' · '+ch.phase),
+        title:g('title',ch.title),
+        subtitle:g('subtitle',''),
+        framing:g('body','This chapter has not been written yet.'),
+        snapshot:g('snapshot',[]), tags:[],
+        ctaHidden:true,
+        edit:(typeof editMode!=='undefined')&&editMode };
+    }
+    function csShowBooklet(ch,i){
+      var cs=document.getElementById('cs-root'); if(cs) cs.classList.add('cs-focus-panel');
+      if(window.CS && CS.showBooklet) CS.showBooklet(csDataForBooklet(ch,i));
+    }
+
+    // ── navigation ─────────────────────────────────────────────────────────────
+    function csCrumb(){
+      var segs=[{text:csRootLabel||'Project'},{text:'Case study',bold:!csAtChapter}];
+      if(csAtChapter && csNodes[csSelIdx]) segs.push({text:csNodes[csSelIdx].ch.title,bold:true});
+      setCrumb('cscase:'+csPid+(csAtChapter?':'+csSelIdx:''),segs);
+    }
+    function csSetRoute(){
+      var c=CASES[csPid]; if(!c) return;
+      var p='/work/'+(c.slug||slugify(c.title||csPid))+'/case';
+      if(csAtChapter && csNodes[csSelIdx]) p+='/'+csNodes[csSelIdx].ch.id;
+      setRoute(p);
+    }
+    function csOverview(){
+      csAtChapter=false; csSelIdx=-1; csMark();
+      var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');
+      csScene.orbit.fitPoints(csNodes.map(function(n){ return [n.pos.x,n.pos.y,n.pos.z]; }), {min:9, extra:3.2});
+      csCrumb(); csSetRoute();
+    }
+    function csSelect(i){
+      var n=csNodes[i]; if(!n) return;
+      csSelIdx=i; csAtChapter=true;
+      // Radius first — frameAt measures against the NEW zoom. Then park the chapter at 28% down
+      // the viewport, the gap above the manual panel. Deliberately NOT measuring the panel: on
+      // the first chapter opened it is still transitioning in and reports a stale position.
+      csScene.orbit.radius=CS_RING.chapterZoom;
+      csScene.orbit.frameAt([n.pos.x,n.pos.y,n.pos.z], CS_RING.chapterFrac);
+      csShowBooklet(n.ch,i); csMark(); csCrumb(); csSetRoute();
+    }
+    // Wraps: stepping past the last chapter returns to the first. Arrow steps are a camera move
+    // only — NO cascade between chapters. The cascade is reserved for crossing between worlds,
+    // or it stops meaning anything.
+    function csStep(d){
+      if(!csNodes.length) return;
+      csSelect(csSelIdx<0 ? (d>0?0:csNodes.length-1) : (csSelIdx+d+csNodes.length)%csNodes.length);
+    }
+    function csUp(){
+      if(csAtChapter){ csOverview(); return; }
+      var pid=csPid;
+      csExit();
+      var g=pid&&planetById(pid);
+      if(g) activate(g.userData); else goHome();
+    }
+    function csExit(){ return csScene.exit(); }   // teardown lives in the scene's onExit
+
+    // ── entry ──────────────────────────────────────────────────────────────────
+    function csEnterFromProject(pid){
+      csPid=pid;
+      csBuildRing(pid);
+      csScene.orbit.viewKey='csview:'+pid;   // saved default view is per project
+      csScene.enter(planetById(pid));
+      csRootLabel=(CASES[pid]&&CASES[pid].title)||'Case study';
+      csOverview();
+    }
+    // What the kit box / manual CTA calls. The cascade covers the swap; freeze:false keeps the
+    // render loop alive because the ring is what the curtain lifts on, and domTakeover:false
+    // suppresses the old static DOM page.
+    function csOpenCaseStudy(pid){
+      pid = pid || (focused && focused.userData && focused.userData.id);   // default: the focused project
+      if(!pid || !CASES[pid]) return;
+      enterCaseStudy({ freeze:false, domTakeover:false,
+        hooks:{ onCurtainClosed:function(){ csEnterFromProject(pid); } } });
+    }
+    window.csOpenCaseStudy=csOpenCaseStudy;
+    // Single entry point for every in-page trigger (kit-box click, manual CTA). Falls back to
+    // the old DOM page takeover if the constellation is somehow unavailable, so nothing can
+    // dead-end on a click.
+    function openCaseStudyRoute(pid){
+      if(typeof csOpenCaseStudy==='function') csOpenCaseStudy(pid);
+      else enterCaseStudy();
+    }
+
+    // ── in-scene controls ──────────────────────────────────────────────────────
+    (function wireRingCtl(){
+      var prev=document.getElementById('csPrev'), next=document.getElementById('csNext'), ring=document.getElementById('csRingBtn');
+      if(prev) prev.addEventListener('click',function(){ csStep(-1); });
+      if(next) next.addEventListener('click',function(){ csStep(1); });
+      if(ring) ring.addEventListener('click',function(){ csOverview(); });
+
+      // Authoring shortcuts (Edit Mode panel), so previewing never needs the dev console.
+      var pv=document.getElementById('cCsPreview'), dj=document.getElementById('cCsRing');
+      function currentProject(){ return focused && focused.userData && focused.userData.id; }
+      if(pv) pv.addEventListener('click',function(){
+        var pid=currentProject();
+        if(!pid || !CASES[pid]){ if(typeof toast==='function') toast('focus a project first'); return; }
+        openCaseStudyRoute(pid);
+      });
+      if(dj) dj.addEventListener('click',function(){
+        var pid=currentProject();
+        if(!pid || !CASES[pid]){ if(typeof toast==='function') toast('focus a project first'); return; }
+        csEnterFromProject(pid);   // straight to the ring — no box-open, no cascade
+      });
+    })();
+
+    // ── keyboard ───────────────────────────────────────────────────────────────
+    // ←/→ step chapters (wrapping), Enter opens the first when at the ring, Esc goes up a level.
+    window.addEventListener('keydown',function(e){
+      if(!csScene.active) return;
+      var t=e.target;
+      if(t && (/^(input|textarea|select)$/i.test(t.tagName) || t.isContentEditable)) return;
+      if(e.key==='ArrowRight'){ e.preventDefault(); csStep(1); }
+      else if(e.key==='ArrowLeft'){ e.preventDefault(); csStep(-1); }
+      else if(e.key==='Enter'||e.key===' '){ if(!csAtChapter){ e.preventDefault(); csStep(1); } }
+      else if(e.key==='Escape'){ e.preventDefault(); csUp(); }
+    });
+
     // ══════ EDIT MODE: per-object mesh/bitmap overrides ══════════════════════
     // Toggle Edit, then click any object to upload. .obj/.glb/.svg → mesh;
     // bitmap → texture (focused box = front face; otherwise the object's material).
@@ -12769,6 +13133,7 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof updateMsgStars==='function') updateMsgStars();   // project visitor message stars to screen each frame
       if(typeof cvUpdateShip==='function') cvUpdateShip(t);       // advance ship travel along the lane
       if(typeof cvUpdateLabels==='function') cvUpdateLabels();   // project CV route node labels to screen each frame
+      if(typeof csUpdateLabels==='function') csUpdateLabels();   // ...and the case-study chapter ring's
       if(typeof cvDrawPulse==='function') cvDrawPulse(t);        // draw active-node pulse on the low-res pixelated canvas
       if(typeof cvUpdateNodes==='function') cvUpdateNodes(t);    // node glimmer (HSL oscillation per node)
       planets.forEach(function(p){ var wp=new THREE.Vector3(); p.getWorldPosition(wp); var below=wp.clone(); below.y-=0.62*galaxy.scale.x; var s=projWorld(below);
@@ -12838,6 +13203,19 @@ f 2469//2469 2470//2470 2434//2434
         if(!pid) return;   // unknown slug — leave the galaxy home rather than guessing
         var grp=planetById(pid); if(!grp) return;
         if(!focused || focused.userData.id!==pid) activate(grp.userData);
+        // RESERVED SEGMENT. 'case' is checked BEFORE the artifact loop below, because
+        // /work/<project>/<artifact> and /work/<project>/case occupy the same slot — an
+        // artifact slugged "case" would otherwise be indistinguishable from the case study.
+        if(moonSeg==='case'){
+          if(typeof csEnterFromProject==='function'){
+            if(csPid!==pid || !csScene.active) csEnterFromProject(pid);
+            var chSeg=parts[3];
+            var ci=chSeg?csSlugIndex(pid,chSeg):-1;
+            if(ci>=0) csSelect(ci); else csOverview();
+          }
+          return;
+        }
+        if(typeof csScene!=='undefined' && csScene.active) csExit();   // left the case study
         if(moonSeg && grp.userData.moons && grp.userData.moons.length){
           for(var i=0;i<grp.userData.moons.length;i++){
             var mm=grp.userData.moons[i], meta=getMoonMeta(mm);
@@ -12851,11 +13229,15 @@ f 2469//2469 2470//2470 2434//2434
     // takes effect on the next cascade with no reload. Writes go through persistCopy() so
     // they land in the same server-synced store as all other authored content.
     (function wireCascadePanel(){
-      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,curve:11,hold:600,style:'holo'};
+      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,curve:11,hold:600,
+               start:160,exitSpread:0.70,exitStagger:0.35,bounce:1.30,holo:'#78E0D6',voxel:'#E9A73E',style:'holo'};
       var ROWS=[['U','cCasU','vCasU',0],['spacing','cCasSpacing','vCasSpacing',1],['jitter','cCasJitter','vCasJitter',2],
                 ['tumble','cCasTumble','vCasTumble',0],['spin','cCasSpin','vCasSpin',0],['fall','cCasFall','vCasFall',2],
                 ['rowDelay','cCasRowDelay','vCasRowDelay',0],['randDelay','cCasRandDelay','vCasRandDelay',0],
-                ['curve','cCasCurve','vCasCurve',0],['hold','cCasHold','vCasHold',0]];
+                ['curve','cCasCurve','vCasCurve',0],['hold','cCasHold','vCasHold',0],
+                ['start','cCasStart','vCasStart',0],['bounce','cCasBounce','vCasBounce',2],
+                ['exitSpread','cCasExitSpread','vCasExitSpread',2],['exitStagger','cCasExitStagger','vCasExitStagger',2]];
+      var COLS=[['holo','cCasHolo','cCasHoloHex'],['voxel','cCasVox','cCasVoxHex']];
       function cur(){ var o=copyOvr['cascadeCfg']; return (o&&typeof o==='object')?o:{}; }
       function val(k){ var o=cur(); return o[k]!=null?o[k]:DEF[k]; }
       function put(k,v){ var o=cur(); o[k]=v; copyOvr['cascadeCfg']=o; persistCopy(); }
@@ -12863,6 +13245,10 @@ f 2469//2469 2470//2470 2434//2434
         ROWS.forEach(function(r){
           var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
           if(!el) return; var v=val(r[0]); el.value=v; if(out) out.textContent=Number(v).toFixed(r[3]);
+        });
+        COLS.forEach(function(c){
+          var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
+          var v=val(c[0]); if(sw) sw.value=v; if(tx) tx.value=v;
         });
         var vx=document.getElementById('cCasVoxel'); if(vx) vx.checked=(val('style')==='voxel');
       }
@@ -12873,10 +13259,24 @@ f 2469//2469 2470//2470 2434//2434
           var v=parseFloat(el.value); if(out) out.textContent=v.toFixed(r[3]); put(r[0],v);
         });
       });
+      COLS.forEach(function(c){
+        var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
+        if(sw) sw.addEventListener('input',function(){ if(tx) tx.value=sw.value; put(c[0], sw.value); });
+        if(tx) tx.addEventListener('change',function(){
+          var v=tx.value.trim(); if(!/^#[0-9a-f]{6}$/i.test(v)){ tx.value=val(c[0]); return; }
+          if(sw) sw.value=v; put(c[0], v);
+        });
+      });
       var vx=document.getElementById('cCasVoxel');
       if(vx) vx.addEventListener('change',function(){ put('style', vx.checked?'voxel':'holo'); });
       var pv=document.getElementById('cCasPreview');
-      if(pv) pv.addEventListener('click',function(){ if(window.enterCaseStudy) window.enterCaseStudy(); });
+      // Preview the REAL destination. This used to call enterCaseStudy() bare, which defaults
+      // to the old DOM page takeover — so tuning the cascade showed you a cream placeholder
+      // that is no longer where the transition goes.
+      if(pv) pv.addEventListener('click',function(){
+        if(window.csOpenCaseStudy) window.csOpenCaseStudy();
+        else if(window.enterCaseStudy) window.enterCaseStudy();
+      });
       var rs=document.getElementById('cCasReset');
       if(rs) rs.addEventListener('click',function(){ delete copyOvr['cascadeCfg']; persistCopy(); paint(); if(typeof toast==='function') toast('cascade defaults restored'); });
       paint();
@@ -13213,6 +13613,7 @@ f 2469//2469 2470//2470 2434//2434
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
             if(data.ctaUrl && data.ctaUrl!=='#') window.open(data.ctaUrl,'_blank','noopener');   // an explicit URL overrides the internal case-study takeover
+            else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
         ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
@@ -13423,15 +13824,36 @@ f 2469//2469 2470//2470 2434//2434
       randDelay: 460, // random delay spread (ms)
       curve: 11,      // weight of curved (arch) pieces
       hold: 600,      // how long the full pile hangs before it wipes away (ms)
+      start: 160,     // delay before the first brick starts falling (ms)
+      exitSpread: 0.70,  // exit randomness, as a fraction of randDelay
+      exitStagger: 0.35, // exit per-row stagger, as a fraction of rowDelay
+      bounce: 1.30,   // landing overshoot — the easing curve's second control point
+      holo: '#78E0D6',   // holo tint; the lighter rim is derived from it
+      voxel: '#E9A73E',  // voxel base; top/side shades are derived from it
       style: 'holo'   // 'holo' = teal stepped stud-plate (default), 'voxel' = amber pixel brick
     };
     var CFG = {};
+    // Shift a hex colour toward white (p>0) or black (p<0), so one authored swatch can drive a
+    // whole set of face shades instead of asking for six colour pickers.
+    function shade(hex, p){
+      var m=/^#?([0-9a-f]{6})$/i.exec(String(hex||'')); if(!m) return hex;
+      var n=parseInt(m[1],16), t=p<0?0:255, a=Math.abs(p);
+      var r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+      function mix(c){ return Math.round((t-c)*a+c); }
+      return '#'+((1<<24)+(mix(r)<<16)+(mix(g)<<8)+mix(b)).toString(16).slice(1);
+    }
     // Re-read on EVERY run, so a slider change lands on the next cascade with no reload.
     function loadCfg(){
       var o=null;
       try { o = (window.BRICStore && BRICStore.getCopy) ? BRICStore.getCopy()['cascadeCfg'] : null; } catch(e){}
       CFG = {};
       Object.keys(CFG_DEFAULT).forEach(function(k){ CFG[k] = (o && o[k] != null) ? o[k] : CFG_DEFAULT[k]; });
+      // Push the authored look onto the layer; the face rules read these.
+      if(cascadeEl){
+        cascadeEl.style.setProperty('--casc-holo', CFG.holo);
+        cascadeEl.style.setProperty('--casc-edge', shade(CFG.holo, 0.45));
+        cascadeEl.style.setProperty('--casc-bounce', String(CFG.bounce));
+      }
       return CFG;
     }
     loadCfg();
@@ -13492,10 +13914,11 @@ f 2469//2469 2470//2470 2434//2434
           b.style.setProperty('--spin1', rnd(-CFG.spin * 0.3, CFG.spin * 0.3).toFixed(1) + 'deg');
           b.style.setProperty('--fall', (CFG.fall + rnd(-0.1, 0.18)).toFixed(2) + 's');
           if (styleName === 'voxel') {
-            var deep = Math.random() > 0.78;
-            b.style.setProperty('--bf', deep ? '#D9962F' : '#E9A73E');
-            b.style.setProperty('--bt', deep ? '#E9A73E' : '#F4B852');
-            b.style.setProperty('--br', deep ? '#A86B22' : '#BE7E2A');
+            var deep = Math.random() > 0.78;   // a minority of bricks sit a shade darker, for depth
+            var base = deep ? shade(CFG.voxel, -0.12) : CFG.voxel;
+            b.style.setProperty('--bf', base);
+            b.style.setProperty('--bt', shade(base,  0.14));   // top face catches light
+            b.style.setProperty('--br', shade(base, -0.22));   // sides fall away
           }
           var j = CFG.jitter * U;
           b.style.left = Math.round(c * cellW + rnd(-j, j)) + 'px';
@@ -13554,7 +13977,7 @@ f 2469//2469 2470//2470 2434//2434
       var maxDelay = 0;
       blocks.forEach(function(b){
         var r = +b.dataset.row;
-        var d = 160 + r * CFG.rowDelay + Math.random() * CFG.randDelay;
+        var d = CFG.start + r * CFG.rowDelay + Math.random() * CFG.randDelay;
         maxDelay = Math.max(maxDelay, d);
         cascadeTimers.push(setTimeout(function(){ b.classList.add('landed'); }, d));
       });
@@ -13566,11 +13989,13 @@ f 2469//2469 2470//2470 2434//2434
       if(hooks.onCurtainClosed) cascadeTimers.push(setTimeout(hooks.onCurtainClosed, fillDone));
       cascadeTimers.push(setTimeout(function(){
         boxScene.style.opacity = '0';
-        pageTakeover.classList.add('visible');
+        // A caller that rebuilt the CANVAS behind the curtain (the chapter ring) passes
+        // showTakeover:false — there is no DOM page to reveal, the bricks just clear off it.
+        if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
       }, exitStart));
       var exitMax = 0;
       blocks.forEach(function(b){
-        var ed = exitStart + Math.random() * (CFG.randDelay * 0.7) + (+b.dataset.row) * (CFG.rowDelay * 0.35);
+        var ed = exitStart + Math.random() * (CFG.randDelay * CFG.exitSpread) + (+b.dataset.row) * (CFG.rowDelay * CFG.exitStagger);
         exitMax = Math.max(exitMax, ed);
         cascadeTimers.push(setTimeout(function(){ b.classList.add('out'); }, ed));
       });
@@ -13596,7 +14021,7 @@ f 2469//2469 2470//2470 2434//2434
       }, FADE));
       cascadeTimers.push(setTimeout(function(){
         boxScene.style.opacity = '0';
-        pageTakeover.classList.add('visible');
+        if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
       }, FADE + COVER));
       cascadeTimers.push(setTimeout(function(){
         cascadeEl.classList.remove('run');
