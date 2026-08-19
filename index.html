@@ -13837,6 +13837,8 @@ f 2469//2469 2470//2470 2434//2434
       exitSpread: 0.70,  // exit randomness, as a fraction of randDelay
       exitStagger: 0.35, // exit per-row stagger, as a fraction of rowDelay
       bounce: 1.30,   // landing overshoot — the easing curve's second control point
+      scrim: 0.92,    // how opaque the backing scrim goes at full fill (0 = bricks only)
+      brickAlpha: 1.0,// brick translucency multiplier
       holo: '#78E0D6',   // holo tint; the lighter rim is derived from it
       voxel: '#E9A73E',  // voxel base; top/side shades are derived from it
       style: 'holo'   // 'holo' = teal stepped stud-plate (default), 'voxel' = amber pixel brick
@@ -14017,8 +14019,190 @@ f 2469//2469 2470//2470 2434//2434
         return loading;
       }
 
+      // ── choreography ────────────────────────────────────────────────────────
+      // Ported from the CSS version beat for beat. The DOM cascade drove the fall with
+      // a CSS transition and .landed/.out class flips; here the same timeline is walked
+      // per frame. Every CFG value keeps its old meaning because the camera is in pixel
+      // space — U really is a pixel size, rowDelay really is milliseconds.
+      var bricks=[], running=false, raf=0, tStart=0, dummy=null, ease=null, scrim=null;
+
+      // THE CURTAIN IS NOT THE BRICKS.
+      // The CSS version occluded for free: each cube was six solid faces, so a filled
+      // grid was effectively opaque. Real bricks are translucent holograms — over a live
+      // galaxy they read beautifully but hide nothing, and the entire job of this
+      // sequence is to cover a scene swap. So the bricks now fall in FRONT of a scrim
+      // that fades up as they land and back down as they leave. Bricks carry the
+      // character; the scrim guarantees the occlusion. CFG.scrim tunes how far it goes —
+      // 0 is pure bricks (and a visible swap), 1 is full cover.
+      function ensureScrim(){
+        if(scrim) return;
+        // DoubleSide is REQUIRED, not defensive. The pixel-space camera is y-DOWN
+        // (top:0, bottom:H), which mirrors the projection and therefore flips triangle
+        // winding — single-sided geometry faces away and is culled. The bricks only
+        // survived this because their material is double-sided too. Anything added to
+        // this scene needs the same treatment.
+        scrim=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+          new THREE.MeshBasicMaterial({color:0x070c0c, transparent:true, opacity:0,
+                                       depthWrite:false, side:THREE.DoubleSide}));
+        scrim.frustumCulled=false;
+        scene.add(scrim);
+      }
+      function placeScrim(){
+        ensureScrim();
+        scrim.geometry.dispose();
+        scrim.geometry=new THREE.PlaneGeometry(W*1.2,H*1.2);
+        scrim.position.set(W/2,H/2,-4000);
+      }
+
+      // CSS cubic-bezier evaluated the way browsers do (Newton-Raphson on x), so the
+      // WebGL fall matches the curve it replaces — including the landing overshoot that
+      // CFG.bounce drives.
+      function bezier(x1,y1,x2,y2){
+        function cx(t){ return 3*x1*(1-t)*(1-t)*t + 3*x2*(1-t)*t*t + t*t*t; }
+        function cy(t){ return 3*y1*(1-t)*(1-t)*t + 3*y2*(1-t)*t*t + t*t*t; }
+        function dcx(t){ return 3*x1*(1-4*t+3*t*t) + 3*x2*(2*t-3*t*t) + 3*t*t; }
+        return function(x){
+          if(x<=0) return 0; if(x>=1) return 1;
+          var t=x;
+          for(var i=0;i<6;i++){
+            var e=cx(t)-x; if(Math.abs(e)<1e-4) break;
+            var d=dcx(t); if(Math.abs(d)<1e-6) break;
+            t-=e/d;
+          }
+          return cy(t<0?0:t>1?1:t);
+        };
+      }
+
+      function pickWeighted(){
+        var total=0, i;
+        for(i=0;i<shapes.length;i++) total+=shapes[i].weight;
+        var r=Math.random()*total;
+        for(i=0;i<shapes.length;i++){ r-=shapes[i].weight; if(r<=0) return i; }
+        return 0;
+      }
+      var rnd=function(lo,hi){ return lo+Math.random()*(hi-lo); };
+
+      // Lay out the field and precompute every brick's timeline. Mirrors buildCascade's
+      // grid: one brick per cell, jittered, with the row driving the stagger.
+      function layout(){
+        var U=CFG.U, cellW=U*CFG.spacing, cellH=U*CFG.spacing*0.83;
+        var cols=Math.ceil(W/cellW)+1, rows=Math.ceil(H/cellH)+2;
+        var j=CFG.jitter*U, fallMs=CFG.fall*1000;
+        bricks=[]; var maxLand=0;
+        for(var r=0;r<rows;r++) for(var c=0;c<cols;c++){
+          var si=pickWeighted();
+          var land=CFG.start + r*CFG.rowDelay + Math.random()*CFG.randDelay;
+          if(land>maxLand) maxLand=land;
+          bricks.push({ s:si, row:r,
+            x:Math.round(c*cellW+rnd(-j,j)), y:Math.round(r*cellH+rnd(-j,j)), z:rnd(-U,U),
+            ox:rnd(-CFG.tumble,CFG.tumble)*Math.PI/180,
+            oy:rnd(0,360)*Math.PI/180,
+            oz:rnd(-CFG.tumble,CFG.tumble)*Math.PI/180,
+            spin0:rnd(-CFG.spin,CFG.spin)*Math.PI/180,
+            spin1:rnd(-CFG.spin*0.3,CFG.spin*0.3)*Math.PI/180,
+            land:land, exit:0 });
+        }
+        var fillDone=maxLand+fallMs, exitStart=fillDone+CFG.hold, maxExit=0;
+        bricks.forEach(function(b){
+          b.exit = exitStart + Math.random()*(CFG.randDelay*CFG.exitSpread) + b.row*(CFG.rowDelay*CFG.exitStagger);
+          if(b.exit>maxExit) maxExit=b.exit;
+        });
+        return { fillDone:fillDone, exitStart:exitStart, done:maxExit+fallMs+120 };
+      }
+
+      // One InstancedMesh per shape — any number of bricks costs one draw call each.
+      function meshes(){
+        shapes.forEach(function(sh){
+          if(sh.mesh){ scene.remove(sh.mesh); sh.mesh.dispose(); sh.mesh=null; }
+        });
+        var counts=shapes.map(function(){ return 0; });
+        bricks.forEach(function(b){ counts[b.s]++; });
+        var scale=CFG.U/STUD_WORLD;   // 1 stud → CFG.U pixels
+        shapes.forEach(function(sh,i){
+          if(!counts[i]) return;
+          var g=sh.geo.clone(); g.scale(scale,scale,scale);
+          sh.mesh=new THREE.InstancedMesh(g, mat, counts[i]);
+          sh.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          sh.mesh.frustumCulled=false;
+          scene.add(sh.mesh);
+          sh.cursor=0;
+        });
+      }
+
+      function frame(times, hooks, fired){
+        var now=performance.now()-tStart, fallMs=CFG.fall*1000;
+        mat.uniforms.uTime.value=now/1000;
+        if(scrim){
+          // up with the fall, hold through the swap window, down with the exit
+          var o;
+          if(now < times.fillDone) o = Math.max(0, Math.min(1, now/Math.max(1,times.fillDone)));
+          else if(now < times.exitStart) o = 1;
+          else o = Math.max(0, 1 - (now-times.exitStart)/Math.max(1,(times.done-times.exitStart)));
+          scrim.material.opacity = o * CFG.scrim;
+        }
+        shapes.forEach(function(sh){ sh.cursor=0; });
+        for(var i=0;i<bricks.length;i++){
+          var b=bricks[i], sh=shapes[b.s];
+          if(!sh || !sh.mesh) continue;
+          var y, spin;
+          if(now < b.exit){
+            var p = ease((now-b.land)/fallMs);
+            y = (b.y - H*1.25) + (H*1.25)*p;           // matches translateY(-125vh) → 0
+            spin = b.spin0 + (b.spin1-b.spin0)*p;
+          } else {
+            var q = ease((now-b.exit)/fallMs);
+            y = b.y + (H*1.30)*q;                      // matches translateY(130vh)
+            spin = b.spin1 + (b.spin0-b.spin1)*q;
+          }
+          dummy.position.set(b.x, y, b.z);
+          dummy.rotation.set(b.ox, b.oy, b.oz + spin);
+          dummy.updateMatrix();
+          sh.mesh.setMatrixAt(sh.cursor++, dummy.matrix);
+        }
+        shapes.forEach(function(sh){ if(sh.mesh) sh.mesh.instanceMatrix.needsUpdate=true; });
+        renderer.render(scene,cam);
+
+        if(!fired.curtain && now>=times.fillDone){ fired.curtain=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); }
+        if(!fired.reveal && now>=times.exitStart){ fired.reveal=true; if(hooks.onReveal) hooks.onReveal(); }
+        if(now>=times.done){ stop(); if(hooks.onDone) hooks.onDone(); return; }
+        raf=requestAnimationFrame(function(){ frame(times,hooks,fired); });
+      }
+
+      // Run the curtain. Resolves nothing — the caller is driven by the hooks, which fire
+      // at the same moments the DOM version fired them.
+      function run(hooks){
+        hooks=hooks||{};
+        if(!loaded || !shapes.length) return false;
+        loadCfg();                       // authored tunables apply to the next run, no reload
+        stop();
+        resize();
+        if(!dummy) dummy=new THREE.Object3D();
+        ease=bezier(0.30, CFG.bounce, 0.55, 1);
+        mat.uniforms.uAlpha.value=CFG.brickAlpha;
+        mat.uniforms.uTint.value.set(CFG.holo);
+        mat.uniforms.uHot.value.set(shade(CFG.holo,0.45));
+        var times=layout();
+        placeScrim();
+        meshes();
+        running=true; tStart=performance.now();
+        canvas.classList.add('run');
+        frame(times,hooks,{curtain:false,reveal:false});
+        return true;
+      }
+      function stop(){
+        running=false;
+        if(raf) cancelAnimationFrame(raf), raf=0;
+        if(canvas) canvas.classList.remove('run');
+        shapes.forEach(function(sh){ if(sh.mesh){ scene.remove(sh.mesh); sh.mesh.dispose(); sh.mesh=null; } });
+        if(scrim) scrim.material.opacity=0;
+        bricks=[];
+      }
+
       return {
         load: load,
+        run: run,
+        stop: stop,
+        running: function(){ return running; },
         ready: function(){ return loaded && shapes.length>0; },
         shapes: function(){ return shapes; },
         defaults: function(){ return DEFAULT_SHAPES.slice(); },
