@@ -1621,7 +1621,7 @@
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
           <div class="manual-cta">
-            <button class="manual-cta-btn" onclick="window.enterCaseStudy&&window.enterCaseStudy()"><!--CMS:ctaLabel-->Case study coming soon</button>
+            <button class="manual-cta-btn" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -9838,7 +9838,7 @@ f 2469//2469 2470//2470 2434//2434
         if(focusedMoon){ unfocusMoon(); return; }   // click off the artifact → back to the project manual
         // click the kit box face (when hover affordance is active) → enter case study
         if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
-          clearBoxHover(); enterCaseStudy(); return; }
+          clearBoxHover(); openCaseStudyRoute(); return; }
         goHome(); return; }
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
@@ -11658,6 +11658,13 @@ f 2469//2469 2470//2470 2434//2434
         hooks:{ onCurtainClosed:function(){ csEnterFromProject(pid); } } });
     }
     window.csOpenCaseStudy=csOpenCaseStudy;
+    // Single entry point for every in-page trigger (kit-box click, manual CTA). Falls back to
+    // the old DOM page takeover if the constellation is somehow unavailable, so nothing can
+    // dead-end on a click.
+    function openCaseStudyRoute(pid){
+      if(typeof csOpenCaseStudy==='function') csOpenCaseStudy(pid);
+      else enterCaseStudy();
+    }
 
     // ── in-scene controls ──────────────────────────────────────────────────────
     (function wireRingCtl(){
@@ -13542,6 +13549,7 @@ f 2469//2469 2470//2470 2434//2434
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
             if(data.ctaUrl && data.ctaUrl!=='#') window.open(data.ctaUrl,'_blank','noopener');   // an explicit URL overrides the internal case-study takeover
+            else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
         ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
