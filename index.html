@@ -1003,7 +1003,9 @@
     position: absolute;
     width: 0; height: 0;
     transform: translateY(-125vh) rotate(var(--spin0, 0deg));
-    transition: transform var(--fall, 0.62s) cubic-bezier(0.30,1.30,0.55,1);
+    /* The second control point is the landing BOUNCE — >1 overshoots and settles back.
+       Exposed as --casc-bounce so it can be tuned from the debug panel. */
+    transition: transform var(--fall, 0.62s) cubic-bezier(0.30, var(--casc-bounce, 1.30), 0.55, 1);
     will-change: transform;
   }
   .block.landed { transform: translateY(0) rotate(var(--spin1, 0deg)); }
@@ -1077,16 +1079,19 @@
   #cascade.style-voxel .stud { display: none; }
 
   /* Variant C — HOLO */
-  #cascade.style-holo .fc { background: rgba(120,224,214,0.16); border: 1px solid rgba(170,245,238,0.42); }
-  #cascade.style-holo .fc.top { background: rgba(120,224,214,0.32); border-color: rgba(170,245,238,0.7); }
-  #cascade.style-holo .fc.front, #cascade.style-holo .fc.back { box-shadow: inset 0 0 12px rgba(120,224,214,0.20); }
+  /* Holo faces derive every tint from one authored colour (--casc-holo, set by the debug
+     panel), so the whole cascade can be recoloured from a single swatch. --casc-edge is the
+     lighter rim, derived in JS. */
+  #cascade.style-holo .fc { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 16%, transparent); border: 1px solid color-mix(in srgb, var(--casc-edge,#AAF5EE) 42%, transparent); }
+  #cascade.style-holo .fc.top { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 32%, transparent); border-color: color-mix(in srgb, var(--casc-edge,#AAF5EE) 70%, transparent); }
+  #cascade.style-holo .fc.front, #cascade.style-holo .fc.back { box-shadow: inset 0 0 12px color-mix(in srgb, var(--casc-holo,#78E0D6) 20%, transparent); }
   #cascade.style-holo .fc.top::after {
     content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(180deg, transparent 0, transparent 2px, rgba(170,245,238,0.16) 2px, rgba(170,245,238,0.16) 3px);
+    background: repeating-linear-gradient(180deg, transparent 0, transparent 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 3px);
   }
   #cascade.style-holo .stud {
-    background: rgba(120,224,214,0.55); border: 1px solid #EAFEFB; border-radius: 32%;
-    box-shadow: 0 0 8px rgba(120,224,214,0.5);
+    background: color-mix(in srgb, var(--casc-holo,#78E0D6) 55%, transparent); border: 1px solid #EAFEFB; border-radius: 32%;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--casc-holo,#78E0D6) 50%, transparent);
   }
 </style>
 </head>
@@ -1330,6 +1335,12 @@
       <div class="ctl"><label>Random spread <b id="vCasRandDelay">460</b></label><input type="range" id="cCasRandDelay" min="0" max="1200" step="20" value="460"></div>
       <div class="ctl"><label>Curved pieces <b id="vCasCurve">11</b></label><input type="range" id="cCasCurve" min="0" max="30" step="1" value="11"></div>
       <div class="ctl"><label>Hang time <b id="vCasHold">600</b></label><input type="range" id="cCasHold" min="0" max="2000" step="50" value="600"></div>
+      <div class="ctl"><label>Start delay <b id="vCasStart">160</b></label><input type="range" id="cCasStart" min="0" max="900" step="20" value="160"></div>
+      <div class="ctl"><label>Landing bounce <b id="vCasBounce">1.30</b></label><input type="range" id="cCasBounce" min="1" max="2.2" step="0.05" value="1.3"></div>
+      <div class="ctl"><label>Exit spread <b id="vCasExitSpread">0.70</b></label><input type="range" id="cCasExitSpread" min="0" max="2" step="0.05" value="0.7"></div>
+      <div class="ctl"><label>Exit stagger <b id="vCasExitStagger">0.35</b></label><input type="range" id="cCasExitStagger" min="0" max="2" step="0.05" value="0.35"></div>
+      <div class="ctl"><label>Holo tint</label><input type="color" id="cCasHolo" value="#78E0D6"><input type="text" id="cCasHoloHex" value="#78E0D6" class="hexin"></div>
+      <div class="ctl"><label>Voxel tint</label><input type="color" id="cCasVox" value="#E9A73E"><input type="text" id="cCasVoxHex" value="#E9A73E" class="hexin"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cCasVoxel"> Amber voxel bricks (default: teal holo)</label></div>
       <button class="resetbtn" id="cCasPreview">▶ Preview cascade</button>
       <button class="resetbtn" id="cCasReset">⟲ Reset cascade defaults</button>
@@ -13218,11 +13229,15 @@ f 2469//2469 2470//2470 2434//2434
     // takes effect on the next cascade with no reload. Writes go through persistCopy() so
     // they land in the same server-synced store as all other authored content.
     (function wireCascadePanel(){
-      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,curve:11,hold:600,style:'holo'};
+      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,curve:11,hold:600,
+               start:160,exitSpread:0.70,exitStagger:0.35,bounce:1.30,holo:'#78E0D6',voxel:'#E9A73E',style:'holo'};
       var ROWS=[['U','cCasU','vCasU',0],['spacing','cCasSpacing','vCasSpacing',1],['jitter','cCasJitter','vCasJitter',2],
                 ['tumble','cCasTumble','vCasTumble',0],['spin','cCasSpin','vCasSpin',0],['fall','cCasFall','vCasFall',2],
                 ['rowDelay','cCasRowDelay','vCasRowDelay',0],['randDelay','cCasRandDelay','vCasRandDelay',0],
-                ['curve','cCasCurve','vCasCurve',0],['hold','cCasHold','vCasHold',0]];
+                ['curve','cCasCurve','vCasCurve',0],['hold','cCasHold','vCasHold',0],
+                ['start','cCasStart','vCasStart',0],['bounce','cCasBounce','vCasBounce',2],
+                ['exitSpread','cCasExitSpread','vCasExitSpread',2],['exitStagger','cCasExitStagger','vCasExitStagger',2]];
+      var COLS=[['holo','cCasHolo','cCasHoloHex'],['voxel','cCasVox','cCasVoxHex']];
       function cur(){ var o=copyOvr['cascadeCfg']; return (o&&typeof o==='object')?o:{}; }
       function val(k){ var o=cur(); return o[k]!=null?o[k]:DEF[k]; }
       function put(k,v){ var o=cur(); o[k]=v; copyOvr['cascadeCfg']=o; persistCopy(); }
@@ -13230,6 +13245,10 @@ f 2469//2469 2470//2470 2434//2434
         ROWS.forEach(function(r){
           var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
           if(!el) return; var v=val(r[0]); el.value=v; if(out) out.textContent=Number(v).toFixed(r[3]);
+        });
+        COLS.forEach(function(c){
+          var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
+          var v=val(c[0]); if(sw) sw.value=v; if(tx) tx.value=v;
         });
         var vx=document.getElementById('cCasVoxel'); if(vx) vx.checked=(val('style')==='voxel');
       }
@@ -13240,10 +13259,24 @@ f 2469//2469 2470//2470 2434//2434
           var v=parseFloat(el.value); if(out) out.textContent=v.toFixed(r[3]); put(r[0],v);
         });
       });
+      COLS.forEach(function(c){
+        var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
+        if(sw) sw.addEventListener('input',function(){ if(tx) tx.value=sw.value; put(c[0], sw.value); });
+        if(tx) tx.addEventListener('change',function(){
+          var v=tx.value.trim(); if(!/^#[0-9a-f]{6}$/i.test(v)){ tx.value=val(c[0]); return; }
+          if(sw) sw.value=v; put(c[0], v);
+        });
+      });
       var vx=document.getElementById('cCasVoxel');
       if(vx) vx.addEventListener('change',function(){ put('style', vx.checked?'voxel':'holo'); });
       var pv=document.getElementById('cCasPreview');
-      if(pv) pv.addEventListener('click',function(){ if(window.enterCaseStudy) window.enterCaseStudy(); });
+      // Preview the REAL destination. This used to call enterCaseStudy() bare, which defaults
+      // to the old DOM page takeover — so tuning the cascade showed you a cream placeholder
+      // that is no longer where the transition goes.
+      if(pv) pv.addEventListener('click',function(){
+        if(window.csOpenCaseStudy) window.csOpenCaseStudy();
+        else if(window.enterCaseStudy) window.enterCaseStudy();
+      });
       var rs=document.getElementById('cCasReset');
       if(rs) rs.addEventListener('click',function(){ delete copyOvr['cascadeCfg']; persistCopy(); paint(); if(typeof toast==='function') toast('cascade defaults restored'); });
       paint();
@@ -13791,15 +13824,36 @@ f 2469//2469 2470//2470 2434//2434
       randDelay: 460, // random delay spread (ms)
       curve: 11,      // weight of curved (arch) pieces
       hold: 600,      // how long the full pile hangs before it wipes away (ms)
+      start: 160,     // delay before the first brick starts falling (ms)
+      exitSpread: 0.70,  // exit randomness, as a fraction of randDelay
+      exitStagger: 0.35, // exit per-row stagger, as a fraction of rowDelay
+      bounce: 1.30,   // landing overshoot — the easing curve's second control point
+      holo: '#78E0D6',   // holo tint; the lighter rim is derived from it
+      voxel: '#E9A73E',  // voxel base; top/side shades are derived from it
       style: 'holo'   // 'holo' = teal stepped stud-plate (default), 'voxel' = amber pixel brick
     };
     var CFG = {};
+    // Shift a hex colour toward white (p>0) or black (p<0), so one authored swatch can drive a
+    // whole set of face shades instead of asking for six colour pickers.
+    function shade(hex, p){
+      var m=/^#?([0-9a-f]{6})$/i.exec(String(hex||'')); if(!m) return hex;
+      var n=parseInt(m[1],16), t=p<0?0:255, a=Math.abs(p);
+      var r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+      function mix(c){ return Math.round((t-c)*a+c); }
+      return '#'+((1<<24)+(mix(r)<<16)+(mix(g)<<8)+mix(b)).toString(16).slice(1);
+    }
     // Re-read on EVERY run, so a slider change lands on the next cascade with no reload.
     function loadCfg(){
       var o=null;
       try { o = (window.BRICStore && BRICStore.getCopy) ? BRICStore.getCopy()['cascadeCfg'] : null; } catch(e){}
       CFG = {};
       Object.keys(CFG_DEFAULT).forEach(function(k){ CFG[k] = (o && o[k] != null) ? o[k] : CFG_DEFAULT[k]; });
+      // Push the authored look onto the layer; the face rules read these.
+      if(cascadeEl){
+        cascadeEl.style.setProperty('--casc-holo', CFG.holo);
+        cascadeEl.style.setProperty('--casc-edge', shade(CFG.holo, 0.45));
+        cascadeEl.style.setProperty('--casc-bounce', String(CFG.bounce));
+      }
       return CFG;
     }
     loadCfg();
@@ -13860,10 +13914,11 @@ f 2469//2469 2470//2470 2434//2434
           b.style.setProperty('--spin1', rnd(-CFG.spin * 0.3, CFG.spin * 0.3).toFixed(1) + 'deg');
           b.style.setProperty('--fall', (CFG.fall + rnd(-0.1, 0.18)).toFixed(2) + 's');
           if (styleName === 'voxel') {
-            var deep = Math.random() > 0.78;
-            b.style.setProperty('--bf', deep ? '#D9962F' : '#E9A73E');
-            b.style.setProperty('--bt', deep ? '#E9A73E' : '#F4B852');
-            b.style.setProperty('--br', deep ? '#A86B22' : '#BE7E2A');
+            var deep = Math.random() > 0.78;   // a minority of bricks sit a shade darker, for depth
+            var base = deep ? shade(CFG.voxel, -0.12) : CFG.voxel;
+            b.style.setProperty('--bf', base);
+            b.style.setProperty('--bt', shade(base,  0.14));   // top face catches light
+            b.style.setProperty('--br', shade(base, -0.22));   // sides fall away
           }
           var j = CFG.jitter * U;
           b.style.left = Math.round(c * cellW + rnd(-j, j)) + 'px';
@@ -13922,7 +13977,7 @@ f 2469//2469 2470//2470 2434//2434
       var maxDelay = 0;
       blocks.forEach(function(b){
         var r = +b.dataset.row;
-        var d = 160 + r * CFG.rowDelay + Math.random() * CFG.randDelay;
+        var d = CFG.start + r * CFG.rowDelay + Math.random() * CFG.randDelay;
         maxDelay = Math.max(maxDelay, d);
         cascadeTimers.push(setTimeout(function(){ b.classList.add('landed'); }, d));
       });
@@ -13940,7 +13995,7 @@ f 2469//2469 2470//2470 2434//2434
       }, exitStart));
       var exitMax = 0;
       blocks.forEach(function(b){
-        var ed = exitStart + Math.random() * (CFG.randDelay * 0.7) + (+b.dataset.row) * (CFG.rowDelay * 0.35);
+        var ed = exitStart + Math.random() * (CFG.randDelay * CFG.exitSpread) + (+b.dataset.row) * (CFG.rowDelay * CFG.exitStagger);
         exitMax = Math.max(exitMax, ed);
         cascadeTimers.push(setTimeout(function(){ b.classList.add('out'); }, ed));
       });
