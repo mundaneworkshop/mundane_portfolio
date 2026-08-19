@@ -990,6 +990,15 @@
     pointer-events: none; z-index: 8700;
     opacity: 0; visibility: hidden;
   }
+  /* WebGL curtain — its own canvas so the cascade stays independent of the galaxy's
+     renderer and camera. Same stacking position the DOM cascade occupies. */
+  #cascade-gl {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 8700;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.35s ease;
+  }
+  #cascade-gl.run { opacity: 1; visibility: visible; }
   #cascade.run  { opacity: 1; visibility: visible; }
   #cascade.fade { opacity: 0; transition: opacity 0.7s ease 0.15s; }
   /* REDUCED MOTION: one opaque scrim instead of ~600 tumbling bricks. The design language
@@ -13858,6 +13867,166 @@ f 2469//2469 2470//2470 2434//2434
     }
     loadCfg();
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // BRICK FIELD — the WebGL cascade renderer
+    //
+    // Replaces the CSS-3D cube system. The old cascade faked bricks from six face
+    // divs per cube; this draws REAL LEGO parts loaded from .glb, because the faked
+    // shapes never read as bricks no matter how they were tuned.
+    //
+    // WHY A SEPARATE CANVAS: the cascade is a screen-space CURTAIN, not part of the
+    // galaxy. Giving it its own canvas + renderer keeps it completely independent of
+    // the main scene's camera and render loop — it can cover a scene swap without
+    // knowing anything about what it is covering, exactly as the DOM overlay did.
+    //
+    // WHY PIXEL-SPACE: the orthographic frustum is set to (0,0)-(W,H) in CSS pixels
+    // with y pointing DOWN, so it shares a coordinate system with the DOM version.
+    // That is what lets every existing tunable — U, spacing, jitter, rowDelay — carry
+    // over unchanged instead of being re-derived in world units.
+    //
+    // Geometry convention (measured from the shipped parts, Aug 2026): exports are in
+    // LDraw units with the node carrying a 0.01 scale and a -90° X rotation. 20 LDU is
+    // one stud, so one stud is 0.2 world units after the node transform — hence
+    // STUD_WORLD below. Node transforms are BAKED rather than assumed, so a part
+    // exported with a different convention still lands correctly.
+    // ══════════════════════════════════════════════════════════════════════════
+    var BrickField = (function(){
+      var STUD_WORLD = 0.2;          // one stud, in world units, after node transforms are baked
+      var canvas=null, renderer=null, scene=null, cam=null, mat=null;
+      var shapes=[];                 // [{id,label,geo,mesh,weight}]
+      var loaded=false, loading=null;
+      var W=0, H=0;
+
+      // Default shape set. `file` is the fallback path under assets/; an author upload
+      // in IndexedDB under 'brick:<id>' takes precedence. `weight` is how often the
+      // shape appears in the mix — this replaces the old SHAPES array's baked w: values.
+      var DEFAULT_SHAPES=[
+        {id:'brick-2x2',  label:'2×2 brick',   file:'assets/models/bricks/brick-2x2.glb',  weight:8},
+        {id:'brick-1x1',  label:'1×1 brick',   file:'assets/models/bricks/brick-1x1.glb',  weight:6},
+        {id:'slope-1x1',  label:'1×1 slope',   file:'assets/models/bricks/slope-1x1.glb',  weight:5}
+      ];
+
+      function shapeDefs(){
+        var ovr=null;
+        try{ ovr=(window.BRICStore&&BRICStore.getCopy)?BRICStore.getCopy()['brickShapes']:null; }catch(e){}
+        if(ovr && ovr.length) return ovr;
+        return DEFAULT_SHAPES.map(function(s){ return {id:s.id,label:s.label,file:s.file,weight:s.weight}; });
+      }
+
+      // Holographic material. Written entirely in code and applied OVER whatever the
+      // .glb shipped with — the exports carry a plain "15 White" PBR material which is
+      // discarded here. Nothing about the look is baked in Blender.
+      function makeMat(){
+        return new THREE.ShaderMaterial({
+          transparent:true, depthWrite:false, side:THREE.DoubleSide,
+          uniforms:{ uTint:{value:new THREE.Color(0x78E0D6)}, uHot:{value:new THREE.Color(0xEAFEFB)},
+                     uTime:{value:0}, uScan:{value:0.7}, uFres:{value:1.8}, uAlpha:{value:1} },
+          vertexShader:
+            'varying vec3 vN; varying vec3 vV; varying vec3 vW;\n'+
+            'void main(){\n'+
+            '  vec4 wp = instanceMatrix * vec4(position,1.0);\n'+
+            '  vN = normalize(mat3(instanceMatrix) * normal);\n'+
+            '  vec4 mv = modelViewMatrix * wp;\n'+
+            '  vV = normalize(-mv.xyz); vW = wp.xyz;\n'+
+            '  gl_Position = projectionMatrix * mv;\n'+
+            '}',
+          fragmentShader:
+            'uniform vec3 uTint; uniform vec3 uHot; uniform float uTime,uScan,uFres,uAlpha;\n'+
+            'varying vec3 vN; varying vec3 vV; varying vec3 vW;\n'+
+            'void main(){\n'+
+            '  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uFres);\n'+   // fresnel rim
+            '  float scan = 0.5 + 0.5*sin((vW.y*0.22) - uTime*2.0);\n'+                  // travelling scanlines
+            '  vec3 col = mix(uTint, uHot, f);\n'+
+            '  float a = (0.16 + f*0.72 + scan*uScan*0.10) * uAlpha;\n'+
+            '  gl_FragColor = vec4(col, clamp(a,0.0,1.0));\n'+
+            '}'
+        });
+      }
+
+      function ensureCanvas(){
+        if(canvas) return;
+        canvas=document.createElement('canvas');
+        canvas.id='cascade-gl';
+        var host=document.getElementById('cascade');
+        (host&&host.parentNode?host.parentNode:document.body).insertBefore(canvas, host||null);
+        renderer=new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+        renderer.setClearColor(0x000000,0);
+        scene=new THREE.Scene();
+        cam=new THREE.OrthographicCamera(0,1,0,1,-6000,6000);   // pixel space, y DOWN
+        mat=makeMat();
+        resize();
+      }
+      function resize(){
+        if(!renderer) return;
+        W=window.innerWidth; H=window.innerHeight;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+        renderer.setSize(W,H,false);
+        cam.left=0; cam.right=W; cam.top=0; cam.bottom=H; cam.updateProjectionMatrix();
+      }
+      window.addEventListener('resize',resize);
+
+      // Bake a loaded glTF scene down to ONE geometry in world units. Uses matrixWorld
+      // rather than assuming the exporter's rotation/scale, so an oddly-authored part
+      // still lands the right way up and at the right size.
+      function bake(gltf){
+        var out=null;
+        gltf.scene.updateMatrixWorld(true);
+        gltf.scene.traverse(function(o){
+          if(!o.isMesh || out) return;
+          var g=o.geometry.clone();
+          g.applyMatrix4(o.matrixWorld);
+          out=g;
+        });
+        return out;
+      }
+
+      function loadOne(def){
+        return new Promise(function(res){
+          var gl=new THREE.GLTFLoader();
+          if(THREE.DRACOLoader){ var d=new THREE.DRACOLoader(); d.setDecoderPath('./vendor/draco/'); gl.setDRACOLoader(d); }
+          function fromBuffer(buf){
+            gl.parse(buf,'',function(g){ res({def:def, geo:bake(g)}); }, function(){ res({def:def, geo:null}); });
+          }
+          // An author upload in IndexedDB wins over the shipped file.
+          var got=null;
+          try{ got=(window.BRICStore&&BRICStore.get)?BRICStore.get('brick:'+def.id):null; }catch(e){}
+          Promise.resolve(got).then(function(rec){
+            if(rec && rec.buffer){ fromBuffer(rec.buffer); return; }
+            fetch(def.file).then(function(r){ return r.ok?r.arrayBuffer():Promise.reject(); })
+              .then(fromBuffer).catch(function(){ res({def:def, geo:null}); });
+          }).catch(function(){ res({def:def, geo:null}); });
+        });
+      }
+
+      // Load every shape once. Resolves to the number of shapes that actually loaded —
+      // the caller uses 0 to mean "fall through to the reduced-motion cross-fade".
+      function load(){
+        if(loaded) return Promise.resolve(shapes.length);
+        if(loading) return loading;
+        ensureCanvas();
+        var defs=shapeDefs();
+        loading=Promise.all(defs.map(loadOne)).then(function(rs){
+          shapes=[];
+          rs.forEach(function(r){
+            if(!r.geo) return;
+            shapes.push({id:r.def.id, label:r.def.label, geo:r.geo, weight:+r.def.weight||1, mesh:null});
+          });
+          loaded=true; loading=null;
+          return shapes.length;
+        });
+        return loading;
+      }
+
+      return {
+        load: load,
+        ready: function(){ return loaded && shapes.length>0; },
+        shapes: function(){ return shapes; },
+        defaults: function(){ return DEFAULT_SHAPES.slice(); },
+        _internals: function(){ return {get renderer(){return renderer;}, get scene(){return scene;},
+          get cam(){return cam;}, get mat(){return mat;}, get canvas(){return canvas;}, STUD_WORLD:STUD_WORLD}; }
+      };
+    })();
+
     var SHAPES = [
       { sw:2, sd:2, hk:'b', t:'brick',  w:8 },
       { sw:1, sd:2, hk:'b', t:'brick',  w:7 },
@@ -14032,7 +14201,8 @@ f 2469//2469 2470//2470 2434//2434
       }, FADE + COVER + FADE + 60));
     }
 
-    window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset };
+    window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset,
+                  bricks: BrickField };   // brick library: the Edit Mode panel loads/validates through this
   })();
   </script>
 </body>
