@@ -47,7 +47,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <!-- HoloNet backend: Supabase JS (UMD → window.supabase.createClient). Publishable key is safe to ship client-side by design; RLS on the messages table restricts it to read-only on approved rows. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- supabase-js — local copy first, CDN only if it is missing. Powers the HoloNet message
+     reads and reconcileServerContent(); both already tolerate its absence, so a total failure
+     degrades to "no server content this boot" rather than a broken page. -->
+<script src="./vendor/supabase.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';document.head.appendChild(s);"></script>
 <style>
   :root{
     --bg:#070c0c; --line:#5ABFB8; --line-dim:rgba(90,191,184,.5); --holo:#AAF5EE;
@@ -11483,7 +11486,10 @@ f 2469//2469 2470//2470 2434//2434
       var gl=new THREE.GLTFLoader();
       try{
         if(THREE.DRACOLoader){
-          if(!_mwDraco){ _mwDraco=new THREE.DRACOLoader(); _mwDraco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/'); }
+          // Local decoder binaries (draco_decoder.js/.wasm + wrapper live in vendor/draco/).
+          // If these ever need to go back to the CDN the path is
+          // https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/
+          if(!_mwDraco){ _mwDraco=new THREE.DRACOLoader(); _mwDraco.setDecoderPath('./vendor/draco/'); }
           gl.setDRACOLoader(_mwDraco);
         }
       }catch(e){}
@@ -12883,13 +12889,20 @@ f 2469//2469 2470//2470 2434//2434
   }
 
   (function(){
-    var SRCS=['./three.min.js','https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js','https://unpkg.com/three@0.128.0/build/three.min.js'];
+    // Local first, then three CDNs. The local entry used to be './three.min.js', a file that
+    // was never actually committed — so every visitor 404'd, got index.html back through the SPA
+    // rewrite, threw "Unexpected token '<'", and silently fell through to cdnjs.
+    var SRCS=['./vendor/three.min.js','https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js','https://unpkg.com/three@0.128.0/build/three.min.js'];
     var i=0;
     function showError(msg){ var d=document.createElement('div'); d.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:40;font-family:Space Mono,monospace;font-size:13px;letter-spacing:1px;color:#F0B848;text-align:center;border:1px solid rgba(240,184,72,.4);padding:18px 22px;border-radius:6px;background:rgba(8,15,17,.9);max-width:400px;line-height:1.6'; d.textContent=msg; document.body.appendChild(d); }
     function tryInit(){
-      var svgSrc='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/SVGLoader.js';
-      var gltfSrc='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';   // EDIT MODE: .glb upload support
-      var dracoSrc='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js';   // MW SEED: pre-loaded portfolio .glb files are Draco-compressed
+      // Each loader is local-first with a CDN fallback. These used to be jsdelivr-only with NO
+      // fallback, and they fail SILENTLY (onerror just proceeds), so a blocked or slow jsdelivr
+      // produced a galaxy with every kit box missing its 3D model and no error shown anywhere.
+      var CDN='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/';
+      var svgSrcs =['./vendor/SVGLoader.js',   CDN+'SVGLoader.js'];
+      var gltfSrcs=['./vendor/GLTFLoader.js',  CDN+'GLTFLoader.js'];    // EDIT MODE: .glb upload support
+      var dracoSrcs=['./vendor/DRACOLoader.js',CDN+'DRACOLoader.js'];   // MW SEED: pre-loaded portfolio .glb files are Draco-compressed
       function boot(){ try{ bootHolotable(); }catch(err){ console.error('[holotable]',err); showError('3D scene error: '+err.message); } }
       // MW SEED: wait for the manifest-driven asset seed (assets/manifest.json → IndexedDB) to finish
       // before booting the scene, so first-time visitors never see an empty/placeholder flash. If the
@@ -12898,9 +12911,20 @@ f 2469//2469 2470//2470 2434//2434
         if(window.__mwSeedReady && window.__mwSeedReady.then){ window.__mwSeedReady.then(boot,boot); }
         else { boot(); }
       }
-      function loadDraco(){ var ds=document.createElement('script'); ds.src=dracoSrc; ds.onload=doInit; ds.onerror=doInit; document.head.appendChild(ds); }
-      function loadGltf(){ var gs=document.createElement('script'); gs.src=gltfSrc; gs.onload=loadDraco; gs.onerror=loadDraco; document.head.appendChild(gs); }
-      var ss=document.createElement('script'); ss.src=svgSrc; ss.onload=loadGltf; ss.onerror=loadGltf; document.head.appendChild(ss);
+      // Walk a source list until one loads; call done() either way. Boot must never be blocked
+      // by an optional loader — that has always been the contract, it just had nothing to fall
+      // back to before.
+      function loadChain(srcs, done){
+        var i=0;
+        (function next(){
+          if(i>=srcs.length){ done(); return; }
+          var el=document.createElement('script');
+          el.src=srcs[i++];
+          el.onload=done; el.onerror=next;
+          document.head.appendChild(el);
+        })();
+      }
+      loadChain(svgSrcs, function(){ loadChain(gltfSrcs, function(){ loadChain(dracoSrcs, doInit); }); });
     }
     function load(){ if(i>=SRCS.length){ showError('Could not load the 3D engine (Three.js). Keep three.min.js next to this file, or connect to the internet and reload.'); return; }
       var s=document.createElement('script'); s.src=SRCS[i]; s.onload=function(){ if(window.THREE)tryInit(); else{i++;load();} }; s.onerror=function(){ i++; load(); }; document.head.appendChild(s); }
