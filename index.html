@@ -9919,6 +9919,215 @@ f 2469//2469 2470//2470 2434//2434
     function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
 
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // SUB-SCENE PRIMITIVE  (Aug 2026 — refactor/subscene-primitive)
+    //
+    // A "sub-scene" is a self-contained 3D view that TAKES OVER the canvas from the
+    // galaxy: the galaxy hides, the sub-scene's own THREE.Group shows, and an orbit
+    // rig drives the camera until the visitor backs out. The CV hyperspace route was
+    // the first of these and was written inline; the case-study chapter ring is the
+    // second. This block is only what they SHARE — camera orbit, fit-to-bounds, the
+    // saved "default view", and the enter/exit lifecycle.
+    //
+    // What stays with the caller, deliberately: what the nodes are, how they're laid
+    // out, what a click means, and every piece of per-scene furniture (the CV route's
+    // branching tree, its ship, its pulse FX canvas; the ring's chapter meshes).
+    //
+    // IMPORTANT: the canvas is never destroyed or paused by a sub-scene — animate()
+    // keeps running and simply asks the active scene where the camera should be. That
+    // is what makes the case-study ring possible at all; see the note on csPaused in
+    // docs/project-history/case-study-direction.md for why the old "WebGL pauses on
+    // full takeover" rule does not apply here.
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // Which sub-scene (if any) currently owns the canvas. The scattered branches in the
+    // drag/wheel/click/exit handlers ask this instead of naming a specific scene, so a
+    // second sub-scene needs no new branches in any of them.
+    var MWSub = { active: null };
+
+    // ── Orbit rig ─────────────────────────────────────────────────────────────
+    // Spherical orbit (yaw / pitch / radius) around a movable look target. This is the
+    // exact camera model the CV route has always used, lifted verbatim so the framing
+    // of an existing scene cannot drift.
+    function MWOrbit(home, lim){
+      this.home = { look: home.look.clone(), yaw: home.yaw, pitch: home.pitch, radius: home.radius };
+      this.look = home.look.clone();
+      this.yaw = home.yaw; this.pitch = home.pitch; this.radius = home.radius;
+      this.lim = lim || {};
+      this.viewKey = home.viewKey || null;   // copyOvr key holding this scene's saved default view
+    }
+    MWOrbit.prototype.PITCH = [-0.15, 1.35];
+    MWOrbit.prototype.RADIUS = [3, 24];
+    MWOrbit.prototype.PANY = [-3, 9];
+
+    // Write this rig's orbit into the camera position/look vectors that animate() lerps
+    // toward. Called once per frame while the scene is active.
+    MWOrbit.prototype.apply = function(camPos, camLook){
+      var cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+      camPos.set(this.look.x + Math.sin(this.yaw) * cp * this.radius,
+                 this.look.y + sp * this.radius,
+                 this.look.z + Math.cos(this.yaw) * cp * this.radius);
+      camLook.copy(this.look);
+    };
+
+    // Pointer drag. Plain drag orbits; SHIFT-drag pans the look target on Y and still
+    // yaws on X — the same convention the galaxy and focus views use. (Both branches
+    // always yaw, which is why the yaw line sits outside the if.)
+    MWOrbit.prototype.drag = function(dx, dy, shift, sy){
+      var P = this.lim.pitch || this.PITCH, Y = this.lim.panY || this.PANY;
+      this.yaw -= dx * 0.006;
+      if(shift) this.look.y = clamp(this.look.y - sy * dy * 0.02, Y[0], Y[1]);
+      else      this.pitch  = clamp(this.pitch + sy * dy * 0.006, P[0], P[1]);
+    };
+
+    MWOrbit.prototype.zoom = function(dir, step){
+      var R = this.lim.radius || this.RADIUS;
+      this.radius = clamp(this.radius + dir * (step || 0.9), R[0], R[1]);
+    };
+
+    // Frame a set of world points: centre the look target on their bounding box, then
+    // pull the radius back far enough to fit the bounding sphere with padding. `pts` is
+    // an array of [x,y,z]. Falls back to the rig's home framing when there's nothing to
+    // fit. Ends by letting a saved default view override the auto-fit.
+    MWOrbit.prototype.fitPoints = function(pts, opt){
+      opt = opt || {};
+      if(pts && pts.length){
+        var mn = [1e9, 1e9, 1e9], mx = [-1e9, -1e9, -1e9];
+        pts.forEach(function(p){
+          for(var i = 0; i < 3; i++){ if(p[i] < mn[i]) mn[i] = p[i]; if(p[i] > mx[i]) mx[i] = p[i]; }
+        });
+        this.look.set((mn[0]+mx[0])/2, (mn[1]+mx[1])/2, (mn[2]+mx[2])/2);
+        var dx = mx[0]-mn[0], dy = mx[1]-mn[1], dz = mx[2]-mn[2];
+        var diag = Math.sqrt(dx*dx + dy*dy + dz*dz), fov = (camera.fov || 48) * Math.PI / 180;
+        this.radius = Math.max(opt.min || 6, (diag * 0.5) / Math.tan(fov/2) * (opt.pad || 1.15) + (opt.extra != null ? opt.extra : 2.5));
+      } else {
+        this.look.copy(this.home.look);
+        this.radius = this.home.radius;
+      }
+      this.yaw = this.home.yaw; this.pitch = this.home.pitch;
+      this.restoreSaved();
+    };
+
+    // Dolly onto a single point, keeping the current yaw/pitch. `offsetY` nudges the
+    // look target so the subject lands in the free space above a panel rather than
+    // dead-centre behind it.
+    MWOrbit.prototype.flyTo = function(pos, radius, offsetY){
+      if(radius != null) this.radius = radius;
+      this.look.set(pos[0], pos[1] + (offsetY || 0), pos[2]);
+    };
+
+    // How far the look target must shift for `pos` to sit centred in the gap between the
+    // top of the window and the top of a bottom-anchored panel. Pulled out of the CV
+    // route's fly-to so the ring's chapter focus frames identically under the manual.
+    MWOrbit.prototype.panelGapOffset = function(panelEl){
+      var H = window.innerHeight;
+      var r = panelEl ? panelEl.getBoundingClientRect() : null;
+      var top = (r && r.height > 4 && r.top > 0) ? r.top : H * 0.60;
+      var visH = 2 * this.radius * Math.tan((camera.fov * Math.PI / 180) / 2);
+      return ((top * 0.5 - H * 0.5) / H) * visH;
+    };
+
+    // ── Saved "default view" ──────────────────────────────────────────────────
+    // REGRESSION GUARD (Jul 9 2026, carried over verbatim from cvFitOverview): restore
+    // ALL FOUR fields together. An earlier version restored only yaw/pitch, so a saved
+    // zoom (radius) or pan (lookY) was silently overwritten by the auto-fit on every
+    // re-entry — the angle "stuck" but zoom/pan always snapped back. Don't split these.
+    MWOrbit.prototype.restoreSaved = function(){
+      if(!this.viewKey || typeof copyOvr === 'undefined') return;
+      var v = copyOvr[this.viewKey];
+      if(!v) return;
+      if(v.yaw != null)    this.yaw = v.yaw;
+      if(v.pitch != null)  this.pitch = v.pitch;
+      if(v.radius != null) this.radius = v.radius;
+      if(v.lookY != null)  this.look.y = v.lookY;
+    };
+    MWOrbit.prototype.saveView = function(){
+      if(!this.viewKey || typeof copyOvr === 'undefined') return false;
+      copyOvr[this.viewKey] = { yaw: this.yaw, pitch: this.pitch, radius: this.radius, lookY: this.look.y };
+      if(typeof persistCopy === 'function') persistCopy();
+      return true;
+    };
+    MWOrbit.prototype.clearView = function(){
+      if(!this.viewKey || typeof copyOvr === 'undefined') return false;
+      delete copyOvr[this.viewKey];
+      if(typeof persistCopy === 'function') persistCopy();
+      return true;
+    };
+
+    // ── Sub-scene lifecycle ───────────────────────────────────────────────────
+    // Wraps one THREE.Group plus the DOM furniture that belongs to it. enter()/exit()
+    // are the only places that touch galaxy visibility and the body classes, so the two
+    // scenes can never disagree about who owns the canvas.
+    //
+    // cfg: { id, bodyClass, layerId, ctlId, orbit, hits(), onPick(id), onBack(), build() }
+    //   hits()   → array of pickable meshes, re-read on every click (they get rebuilt)
+    //   onPick   → a hit was clicked; receives whatever hitId() resolves it to
+    //   onBack   → empty space was clicked; back out one level within the scene
+    //   build()  → lazily construct the group's contents on first enter
+    function MWSubScene(cfg){
+      this.id = cfg.id;
+      this.bodyClass = cfg.bodyClass || null;
+      this.layerId = cfg.layerId || null;
+      this.ctlId = cfg.ctlId || null;
+      this.orbit = cfg.orbit;
+      this.hits = cfg.hits || function(){ return []; };
+      this.hitId = cfg.hitId || function(o){ return o && o.userData && o.userData.subId; };
+      this.onPick = cfg.onPick || null;
+      this.onBack = cfg.onBack || null;
+      this.build = cfg.build || null;
+      this.group = null;
+      this.active = false;
+    }
+    MWSubScene.prototype._el = function(id){ return id ? document.getElementById(id) : null; };
+    MWSubScene.prototype.ensureGroup = function(){
+      if(!this.group){ this.group = new THREE.Group(); scene.add(this.group); this.group.visible = false; }
+      return this.group;
+    };
+    // Take the canvas. `grp` is the galaxy planet being entered FROM — its own moons and
+    // hit proxy are hidden so they can't be picked or drawn behind the sub-scene.
+    MWSubScene.prototype.enter = function(grp){
+      this.ensureGroup();
+      if(this.build) this.build();
+      if(grp){
+        if(grp.userData.moonGrp) grp.userData.moonGrp.visible = false;
+        if(grp.userData.hit) grp.userData.hit.visible = false;
+      }
+      galaxy.visible = false;
+      this.group.visible = true;
+      this.active = true;
+      MWSub.active = this;
+      document.body.classList.add('mw-altfocus');
+      if(this.bodyClass) document.body.classList.add(this.bodyClass);
+      var l = this._el(this.layerId); if(l) l.classList.add('show');
+      var c = this._el(this.ctlId);   if(c) c.classList.add('show');
+    };
+    // Hand the canvas back to the galaxy. Safe to call when not active.
+    MWSubScene.prototype.exit = function(){
+      if(!this.active) return false;
+      this.active = false;
+      if(MWSub.active === this) MWSub.active = null;
+      if(this.group) this.group.visible = false;
+      galaxy.visible = true;
+      var c = this._el(this.ctlId);   if(c) c.classList.remove('show');
+      var l = this._el(this.layerId); if(l) l.classList.remove('show');
+      if(this.bodyClass) document.body.classList.remove(this.bodyClass);
+      return true;
+    };
+    // Canvas click while this scene owns it: pick a node, else back out one level.
+    MWSubScene.prototype.click = function(){
+      var list = this.hits() || [];
+      if(list.length){
+        ray.setFromCamera(mouse, camera);
+        var h = ray.intersectObjects(list, false);
+        if(h.length){
+          var id = this.hitId(h[0].object);
+          if(id != null && this.onPick){ this.onPick(id); return true; }
+        }
+      }
+      if(this.onBack) this.onBack();
+      return true;
+    };
+
     // ══════ CV — 3D HYPERSPACE ROUTE (branchable tree; CV focus view) ══════
     var cvRouteActive=false, cvRouteGroup=null, cvLaneGroup=null, cvShipGroup=null, cvShipModel=null, cvNodes=[], cvSelId=null, cvData=null, cvAtNode=false, cvRootLabel='';
     var cvFxCanvas=null, cvFxCtx=null, cvPulseColor='#F0D080', cvPulseSize=22, cvPulseDur=1.6;   // active-node pulse drawn on a low-res canvas (pixelated like message stars)
