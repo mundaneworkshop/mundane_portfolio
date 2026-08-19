@@ -37,4 +37,5 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [text-style-tokens-todo.md](text-style-tokens-todo.md) — todo for the real build: bind text to DS type tokens
 - [url-slugs-routing.md](url-slugs-routing.md) — Aug 13 2026: editable URL slugs + client-side routing (most recent work)
 - [visual-language-direction.md](visual-language-direction.md) — locked cassette-futurism aesthetic, all core design rules
+- [webgl-brick-cascade.md](webgl-brick-cascade.md) — WebGL brick cascade: decision, measurements, brick authoring rules, and the traps
 - [workflow-html-verification.md](workflow-html-verification.md) — standing QA process for HTML prototype changes
