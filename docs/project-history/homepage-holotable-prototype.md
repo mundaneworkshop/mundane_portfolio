@@ -4,7 +4,7 @@
 
 Portfolio homepage concept locked as a **holotable projection** (Star Wars war-table). The homepage's primary job: fast-navigate to case studies. Runner-up direction that was rejected: "list + live map."
 
-**Architecture:** one WebGL canvas, Three.js r128, vanilla (no framework/bundler) — this is still true of the current `index.html`. `three.min.js` is bundled locally alongside it (the designer's network blocks CDNs even in-browser, so a CDN-only dependency would be fragile) — a loader falls back local → cdnjs → jsdelivr → unpkg and shows an on-screen error if all fail. Colors bound to the BRIC DS Figma tokens (see color-decisions.md).
+**Architecture:** one WebGL canvas, Three.js r128, vanilla (no framework/bundler) — this is still true of the current `index.html`. `three.min.js` is bundled locally alongside it (the designer's network blocks CDNs even in-browser, so a CDN-only dependency would be fragile) — a loader falls back local → cdnjs → jsdelivr → unpkg and shows an on-screen error if all fail. **Correction (Aug 19 2026):** for most of the project's life this was aspirational — `three.min.js` was never actually committed, so the local entry 404'd on every visit, returned `index.html` via the SPA rewrite, threw `Unexpected token '<'`, and fell through to cdnjs. Worse, the three THREE.js *loaders* and supabase-js were jsdelivr-only with no fallback at all and failed silently. All of it now lives in `vendor/`, local-first with CDN fallback. Colors bound to the BRIC DS Figma tokens (see color-decisions.md).
 
 **Scene fundamentals (mostly still true of the current site):**
 
