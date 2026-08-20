@@ -81,6 +81,11 @@
   #topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;pointer-events:none}
   #breadcrumb{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);pointer-events:auto;cursor:pointer;text-transform:uppercase;display:flex;align-items:center;gap:8px}
   #breadcrumb b{color:var(--holo);font-weight:400}
+  #breadcrumb .crumb-seg.nav{cursor:pointer;transition:color .15s}
+  #breadcrumb .crumb-seg.nav:hover,#breadcrumb .crumb-seg.nav:focus-visible{color:var(--holo);text-decoration:underline;text-underline-offset:3px}
+  /* In Edit Mode syncCrumbEdit() adds .inline-edit-on to each segment — clicking then means
+     "rename this", so drop the navigation affordance. */
+  #breadcrumb .crumb-seg.nav.inline-edit-on{cursor:text;text-decoration:none}
   #breadcrumb .home{border:1px solid var(--border);padding:5px 9px;border-radius:0;transition:.15s;clip-path:var(--clip-step)}
   #breadcrumb .home:hover{border-color:var(--line);color:var(--line)}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
@@ -10453,7 +10458,7 @@ f 2469//2469 2470//2470 2434//2434
       cvOrbit.flyTo(node.pos, null, off);
     }
     function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFlyTo(n); cvShipGoTo(id); cvShowBooklet(id); cvMarkLabels();
-      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level
+      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV', go:cvOverview},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level; the CV segment backs out to the route
     }
     function cvUpdateShipUnderColor(){ if(!cvShipGroup) return;
       var shipOnSelected=(cvShipNodeId&&cvSelId&&cvShipNodeId===cvSelId);
@@ -11576,7 +11581,10 @@ f 2469//2469 2470//2470 2434//2434
 
     // ── navigation ─────────────────────────────────────────────────────────────
     function csCrumb(){
-      var segs=[{text:csRootLabel||'Project'},{text:'Case study',bold:!csAtChapter}];
+      var segs=[
+        {text:csRootLabel||'Project', go:csToProject},                                   // → project focus
+        {text:'Case study', bold:!csAtChapter, go:(csAtChapter?csOverview:null)}          // → chapter ring
+      ];
       if(csAtChapter && csNodes[csSelIdx]) segs.push({text:csNodes[csSelIdx].ch.title,bold:true});
       setCrumb('cscase:'+csPid+(csAtChapter?':'+csSelIdx:''),segs);
     }
@@ -11609,12 +11617,16 @@ f 2469//2469 2470//2470 2434//2434
       if(!csNodes.length) return;
       csSelect(csSelIdx<0 ? (d>0?0:csNodes.length-1) : (csSelIdx+d+csNodes.length)%csNodes.length);
     }
-    function csUp(){
-      if(csAtChapter){ csOverview(); return; }
+    // Leave the case study entirely and return to the project focus it was entered from.
+    function csToProject(){
       var pid=csPid;
       csExit();
       var g=pid&&planetById(pid);
       if(g) activate(g.userData); else goHome();
+    }
+    function csUp(){
+      if(csAtChapter){ csOverview(); return; }
+      csToProject();
     }
     function csExit(){ return csScene.exit(); }   // teardown lives in the scene's onExit
 
@@ -12612,7 +12624,22 @@ f 2469//2469 2470//2470 2434//2434
         var sep=document.createElement('span'); sep.textContent=' ▸ '; sep.style.opacity='.55'; crumbPathEl.appendChild(sep);
         var s=document.createElement('span'); s.className='crumb-seg'; var ovr=copyOvr['crumb:'+crumbCtx+':'+i];
         s.textContent=(ovr!=null)?ovr:seg.text; if(seg.bold) s.style.color='var(--holo)';
-        s.setAttribute('data-ci',i); crumbPathEl.appendChild(s);
+        s.setAttribute('data-ci',i);
+        // An ancestor segment with a `go` handler is a real navigation control, not a label —
+        // the breadcrumb is meant to jump to any level, at any depth. Suppressed in Edit Mode,
+        // where clicking a segment means "rename this", not "go here".
+        if(typeof seg.go==='function'){
+          s.classList.add('nav'); s.setAttribute('role','link'); s.setAttribute('tabindex','0');
+          s.addEventListener('click',function(e){
+            if((typeof editMode!=='undefined')&&editMode) return;
+            e.preventDefault(); e.stopPropagation(); seg.go();
+          });
+          s.addEventListener('keydown',function(e){
+            if((typeof editMode!=='undefined')&&editMode) return;
+            if(e.key==='Enter'||e.key===' '){ e.preventDefault(); seg.go(); }
+          });
+        }
+        crumbPathEl.appendChild(s);
       });
       syncCrumbEdit();
     }
