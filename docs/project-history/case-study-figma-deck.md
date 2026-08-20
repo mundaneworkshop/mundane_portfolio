@@ -55,12 +55,62 @@ same mechanism applies here.
 
 This is the single highest-risk part of the direction. Everything else is assembly.
 
+## Built Aug 20 2026 — the wrapper
+
+`/work/<slug>/case` renders the deck. `CASE_STUDY_MODE` ('deck' | 'constellation') picks
+between this and the shelved ring, so the shelf promise stays honest.
+
+- **`deckEmbedURL()` is the only place that knows Figma's URL shape.** It accepts either a
+  plain Slides URL or what "Get embed code" gives you and normalises to
+  `embed.figma.com/deck/<key>/<name>`. `embed-host` is REQUIRED by Embed Kit 2.0 and is set
+  to `mundane-workshop`. `node-id` carries the start slide. If Figma changes parameters,
+  fix that function and nothing else.
+- **The CTA now gates on having a deck.** `ctaActive` for a work project defaults from
+  `deckHasContent(pid)`, which is the per-project gating `CASE_STUDY_CTA_ENABLED` was
+  always standing in for. An explicit author override still wins.
+- **`openCaseStudyRoute` is now genuinely the single entry point.** It was documented as
+  one but three call sites reached past it straight to `window.csOpenCaseStudy` — so after
+  the pivot the CTA still opened the constellation. Caught in testing. Add new triggers
+  through `window.openCaseStudyRoute`.
+
+### The curtain now HOLDS instead of racing (this was the stated risk)
+
+`BrickField.run` takes an optional `hooks.gate()`, polled once per frame at full brick
+coverage. While it returns false the timeline PINS at `exitStart` — `now` stops advancing
+rather than the loop stalling, so the shader keeps running and nothing looks hung. Capped
+at `GATE_MAX` (6s), and the wall-clock guard was extended by the same amount so it can't
+tear the curtain down mid-hold. The reduced-motion cross-fade honours the same gate via a
+poll, or reduced-motion visitors would get exactly the blank-frame flash this prevents.
+
+Gate arithmetic is unit-tested against the real source (holds until open, gives up at
+GATE_MAX, no hold when already ready, accumulates the right wait).
+
+### Ready detection is layered, because Figma has no single "painted" signal
+
+**iframe `onload` fires while the deck is still blank** — observed, not theorised. So:
+postMessage from a `figma.com` origin (best — the app is actually running) → `onload` +
+1.4s settle (fallback) → 9s hard cap. First one wins.
+
+Independently, a **veil** covers the iframe until ready. It is deliberately not tied to the
+cascade gate: if the gate gives up at GATE_MAX the reader still sees the veil, never a
+half-painted embed.
+
+### Verified / not verified
+
+Verified in a headless pane: the wrapper renders a third-party iframe at the right size
+with the site's chrome and starfield; the embed URL builds correctly; route, breadcrumb,
+booklet dismissal and teardown (iframe `src` removed on exit) all work; the CTA → cascade →
+deck path lands; **a public Figma embed renders inside the wrapper**.
+
+NOT verified: the JH Q2'26 deck itself renders blank in that pane after 10s, while Figma's
+own public example renders. It is not sharing (anonymous view of the deck works) and not
+URL construction (the endpoint returns and fires onload). Cause undetermined — **check it
+in a real browser before trusting the embed**.
+
 ## Open questions
 
-- **Deep-linking to a specific slide.** Is there a per-slide parameter on `/deck`, so
-  `/work/slate-auto` can open at that project's first slide rather than slide 1 of a
-  combined deck? If not, the alternative is one deck per project. **Unverified — check
-  this early, it changes the deck's structure.**
+- ~~Deep-linking to a specific slide.~~ ANSWERED — `node-id` carries it, authored per
+  project as `deck:<pid>:node`. One combined deck can serve every project.
 - **SEO and indexing.** An iframe's contents are opaque to search engines. Today the
   booklet text is real DOM and indexable; a deck is not. For a portfolio people find by
   searching a name, that is a genuine cost. Mitigation: keep a short site-native summary
