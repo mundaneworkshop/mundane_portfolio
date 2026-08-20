@@ -31,6 +31,25 @@ The site has its own in-page CMS, not a separate admin panel:
 - `_positionManualBook()` — measures both booklet pages and clamps/scrolls as needed so the booklet's visible height adapts to content (fixed Aug 13 2026; previously it only measured the left page and could cut off a taller right page below the fold).
 - The **field-restore whitelist array** used to repopulate `CASES[id]` from stored overrides on boot — if you add a new persisted per-project field, it must be added to this array or edits will silently not survive a reload. This has bitten the project before (see `docs/project-history/url-slugs-routing.md`).
 
+## Case studies — current state (Aug 20 2026)
+
+Two directions exist; know which one you're touching.
+
+- **Chapter constellation — BUILT, WORKS, SHELVED.** A ring of 10 chapter planets around a
+  project hub at `/work/<slug>/case/<chapter>`, entered through the brick cascade. It is
+  gated behind `window.CASE_STUDY_CTA_ENABLED` (currently `false`), so it is unreachable by
+  visitors but fully functional if you flip the flag. Do not delete it. Locked decisions and
+  open questions: `docs/project-history/case-study-constellation-SHELVED.md`; mechanics:
+  `docs/project-history/case-study-chapter-ring.md`.
+- **Embedded Figma Slides deck — CURRENT DIRECTION, NOT BUILT.** Case studies come from the
+  existing deck, embedded in a wrapper page that keeps the breadcrumb and star field, still
+  entered through the brick cascade. `docs/project-history/case-study-figma-deck.md` — read
+  the "one real design problem" section before building, it is about the cascade racing the
+  iframe load.
+
+The **brick cascade** (`BrickField`, real LEGO GLBs in `assets/models/bricks/`) is common to
+both and is not affected by the pivot. See `docs/project-history/webgl-brick-cascade.md`.
+
 ## Routing
 
 Client-side only, via `history.pushState`/`popstate` — no server routing beyond the Vercel SPA-fallback rewrite. URL scheme: `/work/<project-slug>`, `/work/<project-slug>/<moon-slug>` (nested, artifacts), `/cv` (one slug for the whole CV route — per-node CV slugs were explicitly ruled out), `/holonet` (the internal dev id for this view/planet is `contact`; there is no separate "Contact" page — just HoloNet). Full detail and the two bugs that were found and fixed while building this: `docs/project-history/url-slugs-routing.md`.

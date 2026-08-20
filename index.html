@@ -81,6 +81,11 @@
   #topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;pointer-events:none}
   #breadcrumb{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--muted);pointer-events:auto;cursor:pointer;text-transform:uppercase;display:flex;align-items:center;gap:8px}
   #breadcrumb b{color:var(--holo);font-weight:400}
+  #breadcrumb .crumb-seg.nav{cursor:pointer;transition:color .15s}
+  #breadcrumb .crumb-seg.nav:hover,#breadcrumb .crumb-seg.nav:focus-visible{color:var(--holo);text-decoration:underline;text-underline-offset:3px}
+  /* In Edit Mode syncCrumbEdit() adds .inline-edit-on to each segment — clicking then means
+     "rename this", so drop the navigation affordance. */
+  #breadcrumb .crumb-seg.nav.inline-edit-on{cursor:text;text-decoration:none}
   #breadcrumb .home{border:1px solid var(--border);padding:5px 9px;border-radius:0;transition:.15s;clip-path:var(--clip-step)}
   #breadcrumb .home:hover{border-color:var(--line);color:var(--line)}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
@@ -720,8 +725,14 @@
   .cschlbl:hover .cschlbl-t{color:var(--holo)}
   .cschlbl.sel .cschlbl-t{color:var(--amber)}
   .cschlbl.sel .cschlbl-n{color:var(--amber-hot)}
-  #csRouteCtl{position:absolute;left:16px;top:64px;z-index:8;display:none;gap:6px;align-items:center;flex-wrap:wrap;pointer-events:auto}
+  /* Nav sits with what it navigates — centred, just above the booklet (placed by csPlaceNav).
+     The camera hint stays centred at the top, out of the way. */
+  #csRouteCtl{position:absolute;left:50%;transform:translateX(-50%);top:66%;z-index:8;display:none;
+    gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;pointer-events:auto}
   #csRouteCtl.show{display:flex}
+  #csRouteCtl.hidden{display:none}
+  #csHint{position:absolute;left:50%;transform:translateX(-50%);top:16px;z-index:8;display:none;pointer-events:none}
+  #csHint.show{display:flex}
   #csStepper{display:flex;gap:3px;flex-wrap:wrap}
   .cs-step{width:26px;height:24px;display:flex;align-items:center;justify-content:center;
     font-family:var(--mono);font-size:10px;color:var(--line);background:var(--panel);
@@ -730,6 +741,23 @@
   .cs-step.on{background:var(--amber);color:var(--on-brand);border-color:var(--amber);font-weight:700}
   /* the galaxy's own chrome stands down while a case study owns the canvas */
   body.mw-casestudy #menu, body.mw-casestudy #hint{display:none}
+
+  /* ── Brick library rows ── */
+  .brk{border:1px solid var(--border);padding:7px 8px;margin-bottom:6px;display:flex;flex-direction:column;gap:5px}
+  .brk-top{display:flex;align-items:center;gap:6px}
+  .brk-name{flex:1;background:transparent;border:0;color:var(--line);font-family:var(--mono);font-size:10px;letter-spacing:.5px}
+  .brk-chip{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 5px;border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+  .brk-chip.ship{color:var(--amber);border-color:rgba(233,167,62,.45)}
+  .brk-chip.local{color:var(--holo);border-color:rgba(90,191,184,.45)}
+  .brk-chip.miss{color:#D2694A;border-color:rgba(210,105,74,.5)}
+  .brk-row{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9px;color:var(--muted)}
+  .brk-row input[type=range]{flex:1}
+  .brk-btn{font-family:var(--mono);font-size:9px;padding:3px 6px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:transparent}
+  .brk-btn:hover{color:var(--holo);border-color:var(--line)}
+  .brk-stat{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5}
+  .brk-stat b{color:var(--line);font-weight:400}
+  .brk-warn{color:#D2694A}
+  .brk-note{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5}
 
   /* ── TOAST ── */
   #toast{position:absolute;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:30;opacity:0;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:var(--holo);transition:.35s}
@@ -864,6 +892,8 @@
   body.mw-cvroute #dbg-cv{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-planet{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-cascade{display:block}
+  body.mw-planet:not(.mw-altfocus) #dbg-bricks{display:block}
+  body.mw-casestudy #dbg-ring{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-casestudy{display:block}
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
@@ -990,6 +1020,15 @@
     pointer-events: none; z-index: 8700;
     opacity: 0; visibility: hidden;
   }
+  /* WebGL curtain — its own canvas so the cascade stays independent of the galaxy's
+     renderer and camera. Same stacking position the DOM cascade occupies. */
+  #cascade-gl {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 8700;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.35s ease;
+  }
+  #cascade-gl.run { opacity: 1; visibility: visible; }
   #cascade.run  { opacity: 1; visibility: visible; }
   #cascade.fade { opacity: 0; transition: opacity 0.7s ease 0.15s; }
   /* REDUCED MOTION: one opaque scrim instead of ~600 tumbling bricks. The design language
@@ -999,100 +1038,10 @@
   #cascade.reduced     { background: var(--bg); transition: opacity 0.42s ease, visibility 0s linear 0.42s; }
   #cascade.reduced.run { opacity: 1; visibility: visible; transition: opacity 0.42s ease; }
 
-  .block {
-    position: absolute;
-    width: 0; height: 0;
-    transform: translateY(-125vh) rotate(var(--spin0, 0deg));
-    /* The second control point is the landing BOUNCE — >1 overshoots and settles back.
-       Exposed as --casc-bounce so it can be tuned from the debug panel. */
-    transition: transform var(--fall, 0.62s) cubic-bezier(0.30, var(--casc-bounce, 1.30), 0.55, 1);
-    will-change: transform;
-  }
-  .block.landed { transform: translateY(0) rotate(var(--spin1, 0deg)); }
-  .block.out { transform: translateY(130vh) rotate(var(--spin0, 0deg)); }
-
-  .cube {
-    position: absolute; left: 0; top: 0;
-    transform-style: preserve-3d;
-    transform: rotateX(-20deg) rotateY(-26deg)
-               rotateX(var(--ox,0deg)) rotateY(var(--oy,0deg)) rotateZ(var(--oz,0deg));
-  }
-  .cube .fc { position: absolute; top: 0; left: 0; box-sizing: border-box; }
-
-  .fc.front, .fc.back  { width: var(--w); height: var(--h); margin-left: calc(var(--w)/-2); margin-top: calc(var(--h)/-2); }
-  .fc.left,  .fc.right { width: var(--d); height: var(--h); margin-left: calc(var(--d)/-2); margin-top: calc(var(--h)/-2); }
-  .fc.top,   .fc.bottom{ width: var(--w); height: var(--d); margin-left: calc(var(--w)/-2); margin-top: calc(var(--d)/-2); }
-  .fc.front { transform: translateZ(calc(var(--d)/2)); }
-  .fc.back  { transform: rotateY(180deg) translateZ(calc(var(--d)/2)); }
-  .fc.right { transform: rotateY(90deg)  translateZ(calc(var(--w)/2)); }
-  .fc.left  { transform: rotateY(-90deg) translateZ(calc(var(--w)/2)); }
-  .fc.top   { transform: rotateX(90deg)  translateZ(calc(var(--h)/2)); }
-  .fc.bottom{ transform: rotateX(-90deg) translateZ(calc(var(--h)/2)); }
-
-  .stud { position: absolute;
-    width: calc(var(--u)*0.52); height: calc(var(--u)*0.52);
-    margin: calc(var(--u)*-0.26) 0 0 calc(var(--u)*-0.26);
-    transform: translateZ(6px); }
-
-  /* SLOPE */
-  .cube.slope .fc.front { display: none; }
-  .cube.slope .fc.right { clip-path: polygon(0 100%, 100% 100%, 100% 0); }
-  .cube.slope .fc.left  { clip-path: polygon(0 100%, 100% 100%, 0 0); }
-  .cube.slope .fc.top {
-    height: calc(var(--h) * 1.4142);
-    margin-top: calc(var(--h) * -0.7071);
-    transform: rotateX(45deg);
-  }
-  .cube.slope .stud { display: none; }
-
-  /* INVERTED SLOPE */
-  .cube.islope .fc.front { display: none; }
-  .cube.islope .fc.right { clip-path: polygon(100% 0, 100% 100%, 0 0); }
-  .cube.islope .fc.left  { clip-path: polygon(0 0, 0 100%, 100% 0); }
-  .cube.islope .fc.bottom {
-    height: calc(var(--h) * 1.4142);
-    margin-top: calc(var(--h) * -0.7071);
-    transform: rotateX(-45deg);
-  }
-
-  /* CORNER */
-  .cpart { position: absolute; top: 0; left: 0; transform-style: preserve-3d; }
-
-  /* ARCH */
-  .cube.arch .fc.front, .cube.arch .fc.back {
-    clip-path: polygon(0 0,100% 0,100% 100%,78% 100%,78% 56%,73% 40%,64% 27%,50% 21%,36% 27%,27% 40%,22% 56%,22% 100%,0 100%);
-  }
-
-  /* Variant B — VOXEL */
-  #cascade.style-voxel .fc.front, #cascade.style-voxel .fc.back  { background: var(--bf,#E9A73E); }
-  #cascade.style-voxel .fc.left,  #cascade.style-voxel .fc.right { background: var(--br,#BE7E2A); }
-  #cascade.style-voxel .fc.top,   #cascade.style-voxel .fc.bottom{ background: var(--bt,#F4B852); }
-  #cascade.style-voxel .fc.front, #cascade.style-voxel .fc.back {
-    clip-path: polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));
-  }
-  #cascade.style-voxel .fc.top {
-    background-image:
-      linear-gradient(90deg, rgba(0,0,0,.16) 1px, transparent 1px),
-      linear-gradient(0deg,  rgba(0,0,0,.16) 1px, transparent 1px);
-    background-size: var(--u) var(--u);
-  }
-  #cascade.style-voxel .stud { display: none; }
-
-  /* Variant C — HOLO */
-  /* Holo faces derive every tint from one authored colour (--casc-holo, set by the debug
-     panel), so the whole cascade can be recoloured from a single swatch. --casc-edge is the
-     lighter rim, derived in JS. */
-  #cascade.style-holo .fc { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 16%, transparent); border: 1px solid color-mix(in srgb, var(--casc-edge,#AAF5EE) 42%, transparent); }
-  #cascade.style-holo .fc.top { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 32%, transparent); border-color: color-mix(in srgb, var(--casc-edge,#AAF5EE) 70%, transparent); }
-  #cascade.style-holo .fc.front, #cascade.style-holo .fc.back { box-shadow: inset 0 0 12px color-mix(in srgb, var(--casc-holo,#78E0D6) 20%, transparent); }
-  #cascade.style-holo .fc.top::after {
-    content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(180deg, transparent 0, transparent 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 3px);
-  }
-  #cascade.style-holo .stud {
-    background: color-mix(in srgb, var(--casc-holo,#78E0D6) 55%, transparent); border: 1px solid #EAFEFB; border-radius: 32%;
-    box-shadow: 0 0 8px color-mix(in srgb, var(--casc-holo,#78E0D6) 50%, transparent);
-  }
+  /* The CSS-3D cube system that used to live here (.block/.cube/.fc/.stud plus the
+     style-voxel and style-holo face rules) is gone — the cascade now draws real LEGO
+     geometry on its own canvas. #cascade survives because the reduced-motion path
+     still uses it as a plain scrim. See BrickField in the CS module. */
 </style>
 </head>
 <body>
@@ -1306,6 +1255,41 @@
     </div><!-- /#dbg-planet -->
 
     <!-- ── HoloNet / Contact view ── -->
+    <!-- ── Chapter ring · camera + centre object ──
+         Shown only while the ring owns the canvas. The generic per-object panel (#editPanel)
+         edits the galaxy's KIT BOX — faces, marquee, artifacts — none of which exist in this
+         view, so it is suppressed here and this stands in its place. -->
+    <div class="dbg-ctx" id="dbg-ring">
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Chapter ring · camera</label></div>
+      <div class="ctl"><label>Camera angle <b id="vRingPitch">0.13</b></label><input type="range" id="cRingPitch" min="0" max="0.9" step="0.01" value="0.13"></div>
+      <div class="ctl"><label>Camera distance <b id="vRingDist">4.2</b></label><input type="range" id="cRingDist" min="1" max="14" step="0.1" value="4.2"></div>
+      <div class="ctl"><label>Chapter height <b id="vRingFrac">0.32</b></label><input type="range" id="cRingFrac" min="0.12" max="0.5" step="0.01" value="0.32"></div>
+      <div class="ctl"><label>Ring radius <b id="vRingRad">6.4</b></label><input type="range" id="cRingRad" min="3" max="14" step="0.2" value="6.4"></div>
+      <div class="ctl"><label>Swing speed <b id="vRingEase">0.04</b></label><input type="range" id="cRingEase" min="0.01" max="0.06" step="0.005" value="0.04"></div>
+      <div class="ctl"><label>Focus dim <b id="vRingDim">0.28</b></label><input type="range" id="cRingDim" min="0" max="1" step="0.02" value="0.28"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Centre object</label></div>
+      <div class="ctl"><span class="brk-note" id="ringHubStat">default holo form</span></div>
+      <label class="resetbtn" id="cRingHubUp" style="display:block;text-align:center;cursor:pointer">⬆ Replace centre object (.glb)<input type="file" id="cRingHubFile" accept=".glb,.gltf" hidden></label>
+      <button class="resetbtn" id="cRingHubReset">⟲ Reset centre object</button>
+
+      <div class="ctl sec"><label style="color:var(--holo)">Chapter object</label></div>
+      <div class="ctl"><label>Chapter</label><select id="cChSel"></select></div>
+      <div class="ctl"><label>Ring size <b id="vChR">0.34</b></label><input type="range" id="cChR" min="0.08" max="1.4" step="0.02" value="0.34"></div>
+      <div class="ctl"><label>Focus size <b id="vChFR">0.55</b></label><input type="range" id="cChFR" min="0.2" max="3.5" step="0.05" value="0.55"></div>
+
+      <div class="ctl"><span class="brk-note" id="chRingStat">ring view · default</span></div>
+      <label class="resetbtn" id="cChRingUp" style="display:block;text-align:center;cursor:pointer">⬆ Ring view object<input type="file" id="cChRingFile" accept=".glb,.gltf,.obj,.svg,.stp,.step,image/*" hidden></label>
+      <div class="ctl"><input type="text" id="cChRingVid" placeholder="…or video URL (.mp4/.webm)"></div>
+      <button class="resetbtn" id="cChRingReset">⟲ Reset ring view</button>
+
+      <div class="ctl"><span class="brk-note" id="chFocStat">focus view · falls back to ring</span></div>
+      <label class="resetbtn" id="cChFocUp" style="display:block;text-align:center;cursor:pointer">⬆ Focus override<input type="file" id="cChFocFile" accept=".glb,.gltf,.obj,.svg,.stp,.step,image/*" hidden></label>
+      <div class="ctl"><input type="text" id="cChFocVid" placeholder="…or video URL (.mp4/.webm)"></div>
+      <button class="resetbtn" id="cChFocReset">⟲ Reset focus override</button>
+      <div class="ctl"><span class="brk-note">Accepts .glb/.gltf/.obj/.svg/.stp and bitmaps. Video must be a direct .mp4/.webm served with CORS — a YouTube or Vimeo embed page is an iframe and cannot be drawn into WebGL.</span></div>
+    </div><!-- /#dbg-ring -->
+
     <!-- ── Case study (chapter ring) ──
          Two ways in, because they serve different jobs: the full entry when you want to see
          the transition, and a direct jump when you are iterating on the ring itself and do not
@@ -1316,6 +1300,20 @@
       <button class="resetbtn" id="cCsPreview">▶ Preview case study (with cascade)</button>
       <button class="resetbtn" id="cCsRing">⛶ Open chapter ring (skip cascade)</button>
     </div><!-- /#dbg-casestudy -->
+
+    <!-- ── Brick library ──
+         The cascade draws real LEGO parts from .glb. Uploads land in IndexedDB and are
+         THIS BROWSER ONLY, exactly like every other mesh override in this file; shipping
+         a brick to visitors means committing the file under assets/models/bricks/ and
+         adding a manifest line. The per-slot status chip says which state each one is in,
+         because that distinction is the easiest thing to get wrong. -->
+    <div class="dbg-ctx" id="dbg-bricks">
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Brick library</label></div>
+      <div id="brickSlots"></div>
+      <button class="resetbtn" id="cBrkAdd">＋ Add brick shape</button>
+      <div class="ctl"><span class="brk-note">Uploads are local to this browser. Commit the .glb under assets/models/bricks/ to ship it.</span></div>
+    </div><!-- /#dbg-bricks -->
 
     <!-- ── Brick cascade (case-study transition) ──
          Standing rule (docs/project-history/maximize-customization.md): no tunable stays
@@ -1333,15 +1331,15 @@
       <div class="ctl"><label>Fall time <b id="vCasFall">1.40</b></label><input type="range" id="cCasFall" min="0.6" max="3" step="0.05" value="1.4"></div>
       <div class="ctl"><label>Row delay <b id="vCasRowDelay">120</b></label><input type="range" id="cCasRowDelay" min="0" max="400" step="10" value="120"></div>
       <div class="ctl"><label>Random spread <b id="vCasRandDelay">460</b></label><input type="range" id="cCasRandDelay" min="0" max="1200" step="20" value="460"></div>
-      <div class="ctl"><label>Curved pieces <b id="vCasCurve">11</b></label><input type="range" id="cCasCurve" min="0" max="30" step="1" value="11"></div>
       <div class="ctl"><label>Hang time <b id="vCasHold">600</b></label><input type="range" id="cCasHold" min="0" max="2000" step="50" value="600"></div>
       <div class="ctl"><label>Start delay <b id="vCasStart">160</b></label><input type="range" id="cCasStart" min="0" max="900" step="20" value="160"></div>
       <div class="ctl"><label>Landing bounce <b id="vCasBounce">1.30</b></label><input type="range" id="cCasBounce" min="1" max="2.2" step="0.05" value="1.3"></div>
       <div class="ctl"><label>Exit spread <b id="vCasExitSpread">0.70</b></label><input type="range" id="cCasExitSpread" min="0" max="2" step="0.05" value="0.7"></div>
       <div class="ctl"><label>Exit stagger <b id="vCasExitStagger">0.35</b></label><input type="range" id="cCasExitStagger" min="0" max="2" step="0.05" value="0.35"></div>
-      <div class="ctl"><label>Holo tint</label><input type="color" id="cCasHolo" value="#78E0D6"><input type="text" id="cCasHoloHex" value="#78E0D6" class="hexin"></div>
-      <div class="ctl"><label>Voxel tint</label><input type="color" id="cCasVox" value="#E9A73E"><input type="text" id="cCasVoxHex" value="#E9A73E" class="hexin"></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cCasVoxel"> Amber voxel bricks (default: teal holo)</label></div>
+      <div class="ctl"><label>Brick tint</label><input type="color" id="cCasHolo" value="#78E0D6"><input type="text" id="cCasHoloHex" value="#78E0D6" class="hexin"></div>
+      <div class="ctl"><label>Brick opacity <b id="vCasAlpha">1.00</b></label><input type="range" id="cCasAlpha" min="0.2" max="1" step="0.05" value="1"></div>
+      <div class="ctl"><label>Curtain cover <b id="vCasScrim">0.92</b></label><input type="range" id="cCasScrim" min="0" max="1" step="0.02" value="0.92"></div>
+      <div class="ctl"><span class="brk-note" id="casMotionNote"></span></div>
       <button class="resetbtn" id="cCasPreview">▶ Preview cascade</button>
       <button class="resetbtn" id="cCasReset">⟲ Reset cascade defaults</button>
     </div><!-- /#dbg-cascade -->
@@ -1468,8 +1466,8 @@
     <div id="csStepper"></div>
     <button class="cvr-pill" id="csNext" title="Next chapter (→)">►</button>
     <button class="cvr-pill" id="csRingBtn">⛶ Chapter ring</button>
-    <span class="cvr-pill cvr-hint">← → chapters · esc back · drag orbit · scroll zoom</span>
   </div>
+  <div id="csHint"><span class="cvr-pill cvr-hint">← → chapters · esc back · drag orbit · scroll zoom</span></div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
     <button class="cvr-pill" id="cvmOverview">⛶ Route overview</button>
@@ -10058,6 +10056,7 @@ f 2469//2469 2470//2470 2434//2434
     // drag/wheel/click/exit handlers ask this instead of naming a specific scene, so a
     // second sub-scene needs no new branches in any of them.
     var MWSub = { active: null };
+    var camSnap = false;   // set true to make the next animate() frame place the camera outright
 
     // ── Orbit rig ─────────────────────────────────────────────────────────────
     // Spherical orbit (yaw / pitch / radius) around a movable look target. This is the
@@ -10502,7 +10501,7 @@ f 2469//2469 2470//2470 2434//2434
       cvOrbit.flyTo(node.pos, null, off);
     }
     function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFlyTo(n); cvShipGoTo(id); cvShowBooklet(id); cvMarkLabels();
-      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level
+      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV', go:cvOverview},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level; the CV segment backs out to the route
     }
     function cvUpdateShipUnderColor(){ if(!cvShipGroup) return;
       var shipOnSelected=(cvShipNodeId&&cvSelId&&cvShipNodeId===cvSelId);
@@ -11477,10 +11476,33 @@ f 2469//2469 2470//2470 2434//2434
       {id:'impact',        title:'Impact',                   phase:'Outcome'},
       {id:'learnings',     title:'Next / learnings',         phase:'Outcome'}
     ];
-    var CS_RING={ radius:6.4, nodeR:0.20, hubR:0.85, y:0, chapterZoom:4.2, chapterFrac:0.28 };
+    var CS_RING={ radius:6.4, nodeR:0.20, hubR:0.85, y:0,
+      // The camera parks on the line running from the hub out through the focused chapter, so
+      // the hub sits behind it. PITCH IS THE DIAL: 0 puts them exactly collinear (hub dead
+      // behind, pair centred); lifting it tilts the view down so the hub rides a little above
+      // the chapter, which reads with more depth. Deliberately not baked — tune it live.
+      chapterPitch:0.13,
+      chapterDist:4.2,      // camera distance FROM THE FOCUSED CHAPTER (not from the hub) — the
+                            // chapter is the subject, so it is what the framing is measured against
+      chapterFrac:0.32,     // where the chapter sits vertically (0=top, 0.5=centre). Kept above
+                            // 0.5 so it clears the booklet, which occupies the lower half
+      ease:0.04,            // orbit easing per frame — MUST stay below animate()'s 0.06 camera
+                            // lerp, or the camera trails the orbit and cuts a chord across the
+                            // middle instead of swinging round the outside
+      dim:0.28,             // how far the hub and the other chapters fade back while one is focused
+      objR:0.34,            // half-extent an uploaded chapter object is fitted to OUT ON THE RING
+      objFocusR:0.55 };     // …and once that chapter is the focused subject. Sized against the
+                            // gap the framing leaves: the chapter sits at chapterFrac with the
+                            // booklet's top edge at ~52%, so ~1.1 units of diameter clears both
 
     var csPid=null, csNodes=[], csSelIdx=-1, csAtChapter=false, csHub=null, csRootLabel='';
     var _csUp=new THREE.Vector3();
+    // Orbit easing targets. The camera must travel AROUND the hub, never through it: the
+    // global camera lerp in animate() interpolates world POSITION, so snapping the orbit to
+    // the far side of the ring sent the camera straight through the middle — the hub filled
+    // the frame mid-move. Easing yaw/pitch/radius instead keeps every intermediate pose on
+    // the orbit sphere, which is what makes it read as swinging round to the next chapter.
+    var csTgt=null, _csLook=new THREE.Vector3();
 
     // Per-project chapter list. Hidden chapters are SOFT-deleted — kept in storage, skipped
     // here — exactly like galaxyModel's zones and planets, and the ring re-spaces around
@@ -11509,13 +11531,16 @@ f 2469//2469 2470//2470 2434//2434
       onPick:function(i){ csSelect(i); },
       onBack:function(){ if(csAtChapter) csOverview(); },  // chapter → ring; at the ring, empty clicks do nothing (exit via breadcrumb/Esc)
       onExit:function(){
+        var hint=document.getElementById('csHint'); if(hint) hint.classList.remove('show');
         var cs=document.getElementById('cs-root');
         if(cs){ cs.classList.remove('cs-focus-panel'); cs.classList.remove('active'); }
+        csNodes.forEach(function(n){ csClearNodeObj(n); n._tier=null; });   // stops chapter videos
         csAtChapter=false; csSelIdx=-1; csPid=null;
       }
     });
 
     function csBuildRing(pid){
+      csNodes.forEach(csClearNodeObj);   // stop any videos before their nodes are thrown away
       var g=csScene.ensureGroup();
       for(var k=g.children.length-1;k>=0;k--){   // wipe the previous project's ring
         var o=g.children[k]; g.remove(o);
@@ -11540,7 +11565,8 @@ f 2469//2469 2470//2470 2434//2434
       // / GLB replaces it next, reusing the focus-view box-replacement uploader.
       csHub=new THREE.Mesh(new THREE.IcosahedronGeometry(CS_RING.hubR,1),
               new THREE.MeshBasicMaterial({color:0x78E0D6,wireframe:true,transparent:true,opacity:0.45,fog:false}));
-      csHub.position.set(0,CS_RING.y+0.95,0); g.add(csHub);
+      csHub.position.set(0,CS_RING.y,0); g.add(csHub);   // in the ring plane; pitch controls how far behind it reads
+      csApplyHub();
 
       list.forEach(function(ch,i){
         var p=csNodePos(i,n);
@@ -11561,8 +11587,182 @@ f 2469//2469 2470//2470 2434//2434
         layer.appendChild(lbl);
         csNodes.push({ch:ch,mesh:mesh,hit:hit,lbl:lbl,pos:mesh.position});
       });
+      csApplyChapterObjs(true);
       csBuildStepper();
+      if(window.__csRefreshChapters) window.__csRefreshChapters();
     }
+
+    // Swap the placeholder centre form for an uploaded .glb, run through the same holo
+    // pipeline the orbiting artifacts use so it matches the rest of the scene's material
+    // language. Local to this browser until the file is committed, like every mesh override.
+    function csApplyHub(){
+      if(!csPid || !csHub) return;
+      BRICStore.get('csobj:'+csPid).then(function(rec){
+        if(!rec || !rec.buffer || !csHub) return;
+        loadGLBScene(rec.buffer,function(sc,err){
+          if(!sc || !csHub) { if(err) console.warn('[ring] centre object:',err); return; }
+          var g=csScene.group, at=csHub.position.clone();
+          var holo=buildHoloGLB(sc, FX_MOON, CS_RING.hubR*1.6);
+          if(!holo) return;
+          g.remove(csHub);
+          if(csHub.geometry) csHub.geometry.dispose();
+          holo.position.copy(at);
+          csHub=holo; g.add(csHub);
+          csMark();
+        });
+      }).catch(function(){});
+    }
+
+    // ══════ PER-CHAPTER OBJECTS ═══════════════════════════════════════════════
+    // Two tiers, mirroring how a project reads as a PLANET out in the galaxy and as a KIT
+    // BOX once you focus it. `chmesh:` is what a chapter looks like sitting on the ring;
+    // `chfocus:` is what replaces it once that chapter is the subject. Focus falls back to
+    // the ring visual, which falls back to the built-in holo sphere — so setting either
+    // tier alone is valid, and setting only the ring tier just means "same object, closer".
+    //
+    // Storage is split the way everything else in this file is split, and for the same
+    // reason: binary uploads (.glb/.gltf/.obj/.svg/.stp/bitmap) go to IndexedDB and stay
+    // local to this browser until the file is committed, while a VIDEO is only a URL, so it
+    // goes to copyOvr and syncs to every visitor — which is the entire point of putting a
+    // video on a public case study.
+    //
+    // ONE SLOT HOLDS ONE THING: setting a video clears that slot's upload and uploading
+    // clears that slot's video, so there is never a precedence question to answer.
+    function csObjKey(slot,pid,chId){ return (slot==='focus'?'chfocus:':'chmesh:')+pid+':'+chId; }
+    function csVidKey(slot,pid,chId){ return 'chvid:'+pid+':'+chId+':'+slot; }
+
+    function csSlotRec(slot,pid,chId){
+      var vid=(typeof copyOvr!=='undefined')?copyOvr[csVidKey(slot,pid,chId)]:null;
+      if(vid) return Promise.resolve({kind:'video',url:vid});
+      if(!window.BRICStore) return Promise.resolve(null);
+      return BRICStore.get(csObjKey(slot,pid,chId))
+        .then(function(r){ return r||null; }).catch(function(){ return null; });
+    }
+
+    // Holo surface for a chapter object — FX_MOON, so it matches the hub and the orbiting
+    // artifacts rather than the kit box's heavier FX_BOX treatment.
+    function csOvrMat(map,flat){
+      var m=new THREE.MeshBasicMaterial({map:map||null,color:0xffffff,fog:false,
+            side:flat?THREE.DoubleSide:THREE.FrontSide,transparent:true,depthWrite:!flat});
+      if(map&&THREE.LinearEncoding!==undefined){ map.encoding=THREE.LinearEncoding; map.needsUpdate=true; }
+      addFx(m,FX_MOON,false); return m;
+    }
+    // Flat media (bitmap, video) hangs on a plane that billboards to the camera — a chapter
+    // object is looked at from wherever the ring has swung to, so a fixed-facing plane would
+    // vanish edge-on at most angles.
+    function csPlaneFor(tex,ar,R){
+      var pw=ar>=1?R*2:R*2*ar, ph=ar>=1?R*2/ar:R*2;
+      var mesh=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph), csOvrMat(tex,true));
+      mesh.userData.billboard=true; return mesh;
+    }
+
+    // record → Object3D. Async throughout: GLB, STEP, bitmaps and video all decode off-thread.
+    function csBuildObj(rec,R,cb){
+      if(!rec){ cb(null); return; }
+      try{
+        if(rec.kind==='glb'){ loadGLBScene(rec.buffer,function(sc,err){ cb(sc?buildHoloGLB(sc,FX_MOON,R):null,err); }); return; }
+        if(rec.kind==='step'){ parseSTEP(rec.buffer,function(g,err){ cb(g?buildHoloGLB(g,FX_MOON,R):null,err); }); return; }
+        if(rec.kind==='svg'){ var gs=parseSVGGeo(rec.text,R,rec.depth||0.3,rec.axis||'z');
+          cb(gs?new THREE.Mesh(gs,csOvrMat(null,false)):null, gs?null:'SVGLoader not ready'); return; }
+        if(rec.kind==='obj'){ var go=parseUploadedOBJ(rec.text,R);
+          cb(go?new THREE.Mesh(go,csOvrMat(null,false)):null, go?null:'OBJ parse failed'); return; }
+        if(rec.kind==='image'){ var im=new Image();
+          im.onload=function(){ var t=new THREE.Texture(im); if(THREE.sRGBEncoding) t.encoding=THREE.sRGBEncoding; t.needsUpdate=true;
+            cb(csPlaneFor(t,(im.naturalWidth||1)/(im.naturalHeight||1),R)); };
+          im.onerror=function(){ cb(null,'image failed to decode'); };
+          im.src=rec.dataURL; return; }
+        if(rec.kind==='video'){
+          // muted+playsInline is what lets this autoplay at all; crossOrigin is what keeps the
+          // texture from tainting. A URL that sends no CORS headers loads but cannot be drawn.
+          var v=document.createElement('video');
+          v.crossOrigin='anonymous'; v.loop=true; v.muted=true; v.playsInline=true;
+          v.autoplay=true; v.preload='auto';
+          // Parked in the document, not left detached. A detached <video> textures fine in
+          // Chrome but Safari/iOS will not reliably decode one, and display:none stops
+          // playback outright — so it lives off-screen at 1px instead.
+          v.setAttribute('playsinline','');
+          v.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+          document.body.appendChild(v);
+          v.addEventListener('loadeddata',function(){
+            var t=new THREE.VideoTexture(v);
+            var o=csPlaneFor(t,(v.videoWidth||16)/(v.videoHeight||9),R);
+            o.userData.video=v;            // teardown needs the element back to stop it
+            // A looping clip is motion. Under prefers-reduced-motion the frame that is already
+            // decoded stays up as a still, which is the same bargain the brick cascade strikes.
+            if(!csReducedMotion()) v.play().catch(function(){});
+            cb(o);
+          },{once:true});
+          v.addEventListener('error',function(){ cb(null,'video failed to load: '+rec.url); },{once:true});
+          v.src=rec.url; v.load(); return; }
+      }catch(e){ cb(null,String((e&&e.message)||e)); return; }
+      cb(null,'unsupported kind: '+rec.kind);
+    }
+
+    // A detached chapter object must give its GPU memory back, and a video must actually STOP
+    // — an unreferenced <video> keeps decoding frames for as long as it has a src.
+    function csDisposeObj(o){
+      if(!o) return;
+      if(o.userData && o.userData.video){
+        try{ var v=o.userData.video; v.pause(); v.removeAttribute('src'); v.load();
+             if(v.parentNode) v.parentNode.removeChild(v); }catch(e){}
+      }
+      o.traverse(function(c){
+        if(c.geometry) c.geometry.dispose();
+        if(c.material){
+          if(c.material.map && c.material.map.dispose) c.material.map.dispose();
+          if(c.material.dispose) c.material.dispose();
+        }
+      });
+    }
+    function csClearNodeObj(n){ if(n && n.ovr){ n.mesh.remove(n.ovr); csDisposeObj(n.ovr); n.ovr=null; } }
+
+    function csReducedMotion(){
+      try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+      catch(e){ return false; }
+    }
+    // Browsers suspend media in a hidden document, and do not always resume it when the tab
+    // comes back. Same family of trap as the cascade's rAF stall — worth handling explicitly
+    // rather than leaving a chapter's video frozen on whatever frame it stopped at.
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden || !csScene.active || csReducedMotion()) return;
+      csNodes.forEach(function(n){
+        var v=n.ovr && n.ovr.userData && n.ovr.userData.video;
+        if(v && v.paused) v.play().catch(function(){});
+      });
+    });
+
+    // Resolve and mount the right visual for one node. Only rebuilds when the node's TIER
+    // changes (ring ⇄ focus) — stepping around a ten-chapter ring otherwise re-decodes ten
+    // GLBs per step. Pass force=true when the underlying record or size dial changed.
+    function csNodeVisual(i,force){
+      var n=csNodes[i]; if(!n||!csPid) return;
+      var focusTier=(csAtChapter && i===csSelIdx);
+      var tier=focusTier?'focus':'ring';
+      if(!force && n._tier===tier) return;
+      n._tier=tier;
+      var R=focusTier?CS_RING.objFocusR:CS_RING.objR;
+      // Every swap takes a ticket. An upload that resolves after the reader has already moved
+      // on must not mount itself onto a node that has since changed tier.
+      var token=(n._tok=(n._tok||0)+1);
+      function place(obj){
+        if(n._tok!==token){ csDisposeObj(obj); return; }
+        csClearNodeObj(n);
+        if(obj){ n.ovr=obj; n.mesh.add(obj); }
+        csMark();
+      }
+      csSlotRec(tier,csPid,n.ch.id).then(function(rec){
+        if(!rec && focusTier) return csSlotRec('ring',csPid,n.ch.id);   // focus falls back to the ring visual
+        return rec;
+      }).then(function(rec){
+        if(n._tok!==token) return;
+        if(!rec){ place(null); return; }
+        csBuildObj(rec,R,function(obj,err){
+          if(err) console.warn('[ring] chapter object ('+n.ch.id+'/'+tier+'):',err);
+          place(obj);
+        });
+      }).catch(function(){ place(null); });
+    }
+    function csApplyChapterObjs(force){ csNodes.forEach(function(n,i){ csNodeVisual(i,force); }); }
 
     // The 1..N stepper is the instruction-manual nav from the original direction, flattened:
     // the right rail became this strip plus the ring itself.
@@ -11580,12 +11780,32 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     function csMark(){
+      // While a chapter is focused the hub and every other chapter fade back, so the eye has
+      // one subject. CS_RING.dim is authored — 1 disables the effect entirely.
+      var dim = csAtChapter ? CS_RING.dim : 1;
       csNodes.forEach(function(n,i){
         var on=(i===csSelIdx);
         n.lbl.classList.toggle('sel',on);
-        if(n.mesh.material) n.mesh.material.color.setHex(on?0xF0D080:0x78E0D6);
+        n.lbl.style.opacity = (csAtChapter && !on) ? String(CS_RING.dim) : '';
+        var m=n.mesh.material;
+        // an uploaded chapter object stands in for the sphere entirely — the sphere goes to
+        // zero rather than being hidden, so the halo behind it still reads as a glow
+        if(m){ m.color.setHex(on?0xF0D080:0x78E0D6); m.transparent=true;
+               m.opacity = n.ovr ? 0 : (on?1:dim); m.depthWrite = !n.ovr; }
+        if(n.ovr) n.ovr.traverse(function(o){
+          if(o.material){ o.material.transparent=true;
+            if(o.userData._baseOp==null) o.userData._baseOp=(o.material.opacity!=null?o.material.opacity:1);
+            o.material.opacity=o.userData._baseOp*(on?1:dim); } });
         var halo=n.mesh.children&&n.mesh.children[0];
-        if(halo&&halo.material) halo.material.color.setHex(on?0xE9A73E:0x5ABFB8);
+        if(halo&&halo.material){ halo.material.color.setHex(on?0xE9A73E:0x5ABFB8);
+                                 halo.material.opacity = 0.16*(on?1:dim); }
+      });
+      // an uploaded centre object is a GROUP of meshes, the placeholder is a single mesh —
+      // walk it either way so the dim applies to both
+      if(csHub) csHub.traverse(function(o){
+        if(o.material){ o.material.transparent=true;
+          if(o.userData._baseOp==null) o.userData._baseOp=(o.material.opacity!=null?o.material.opacity:1);
+          o.material.opacity=o.userData._baseOp*dim; }
       });
       var st=document.getElementById('csStepper');
       if(st) Array.prototype.forEach.call(st.children,function(b,i){ b.classList.toggle('on',i===csSelIdx); });
@@ -11593,7 +11813,20 @@ f 2469//2469 2470//2470 2434//2434
 
     function csUpdateLabels(){
       if(!csScene.active) return;
+      if(csTgt){
+        var o=csScene.orbit, k=CS_RING.ease;
+        // shortest angular path — stepping 10 → 01 swings one step forward, not nine back
+        var dy=csTgt.yaw-o.yaw;
+        while(dy>Math.PI) dy-=Math.PI*2;
+        while(dy<-Math.PI) dy+=Math.PI*2;
+        o.yaw   += dy*k;
+        o.pitch += (csTgt.pitch-o.pitch)*k;
+        o.radius+= (csTgt.radius-o.radius)*k;
+        o.look.lerp(csTgt.look,k);
+      }
       csNodes.forEach(function(n){
+        // flat media (bitmap/video) has to keep facing the camera as the ring swings past it
+        if(n.ovr && n.ovr.userData.billboard) n.ovr.lookAt(camera.position);
         var s=projWorld(n.pos);
         if(!s.vis){ n.lbl.style.display='none'; return; }
         _csUp.set(n.pos.x,n.pos.y+CS_RING.nodeR*1.8,n.pos.z);
@@ -11621,11 +11854,16 @@ f 2469//2469 2470//2470 2434//2434
     function csShowBooklet(ch,i){
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.add('cs-focus-panel');
       if(window.CS && CS.showBooklet) CS.showBooklet(csDataForBooklet(ch,i));
+      // the booklet slides in — re-place the nav once it has settled, or it anchors to a stale top
+      setTimeout(csPlaceNav, 60); setTimeout(csPlaceNav, 700);
     }
 
     // ── navigation ─────────────────────────────────────────────────────────────
     function csCrumb(){
-      var segs=[{text:csRootLabel||'Project'},{text:'Case study',bold:!csAtChapter}];
+      var segs=[
+        {text:csRootLabel||'Project', go:csToProject},                                   // → project focus
+        {text:'Case study', bold:!csAtChapter, go:(csAtChapter?csOverview:null)}          // → chapter ring
+      ];
       if(csAtChapter && csNodes[csSelIdx]) segs.push({text:csNodes[csSelIdx].ch.title,bold:true});
       setCrumb('cscase:'+csPid+(csAtChapter?':'+csSelIdx:''),segs);
     }
@@ -11635,21 +11873,78 @@ f 2469//2469 2470//2470 2434//2434
       if(csAtChapter && csNodes[csSelIdx]) p+='/'+csNodes[csSelIdx].ch.id;
       setRoute(p);
     }
-    function csOverview(){
-      csAtChapter=false; csSelIdx=-1; csMark();
-      var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');
-      csScene.orbit.fitPoints(csNodes.map(function(n){ return [n.pos.x,n.pos.y,n.pos.z]; }), {min:9, extra:3.2});
-      csCrumb(); csSetRoute();
+    // The chapter nav belongs with the thing it navigates — just above the booklet when one
+    // is open, and parked in the lower third at the ring level where there is no booklet.
+    function csPlaceNav(){
+      var el=document.getElementById('csRouteCtl'); if(!el) return;
+      // At the ring there is nothing to step between — the whole set is on screen and every
+      // chapter is one click away, so the stepper is just clutter over the constellation.
+      el.classList.toggle('hidden', !csAtChapter);
+      if(!csAtChapter) return;
+      var ms=document.getElementById('manual-scene');
+      var r=ms ? ms.getBoundingClientRect() : null;
+      var top=(r && r.height>4 && r.top>0) ? (r.top - el.offsetHeight - 16) : (window.innerHeight*0.66);
+      el.style.top=Math.max(64, top)+'px';
     }
-    function csSelect(i){
+    window.addEventListener('resize',function(){ if(csScene.active) csPlaceNav(); });
+
+    // Tuning hook. The ring's framing is a dial the designer is expected to keep turning,
+    // and every internal here lives in bootHolotable()'s closure — without this the only way
+    // to check where a chapter actually LANDS on screen is to eyeball a screenshot.
+    window.__ring=function(){
+      if(!csScene.active) return {active:false};
+      var n=csNodes[csSelIdx]; if(!n) return {active:true,sel:-1};
+      var v=n.mesh.getWorldPosition(new THREE.Vector3()).project(camera);
+      return { active:true, sel:csSelIdx, atChapter:csAtChapter,
+               xPct:+(( v.x+1)/2*100).toFixed(1), yPct:+((1-v.y)/2*100).toFixed(1),
+               orbit:{yaw:+csScene.orbit.yaw.toFixed(3), pitch:+csScene.orbit.pitch.toFixed(3),
+                      radius:+csScene.orbit.radius.toFixed(2), lookY:+csScene.orbit.look.y.toFixed(2)},
+               tgt: csTgt?{yaw:+csTgt.yaw.toFixed(3), pitch:+csTgt.pitch.toFixed(3),
+                      radius:+csTgt.radius.toFixed(2), lookY:+csTgt.look.y.toFixed(2)}:null,
+               cam:camera.position.toArray().map(function(v){return +v.toFixed(2);}),
+               bookTop:(function(){ var m=document.getElementById('manual-scene');
+                  var r=m&&m.getBoundingClientRect();
+                  return (r&&r.height>4)?+(r.top/window.innerHeight*100).toFixed(1):null; })() };
+    };
+
+    function csOverview(){
+      csAtChapter=false; csSelIdx=-1;
+      csApplyChapterObjs();   // whatever was focused drops back to its ring visual
+      if(window.__csRefreshChapters) window.__csRefreshChapters();
+      csMark();
+      var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');
+      csTgt=null;   // overview frames directly; nothing to ease toward
+      csScene.orbit.fitPoints(csNodes.map(function(n){ return [n.pos.x,n.pos.y,n.pos.z]; }), {min:9, extra:3.2});
+      csCrumb(); csSetRoute(); csPlaceNav();
+    }
+    // `snap` skips the swing. A visitor arriving on a chapter URL should simply BE there —
+    // easing in from whatever pose the ring happened to build at is a move they did not make.
+    function csSelect(i, snap){
       var n=csNodes[i]; if(!n) return;
       csSelIdx=i; csAtChapter=true;
-      // Radius first — frameAt measures against the NEW zoom. Then park the chapter at 28% down
-      // the viewport, the gap above the manual panel. Deliberately NOT measuring the panel: on
-      // the first chapter opened it is still transitioning in and reports a stale position.
-      csScene.orbit.radius=CS_RING.chapterZoom;
-      csScene.orbit.frameAt([n.pos.x,n.pos.y,n.pos.z], CS_RING.chapterFrac);
-      csShowBooklet(n.ch,i); csMark(); csCrumb(); csSetRoute();
+      // Camera goes on the line running from the HUB out THROUGH this chapter, and looks at
+      // THE CHAPTER — not at the hub. Looking at the hub kept the constellation's centre in
+      // frame but pushed the chapter low, straight behind the booklet. Looking at the chapter
+      // centres it and leaves the hub visible just beyond, which is the arrangement wanted.
+      //
+      // yaw derivation: csNodePos puts node i at angle a=(π/2)-(i/n)2π on (cos a, sin a) in
+      // x/z, while MWOrbit.apply reads yaw on (sin yaw, cos yaw). Those conventions are
+      // mirrored, so the camera direction matching the node's own outward radial is
+      // yaw = (π/2) - a = (i/n)2π. Verified: chapter lands at x=50%, y≈32% of the viewport.
+      //
+      // `look` is dropped below the chapter by chapterFrac of the visible height, which is
+      // what lifts the chapter clear of the booklet (top edge at ~52%) rather than centring
+      // it behind it.
+      var R = CS_RING.chapterDist;
+      var visH = 2*R*Math.tan((camera.fov*Math.PI/180)/2);
+      csTgt = { yaw:(i/csNodes.length)*Math.PI*2, pitch:CS_RING.chapterPitch, radius:R,
+                look:new THREE.Vector3(n.pos.x, n.pos.y - (0.5-CS_RING.chapterFrac)*visH, n.pos.z) };
+      csApplyChapterObjs();   // the newly focused chapter takes its focus visual; the old one reverts
+      if(window.__csRefreshChapters) window.__csRefreshChapters();
+      if(snap){ var o=csScene.orbit;
+        o.yaw=csTgt.yaw; o.pitch=csTgt.pitch; o.radius=csTgt.radius; o.look.copy(csTgt.look);
+        camSnap=true; }   // and skip the glide — see the camSnap note in animate()
+      csShowBooklet(n.ch,i); csMark(); csCrumb(); csSetRoute(); csPlaceNav();
     }
     // Wraps: stepping past the last chapter returns to the first. Arrow steps are a camera move
     // only — NO cascade between chapters. The cascade is reserved for crossing between worlds,
@@ -11658,12 +11953,16 @@ f 2469//2469 2470//2470 2434//2434
       if(!csNodes.length) return;
       csSelect(csSelIdx<0 ? (d>0?0:csNodes.length-1) : (csSelIdx+d+csNodes.length)%csNodes.length);
     }
-    function csUp(){
-      if(csAtChapter){ csOverview(); return; }
+    // Leave the case study entirely and return to the project focus it was entered from.
+    function csToProject(){
       var pid=csPid;
       csExit();
       var g=pid&&planetById(pid);
       if(g) activate(g.userData); else goHome();
+    }
+    function csUp(){
+      if(csAtChapter){ csOverview(); return; }
+      csToProject();
     }
     function csExit(){ return csScene.exit(); }   // teardown lives in the scene's onExit
 
@@ -11673,6 +11972,8 @@ f 2469//2469 2470//2470 2434//2434
       csBuildRing(pid);
       csScene.orbit.viewKey='csview:'+pid;   // saved default view is per project
       csScene.enter(planetById(pid));
+      var hint=document.getElementById('csHint'); if(hint) hint.classList.add('show');
+      if(window.__csRefreshHubStat) window.__csRefreshHubStat();
       csRootLabel=(CASES[pid]&&CASES[pid].title)||'Case study';
       csOverview();
     }
@@ -12218,6 +12519,9 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof updateMarqueePanel==='function') updateMarqueePanel();
       if(typeof igFeedRefresh==='function') igFeedRefresh();
       var panel=document.getElementById('editPanel'); if(!panel) return;
+      // The chapter ring has no kit box, no faces and no marquee — this panel would offer
+      // controls that do nothing to what is on screen. #dbg-ring stands in for it there.
+      if(typeof csScene!=='undefined' && csScene.active){ panel.style.display='none'; return; }
       var tid=currentEditTarget();
       if(!(editMode && tid)){ panel.style.display='none'; return; }
       editTargetId=tid; panel.style.display='block';
@@ -12661,7 +12965,22 @@ f 2469//2469 2470//2470 2434//2434
         var sep=document.createElement('span'); sep.textContent=' ▸ '; sep.style.opacity='.55'; crumbPathEl.appendChild(sep);
         var s=document.createElement('span'); s.className='crumb-seg'; var ovr=copyOvr['crumb:'+crumbCtx+':'+i];
         s.textContent=(ovr!=null)?ovr:seg.text; if(seg.bold) s.style.color='var(--holo)';
-        s.setAttribute('data-ci',i); crumbPathEl.appendChild(s);
+        s.setAttribute('data-ci',i);
+        // An ancestor segment with a `go` handler is a real navigation control, not a label —
+        // the breadcrumb is meant to jump to any level, at any depth. Suppressed in Edit Mode,
+        // where clicking a segment means "rename this", not "go here".
+        if(typeof seg.go==='function'){
+          s.classList.add('nav'); s.setAttribute('role','link'); s.setAttribute('tabindex','0');
+          s.addEventListener('click',function(e){
+            if((typeof editMode!=='undefined')&&editMode) return;
+            e.preventDefault(); e.stopPropagation(); seg.go();
+          });
+          s.addEventListener('keydown',function(e){
+            if((typeof editMode!=='undefined')&&editMode) return;
+            if(e.key==='Enter'||e.key===' '){ e.preventDefault(); seg.go(); }
+          });
+        }
+        crumbPathEl.appendChild(s);
       });
       syncCrumbEdit();
     }
@@ -13114,7 +13433,11 @@ f 2469//2469 2470//2470 2434//2434
 
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
-      camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
+      // camSnap: one-frame request to arrive rather than glide. A deep link opens the page
+      // ALREADY at a chapter — lerping there from the galaxy home pose plays a camera move
+      // the visitor never made, and takes ~2s doing it.
+      if(camSnap){ camSnap=false; camera.position.copy(camPos); lookNow.copy(camLook); camera.lookAt(lookNow); }
+      else { camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow); }
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
         planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
@@ -13211,7 +13534,7 @@ f 2469//2469 2470//2470 2434//2434
             if(csPid!==pid || !csScene.active) csEnterFromProject(pid);
             var chSeg=parts[3];
             var ci=chSeg?csSlugIndex(pid,chSeg):-1;
-            if(ci>=0) csSelect(ci); else csOverview();
+            if(ci>=0) csSelect(ci, true); else csOverview();   // deep link → arrive, don't swing
           }
           return;
         }
@@ -13224,20 +13547,289 @@ f 2469//2469 2470//2470 2434//2434
         } else if(focusedMoon){ unfocusMoon(); }
       }catch(e){ console.warn('[route]',e); }
     }
+    // ── Chapter ring panel: camera dials + centre object ───────────────────────
+    // Values live in copyOvr['csRing'] so they sync and export like all authored content.
+    (function wireRingPanel(){
+      var DEF={chapterPitch:0.13, chapterDist:4.2, chapterFrac:0.32, radius:6.4, ease:0.04, dim:0.28,
+               objR:0.34, objFocusR:0.55};
+      function cur(){ var o=copyOvr['csRing']; return (o&&typeof o==='object')?o:{}; }
+      function put(k,v){ var o=cur(); o[k]=v; copyOvr['csRing']=o; persistCopy(); CS_RING[k]=v; }
+      // apply any stored overrides at boot, before the ring is ever built
+      Object.keys(DEF).forEach(function(k){ var o=cur(); if(o[k]!=null) CS_RING[k]=o[k]; });
+
+      var ROWS=[['chapterPitch','cRingPitch','vRingPitch',2],['chapterDist','cRingDist','vRingDist',1],
+                ['chapterFrac','cRingFrac','vRingFrac',2],
+                ['radius','cRingRad','vRingRad',1],['ease','cRingEase','vRingEase',3],
+                ['dim','cRingDim','vRingDim',2],
+                ['objR','cChR','vChR',2],['objFocusR','cChFR','vChFR',2]];
+      ROWS.forEach(function(r){
+        var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
+        if(!el) return;
+        var v=(cur()[r[0]]!=null)?cur()[r[0]]:DEF[r[0]];
+        el.value=v; if(out) out.textContent=Number(v).toFixed(r[3]);
+        el.addEventListener('input',function(){
+          var n=parseFloat(el.value); if(out) out.textContent=n.toFixed(r[3]);
+          put(r[0],n);
+          // geometry changes need a rebuild; camera changes just re-aim
+          if(r[0]==='radius'){ if(csScene.active && csPid){ csBuildRing(csPid); csMark();
+                                 if(csAtChapter) csSelect(csSelIdx); else csOverview(); } }
+          else if(r[0]==='dim'){ csMark(); }
+          else if(r[0]==='objR'||r[0]==='objFocusR'){ csApplyChapterObjs(true); }   // refit at the new size
+          else if(csAtChapter && csSelIdx>=0){ csSelect(csSelIdx); }
+        });
+      });
+
+      function hubStat(txt){ var el=document.getElementById('ringHubStat'); if(el) el.textContent=txt; }
+      function refreshHubStat(){
+        if(!csPid){ hubStat('open a case study first'); return; }
+        BRICStore.get('csobj:'+csPid).then(function(rec){
+          hubStat(rec&&rec.buffer ? 'uploaded · this browser only' : 'default holo form');
+        }).catch(function(){ hubStat('default holo form'); });
+      }
+      var f=document.getElementById('cRingHubFile');
+      if(f) f.addEventListener('change',function(){
+        var file=f.files[0]; if(!file) return;
+        if(!csPid){ if(typeof toast==='function') toast('open a case study first'); return; }
+        var r=new FileReader();
+        r.onload=function(e){
+          var buf=e.target.result;
+          BRICStore.set('csobj:'+csPid,{kind:'glb',buffer:buf,name:file.name,uploaded:true}).then(function(){
+            csApplyHub(); refreshHubStat();
+            if(typeof toast==='function') toast('centre object ✓');
+          });
+        };
+        r.readAsArrayBuffer(file);
+      });
+      var rs=document.getElementById('cRingHubReset');
+      if(rs) rs.addEventListener('click',function(){
+        if(!csPid) return;
+        BRICStore.del('csobj:'+csPid).then(function(){
+          if(csScene.active){ csBuildRing(csPid); csMark(); if(csAtChapter) csSelect(csSelIdx); else csOverview(); }
+          refreshHubStat(); if(typeof toast==='function') toast('centre object reset');
+        });
+      });
+
+      // ── Chapter object slots ────────────────────────────────────────────────
+      // The picker defaults to whatever chapter is focused, so the common case — "I am
+      // looking at this chapter and want to change it" — needs no extra selection step.
+      function chList(){ return (typeof csNodes!=='undefined')?csNodes:[]; }
+      function chIdx(){
+        var sel=document.getElementById('cChSel');
+        var v=sel?parseInt(sel.value,10):-1;
+        if(!(v>=0) && csSelIdx>=0) v=csSelIdx;
+        return (v>=0 && v<chList().length)?v:-1;
+      }
+      function fillChSel(){
+        var sel=document.getElementById('cChSel'); if(!sel) return;
+        var keep=sel.value, list=chList();
+        sel.innerHTML='';
+        list.forEach(function(n,i){
+          var o=document.createElement('option');
+          o.value=String(i); o.textContent=(i+1<10?'0':'')+(i+1)+' · '+n.ch.title;
+          sel.appendChild(o);
+        });
+        // Follow the focused chapter rather than holding a stale pick: the tool edits what
+        // you are looking at, so there is no way to be aiming at a chapter off screen.
+        if(csAtChapter && csSelIdx>=0) sel.value=String(csSelIdx);
+        else if(keep!=='' && keep!=null && list[parseInt(keep,10)]) sel.value=keep;
+        refreshChStat();
+      }
+      function slotLabel(slot,rec){
+        if(!rec) return slot==='ring' ? 'ring view · default holo sphere'
+                                      : 'focus view · falls back to ring';
+        if(rec.kind==='video') return slot+' view · video · syncs to visitors';
+        return slot+' view · '+rec.kind+(rec.name?' · '+rec.name:'')+' · this browser only';
+      }
+      function refreshChStat(){
+        var i=chIdx(), rs=document.getElementById('chRingStat'), fs=document.getElementById('chFocStat');
+        if(!rs||!fs) return;
+        if(i<0||!csPid){ rs.textContent='open a case study first'; fs.textContent=''; return; }
+        var chId=chList()[i].ch.id;
+        csSlotRec('ring',csPid,chId).then(function(r){ rs.textContent=slotLabel('ring',r); });
+        csSlotRec('focus',csPid,chId).then(function(r){ fs.textContent=slotLabel('focus',r); });
+        var rv=document.getElementById('cChRingVid'), fv=document.getElementById('cChFocVid');
+        if(rv) rv.value=copyOvr[csVidKey('ring',csPid,chId)]||'';
+        if(fv) fv.value=copyOvr[csVidKey('focus',csPid,chId)]||'';
+      }
+
+      // Read an upload into the same record shape the focus-view box replacement already uses,
+      // so both tiers understand every format this file can already parse.
+      function readUpload(file,cb){
+        var ext=(file.name.split('.').pop()||'').toLowerCase(), rd=new FileReader();
+        function done(mk,how){ rd.onload=function(e){ cb(mk(e.target.result)); }; rd[how](file); }
+        if(isImageFile(file,ext))      done(function(v){ return {kind:'image',dataURL:v,name:file.name,uploaded:true}; },'readAsDataURL');
+        else if(ext==='svg')           done(function(v){ return {kind:'svg',text:v,depth:0.3,axis:'z',name:file.name,uploaded:true}; },'readAsText');
+        else if(ext==='obj')           done(function(v){ return {kind:'obj',text:v,name:file.name,uploaded:true}; },'readAsText');
+        else if(ext==='glb'||ext==='gltf') done(function(v){ return {kind:'glb',buffer:v,name:file.name,uploaded:true}; },'readAsArrayBuffer');
+        else if(ext==='stp'||ext==='step') done(function(v){ return {kind:'step',buffer:v,name:file.name,uploaded:true}; },'readAsArrayBuffer');
+        else cb(null,'unsupported: .'+ext);
+      }
+      function afterSlotChange(i,msg){
+        csNodeVisual(i,true); refreshChStat();
+        if(typeof toast==='function') toast(msg);
+      }
+      // Each setter clears the OTHER kind for its slot — one slot, one thing.
+      function setUpload(slot,i,rec){
+        var chId=chList()[i].ch.id, vk=csVidKey(slot,csPid,chId);
+        if(copyOvr[vk]!=null){ delete copyOvr[vk]; persistCopy(); }
+        BRICStore.set(csObjKey(slot,csPid,chId),rec).then(function(){ afterSlotChange(i,slot+' object ✓'); });
+      }
+      function setVideo(slot,i,url){
+        var chId=chList()[i].ch.id;
+        BRICStore.del(csObjKey(slot,csPid,chId)).then(function(){
+          copyOvr[csVidKey(slot,csPid,chId)]=url; persistCopy();
+          afterSlotChange(i,slot+' video ✓');
+        });
+      }
+      function clearSlot(slot,i){
+        var chId=chList()[i].ch.id, vk=csVidKey(slot,csPid,chId);
+        if(copyOvr[vk]!=null){ delete copyOvr[vk]; persistCopy(); }
+        BRICStore.del(csObjKey(slot,csPid,chId)).then(function(){ afterSlotChange(i,slot+' reset'); });
+      }
+
+      function needChapter(){
+        var i=chIdx();
+        if(i<0||!csPid){ if(typeof toast==='function') toast('open a case study first'); return -1; }
+        return i;
+      }
+      [['ring','cChRingFile','cChRingVid','cChRingReset'],
+       ['focus','cChFocFile','cChFocVid','cChFocReset']].forEach(function(r){
+        var slot=r[0];
+        var fEl=document.getElementById(r[1]);
+        if(fEl) fEl.addEventListener('change',function(){
+          var file=fEl.files[0]; if(!file) return;
+          var i=needChapter(); if(i<0) return;
+          readUpload(file,function(rec,err){
+            if(!rec){ if(typeof toast==='function') toast(err||'could not read file'); return; }
+            setUpload(slot,i,rec);
+          });
+          fEl.value='';   // so re-picking the same file fires change again
+        });
+        var vEl=document.getElementById(r[2]);
+        if(vEl) vEl.addEventListener('change',function(){
+          var i=needChapter(); if(i<0) return;
+          var url=vEl.value.trim();
+          if(url) setVideo(slot,i,url); else clearSlot(slot,i);
+        });
+        var rEl=document.getElementById(r[3]);
+        if(rEl) rEl.addEventListener('click',function(){
+          var i=needChapter(); if(i<0) return;
+          clearSlot(slot,i);
+        });
+      });
+      var chSel=document.getElementById('cChSel');
+      if(chSel) chSel.addEventListener('change',refreshChStat);
+
+      window.__csRefreshHubStat=refreshHubStat;
+      window.__csRefreshChapters=fillChSel;   // called when a ring is built / a chapter is picked
+    })();
+
+    // ── Brick library panel ────────────────────────────────────────────────────
+    // Slots are authored content (copyOvr['brickShapes']); the .glb binaries are
+    // IndexedDB, matching how every other mesh override in this file is split.
+    (function wireBrickLibrary(){
+      var host=document.getElementById('brickSlots'); if(!host) return;
+      function slots(){
+        var o=copyOvr['brickShapes'];
+        if(o && o.length) return o;
+        return (window.CS && CS.bricks) ? CS.bricks.defaults() : [];
+      }
+      function save(list){ copyOvr['brickShapes']=list; persistCopy(); }
+      function statusOf(def,cb){
+        // An AUTHOR UPLOAD is flagged uploaded:true. Merely having an IndexedDB record is
+        // not enough to call something local — the seed pipeline writes every shipped asset
+        // into IndexedDB on first boot, so without this flag all three default bricks
+        // reported "this browser only" when they are in fact committed files.
+        BRICStore.get('brick:'+def.id).then(function(rec){
+          if(rec && rec.buffer && rec.uploaded) return cb('local','this browser only');
+          fetch(def.file,{method:'HEAD'}).then(function(r){
+            cb(r.ok?'ship':'miss', r.ok?'shipped':'no file');
+          }).catch(function(){ cb('miss','no file'); });
+        }).catch(function(){ cb('miss','no file'); });
+      }
+      function render(){
+        var list=slots(); host.innerHTML='';
+        list.forEach(function(def,i){
+          var row=document.createElement('div'); row.className='brk';
+          row.innerHTML=
+            '<div class="brk-top">'+
+              '<input class="brk-name" value="'+(def.label||def.id)+'">'+
+              '<span class="brk-chip">…</span>'+
+            '</div>'+
+            '<div class="brk-row"><span>weight</span><input type="range" min="0" max="20" step="1" value="'+(def.weight||1)+'"><b>'+(def.weight||1)+'</b></div>'+
+            '<div class="brk-row">'+
+              '<label class="brk-btn">⬆ replace<input type="file" accept=".glb,.gltf" hidden></label>'+
+              '<button class="brk-btn" data-a="reset">⟲ default</button>'+
+              '<button class="brk-btn" data-a="del">✕ remove</button>'+
+            '</div>'+
+            '<div class="brk-stat"></div>';
+          var chip=row.querySelector('.brk-chip'),
+              nameEl=row.querySelector('.brk-name'),
+              wEl=row.querySelector('input[type=range]'), wOut=row.querySelector('.brk-row b'),
+              fileEl=row.querySelector('input[type=file]'), stat=row.querySelector('.brk-stat');
+
+          statusOf(def,function(cls,txt){ chip.className='brk-chip '+cls; chip.textContent=txt; });
+
+          nameEl.addEventListener('change',function(){ var l=slots(); l[i].label=nameEl.value; save(l); });
+          wEl.addEventListener('input',function(){ wOut.textContent=wEl.value;
+            var l=slots(); l[i].weight=+wEl.value; save(l); if(window.CS&&CS.bricks) CS.bricks.reload(); });
+
+          fileEl.addEventListener('change',function(){
+            var f=fileEl.files[0]; if(!f) return;
+            var r=new FileReader();
+            r.onload=function(e){
+              var buf=e.target.result;
+              CS.bricks.inspect(buf,f.name).then(function(info){
+                if(!info.ok){ stat.innerHTML='<span class="brk-warn">'+info.error+'</span>'; return; }
+                BRICStore.set('brick:'+def.id,{kind:'glb',buffer:buf,name:f.name,uploaded:true}).then(function(){
+                  CS.bricks.reload();
+                  statusOf(def,function(cls,txt){ chip.className='brk-chip '+cls; chip.textContent=txt; });
+                });
+                stat.innerHTML='<b>'+info.tris.toLocaleString()+'</b> tris · <b>'+Math.round(info.bytes/1024)+
+                  'KB</b> · <b>'+info.studs+'</b> studs wide'+
+                  (info.warn.length?'<br><span class="brk-warn">⚠ '+info.warn.join('<br>⚠ ')+'</span>':'<br>looks good');
+              });
+            };
+            r.readAsArrayBuffer(f);
+          });
+
+          row.querySelector('[data-a="reset"]').addEventListener('click',function(){
+            BRICStore.del('brick:'+def.id).then(function(){
+              CS.bricks.reload(); stat.textContent='';
+              statusOf(def,function(cls,txt){ chip.className='brk-chip '+cls; chip.textContent=txt; });
+              if(typeof toast==='function') toast('brick reset to shipped file');
+            });
+          });
+          row.querySelector('[data-a="del"]').addEventListener('click',function(){
+            var l=slots(); l.splice(i,1); save(l); if(window.CS&&CS.bricks) CS.bricks.reload(); render();
+          });
+          host.appendChild(row);
+        });
+      }
+      var add=document.getElementById('cBrkAdd');
+      if(add) add.addEventListener('click',function(){
+        var l=slots().slice(), n=l.length+1;
+        l.push({id:'brick-custom-'+n, label:'New shape '+n, file:'assets/models/bricks/custom-'+n+'.glb', weight:4});
+        save(l); render();
+      });
+      render();
+    })();
+
     // ── Brick cascade tunables → copyOvr['cascadeCfg'] ──────────────────────────
     // The CS module re-reads this object at the start of every run, so a slider change
     // takes effect on the next cascade with no reload. Writes go through persistCopy() so
     // they land in the same server-synced store as all other authored content.
     (function wireCascadePanel(){
-      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,curve:11,hold:600,
-               start:160,exitSpread:0.70,exitStagger:0.35,bounce:1.30,holo:'#78E0D6',voxel:'#E9A73E',style:'holo'};
+      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,hold:600,
+               start:160,exitSpread:0.70,exitStagger:0.35,bounce:1.30,scrim:0.92,brickAlpha:1.0,holo:'#78E0D6'};
       var ROWS=[['U','cCasU','vCasU',0],['spacing','cCasSpacing','vCasSpacing',1],['jitter','cCasJitter','vCasJitter',2],
                 ['tumble','cCasTumble','vCasTumble',0],['spin','cCasSpin','vCasSpin',0],['fall','cCasFall','vCasFall',2],
                 ['rowDelay','cCasRowDelay','vCasRowDelay',0],['randDelay','cCasRandDelay','vCasRandDelay',0],
-                ['curve','cCasCurve','vCasCurve',0],['hold','cCasHold','vCasHold',0],
+                ['hold','cCasHold','vCasHold',0],['brickAlpha','cCasAlpha','vCasAlpha',2],
+                ['scrim','cCasScrim','vCasScrim',2],
                 ['start','cCasStart','vCasStart',0],['bounce','cCasBounce','vCasBounce',2],
                 ['exitSpread','cCasExitSpread','vCasExitSpread',2],['exitStagger','cCasExitStagger','vCasExitStagger',2]];
-      var COLS=[['holo','cCasHolo','cCasHoloHex'],['voxel','cCasVox','cCasVoxHex']];
+      var COLS=[['holo','cCasHolo','cCasHoloHex']];
       function cur(){ var o=copyOvr['cascadeCfg']; return (o&&typeof o==='object')?o:{}; }
       function val(k){ var o=cur(); return o[k]!=null?o[k]:DEF[k]; }
       function put(k,v){ var o=cur(); o[k]=v; copyOvr['cascadeCfg']=o; persistCopy(); }
@@ -13250,7 +13842,6 @@ f 2469//2469 2470//2470 2434//2434
           var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
           var v=val(c[0]); if(sw) sw.value=v; if(tx) tx.value=v;
         });
-        var vx=document.getElementById('cCasVoxel'); if(vx) vx.checked=(val('style')==='voxel');
       }
       ROWS.forEach(function(r){
         var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
@@ -13267,8 +13858,14 @@ f 2469//2469 2470//2470 2434//2434
           if(sw) sw.value=v; put(c[0], v);
         });
       });
-      var vx=document.getElementById('cCasVoxel');
-      if(vx) vx.addEventListener('change',function(){ put('style', vx.checked?'voxel':'holo'); });
+      // Reduce Motion turns the cascade into a plain cross-fade with NO bricks — correct
+      // behaviour, but indistinguishable from a broken cascade when you are previewing it.
+      var note=document.getElementById('casMotionNote');
+      if(note){
+        var rm=false; try{ rm=matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+        note.innerHTML = rm ? '<span class="brk-warn">⚠ Reduce Motion is on — the cascade will '+
+          'cross-fade with NO bricks. System Settings → Accessibility → Display → Reduce motion.</span>' : '';
+      }
       var pv=document.getElementById('cCasPreview');
       // Preview the REAL destination. This used to call enterCaseStudy() bare, which defaults
       // to the old DOM page takeover — so tuning the cascade showed you a cream placeholder
@@ -13803,7 +14400,8 @@ f 2469//2469 2470//2470 2434//2434
       arts.forEach(function(a){ a.classList.remove('visible'); });
       // MERGE Stage 3: tear down the cascade + page takeover so back-out fully resets
       clearCascadeTimers();
-      cascadeEl.className=''; cascadeEl.innerHTML='';   // clears both the brick pile and the reduced-motion scrim
+      if(BrickField) BrickField.stop();                 // tear down the WebGL curtain
+      cascadeEl.className=''; cascadeEl.innerHTML='';   // and the reduced-motion scrim
       pageTakeover.classList.remove('visible');
       boxScene.style.opacity='1';
     }
@@ -13828,6 +14426,8 @@ f 2469//2469 2470//2470 2434//2434
       exitSpread: 0.70,  // exit randomness, as a fraction of randDelay
       exitStagger: 0.35, // exit per-row stagger, as a fraction of rowDelay
       bounce: 1.30,   // landing overshoot — the easing curve's second control point
+      scrim: 0.92,    // how opaque the backing scrim goes at full fill (0 = bricks only)
+      brickAlpha: 1.0,// brick translucency multiplier
       holo: '#78E0D6',   // holo tint; the lighter rim is derived from it
       voxel: '#E9A73E',  // voxel base; top/side shades are derived from it
       style: 'holo'   // 'holo' = teal stepped stud-plate (default), 'voxel' = amber pixel brick
@@ -13858,92 +14458,402 @@ f 2469//2469 2470//2470 2434//2434
     }
     loadCfg();
 
-    var SHAPES = [
-      { sw:2, sd:2, hk:'b', t:'brick',  w:8 },
-      { sw:1, sd:2, hk:'b', t:'brick',  w:7 },
-      { sw:1, sd:4, hk:'b', t:'brick',  w:5 },
-      { sw:1, sd:1, hk:'b', t:'brick',  w:3 },
-      { sw:2, sd:2, hk:'p', t:'brick',  w:4 },
-      { sw:1, sd:2, hk:'b', t:'slope',  w:5 },
-      { sw:2, sd:2, hk:'b', t:'islope', w:3 },
-      { sw:2, sd:2, hk:'b', t:'corner', w:3 },
-      { sw:3, sd:1, hk:'a', t:'arch',   wCurve:true }
-    ];
-    var pick = function(a){ return a[(Math.random() * a.length) | 0]; };
-    var rnd = function(lo, hi){ return (lo + Math.random() * (hi - lo)); };
-    function studsStr(sw, sd) {
-      var s = '';
-      for (var i = 0; i < sw; i++)
-        for (var j = 0; j < sd; j++)
-          s += '<span class="stud" style="left:'+((i+0.5)/sw*100).toFixed(1)+'%;top:'+((j+0.5)/sd*100).toFixed(1)+'%"></span>';
-      return s;
-    }
-    function facesStr(studs) {
-      return '<div class="fc back"></div><div class="fc left"></div>'
-        + '<div class="fc right"></div><div class="fc front"></div>'
-        + '<div class="fc bottom"></div><div class="fc top">' + studs + '</div>';
-    }
+    // ══════════════════════════════════════════════════════════════════════════
+    // BRICK FIELD — the WebGL cascade renderer
+    //
+    // Replaces the CSS-3D cube system. The old cascade faked bricks from six face
+    // divs per cube; this draws REAL LEGO parts loaded from .glb, because the faked
+    // shapes never read as bricks no matter how they were tuned.
+    //
+    // WHY A SEPARATE CANVAS: the cascade is a screen-space CURTAIN, not part of the
+    // galaxy. Giving it its own canvas + renderer keeps it completely independent of
+    // the main scene's camera and render loop — it can cover a scene swap without
+    // knowing anything about what it is covering, exactly as the DOM overlay did.
+    //
+    // WHY PIXEL-SPACE: the orthographic frustum is set to (0,0)-(W,H) in CSS pixels
+    // with y pointing DOWN, so it shares a coordinate system with the DOM version.
+    // That is what lets every existing tunable — U, spacing, jitter, rowDelay — carry
+    // over unchanged instead of being re-derived in world units.
+    //
+    // Geometry convention (measured from the shipped parts, Aug 2026): exports are in
+    // LDraw units with the node carrying a 0.01 scale and a -90° X rotation. 20 LDU is
+    // one stud, so one stud is 0.2 world units after the node transform — hence
+    // STUD_WORLD below. Node transforms are BAKED rather than assumed, so a part
+    // exported with a different convention still lands correctly.
+    // ══════════════════════════════════════════════════════════════════════════
+    var BrickField = (function(){
+      var STUD_WORLD = 0.2;          // one stud, in world units, after node transforms are baked
+      var canvas=null, renderer=null, scene=null, cam=null, mat=null;
+      var shapes=[];                 // [{id,label,geo,mesh,weight}]
+      var loaded=false, loading=null;
+      var W=0, H=0;
 
-    function buildCascade(styleName) {
-      clearCascadeTimers();
-      cascadeEl.className = 'style-' + styleName;    // resets run/fade
-      cascadeEl.innerHTML = '';
-      var U = CFG.U, PLATE = U * 0.37, BRICK = U * 0.93;
-      var hOf = function(hk){ return hk === 'p' ? PLATE : hk === 'a' ? BRICK * 1.6 : BRICK; };
-      var bag = [];
-      SHAPES.forEach(function(s){ var n = s.wCurve ? CFG.curve : s.w; for (var i = 0; i < n; i++) bag.push(s); });
-      var cellW = U * CFG.spacing, cellH = U * CFG.spacing * 0.83;
-      var cols = Math.ceil(window.innerWidth  / cellW) + 1;
-      var rows = Math.ceil(window.innerHeight / cellH) + 2;
-      var frag = document.createDocumentFragment();
-      for (var r = 0; r < rows; r++) {
-        for (var c = 0; c < cols; c++) {
-          var sh = pick(bag);
-          var b = document.createElement('div');
-          b.className = 'block';
-          var hh = Math.round(hOf(sh.hk));
-          var dd = (sh.t === 'slope' || sh.t === 'islope') ? hh : sh.sd * U;
-          b.style.setProperty('--u', U + 'px');
-          b.style.setProperty('--w', (sh.sw * U) + 'px');
-          b.style.setProperty('--d', dd + 'px');
-          b.style.setProperty('--h', hh + 'px');
-          b.style.setProperty('--ox', rnd(-CFG.tumble, CFG.tumble).toFixed(1) + 'deg');
-          b.style.setProperty('--oy', rnd(0, 360).toFixed(1) + 'deg');
-          b.style.setProperty('--oz', rnd(-CFG.tumble, CFG.tumble).toFixed(1) + 'deg');
-          b.style.setProperty('--spin0', rnd(-CFG.spin, CFG.spin).toFixed(1) + 'deg');
-          b.style.setProperty('--spin1', rnd(-CFG.spin * 0.3, CFG.spin * 0.3).toFixed(1) + 'deg');
-          b.style.setProperty('--fall', (CFG.fall + rnd(-0.1, 0.18)).toFixed(2) + 's');
-          if (styleName === 'voxel') {
-            var deep = Math.random() > 0.78;   // a minority of bricks sit a shade darker, for depth
-            var base = deep ? shade(CFG.voxel, -0.12) : CFG.voxel;
-            b.style.setProperty('--bf', base);
-            b.style.setProperty('--bt', shade(base,  0.14));   // top face catches light
-            b.style.setProperty('--br', shade(base, -0.22));   // sides fall away
-          }
-          var j = CFG.jitter * U;
-          b.style.left = Math.round(c * cellW + rnd(-j, j)) + 'px';
-          b.style.top  = Math.round(r * cellH + rnd(-j, j)) + 'px';
-          b.dataset.row = r;
+      // Default shape set. `file` is the fallback path under assets/; an author upload
+      // in IndexedDB under 'brick:<id>' takes precedence. `weight` is how often the
+      // shape appears in the mix — this replaces the old SHAPES array's baked w: values.
+      var DEFAULT_SHAPES=[
+        {id:'brick-2x2',  label:'2×2 brick',   file:'assets/models/bricks/brick-2x2.glb',  weight:8},
+        {id:'brick-1x1',  label:'1×1 brick',   file:'assets/models/bricks/brick-1x1.glb',  weight:6},
+        {id:'slope-1x1',  label:'1×1 slope',   file:'assets/models/bricks/slope-1x1.glb',  weight:5}
+      ];
 
-          var showStuds = (sh.t === 'brick' || sh.t === 'arch');
-
-          if (sh.t === 'corner') {
-            var half = U / 2;
-            var armA = '<div class="cpart" style="--w:'+(2*U)+'px;--d:'+U+'px;--h:'+hh+'px;transform:translateZ('+(-half)+'px)">'
-                     + facesStr(studsStr(2,1)) + '</div>';
-            var armB = '<div class="cpart" style="--w:'+U+'px;--d:'+U+'px;--h:'+hh+'px;transform:translateX('+(-half)+'px) translateZ('+half+'px)">'
-                     + facesStr(studsStr(1,1)) + '</div>';
-            b.innerHTML = '<div class="cube corner">'+armA+armB+'</div>';
-          } else {
-            var cls = sh.t === 'brick' ? '' : sh.t;
-            b.innerHTML = '<div class="cube '+cls+'">' + facesStr(showStuds ? studsStr(sh.sw, sh.sd) : '') + '</div>';
-          }
-          frag.appendChild(b);
-        }
+      function shapeDefs(){
+        var ovr=null;
+        try{ ovr=(window.BRICStore&&BRICStore.getCopy)?BRICStore.getCopy()['brickShapes']:null; }catch(e){}
+        if(ovr && ovr.length) return ovr;
+        return DEFAULT_SHAPES.map(function(s){ return {id:s.id,label:s.label,file:s.file,weight:s.weight}; });
       }
-      cascadeEl.appendChild(frag);
-      return rows;
-    }
+
+      // Holographic material. Written entirely in code and applied OVER whatever the
+      // .glb shipped with — the exports carry a plain "15 White" PBR material which is
+      // discarded here. Nothing about the look is baked in Blender.
+      function makeMat(){
+        return new THREE.ShaderMaterial({
+          transparent:true, depthWrite:false, side:THREE.DoubleSide,
+          uniforms:{ uTint:{value:new THREE.Color(0x78E0D6)}, uHot:{value:new THREE.Color(0xEAFEFB)},
+                     uTime:{value:0}, uScan:{value:0.7}, uFres:{value:1.8}, uAlpha:{value:1} },
+          vertexShader:
+            'varying vec3 vN; varying vec3 vV; varying vec3 vW;\n'+
+            'void main(){\n'+
+            '  vec4 wp = instanceMatrix * vec4(position,1.0);\n'+
+            '  vN = normalize(mat3(instanceMatrix) * normal);\n'+
+            '  vec4 mv = modelViewMatrix * wp;\n'+
+            '  vV = normalize(-mv.xyz); vW = wp.xyz;\n'+
+            '  gl_Position = projectionMatrix * mv;\n'+
+            '}',
+          fragmentShader:
+            'uniform vec3 uTint; uniform vec3 uHot; uniform float uTime,uScan,uFres,uAlpha;\n'+
+            'varying vec3 vN; varying vec3 vV; varying vec3 vW;\n'+
+            'void main(){\n'+
+            '  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uFres);\n'+   // fresnel rim
+            '  float scan = 0.5 + 0.5*sin((vW.y*0.22) - uTime*2.0);\n'+                  // travelling scanlines
+            '  vec3 col = mix(uTint, uHot, f);\n'+
+            '  float a = (0.16 + f*0.72 + scan*uScan*0.10) * uAlpha;\n'+
+            '  gl_FragColor = vec4(col, clamp(a,0.0,1.0));\n'+
+            '}'
+        });
+      }
+
+      function ensureCanvas(){
+        if(canvas) return;
+        canvas=document.createElement('canvas');
+        canvas.id='cascade-gl';
+        // ATTACH TO BODY, never beside #cascade. #cascade lives inside #cs-root, which is
+        // opacity:0 unless .active — and the constellation path deliberately never adds
+        // .active (domTakeover:false). Putting the canvas there made it inherit opacity 0:
+        // it rendered correctly every frame, into something invisible. Its own fixed
+        // position and z-index handle stacking without a parent.
+        document.body.appendChild(canvas);
+        renderer=new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
+        renderer.setClearColor(0x000000,0);
+        scene=new THREE.Scene();
+        cam=new THREE.OrthographicCamera(0,1,0,1,-6000,6000);   // pixel space, y DOWN
+        mat=makeMat();
+        resize();
+      }
+      function resize(){
+        if(!renderer) return;
+        W=window.innerWidth; H=window.innerHeight;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+        renderer.setSize(W,H,false);
+        cam.left=0; cam.right=W; cam.top=0; cam.bottom=H; cam.updateProjectionMatrix();
+      }
+      window.addEventListener('resize',resize);
+
+      // Bake a loaded glTF scene down to ONE geometry in world units. Uses matrixWorld
+      // rather than assuming the exporter's rotation/scale, so an oddly-authored part
+      // still lands the right way up and at the right size.
+      function bake(gltf){
+        var out=null;
+        gltf.scene.updateMatrixWorld(true);
+        gltf.scene.traverse(function(o){
+          if(!o.isMesh || out) return;
+          var g=o.geometry.clone();
+          g.applyMatrix4(o.matrixWorld);
+          out=g;
+        });
+        return out;
+      }
+
+      function loadOne(def){
+        return new Promise(function(res){
+          var gl=new THREE.GLTFLoader();
+          if(THREE.DRACOLoader){ var d=new THREE.DRACOLoader(); d.setDecoderPath('./vendor/draco/'); gl.setDRACOLoader(d); }
+          function fromBuffer(buf){
+            gl.parse(buf,'',function(g){ res({def:def, geo:bake(g)}); },
+              function(e){ console.warn('[cascade] brick "'+def.id+'" failed to parse — is the Draco decoder reachable at /vendor/draco/ ?', e);
+                           res({def:def, geo:null}); });
+          }
+          // An author upload in IndexedDB wins over the shipped file.
+          var got=null;
+          try{ got=(window.BRICStore&&BRICStore.get)?BRICStore.get('brick:'+def.id):null; }catch(e){}
+          Promise.resolve(got).then(function(rec){
+            if(rec && rec.buffer && rec.uploaded){ fromBuffer(rec.buffer); return; }   // author upload only; see statusOf
+            fetch(def.file).then(function(r){ return r.ok?r.arrayBuffer():Promise.reject(new Error('HTTP '+r.status)); })
+              .then(fromBuffer)
+              .catch(function(e){ console.warn('[cascade] brick "'+def.id+'" failed to load from '+def.file, (e&&e.message)||e);
+                                  res({def:def, geo:null}); });
+          }).catch(function(){ res({def:def, geo:null}); });
+        });
+      }
+
+      // Load every shape once. Resolves to the number of shapes that actually loaded —
+      // the caller uses 0 to mean "fall through to the reduced-motion cross-fade".
+      function load(){
+        if(loaded) return Promise.resolve(shapes.length);
+        if(loading) return loading;
+        ensureCanvas();
+        var defs=shapeDefs();
+        loading=Promise.all(defs.map(loadOne)).then(function(rs){
+          shapes=[];
+          rs.forEach(function(r){
+            if(!r.geo) return;
+            shapes.push({id:r.def.id, label:r.def.label, geo:r.geo, weight:+r.def.weight||1, mesh:null});
+          });
+          loaded=true; loading=null;
+          return shapes.length;
+        });
+        return loading;
+      }
+
+      // Parse a candidate .glb and report what matters, so an author sees the same three
+      // numbers that went wrong repeatedly while these parts were being authored:
+      // triangle count, file weight, and whether the origin is actually centred.
+      // Everything here was a real defect in a real export at some point.
+      function inspect(buffer, name){
+        return new Promise(function(res){
+          var gl=new THREE.GLTFLoader();
+          if(THREE.DRACOLoader){ var d=new THREE.DRACOLoader(); d.setDecoderPath('./vendor/draco/'); gl.setDRACOLoader(d); }
+          gl.parse(buffer,'',function(g){
+            var geo=bake(g);
+            if(!geo){ res({ok:false, error:'no mesh found in file'}); return; }
+            geo.computeBoundingBox();
+            var b=geo.boundingBox;
+            var size=[b.max.x-b.min.x, b.max.y-b.min.y, b.max.z-b.min.z];
+            var off=[Math.abs(b.max.x+b.min.x)/2, Math.abs(b.max.y+b.min.y)/2, Math.abs(b.max.z+b.min.z)/2];
+            var tris=geo.index ? geo.index.count/3 : geo.attributes.position.count/3;
+            var maxOff=Math.max(off[0],off[1],off[2]);
+            var warn=[];
+            if(tris>5000) warn.push('heavy: '+Math.round(tris).toLocaleString()+' triangles — decimate to ~1,500');
+            if(buffer.byteLength>120000) warn.push('large: '+Math.round(buffer.byteLength/1024)+'KB — enable Draco on export');
+            if(maxOff>0.02) warn.push('off-centre by '+maxOff.toFixed(2)+' units — set origin to bounds centre');
+            res({ ok:true, name:name||'', tris:Math.round(tris), bytes:buffer.byteLength,
+                  studs:+(size[0]/STUD_WORLD).toFixed(1), centred:maxOff<=0.02, warn:warn });
+          }, function(){ res({ok:false, error:'could not parse — is it a .glb?'}); });
+        });
+      }
+
+      // ── choreography ────────────────────────────────────────────────────────
+      // Ported from the CSS version beat for beat. The DOM cascade drove the fall with
+      // a CSS transition and .landed/.out class flips; here the same timeline is walked
+      // per frame. Every CFG value keeps its old meaning because the camera is in pixel
+      // space — U really is a pixel size, rowDelay really is milliseconds.
+      var bricks=[], running=false, raf=0, tStart=0, dummy=null, ease=null, scrim=null, guard=0;
+
+      // THE CURTAIN IS NOT THE BRICKS.
+      // The CSS version occluded for free: each cube was six solid faces, so a filled
+      // grid was effectively opaque. Real bricks are translucent holograms — over a live
+      // galaxy they read beautifully but hide nothing, and the entire job of this
+      // sequence is to cover a scene swap. So the bricks now fall in FRONT of a scrim
+      // that fades up as they land and back down as they leave. Bricks carry the
+      // character; the scrim guarantees the occlusion. CFG.scrim tunes how far it goes —
+      // 0 is pure bricks (and a visible swap), 1 is full cover.
+      function ensureScrim(){
+        if(scrim) return;
+        // DoubleSide is REQUIRED, not defensive. The pixel-space camera is y-DOWN
+        // (top:0, bottom:H), which mirrors the projection and therefore flips triangle
+        // winding — single-sided geometry faces away and is culled. The bricks only
+        // survived this because their material is double-sided too. Anything added to
+        // this scene needs the same treatment.
+        scrim=new THREE.Mesh(new THREE.PlaneGeometry(1,1),
+          new THREE.MeshBasicMaterial({color:0x070c0c, transparent:true, opacity:0,
+                                       depthWrite:false, side:THREE.DoubleSide}));
+        scrim.frustumCulled=false;
+        scene.add(scrim);
+      }
+      function placeScrim(){
+        ensureScrim();
+        scrim.geometry.dispose();
+        scrim.geometry=new THREE.PlaneGeometry(W*1.2,H*1.2);
+        scrim.position.set(W/2,H/2,-4000);
+      }
+
+      // CSS cubic-bezier evaluated the way browsers do (Newton-Raphson on x), so the
+      // WebGL fall matches the curve it replaces — including the landing overshoot that
+      // CFG.bounce drives.
+      function bezier(x1,y1,x2,y2){
+        function cx(t){ return 3*x1*(1-t)*(1-t)*t + 3*x2*(1-t)*t*t + t*t*t; }
+        function cy(t){ return 3*y1*(1-t)*(1-t)*t + 3*y2*(1-t)*t*t + t*t*t; }
+        function dcx(t){ return 3*x1*(1-4*t+3*t*t) + 3*x2*(2*t-3*t*t) + 3*t*t; }
+        return function(x){
+          if(x<=0) return 0; if(x>=1) return 1;
+          var t=x;
+          for(var i=0;i<6;i++){
+            var e=cx(t)-x; if(Math.abs(e)<1e-4) break;
+            var d=dcx(t); if(Math.abs(d)<1e-6) break;
+            t-=e/d;
+          }
+          return cy(t<0?0:t>1?1:t);
+        };
+      }
+
+      function pickWeighted(){
+        var total=0, i;
+        for(i=0;i<shapes.length;i++) total+=shapes[i].weight;
+        var r=Math.random()*total;
+        for(i=0;i<shapes.length;i++){ r-=shapes[i].weight; if(r<=0) return i; }
+        return 0;
+      }
+      var rnd=function(lo,hi){ return lo+Math.random()*(hi-lo); };
+
+      // Lay out the field and precompute every brick's timeline. Mirrors buildCascade's
+      // grid: one brick per cell, jittered, with the row driving the stagger.
+      function layout(){
+        var U=CFG.U, cellW=U*CFG.spacing, cellH=U*CFG.spacing*0.83;
+        var cols=Math.ceil(W/cellW)+1, rows=Math.ceil(H/cellH)+2;
+        var j=CFG.jitter*U, fallMs=CFG.fall*1000;
+        bricks=[]; var maxLand=0;
+        for(var r=0;r<rows;r++) for(var c=0;c<cols;c++){
+          var si=pickWeighted();
+          var land=CFG.start + r*CFG.rowDelay + Math.random()*CFG.randDelay;
+          if(land>maxLand) maxLand=land;
+          bricks.push({ s:si, row:r,
+            x:Math.round(c*cellW+rnd(-j,j)), y:Math.round(r*cellH+rnd(-j,j)), z:rnd(-U,U),
+            ox:rnd(-CFG.tumble,CFG.tumble)*Math.PI/180,
+            oy:rnd(0,360)*Math.PI/180,
+            oz:rnd(-CFG.tumble,CFG.tumble)*Math.PI/180,
+            spin0:rnd(-CFG.spin,CFG.spin)*Math.PI/180,
+            spin1:rnd(-CFG.spin*0.3,CFG.spin*0.3)*Math.PI/180,
+            land:land, exit:0 });
+        }
+        var fillDone=maxLand+fallMs, exitStart=fillDone+CFG.hold, maxExit=0;
+        bricks.forEach(function(b){
+          b.exit = exitStart + Math.random()*(CFG.randDelay*CFG.exitSpread) + b.row*(CFG.rowDelay*CFG.exitStagger);
+          if(b.exit>maxExit) maxExit=b.exit;
+        });
+        return { fillDone:fillDone, exitStart:exitStart, done:maxExit+fallMs+120 };
+      }
+
+      // One InstancedMesh per shape — any number of bricks costs one draw call each.
+      function meshes(){
+        shapes.forEach(function(sh){
+          if(sh.mesh){ scene.remove(sh.mesh); sh.mesh.dispose(); sh.mesh=null; }
+        });
+        var counts=shapes.map(function(){ return 0; });
+        bricks.forEach(function(b){ counts[b.s]++; });
+        var scale=CFG.U/STUD_WORLD;   // 1 stud → CFG.U pixels
+        shapes.forEach(function(sh,i){
+          if(!counts[i]) return;
+          var g=sh.geo.clone(); g.scale(scale,scale,scale);
+          sh.mesh=new THREE.InstancedMesh(g, mat, counts[i]);
+          sh.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          sh.mesh.frustumCulled=false;
+          scene.add(sh.mesh);
+          sh.cursor=0;
+        });
+      }
+
+      function frame(times, hooks, fired){
+        var now=performance.now()-tStart, fallMs=CFG.fall*1000;
+        mat.uniforms.uTime.value=now/1000;
+        if(scrim){
+          // up with the fall, hold through the swap window, down with the exit
+          var o;
+          if(now < times.fillDone) o = Math.max(0, Math.min(1, now/Math.max(1,times.fillDone)));
+          else if(now < times.exitStart) o = 1;
+          else o = Math.max(0, 1 - (now-times.exitStart)/Math.max(1,(times.done-times.exitStart)));
+          scrim.material.opacity = o * CFG.scrim;
+        }
+        shapes.forEach(function(sh){ sh.cursor=0; });
+        for(var i=0;i<bricks.length;i++){
+          var b=bricks[i], sh=shapes[b.s];
+          if(!sh || !sh.mesh) continue;
+          var y, spin;
+          if(now < b.exit){
+            var p = ease((now-b.land)/fallMs);
+            y = (b.y - H*1.25) + (H*1.25)*p;           // matches translateY(-125vh) → 0
+            spin = b.spin0 + (b.spin1-b.spin0)*p;
+          } else {
+            var q = ease((now-b.exit)/fallMs);
+            y = b.y + (H*1.30)*q;                      // matches translateY(130vh)
+            spin = b.spin1 + (b.spin0-b.spin1)*q;
+          }
+          dummy.position.set(b.x, y, b.z);
+          dummy.rotation.set(b.ox, b.oy, b.oz + spin);
+          dummy.updateMatrix();
+          sh.mesh.setMatrixAt(sh.cursor++, dummy.matrix);
+        }
+        shapes.forEach(function(sh){ if(sh.mesh) sh.mesh.instanceMatrix.needsUpdate=true; });
+        renderer.render(scene,cam);
+
+        if(!fired.curtain && now>=times.fillDone){ fired.curtain=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); }
+        if(!fired.reveal && now>=times.exitStart){ fired.reveal=true; if(hooks.onReveal) hooks.onReveal(); }
+        if(now>=times.done){ finish(times,hooks,fired); return; }
+        raf=requestAnimationFrame(function(){ frame(times,hooks,fired); });
+      }
+
+      // Tear down exactly once, however we got here — the rAF loop reaching the end, or the
+      // wall-clock guard below firing because it never did.
+      function finish(times,hooks,fired){
+        if(!running) return;
+        if(!fired.curtain){ fired.curtain=true; if(hooks.onCurtainClosed) hooks.onCurtainClosed(); }
+        if(!fired.reveal){ fired.reveal=true; if(hooks.onReveal) hooks.onReveal(); }
+        stop();
+        if(hooks.onDone) hooks.onDone();
+      }
+
+      // Run the curtain. Resolves nothing — the caller is driven by the hooks, which fire
+      // at the same moments the DOM version fired them.
+      function run(hooks){
+        hooks=hooks||{};
+        if(!loaded || !shapes.length) return false;
+        loadCfg();                       // authored tunables apply to the next run, no reload
+        stop();
+        resize();
+        if(!dummy) dummy=new THREE.Object3D();
+        ease=bezier(0.30, CFG.bounce, 0.55, 1);
+        mat.uniforms.uAlpha.value=CFG.brickAlpha;
+        mat.uniforms.uTint.value.set(CFG.holo);
+        mat.uniforms.uHot.value.set(shade(CFG.holo,0.45));
+        var times=layout();
+        placeScrim();
+        meshes();
+        running=true; tStart=performance.now();
+        canvas.classList.add('run');
+        var fired={curtain:false,reveal:false};
+        // WALL-CLOCK GUARD. requestAnimationFrame stops in a backgrounded tab, so a visitor
+        // who switches away mid-cascade would come back to a curtain that never tore itself
+        // down and a page stuck behind it. The DOM version got this for free from setTimeout;
+        // this restores it. Deliberately generous — it should only ever fire if frames stalled.
+        clearTimeout(guard);
+        guard=setTimeout(function(){ finish(times,hooks,fired); }, times.done+1500);
+        frame(times,hooks,fired);
+        return true;
+      }
+      function stop(){
+        running=false;
+        clearTimeout(guard); guard=0;
+        if(raf) cancelAnimationFrame(raf), raf=0;
+        if(canvas) canvas.classList.remove('run');
+        shapes.forEach(function(sh){ if(sh.mesh){ scene.remove(sh.mesh); sh.mesh.dispose(); sh.mesh=null; } });
+        if(scrim) scrim.material.opacity=0;
+        bricks=[];
+      }
+
+      return {
+        load: load,
+        run: run,
+        inspect: inspect,
+        reload: function(){ loaded=false; loading=null; shapes=[]; return load(); },
+        stop: stop,
+        running: function(){ return running; },
+        ready: function(){ return loaded && shapes.length>0; },
+        shapes: function(){ return shapes; },
+        defaults: function(){ return DEFAULT_SHAPES.slice(); },
+        _internals: function(){ return {get renderer(){return renderer;}, get scene(){return scene;},
+          get cam(){return cam;}, get mat(){return mat;}, get canvas(){return canvas;}, STUD_WORLD:STUD_WORLD}; }
+      };
+    })();
 
     // Does this visitor want motion suppressed? The design language treats ambient holo
     // motion as the single largest accessibility risk in the system and requires it be
@@ -13967,42 +14877,34 @@ f 2469//2469 2470//2470 2434//2434
     // no caller ever has to branch on the visitor's motion preference.
     function runCascade(styleName, hooks) {
       hooks = hooks || {};
-      loadCfg();                       // pick up any authored tunables before timing anything
-      styleName = CFG.style || styleName;
-      if(prefersReducedMotion()) return runCascadeReduced(hooks);
-      buildCascade(styleName);
-      void cascadeEl.offsetWidth;                    // flush layout before animating
-      cascadeEl.classList.add('run');
-      var blocks = cascadeEl.querySelectorAll('.block');
-      var maxDelay = 0;
-      blocks.forEach(function(b){
-        var r = +b.dataset.row;
-        var d = CFG.start + r * CFG.rowDelay + Math.random() * CFG.randDelay;
-        maxDelay = Math.max(maxDelay, d);
-        cascadeTimers.push(setTimeout(function(){ b.classList.add('landed'); }, d));
+      loadCfg();
+      if(prefersReducedMotion()){
+        // Say so. This path looks identical to a broken cascade — a scrim fade with no
+        // bricks — and degrading silently cost real debugging time.
+        console.info('[cascade] prefers-reduced-motion is on → cross-fade, no bricks. '+
+                     'System Settings → Accessibility → Display → Reduce motion.');
+        return runCascadeReduced(hooks);
+      }
+      // The brick set has to be in hand before the curtain can be trusted to cover
+      // anything. If nothing loaded, fall through to the cross-fade rather than running a
+      // half-empty curtain over a visible scene swap — a failed brick set must degrade to
+      // "a plain fade", never to "you can see the seam".
+      BrickField.load().then(function(n){
+        if(!n){
+          console.warn('[cascade] no brick shapes loaded — falling back to the cross-fade. '+
+                       'Check assets/models/bricks/*.glb are served and the Draco decoder '+
+                       'resolves under /vendor/draco/.');
+          runCascadeReduced(hooks); return;
+        }
+        BrickField.run({
+          onCurtainClosed: hooks.onCurtainClosed,
+          onReveal: function(){
+            boxScene.style.opacity = '0';
+            if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
+          },
+          onDone: hooks.onDone
+        });
       });
-      var fallMs   = CFG.fall * 1000;
-      var fillDone = maxDelay + fallMs;
-      var exitStart = fillDone + CFG.hold;
-      // CURTAIN CLOSED: every brick has landed, so the viewport is fully covered. Anything
-      // swapped from here until exitStart happens unseen.
-      if(hooks.onCurtainClosed) cascadeTimers.push(setTimeout(hooks.onCurtainClosed, fillDone));
-      cascadeTimers.push(setTimeout(function(){
-        boxScene.style.opacity = '0';
-        // A caller that rebuilt the CANVAS behind the curtain (the chapter ring) passes
-        // showTakeover:false — there is no DOM page to reveal, the bricks just clear off it.
-        if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
-      }, exitStart));
-      var exitMax = 0;
-      blocks.forEach(function(b){
-        var ed = exitStart + Math.random() * (CFG.randDelay * CFG.exitSpread) + (+b.dataset.row) * (CFG.rowDelay * CFG.exitStagger);
-        exitMax = Math.max(exitMax, ed);
-        cascadeTimers.push(setTimeout(function(){ b.classList.add('out'); }, ed));
-      });
-      cascadeTimers.push(setTimeout(function(){
-        cascadeEl.classList.remove('run');
-        if(hooks.onDone) hooks.onDone();
-      }, exitMax + fallMs + 120));
     }
 
     // Reduced-motion equivalent: no bricks, no tumbling — an opaque scrim fades in, the
@@ -14032,7 +14934,8 @@ f 2469//2469 2470//2470 2434//2434
       }, FADE + COVER + FADE + 60));
     }
 
-    window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset };
+    window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset,
+                  bricks: BrickField };   // brick library: the Edit Mode panel loads/validates through this
   })();
   </script>
 </body>
