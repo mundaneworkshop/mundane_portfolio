@@ -725,8 +725,13 @@
   .cschlbl:hover .cschlbl-t{color:var(--holo)}
   .cschlbl.sel .cschlbl-t{color:var(--amber)}
   .cschlbl.sel .cschlbl-n{color:var(--amber-hot)}
-  #csRouteCtl{position:absolute;left:16px;top:64px;z-index:8;display:none;gap:6px;align-items:center;flex-wrap:wrap;pointer-events:auto}
+  /* Nav sits with what it navigates — centred, just above the booklet (placed by csPlaceNav).
+     The camera hint stays centred at the top, out of the way. */
+  #csRouteCtl{position:absolute;left:50%;transform:translateX(-50%);top:66%;z-index:8;display:none;
+    gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;pointer-events:auto}
   #csRouteCtl.show{display:flex}
+  #csHint{position:absolute;left:50%;transform:translateX(-50%);top:16px;z-index:8;display:none;pointer-events:none}
+  #csHint.show{display:flex}
   #csStepper{display:flex;gap:3px;flex-wrap:wrap}
   .cs-step{width:26px;height:24px;display:flex;align-items:center;justify-content:center;
     font-family:var(--mono);font-size:10px;color:var(--line);background:var(--panel);
@@ -887,6 +892,7 @@
   body.mw-planet:not(.mw-altfocus) #dbg-planet{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-cascade{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-bricks{display:block}
+  body.mw-casestudy #dbg-ring{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-casestudy{display:block}
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
@@ -1248,6 +1254,24 @@
     </div><!-- /#dbg-planet -->
 
     <!-- ── HoloNet / Contact view ── -->
+    <!-- ── Chapter ring · camera + centre object ──
+         Shown only while the ring owns the canvas. The generic per-object panel (#editPanel)
+         edits the galaxy's KIT BOX — faces, marquee, artifacts — none of which exist in this
+         view, so it is suppressed here and this stands in its place. -->
+    <div class="dbg-ctx" id="dbg-ring">
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Chapter ring · camera</label></div>
+      <div class="ctl"><label>Camera angle <b id="vRingPitch">0.13</b></label><input type="range" id="cRingPitch" min="0" max="0.9" step="0.01" value="0.13"></div>
+      <div class="ctl"><label>Camera distance <b id="vRingDist">3.6</b></label><input type="range" id="cRingDist" min="0.5" max="12" step="0.1" value="3.6"></div>
+      <div class="ctl"><label>Ring radius <b id="vRingRad">6.4</b></label><input type="range" id="cRingRad" min="3" max="14" step="0.2" value="6.4"></div>
+      <div class="ctl"><label>Swing speed <b id="vRingEase">0.04</b></label><input type="range" id="cRingEase" min="0.01" max="0.06" step="0.005" value="0.04"></div>
+      <div class="ctl"><label>Focus dim <b id="vRingDim">0.28</b></label><input type="range" id="cRingDim" min="0" max="1" step="0.02" value="0.28"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Centre object</label></div>
+      <div class="ctl"><span class="brk-note" id="ringHubStat">default holo form</span></div>
+      <label class="resetbtn" id="cRingHubUp" style="display:block;text-align:center;cursor:pointer">⬆ Replace centre object (.glb)<input type="file" id="cRingHubFile" accept=".glb,.gltf" hidden></label>
+      <button class="resetbtn" id="cRingHubReset">⟲ Reset centre object</button>
+    </div><!-- /#dbg-ring -->
+
     <!-- ── Case study (chapter ring) ──
          Two ways in, because they serve different jobs: the full entry when you want to see
          the transition, and a direct jump when you are iterating on the ring itself and do not
@@ -1424,8 +1448,8 @@
     <div id="csStepper"></div>
     <button class="cvr-pill" id="csNext" title="Next chapter (→)">►</button>
     <button class="cvr-pill" id="csRingBtn">⛶ Chapter ring</button>
-    <span class="cvr-pill cvr-hint">← → chapters · esc back · drag orbit · scroll zoom</span>
   </div>
+  <div id="csHint"><span class="cvr-pill cvr-hint">← → chapters · esc back · drag orbit · scroll zoom</span></div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
     <button class="cvr-pill" id="cvmOverview">⛶ Route overview</button>
@@ -11433,10 +11457,26 @@ f 2469//2469 2470//2470 2434//2434
       {id:'impact',        title:'Impact',                   phase:'Outcome'},
       {id:'learnings',     title:'Next / learnings',         phase:'Outcome'}
     ];
-    var CS_RING={ radius:6.4, nodeR:0.20, hubR:0.85, y:0, chapterZoom:4.2, chapterFrac:0.28 };
+    var CS_RING={ radius:6.4, nodeR:0.20, hubR:0.85, y:0,
+      // The camera parks on the line running from the hub out through the focused chapter, so
+      // the hub sits behind it. PITCH IS THE DIAL: 0 puts them exactly collinear (hub dead
+      // behind, pair centred); lifting it tilts the view down so the hub rides a little above
+      // the chapter, which reads with more depth. Deliberately not baked — tune it live.
+      chapterPitch:0.13,
+      chapterDist:3.6,      // how far outside the ring the camera parks
+      ease:0.04,            // orbit easing per frame — MUST stay below animate()'s 0.06 camera
+                            // lerp, or the camera trails the orbit and cuts a chord across the
+                            // middle instead of swinging round the outside
+      dim:0.28 };           // how far the hub and the other chapters fade back while one is focused
 
     var csPid=null, csNodes=[], csSelIdx=-1, csAtChapter=false, csHub=null, csRootLabel='';
     var _csUp=new THREE.Vector3();
+    // Orbit easing targets. The camera must travel AROUND the hub, never through it: the
+    // global camera lerp in animate() interpolates world POSITION, so snapping the orbit to
+    // the far side of the ring sent the camera straight through the middle — the hub filled
+    // the frame mid-move. Easing yaw/pitch/radius instead keeps every intermediate pose on
+    // the orbit sphere, which is what makes it read as swinging round to the next chapter.
+    var csTgt=null, _csLook=new THREE.Vector3();
 
     // Per-project chapter list. Hidden chapters are SOFT-deleted — kept in storage, skipped
     // here — exactly like galaxyModel's zones and planets, and the ring re-spaces around
@@ -11465,6 +11505,7 @@ f 2469//2469 2470//2470 2434//2434
       onPick:function(i){ csSelect(i); },
       onBack:function(){ if(csAtChapter) csOverview(); },  // chapter → ring; at the ring, empty clicks do nothing (exit via breadcrumb/Esc)
       onExit:function(){
+        var hint=document.getElementById('csHint'); if(hint) hint.classList.remove('show');
         var cs=document.getElementById('cs-root');
         if(cs){ cs.classList.remove('cs-focus-panel'); cs.classList.remove('active'); }
         csAtChapter=false; csSelIdx=-1; csPid=null;
@@ -11496,7 +11537,8 @@ f 2469//2469 2470//2470 2434//2434
       // / GLB replaces it next, reusing the focus-view box-replacement uploader.
       csHub=new THREE.Mesh(new THREE.IcosahedronGeometry(CS_RING.hubR,1),
               new THREE.MeshBasicMaterial({color:0x78E0D6,wireframe:true,transparent:true,opacity:0.45,fog:false}));
-      csHub.position.set(0,CS_RING.y+0.95,0); g.add(csHub);
+      csHub.position.set(0,CS_RING.y,0); g.add(csHub);   // in the ring plane; pitch controls how far behind it reads
+      csApplyHub();
 
       list.forEach(function(ch,i){
         var p=csNodePos(i,n);
@@ -11520,6 +11562,27 @@ f 2469//2469 2470//2470 2434//2434
       csBuildStepper();
     }
 
+    // Swap the placeholder centre form for an uploaded .glb, run through the same holo
+    // pipeline the orbiting artifacts use so it matches the rest of the scene's material
+    // language. Local to this browser until the file is committed, like every mesh override.
+    function csApplyHub(){
+      if(!csPid || !csHub) return;
+      BRICStore.get('csobj:'+csPid).then(function(rec){
+        if(!rec || !rec.buffer || !csHub) return;
+        loadGLBScene(rec.buffer,function(sc,err){
+          if(!sc || !csHub) { if(err) console.warn('[ring] centre object:',err); return; }
+          var g=csScene.group, at=csHub.position.clone();
+          var holo=buildHoloGLB(sc, FX_MOON, CS_RING.hubR*1.6);
+          if(!holo) return;
+          g.remove(csHub);
+          if(csHub.geometry) csHub.geometry.dispose();
+          holo.position.copy(at);
+          csHub=holo; g.add(csHub);
+          csMark();
+        });
+      }).catch(function(){});
+    }
+
     // The 1..N stepper is the instruction-manual nav from the original direction, flattened:
     // the right rail became this strip plus the ring itself.
     function csBuildStepper(){
@@ -11536,12 +11599,25 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     function csMark(){
+      // While a chapter is focused the hub and every other chapter fade back, so the eye has
+      // one subject. CS_RING.dim is authored — 1 disables the effect entirely.
+      var dim = csAtChapter ? CS_RING.dim : 1;
       csNodes.forEach(function(n,i){
         var on=(i===csSelIdx);
         n.lbl.classList.toggle('sel',on);
-        if(n.mesh.material) n.mesh.material.color.setHex(on?0xF0D080:0x78E0D6);
+        n.lbl.style.opacity = (csAtChapter && !on) ? String(CS_RING.dim) : '';
+        var m=n.mesh.material;
+        if(m){ m.color.setHex(on?0xF0D080:0x78E0D6); m.transparent=true; m.opacity = on?1:dim; }
         var halo=n.mesh.children&&n.mesh.children[0];
-        if(halo&&halo.material) halo.material.color.setHex(on?0xE9A73E:0x5ABFB8);
+        if(halo&&halo.material){ halo.material.color.setHex(on?0xE9A73E:0x5ABFB8);
+                                 halo.material.opacity = 0.16*(on?1:dim); }
+      });
+      // an uploaded centre object is a GROUP of meshes, the placeholder is a single mesh —
+      // walk it either way so the dim applies to both
+      if(csHub) csHub.traverse(function(o){
+        if(o.material){ o.material.transparent=true;
+          if(o.userData._baseOp==null) o.userData._baseOp=(o.material.opacity!=null?o.material.opacity:1);
+          o.material.opacity=o.userData._baseOp*dim; }
       });
       var st=document.getElementById('csStepper');
       if(st) Array.prototype.forEach.call(st.children,function(b,i){ b.classList.toggle('on',i===csSelIdx); });
@@ -11549,6 +11625,17 @@ f 2469//2469 2470//2470 2434//2434
 
     function csUpdateLabels(){
       if(!csScene.active) return;
+      if(csTgt){
+        var o=csScene.orbit, k=CS_RING.ease;
+        // shortest angular path — stepping 10 → 01 swings one step forward, not nine back
+        var dy=csTgt.yaw-o.yaw;
+        while(dy>Math.PI) dy-=Math.PI*2;
+        while(dy<-Math.PI) dy+=Math.PI*2;
+        o.yaw   += dy*k;
+        o.pitch += (csTgt.pitch-o.pitch)*k;
+        o.radius+= (csTgt.radius-o.radius)*k;
+        o.look.lerp(csTgt.look,k);
+      }
       csNodes.forEach(function(n){
         var s=projWorld(n.pos);
         if(!s.vis){ n.lbl.style.display='none'; return; }
@@ -11577,6 +11664,8 @@ f 2469//2469 2470//2470 2434//2434
     function csShowBooklet(ch,i){
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.add('cs-focus-panel');
       if(window.CS && CS.showBooklet) CS.showBooklet(csDataForBooklet(ch,i));
+      // the booklet slides in — re-place the nav once it has settled, or it anchors to a stale top
+      setTimeout(csPlaceNav, 60); setTimeout(csPlaceNav, 700);
     }
 
     // ── navigation ─────────────────────────────────────────────────────────────
@@ -11594,21 +11683,36 @@ f 2469//2469 2470//2470 2434//2434
       if(csAtChapter && csNodes[csSelIdx]) p+='/'+csNodes[csSelIdx].ch.id;
       setRoute(p);
     }
+    // The chapter nav belongs with the thing it navigates — just above the booklet when one
+    // is open, and parked in the lower third at the ring level where there is no booklet.
+    function csPlaceNav(){
+      var el=document.getElementById('csRouteCtl'); if(!el) return;
+      var ms=document.getElementById('manual-scene');
+      var r=(csAtChapter && ms) ? ms.getBoundingClientRect() : null;
+      var top=(r && r.height>4 && r.top>0) ? (r.top - el.offsetHeight - 16) : (window.innerHeight*0.66);
+      el.style.top=Math.max(64, top)+'px';
+    }
+    window.addEventListener('resize',function(){ if(csScene.active) csPlaceNav(); });
+
     function csOverview(){
       csAtChapter=false; csSelIdx=-1; csMark();
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');
+      csTgt=null;   // overview frames directly; nothing to ease toward
       csScene.orbit.fitPoints(csNodes.map(function(n){ return [n.pos.x,n.pos.y,n.pos.z]; }), {min:9, extra:3.2});
-      csCrumb(); csSetRoute();
+      csCrumb(); csSetRoute(); csPlaceNav();
     }
     function csSelect(i){
       var n=csNodes[i]; if(!n) return;
       csSelIdx=i; csAtChapter=true;
-      // Radius first — frameAt measures against the NEW zoom. Then park the chapter at 28% down
-      // the viewport, the gap above the manual panel. Deliberately NOT measuring the panel: on
-      // the first chapter opened it is still transitioning in and reports a stale position.
-      csScene.orbit.radius=CS_RING.chapterZoom;
-      csScene.orbit.frameAt([n.pos.x,n.pos.y,n.pos.z], CS_RING.chapterFrac);
-      csShowBooklet(n.ch,i); csMark(); csCrumb(); csSetRoute();
+      // Put the camera on the line running from the HUB out THROUGH this chapter, and look
+      // back at the hub. The chapter then sits dead centre with the hub directly behind it,
+      // and the constellation's centre never leaves the middle of the frame — so stepping
+      // between chapters reads as the camera swinging around the ring rather than cutting.
+      // (yaw = i/n * 2π is the inverse of csNodePos's angle; see the derivation there.)
+      csTgt = { yaw:(i/csNodes.length)*Math.PI*2, pitch:CS_RING.chapterPitch,
+                radius:CS_RING.radius + CS_RING.chapterDist,
+                look:new THREE.Vector3(0, CS_RING.y, 0) };   // look AT the hub — chapter lands in front of it
+      csShowBooklet(n.ch,i); csMark(); csCrumb(); csSetRoute(); csPlaceNav();
     }
     // Wraps: stepping past the last chapter returns to the first. Arrow steps are a camera move
     // only — NO cascade between chapters. The cascade is reserved for crossing between worlds,
@@ -11636,6 +11740,8 @@ f 2469//2469 2470//2470 2434//2434
       csBuildRing(pid);
       csScene.orbit.viewKey='csview:'+pid;   // saved default view is per project
       csScene.enter(planetById(pid));
+      var hint=document.getElementById('csHint'); if(hint) hint.classList.add('show');
+      if(window.__csRefreshHubStat) window.__csRefreshHubStat();
       csRootLabel=(CASES[pid]&&CASES[pid].title)||'Case study';
       csOverview();
     }
@@ -12181,6 +12287,9 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof updateMarqueePanel==='function') updateMarqueePanel();
       if(typeof igFeedRefresh==='function') igFeedRefresh();
       var panel=document.getElementById('editPanel'); if(!panel) return;
+      // The chapter ring has no kit box, no faces and no marquee — this panel would offer
+      // controls that do nothing to what is on screen. #dbg-ring stands in for it there.
+      if(typeof csScene!=='undefined' && csScene.active){ panel.style.display='none'; return; }
       var tid=currentEditTarget();
       if(!(editMode && tid)){ panel.style.display='none'; return; }
       editTargetId=tid; panel.style.display='block';
@@ -13202,6 +13311,66 @@ f 2469//2469 2470//2470 2434//2434
         } else if(focusedMoon){ unfocusMoon(); }
       }catch(e){ console.warn('[route]',e); }
     }
+    // ── Chapter ring panel: camera dials + centre object ───────────────────────
+    // Values live in copyOvr['csRing'] so they sync and export like all authored content.
+    (function wireRingPanel(){
+      var DEF={chapterPitch:0.13, chapterDist:3.6, radius:6.4, ease:0.04, dim:0.28};
+      function cur(){ var o=copyOvr['csRing']; return (o&&typeof o==='object')?o:{}; }
+      function put(k,v){ var o=cur(); o[k]=v; copyOvr['csRing']=o; persistCopy(); CS_RING[k]=v; }
+      // apply any stored overrides at boot, before the ring is ever built
+      Object.keys(DEF).forEach(function(k){ var o=cur(); if(o[k]!=null) CS_RING[k]=o[k]; });
+
+      var ROWS=[['chapterPitch','cRingPitch','vRingPitch',2],['chapterDist','cRingDist','vRingDist',1],
+                ['radius','cRingRad','vRingRad',1],['ease','cRingEase','vRingEase',3],
+                ['dim','cRingDim','vRingDim',2]];
+      ROWS.forEach(function(r){
+        var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
+        if(!el) return;
+        var v=(cur()[r[0]]!=null)?cur()[r[0]]:DEF[r[0]];
+        el.value=v; if(out) out.textContent=Number(v).toFixed(r[3]);
+        el.addEventListener('input',function(){
+          var n=parseFloat(el.value); if(out) out.textContent=n.toFixed(r[3]);
+          put(r[0],n);
+          // geometry changes need a rebuild; camera changes just re-aim
+          if(r[0]==='radius'){ if(csScene.active && csPid){ csBuildRing(csPid); csMark();
+                                 if(csAtChapter) csSelect(csSelIdx); else csOverview(); } }
+          else if(r[0]==='dim'){ csMark(); }
+          else if(csAtChapter && csSelIdx>=0){ csSelect(csSelIdx); }
+        });
+      });
+
+      function hubStat(txt){ var el=document.getElementById('ringHubStat'); if(el) el.textContent=txt; }
+      function refreshHubStat(){
+        if(!csPid){ hubStat('open a case study first'); return; }
+        BRICStore.get('csobj:'+csPid).then(function(rec){
+          hubStat(rec&&rec.buffer ? 'uploaded · this browser only' : 'default holo form');
+        }).catch(function(){ hubStat('default holo form'); });
+      }
+      var f=document.getElementById('cRingHubFile');
+      if(f) f.addEventListener('change',function(){
+        var file=f.files[0]; if(!file) return;
+        if(!csPid){ if(typeof toast==='function') toast('open a case study first'); return; }
+        var r=new FileReader();
+        r.onload=function(e){
+          var buf=e.target.result;
+          BRICStore.set('csobj:'+csPid,{kind:'glb',buffer:buf,name:file.name,uploaded:true}).then(function(){
+            csApplyHub(); refreshHubStat();
+            if(typeof toast==='function') toast('centre object ✓');
+          });
+        };
+        r.readAsArrayBuffer(file);
+      });
+      var rs=document.getElementById('cRingHubReset');
+      if(rs) rs.addEventListener('click',function(){
+        if(!csPid) return;
+        BRICStore.del('csobj:'+csPid).then(function(){
+          if(csScene.active){ csBuildRing(csPid); csMark(); if(csAtChapter) csSelect(csSelIdx); else csOverview(); }
+          refreshHubStat(); if(typeof toast==='function') toast('centre object reset');
+        });
+      });
+      window.__csRefreshHubStat=refreshHubStat;
+    })();
+
     // ── Brick library panel ────────────────────────────────────────────────────
     // Slots are authored content (copyOvr['brickShapes']); the .glb binaries are
     // IndexedDB, matching how every other mesh override in this file is split.
