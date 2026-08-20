@@ -730,6 +730,7 @@
   #csRouteCtl{position:absolute;left:50%;transform:translateX(-50%);top:66%;z-index:8;display:none;
     gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;pointer-events:auto}
   #csRouteCtl.show{display:flex}
+  #csRouteCtl.hidden{display:none}
   #csHint{position:absolute;left:50%;transform:translateX(-50%);top:16px;z-index:8;display:none;pointer-events:none}
   #csHint.show{display:flex}
   #csStepper{display:flex;gap:3px;flex-wrap:wrap}
@@ -1262,7 +1263,8 @@
       <div class="menudiv"></div>
       <div class="ctl sec"><label style="color:var(--holo)">Chapter ring · camera</label></div>
       <div class="ctl"><label>Camera angle <b id="vRingPitch">0.13</b></label><input type="range" id="cRingPitch" min="0" max="0.9" step="0.01" value="0.13"></div>
-      <div class="ctl"><label>Camera distance <b id="vRingDist">3.6</b></label><input type="range" id="cRingDist" min="0.5" max="12" step="0.1" value="3.6"></div>
+      <div class="ctl"><label>Camera distance <b id="vRingDist">4.2</b></label><input type="range" id="cRingDist" min="1" max="14" step="0.1" value="4.2"></div>
+      <div class="ctl"><label>Chapter height <b id="vRingFrac">0.32</b></label><input type="range" id="cRingFrac" min="0.12" max="0.5" step="0.01" value="0.32"></div>
       <div class="ctl"><label>Ring radius <b id="vRingRad">6.4</b></label><input type="range" id="cRingRad" min="3" max="14" step="0.2" value="6.4"></div>
       <div class="ctl"><label>Swing speed <b id="vRingEase">0.04</b></label><input type="range" id="cRingEase" min="0.01" max="0.06" step="0.005" value="0.04"></div>
       <div class="ctl"><label>Focus dim <b id="vRingDim">0.28</b></label><input type="range" id="cRingDim" min="0" max="1" step="0.02" value="0.28"></div>
@@ -10038,6 +10040,7 @@ f 2469//2469 2470//2470 2434//2434
     // drag/wheel/click/exit handlers ask this instead of naming a specific scene, so a
     // second sub-scene needs no new branches in any of them.
     var MWSub = { active: null };
+    var camSnap = false;   // set true to make the next animate() frame place the camera outright
 
     // ── Orbit rig ─────────────────────────────────────────────────────────────
     // Spherical orbit (yaw / pitch / radius) around a movable look target. This is the
@@ -11463,7 +11466,10 @@ f 2469//2469 2470//2470 2434//2434
       // behind, pair centred); lifting it tilts the view down so the hub rides a little above
       // the chapter, which reads with more depth. Deliberately not baked — tune it live.
       chapterPitch:0.13,
-      chapterDist:3.6,      // how far outside the ring the camera parks
+      chapterDist:4.2,      // camera distance FROM THE FOCUSED CHAPTER (not from the hub) — the
+                            // chapter is the subject, so it is what the framing is measured against
+      chapterFrac:0.32,     // where the chapter sits vertically (0=top, 0.5=centre). Kept above
+                            // 0.5 so it clears the booklet, which occupies the lower half
       ease:0.04,            // orbit easing per frame — MUST stay below animate()'s 0.06 camera
                             // lerp, or the camera trails the orbit and cuts a chord across the
                             // middle instead of swinging round the outside
@@ -11687,12 +11693,35 @@ f 2469//2469 2470//2470 2434//2434
     // is open, and parked in the lower third at the ring level where there is no booklet.
     function csPlaceNav(){
       var el=document.getElementById('csRouteCtl'); if(!el) return;
+      // At the ring there is nothing to step between — the whole set is on screen and every
+      // chapter is one click away, so the stepper is just clutter over the constellation.
+      el.classList.toggle('hidden', !csAtChapter);
+      if(!csAtChapter) return;
       var ms=document.getElementById('manual-scene');
-      var r=(csAtChapter && ms) ? ms.getBoundingClientRect() : null;
+      var r=ms ? ms.getBoundingClientRect() : null;
       var top=(r && r.height>4 && r.top>0) ? (r.top - el.offsetHeight - 16) : (window.innerHeight*0.66);
       el.style.top=Math.max(64, top)+'px';
     }
     window.addEventListener('resize',function(){ if(csScene.active) csPlaceNav(); });
+
+    // Tuning hook. The ring's framing is a dial the designer is expected to keep turning,
+    // and every internal here lives in bootHolotable()'s closure — without this the only way
+    // to check where a chapter actually LANDS on screen is to eyeball a screenshot.
+    window.__ring=function(){
+      if(!csScene.active) return {active:false};
+      var n=csNodes[csSelIdx]; if(!n) return {active:true,sel:-1};
+      var v=n.mesh.getWorldPosition(new THREE.Vector3()).project(camera);
+      return { active:true, sel:csSelIdx, atChapter:csAtChapter,
+               xPct:+(( v.x+1)/2*100).toFixed(1), yPct:+((1-v.y)/2*100).toFixed(1),
+               orbit:{yaw:+csScene.orbit.yaw.toFixed(3), pitch:+csScene.orbit.pitch.toFixed(3),
+                      radius:+csScene.orbit.radius.toFixed(2), lookY:+csScene.orbit.look.y.toFixed(2)},
+               tgt: csTgt?{yaw:+csTgt.yaw.toFixed(3), pitch:+csTgt.pitch.toFixed(3),
+                      radius:+csTgt.radius.toFixed(2), lookY:+csTgt.look.y.toFixed(2)}:null,
+               cam:camera.position.toArray().map(function(v){return +v.toFixed(2);}),
+               bookTop:(function(){ var m=document.getElementById('manual-scene');
+                  var r=m&&m.getBoundingClientRect();
+                  return (r&&r.height>4)?+(r.top/window.innerHeight*100).toFixed(1):null; })() };
+    };
 
     function csOverview(){
       csAtChapter=false; csSelIdx=-1; csMark();
@@ -11701,17 +11730,31 @@ f 2469//2469 2470//2470 2434//2434
       csScene.orbit.fitPoints(csNodes.map(function(n){ return [n.pos.x,n.pos.y,n.pos.z]; }), {min:9, extra:3.2});
       csCrumb(); csSetRoute(); csPlaceNav();
     }
-    function csSelect(i){
+    // `snap` skips the swing. A visitor arriving on a chapter URL should simply BE there —
+    // easing in from whatever pose the ring happened to build at is a move they did not make.
+    function csSelect(i, snap){
       var n=csNodes[i]; if(!n) return;
       csSelIdx=i; csAtChapter=true;
-      // Put the camera on the line running from the HUB out THROUGH this chapter, and look
-      // back at the hub. The chapter then sits dead centre with the hub directly behind it,
-      // and the constellation's centre never leaves the middle of the frame — so stepping
-      // between chapters reads as the camera swinging around the ring rather than cutting.
-      // (yaw = i/n * 2π is the inverse of csNodePos's angle; see the derivation there.)
-      csTgt = { yaw:(i/csNodes.length)*Math.PI*2, pitch:CS_RING.chapterPitch,
-                radius:CS_RING.radius + CS_RING.chapterDist,
-                look:new THREE.Vector3(0, CS_RING.y, 0) };   // look AT the hub — chapter lands in front of it
+      // Camera goes on the line running from the HUB out THROUGH this chapter, and looks at
+      // THE CHAPTER — not at the hub. Looking at the hub kept the constellation's centre in
+      // frame but pushed the chapter low, straight behind the booklet. Looking at the chapter
+      // centres it and leaves the hub visible just beyond, which is the arrangement wanted.
+      //
+      // yaw derivation: csNodePos puts node i at angle a=(π/2)-(i/n)2π on (cos a, sin a) in
+      // x/z, while MWOrbit.apply reads yaw on (sin yaw, cos yaw). Those conventions are
+      // mirrored, so the camera direction matching the node's own outward radial is
+      // yaw = (π/2) - a = (i/n)2π. Verified: chapter lands at x=50%, y≈32% of the viewport.
+      //
+      // `look` is dropped below the chapter by chapterFrac of the visible height, which is
+      // what lifts the chapter clear of the booklet (top edge at ~52%) rather than centring
+      // it behind it.
+      var R = CS_RING.chapterDist;
+      var visH = 2*R*Math.tan((camera.fov*Math.PI/180)/2);
+      csTgt = { yaw:(i/csNodes.length)*Math.PI*2, pitch:CS_RING.chapterPitch, radius:R,
+                look:new THREE.Vector3(n.pos.x, n.pos.y - (0.5-CS_RING.chapterFrac)*visH, n.pos.z) };
+      if(snap){ var o=csScene.orbit;
+        o.yaw=csTgt.yaw; o.pitch=csTgt.pitch; o.radius=csTgt.radius; o.look.copy(csTgt.look);
+        camSnap=true; }   // and skip the glide — see the camSnap note in animate()
       csShowBooklet(n.ch,i); csMark(); csCrumb(); csSetRoute(); csPlaceNav();
     }
     // Wraps: stepping past the last chapter returns to the first. Arrow steps are a camera move
@@ -13201,7 +13244,11 @@ f 2469//2469 2470//2470 2434//2434
 
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
-      camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
+      // camSnap: one-frame request to arrive rather than glide. A deep link opens the page
+      // ALREADY at a chapter — lerping there from the galaxy home pose plays a camera move
+      // the visitor never made, and takes ~2s doing it.
+      if(camSnap){ camSnap=false; camera.position.copy(camPos); lookNow.copy(camLook); camera.lookAt(lookNow); }
+      else { camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow); }
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
         planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
@@ -13298,7 +13345,7 @@ f 2469//2469 2470//2470 2434//2434
             if(csPid!==pid || !csScene.active) csEnterFromProject(pid);
             var chSeg=parts[3];
             var ci=chSeg?csSlugIndex(pid,chSeg):-1;
-            if(ci>=0) csSelect(ci); else csOverview();
+            if(ci>=0) csSelect(ci, true); else csOverview();   // deep link → arrive, don't swing
           }
           return;
         }
@@ -13314,13 +13361,14 @@ f 2469//2469 2470//2470 2434//2434
     // ── Chapter ring panel: camera dials + centre object ───────────────────────
     // Values live in copyOvr['csRing'] so they sync and export like all authored content.
     (function wireRingPanel(){
-      var DEF={chapterPitch:0.13, chapterDist:3.6, radius:6.4, ease:0.04, dim:0.28};
+      var DEF={chapterPitch:0.13, chapterDist:4.2, chapterFrac:0.32, radius:6.4, ease:0.04, dim:0.28};
       function cur(){ var o=copyOvr['csRing']; return (o&&typeof o==='object')?o:{}; }
       function put(k,v){ var o=cur(); o[k]=v; copyOvr['csRing']=o; persistCopy(); CS_RING[k]=v; }
       // apply any stored overrides at boot, before the ring is ever built
       Object.keys(DEF).forEach(function(k){ var o=cur(); if(o[k]!=null) CS_RING[k]=o[k]; });
 
       var ROWS=[['chapterPitch','cRingPitch','vRingPitch',2],['chapterDist','cRingDist','vRingDist',1],
+                ['chapterFrac','cRingFrac','vRingFrac',2],
                 ['radius','cRingRad','vRingRad',1],['ease','cRingEase','vRingEase',3],
                 ['dim','cRingDim','vRingDim',2]];
       ROWS.forEach(function(r){
