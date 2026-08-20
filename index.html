@@ -1292,6 +1292,7 @@
       <div class="ctl"><label>Brick tint</label><input type="color" id="cCasHolo" value="#78E0D6"><input type="text" id="cCasHoloHex" value="#78E0D6" class="hexin"></div>
       <div class="ctl"><label>Brick opacity <b id="vCasAlpha">1.00</b></label><input type="range" id="cCasAlpha" min="0.2" max="1" step="0.05" value="1"></div>
       <div class="ctl"><label>Curtain cover <b id="vCasScrim">0.92</b></label><input type="range" id="cCasScrim" min="0" max="1" step="0.02" value="0.92"></div>
+      <div class="ctl"><span class="brk-note" id="casMotionNote"></span></div>
       <button class="resetbtn" id="cCasPreview">▶ Preview cascade</button>
       <button class="resetbtn" id="cCasReset">⟲ Reset cascade defaults</button>
     </div><!-- /#dbg-cascade -->
@@ -13308,6 +13309,14 @@ f 2469//2469 2470//2470 2434//2434
           if(sw) sw.value=v; put(c[0], v);
         });
       });
+      // Reduce Motion turns the cascade into a plain cross-fade with NO bricks — correct
+      // behaviour, but indistinguishable from a broken cascade when you are previewing it.
+      var note=document.getElementById('casMotionNote');
+      if(note){
+        var rm=false; try{ rm=matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+        note.innerHTML = rm ? '<span class="brk-warn">⚠ Reduce Motion is on — the cascade will '+
+          'cross-fade with NO bricks. System Settings → Accessibility → Display → Reduce motion.</span>' : '';
+      }
       var pv=document.getElementById('cCasPreview');
       // Preview the REAL destination. This used to call enterCaseStudy() bare, which defaults
       // to the old DOM page takeover — so tuning the cascade showed you a cream placeholder
@@ -14018,15 +14027,19 @@ f 2469//2469 2470//2470 2434//2434
           var gl=new THREE.GLTFLoader();
           if(THREE.DRACOLoader){ var d=new THREE.DRACOLoader(); d.setDecoderPath('./vendor/draco/'); gl.setDRACOLoader(d); }
           function fromBuffer(buf){
-            gl.parse(buf,'',function(g){ res({def:def, geo:bake(g)}); }, function(){ res({def:def, geo:null}); });
+            gl.parse(buf,'',function(g){ res({def:def, geo:bake(g)}); },
+              function(e){ console.warn('[cascade] brick "'+def.id+'" failed to parse — is the Draco decoder reachable at /vendor/draco/ ?', e);
+                           res({def:def, geo:null}); });
           }
           // An author upload in IndexedDB wins over the shipped file.
           var got=null;
           try{ got=(window.BRICStore&&BRICStore.get)?BRICStore.get('brick:'+def.id):null; }catch(e){}
           Promise.resolve(got).then(function(rec){
             if(rec && rec.buffer && rec.uploaded){ fromBuffer(rec.buffer); return; }   // author upload only; see statusOf
-            fetch(def.file).then(function(r){ return r.ok?r.arrayBuffer():Promise.reject(); })
-              .then(fromBuffer).catch(function(){ res({def:def, geo:null}); });
+            fetch(def.file).then(function(r){ return r.ok?r.arrayBuffer():Promise.reject(new Error('HTTP '+r.status)); })
+              .then(fromBuffer)
+              .catch(function(e){ console.warn('[cascade] brick "'+def.id+'" failed to load from '+def.file, (e&&e.message)||e);
+                                  res({def:def, geo:null}); });
           }).catch(function(){ res({def:def, geo:null}); });
         });
       }
@@ -14312,13 +14325,24 @@ f 2469//2469 2470//2470 2434//2434
     function runCascade(styleName, hooks) {
       hooks = hooks || {};
       loadCfg();
-      if(prefersReducedMotion()) return runCascadeReduced(hooks);
+      if(prefersReducedMotion()){
+        // Say so. This path looks identical to a broken cascade — a scrim fade with no
+        // bricks — and degrading silently cost real debugging time.
+        console.info('[cascade] prefers-reduced-motion is on → cross-fade, no bricks. '+
+                     'System Settings → Accessibility → Display → Reduce motion.');
+        return runCascadeReduced(hooks);
+      }
       // The brick set has to be in hand before the curtain can be trusted to cover
       // anything. If nothing loaded, fall through to the cross-fade rather than running a
       // half-empty curtain over a visible scene swap — a failed brick set must degrade to
       // "a plain fade", never to "you can see the seam".
       BrickField.load().then(function(n){
-        if(!n){ runCascadeReduced(hooks); return; }
+        if(!n){
+          console.warn('[cascade] no brick shapes loaded — falling back to the cross-fade. '+
+                       'Check assets/models/bricks/*.glb are served and the Draco decoder '+
+                       'resolves under /vendor/draco/.');
+          runCascadeReduced(hooks); return;
+        }
         BrickField.run({
           onCurtainClosed: hooks.onCurtainClosed,
           onReveal: function(){
