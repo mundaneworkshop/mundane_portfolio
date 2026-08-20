@@ -1,5 +1,10 @@
 # Case study chapter ring
 
+> **SHELVED Aug 20 2026.** This describes code that is built and works but is gated off
+> behind `CASE_STUDY_CTA_ENABLED`. See `case-study-constellation-SHELVED.md` for why and
+> `case-study-figma-deck.md` for the direction that replaced it. Everything below is still
+> accurate about the code — it just isn't the shipping path.
+
 The case study view: a flat ring of chapter nodes around a project hub, entered through
 the brick cascade from a kit box or manual CTA. Built Aug 19 2026 on `MWSubScene`.
 Companion docs: `webgl-brick-cascade.md` (how you get here), `box-replacement-focus.md`
