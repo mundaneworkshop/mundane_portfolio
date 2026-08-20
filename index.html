@@ -894,6 +894,52 @@
   body.mw-planet:not(.mw-altfocus) #dbg-cascade{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-bricks{display:block}
   body.mw-casestudy #dbg-ring{display:block}
+  body.mw-deck #dbg-deck{display:block}
+
+  /* ══ CASE STUDY DECK ══════════════════════════════════════════════════════════
+     The embed is unapologetically a framed window, not a fake-native panel — Figma's
+     presentation chrome is Figma's, and pretending otherwise reads worse than owning
+     the seam. Corner brackets + a mono title bar put it in the site's language. */
+  #deck-root{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+             padding:64px 24px 28px;pointer-events:none}
+  body.mw-deck #deck-root{display:flex}
+  #deck-root.ready .deck-shell{opacity:1;transform:none}
+  .deck-shell{position:relative;
+              width:min(1180px, 100%, calc((100vh - 150px) * 16 / 9));
+              max-height:100%;display:flex;flex-direction:column;
+              pointer-events:auto;opacity:0;transform:translateY(10px);
+              transition:opacity .38s ease,transform .38s ease}
+  /* corner brackets — same device the booklet uses */
+  .deck-shell::before,.deck-shell::after{content:'';position:absolute;width:14px;height:14px;pointer-events:none}
+  .deck-shell::before{left:-1px;top:-1px;border-left:1px solid var(--line);border-top:1px solid var(--line)}
+  .deck-shell::after{right:-1px;bottom:-1px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .deck-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;
+            border:1px solid var(--line-dim);border-bottom:none;background:rgba(7,12,12,.72);
+            font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  .deck-dot{width:6px;height:6px;background:var(--amber);flex:0 0 auto}
+  .deck-bar-t{color:var(--holo);flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .deck-bar-out{color:var(--muted);text-decoration:none;flex:0 0 auto}
+  .deck-bar-out:hover{color:var(--amber)}
+  .deck-stage{position:relative;flex:1 1 auto;min-height:0;aspect-ratio:16/9;
+              border:1px solid var(--line-dim);background:#05100f;overflow:hidden}
+  .deck-stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  /* veil sits OVER the iframe until it reports ready, so a half-painted Figma frame is
+     never visible even if the cascade's gate times out early */
+  .deck-veil{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+             background:#05100f;transition:opacity .3s ease}
+  #deck-root.ready .deck-veil{opacity:0;pointer-events:none}
+  .deck-veil-t{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+               color:var(--line);opacity:.75}
+  .deck-veil-t::after{content:'';animation:deckdots 1.4s steps(4,end) infinite}
+  @keyframes deckdots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  @media (prefers-reduced-motion:reduce){ .deck-veil-t::after{content:'…';animation:none} }
+  .deck-empty{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+              justify-content:center;gap:6px;text-align:center;padding:24px}
+  #deck-root.empty .deck-empty{display:flex}
+  #deck-root.empty .deck-veil{opacity:0;pointer-events:none}
+  .deck-empty-t{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber)}
+  .deck-empty-s{font-size:12px;color:var(--muted);max-width:36ch;line-height:1.5}
+  @media (max-width:860px){ #deck-root{padding:56px 10px 14px} }
   body.mw-planet:not(.mw-altfocus) #dbg-casestudy{display:block}
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
@@ -1290,6 +1336,21 @@
       <div class="ctl"><span class="brk-note">Accepts .glb/.gltf/.obj/.svg/.stp and bitmaps. Video must be a direct .mp4/.webm served with CORS — a YouTube or Vimeo embed page is an iframe and cannot be drawn into WebGL.</span></div>
     </div><!-- /#dbg-ring -->
 
+    <div class="dbg-ctx" id="dbg-deck">
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label style="color:var(--holo)">Case study deck</label></div>
+      <div class="ctl"><span class="brk-note" id="deckStat">no deck linked</span></div>
+      <div class="ctl"><input type="text" id="cDeckUrl" placeholder="Figma Slides URL or embed URL"></div>
+      <div class="ctl"><input type="text" id="cDeckNode" placeholder="start slide node-id (e.g. 1-234)"></div>
+      <div class="ctl"><label>Theme</label><select id="cDeckTheme">
+        <option value="dark">dark</option><option value="light">light</option><option value="system">system</option>
+      </select></div>
+      <button class="resetbtn" id="cDeckApply">↻ Apply &amp; reload deck</button>
+      <button class="resetbtn" id="cDeckReset">⟲ Unlink deck</button>
+      <div class="ctl"><span class="brk-note" id="deckSrc" style="word-break:break-all;opacity:.7"></span></div>
+      <div class="ctl"><span class="brk-note">Paste either the Slides URL or what Figma's “Get embed code” gives you. The deck must be link-shared publicly or visitors hit a login wall — check in a private window.</span></div>
+    </div><!-- /#dbg-deck -->
+
     <!-- ── Case study (chapter ring) ──
          Two ways in, because they serve different jobs: the full entry when you want to see
          the transition, and a direct jump when you are iterating on the ring itself and do not
@@ -1508,6 +1569,28 @@
   </div></div>
 
   <!-- MERGE Stage 2: case-study DOM layer — kit box + instruction booklet (focus panel) -->
+  <!-- ══ CASE STUDY DECK ══ Figma Slides in presentation view, framed by the site's own
+       chrome so the breadcrumb and the star field survive the jump. Sits ABOVE the canvas,
+       which keeps rendering the deck scene's starfield behind this panel. -->
+  <div id="deck-root">
+    <div class="deck-shell">
+      <div class="deck-bar">
+        <span class="deck-dot"></span>
+        <span class="deck-bar-t" id="deckTitle">Case study</span>
+        <a class="deck-bar-out" id="deckOut" href="#" target="_blank" rel="noopener noreferrer">open in figma ↗</a>
+      </div>
+      <div class="deck-stage">
+        <iframe id="deckFrame" title="Case study deck" allowfullscreen
+                referrerpolicy="origin-when-cross-origin"></iframe>
+        <div class="deck-veil" id="deckVeil"><span class="deck-veil-t">loading deck</span></div>
+        <div class="deck-empty" id="deckEmpty">
+          <div class="deck-empty-t">No deck linked yet</div>
+          <div class="deck-empty-s">Add a Figma Slides URL in the deck panel (Debug → Case study deck).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="cs-root">
 
     <!-- Box scene -->
@@ -1642,7 +1725,7 @@
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
           <div class="manual-cta">
-            <button class="manual-cta-btn" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
+            <button class="manual-cta-btn" onclick="(window.openCaseStudyRoute||window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -11991,9 +12074,191 @@ f 2469//2469 2470//2470 2434//2434
     // the old DOM page takeover if the constellation is somehow unavailable, so nothing can
     // dead-end on a click.
     function openCaseStudyRoute(pid){
-      if(typeof csOpenCaseStudy==='function') csOpenCaseStudy(pid);
+      if(window.CASE_STUDY_MODE==='deck' && typeof deckOpenCaseStudy==='function') deckOpenCaseStudy(pid);
+      else if(typeof csOpenCaseStudy==='function') csOpenCaseStudy(pid);
       else enterCaseStudy();
     }
+    // EXPORTED, and every in-page trigger must go through it. Three call sites used to reach
+    // past this to window.csOpenCaseStudy directly, which meant the CTA still opened the
+    // constellation after the deck became the shipping path — the comment above claimed a
+    // single entry point that did not exist. If you add a new trigger, call THIS.
+    window.openCaseStudyRoute=openCaseStudyRoute;
+
+    // ══════ CASE STUDY DECK ═══════════════════════════════════════════════════
+    // The shipping case-study path (see docs/project-history/case-study-figma-deck.md).
+    // Case studies live in a Figma Slides deck; this wraps the embed in the site's own
+    // frame so the breadcrumb, the star field and the brick cascade all survive the jump.
+    //
+    // The constellation is NOT deleted — CASE_STUDY_MODE picks between them, so the
+    // shelved ring is one string away from coming back.
+    window.CASE_STUDY_MODE = window.CASE_STUDY_MODE || 'deck';   // 'deck' | 'constellation'
+
+    // embed-host is REQUIRED by Embed Kit 2.0 — a unique string naming the embedding site.
+    var DECK_HOST='mundane-workshop';
+    var deckPid=null, deckLabel='', deckReadyCB=null, deckLoaded=false, deckMsgOff=null;
+
+    function deckCfg(pid){
+      function g(f,d){ var v=(typeof copyOvr!=='undefined')?copyOvr['deck:'+pid+':'+f]:null;
+                       return (v!=null&&v!=='')?v:d; }
+      return { url:g('url',''), node:g('node',''), theme:g('theme','dark') };
+    }
+    function deckHasContent(pid){ return !!(pid && deckCfg(pid).url); }
+
+    // Accepts either what Figma's "Get embed code" gives you (already embed.figma.com) or a
+    // plain Slides URL copied from the address bar, and normalises to the presentation-view
+    // endpoint. If Figma ever changes its parameter names, THIS IS THE ONLY FUNCTION to fix.
+    //   figma.com/slides/<key>/<name>  →  embed.figma.com/deck/<key>/<name>
+    function deckEmbedURL(pid){
+      var c=deckCfg(pid); if(!c.url) return '';
+      var u; try{ u=new URL(c.url); }catch(e){ return ''; }
+      var node=c.node || u.searchParams.get('node-id') || '';
+      if(u.hostname!=='embed.figma.com'){
+        var m=u.pathname.match(/^\/(slides|deck|design|file|board|proto)\/([^\/]+)(\/[^?]*)?$/);
+        if(!m) return '';
+        // 'slides' and 'deck' both mean the Slides file; /deck is the PRESENTATION view,
+        // which is what a reader should land in — /slides would drop them in the editor.
+        var kind = (m[1]==='slides'||m[1]==='deck') ? 'deck' : (m[1]==='file' ? 'design' : m[1]);
+        try{ u=new URL('https://embed.figma.com/'+kind+'/'+m[2]+(m[3]||'')); }catch(e){ return ''; }
+      }
+      u.searchParams.set('embed-host',DECK_HOST);
+      if(node) u.searchParams.set('node-id',node);
+      if(c.theme) u.searchParams.set('theme',c.theme);
+      return u.toString();
+    }
+
+    // The scene behind the embed. MWSubScene hides the galaxy on enter, so a sub-scene has
+    // to bring its own sky — same as the chapter ring did. This one is ONLY a sky: there is
+    // nothing to click out here, the deck is the content.
+    var deckScene=new MWSubScene({
+      id:'deck', bodyClass:'mw-deck', layerId:'deckLayer',
+      orbit:new MWOrbit({look:new THREE.Vector3(0,0,0), yaw:0, pitch:0.22, radius:15},
+                        {pitch:[0.02,1.2], radius:[8,26], panY:[-4,6]}),
+      build:function(){
+        var g=this.group;
+        if(g.userData.built) return;
+        var pts=[]; for(var i=0;i<900;i++) pts.push((Math.random()-0.5)*120,(Math.random()-0.5)*80,(Math.random()-0.5)*120);
+        var bg=new THREE.BufferGeometry();
+        bg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+        g.add(new THREE.Points(bg,new THREE.PointsMaterial({color:0x8fe6df,size:0.055,transparent:true,opacity:0.55,depthWrite:false,fog:false})));
+        g.userData.built=true;
+      },
+      hits:function(){ return []; },
+      onBack:function(){},   // canvas clicks do nothing — leave via breadcrumb or Esc
+      onExit:function(){
+        var r=document.getElementById('deck-root');
+        if(r) r.classList.remove('ready','empty');
+        // Drop the iframe's src on the way out. Leaving a Figma embed mounted keeps it
+        // running (and, for a deck with video slides, playing) behind the galaxy.
+        var f=document.getElementById('deckFrame');
+        if(f){ f.onload=null; f.removeAttribute('src'); }
+        if(deckMsgOff){ deckMsgOff(); deckMsgOff=null; }
+        deckPid=null; deckReadyCB=null; deckLoaded=false;
+      }
+    });
+
+    function deckToProject(){
+      var pid=deckPid;
+      deckScene.exit();
+      var g=pid&&planetById(pid);
+      if(g) activate(g.userData); else goHome();
+    }
+    function deckCrumb(){
+      setCrumb('deck:'+deckPid, [
+        {text:deckLabel||'Project', go:deckToProject},
+        {text:'Case study', bold:true}
+      ]);
+    }
+    function deckSetRoute(){
+      var c=CASES[deckPid]; if(!c) return;
+      setRoute('/work/'+(c.slug||slugify(c.title||deckPid))+'/case');
+    }
+
+    // Mount the embed. `onReady` is the cascade's release signal — it fires when the iframe
+    // has loaded, or immediately when there is nothing to load, so the curtain never waits
+    // on a deck that was never configured.
+    function deckEnter(pid,onReady){
+      deckPid=pid;
+      deckLabel=(CASES[pid]&&CASES[pid].title)||'Case study';
+      deckScene.orbit.viewKey='deckview:'+pid;
+      deckScene.enter(planetById(pid));
+      // The project's focus booklet is DOM and survives the scene swap on its own — drop it,
+      // or it sits underneath the deck still offering "view case study".
+      var csr=document.getElementById('cs-root');
+      if(csr){ csr.classList.remove('cs-focus-panel','active'); }
+      deckCrumb(); deckSetRoute();
+      if(window.__deckRefreshPanel) window.__deckRefreshPanel();
+
+      var root=document.getElementById('deck-root');
+      var frame=document.getElementById('deckFrame');
+      var title=document.getElementById('deckTitle');
+      var out=document.getElementById('deckOut');
+      if(title) title.textContent=deckLabel+' · case study';
+
+      var cfg=deckCfg(pid), src=deckEmbedURL(pid);
+      if(out){
+        if(cfg.url){ out.href=cfg.url; out.style.display=''; }
+        else out.style.display='none';
+      }
+      deckLoaded=false;
+      if(!root||!frame) { if(onReady) onReady(); return; }
+      root.classList.remove('ready','empty');
+
+      if(!src){
+        // Nothing linked (or an unparseable URL) — say so plainly rather than showing an
+        // empty black rectangle, and release the curtain straight away.
+        if(cfg.url) console.warn('[deck] could not build an embed URL from:',cfg.url);
+        root.classList.add('empty','ready');
+        deckLoaded=true; if(onReady) onReady();
+        return;
+      }
+      // READY DETECTION, layered — there is no single reliable "Figma has painted" signal,
+      // and guessing wrong is visible: iframe onload fires while the deck is still blank, so
+      // lifting the veil on onload alone reveals an empty rectangle (observed, not theorised).
+      //   1. a postMessage from the embed  → its app is actually running. Best signal.
+      //   2. onload + settle               → fallback when no message arrives.
+      //   3. hard cap                      → never leave the veil up forever.
+      // Whichever lands first wins. The veil is independent of the cascade's gate, so even
+      // if the gate gives up at GATE_MAX the reader still sees the veil, never a blank frame.
+      var settled=false;
+      function deckReady(){
+        if(settled || deckPid!==pid) return;
+        settled=true;
+        window.removeEventListener('message',onFigmaMsg);
+        clearTimeout(loadT); clearTimeout(capT);
+        deckLoaded=true;
+        root.classList.add('ready');
+        if(deckReadyCB){ var cb=deckReadyCB; deckReadyCB=null; cb(); }
+      }
+      function onFigmaMsg(e){
+        if(!/^https:\/\/(embed\.|www\.)?figma\.com$/.test(e.origin)) return;
+        deckReady();
+      }
+      window.addEventListener('message',onFigmaMsg);
+      if(deckMsgOff) deckMsgOff();
+      deckMsgOff=function(){ window.removeEventListener('message',onFigmaMsg); };
+      var loadT=0, capT=setTimeout(deckReady,9000);
+      frame.onload=function(){ loadT=setTimeout(deckReady,1400); };
+      deckReadyCB=onReady||null;
+      frame.src=src;
+    }
+
+    // Entry from a kit box / manual CTA: cascade, then the deck — with the curtain HELD
+    // over the iframe load instead of racing it. Without the gate this shows bricks, then a
+    // blank Figma frame, then the deck, which reads worse than no transition at all.
+    function deckOpenCaseStudy(pid){
+      pid = pid || (focused && focused.userData && focused.userData.id);
+      if(!pid || !CASES[pid]) return;
+      var ready=false;
+      enterCaseStudy({ freeze:false, domTakeover:false,
+        hooks:{
+          onCurtainClosed:function(){ deckEnter(pid,function(){ ready=true; }); },
+          gate:function(){ return ready; }
+        }});
+    }
+    window.deckOpenCaseStudy=deckOpenCaseStudy;
+
+    // Route restore (no cascade — a deep link should just BE there, same call the ring made).
+    function deckEnterFromRoute(pid){ deckEnter(pid,null); }
 
     // ── in-scene controls ──────────────────────────────────────────────────────
     (function wireRingCtl(){
@@ -12522,6 +12787,8 @@ f 2469//2469 2470//2470 2434//2434
       // The chapter ring has no kit box, no faces and no marquee — this panel would offer
       // controls that do nothing to what is on screen. #dbg-ring stands in for it there.
       if(typeof csScene!=='undefined' && csScene.active){ panel.style.display='none'; return; }
+      // Nothing on screen in the deck view belongs to this panel either — #dbg-deck owns it.
+      if(typeof deckScene!=='undefined' && deckScene.active){ panel.style.display='none'; return; }
       var tid=currentEditTarget();
       if(!(editMode && tid)){ panel.style.display='none'; return; }
       editTargetId=tid; panel.style.display='block';
@@ -12874,7 +13141,12 @@ f 2469//2469 2470//2470 2434//2434
       var _soc=(c.kind==='social');
       // 'work' cases default active/disabled from the legacy global flag (preserves today's "coming soon" look
       // for every existing project); every other kind (social planets) has always been active, so it stays that way.
-      if(c.ctaActive==null) c.ctaActive=(c.kind!=='work')||!!window.CASE_STUDY_CTA_ENABLED;
+      // A work project's case-study CTA activates when it actually HAS a deck to open —
+      // the per-project gating the global flag was always standing in for. An explicit
+      // author override still wins: the copyOvr restore below runs after this default.
+      if(c.ctaActive==null) c.ctaActive=(c.kind!=='work')
+        || (window.CASE_STUDY_MODE==='deck' && typeof deckHasContent==='function' && deckHasContent(id))
+        || !!window.CASE_STUDY_CTA_ENABLED;
       if(c.cta==null) c.cta=_soc?(id==='ig'?'OPEN INSTAGRAM ↗':id==='li'?'OPEN LINKEDIN ↗':'OPEN LINK ↗'):(c.ctaActive?'VIEW CASE STUDY →':'Case study coming soon');
       if(c.ctaUrl==null) c.ctaUrl=_soc?(id==='ig'?'https://instagram.com/':id==='li'?'https://linkedin.com/':'#'):'#';
       if(c.ctaHidden==null) c.ctaHidden=false;
@@ -13530,6 +13802,14 @@ f 2469//2469 2470//2470 2434//2434
         // /work/<project>/<artifact> and /work/<project>/case occupy the same slot — an
         // artifact slugged "case" would otherwise be indistinguishable from the case study.
         if(moonSeg==='case'){
+          if(window.CASE_STUDY_MODE==='deck'){
+            if(typeof csScene!=='undefined' && csScene.active) csExit();   // mode flipped mid-session
+            if(deckPid!==pid || !deckScene.active) deckEnterFromRoute(pid);
+            // Old constellation chapter links still resolve — they normalise to the deck
+            // rather than 404ing, since some may have been shared before the pivot.
+            if(parts[3]) deckSetRoute();
+            return;
+          }
           if(typeof csEnterFromProject==='function'){
             if(csPid!==pid || !csScene.active) csEnterFromProject(pid);
             var chSeg=parts[3];
@@ -13538,6 +13818,7 @@ f 2469//2469 2470//2470 2434//2434
           }
           return;
         }
+        if(typeof deckScene!=='undefined' && deckScene.active) deckScene.exit();   // left the deck
         if(typeof csScene!=='undefined' && csScene.active) csExit();   // left the case study
         if(moonSeg && grp.userData.moons && grp.userData.moons.length){
           for(var i=0;i<grp.userData.moons.length;i++){
@@ -13724,6 +14005,59 @@ f 2469//2469 2470//2470 2434//2434
       window.__csRefreshChapters=fillChSel;   // called when a ring is built / a chapter is picked
     })();
 
+    // ── Case study deck panel ──────────────────────────────────────────────────
+    // Deck URL / start slide / theme are authored content in copyOvr, so they sync to every
+    // visitor exactly like the rest of the CMS. Editable per project, keyed off whichever
+    // project the deck is currently showing.
+    (function wireDeckPanel(){
+      function ids(){ return {u:document.getElementById('cDeckUrl'), n:document.getElementById('cDeckNode'),
+                              t:document.getElementById('cDeckTheme'), st:document.getElementById('deckStat'),
+                              sr:document.getElementById('deckSrc')}; }
+      function refresh(){
+        var e=ids(); if(!e.st) return;
+        if(!deckPid){ e.st.textContent='open a case study first'; if(e.sr) e.sr.textContent=''; return; }
+        var c=deckCfg(deckPid), src=deckEmbedURL(deckPid);
+        if(document.activeElement!==e.u) e.u.value=c.url||'';
+        if(document.activeElement!==e.n) e.n.value=c.node||'';
+        if(e.t) e.t.value=c.theme||'dark';
+        e.st.textContent = !c.url ? 'no deck linked'
+                         : (src ? 'linked · '+(c.node?'slide '+c.node:'first slide') : 'URL not recognised as a Figma file');
+        if(e.sr) e.sr.textContent=src||'';
+      }
+      function put(f,v){
+        if(!deckPid) return;
+        var k='deck:'+deckPid+':'+f;
+        if(v==null||v==='') delete copyOvr[k]; else copyOvr[k]=v;
+        persistCopy();
+      }
+      function apply(){
+        if(!deckPid){ if(typeof toast==='function') toast('open a case study first'); return; }
+        var e=ids(), pid=deckPid;
+        put('url',e.u.value.trim()); put('node',e.n.value.trim()); put('theme',e.t?e.t.value:'dark');
+        // A newly linked deck should light its CTA up without a reload.
+        var c=CASES[pid];
+        if(c && c.kind==='work' && copyOvr['case:'+pid+':ctaActive']==null){
+          c.ctaActive=deckHasContent(pid);
+          if(c.ctaActive && (!c.cta || c.cta==='Case study coming soon')) c.cta='VIEW CASE STUDY →';
+        }
+        deckEnter(pid,null); refresh();
+        if(typeof toast==='function') toast('deck updated ✓');
+      }
+      var a=document.getElementById('cDeckApply'); if(a) a.addEventListener('click',apply);
+      var r=document.getElementById('cDeckReset');
+      if(r) r.addEventListener('click',function(){
+        if(!deckPid) return;
+        var pid=deckPid;
+        put('url',''); put('node',''); 
+        deckEnter(pid,null); refresh();
+        if(typeof toast==='function') toast('deck unlinked');
+      });
+      var e0=ids();
+      [e0.u,e0.n].forEach(function(el){ if(el) el.addEventListener('keydown',function(ev){
+        if(ev.key==='Enter'){ ev.preventDefault(); apply(); } }); });
+      window.__deckRefreshPanel=refresh;
+    })();
+
     // ── Brick library panel ────────────────────────────────────────────────────
     // Slots are authored content (copyOvr['brickShapes']); the .glb binaries are
     // IndexedDB, matching how every other mesh override in this file is split.
@@ -13871,7 +14205,7 @@ f 2469//2469 2470//2470 2434//2434
       // to the old DOM page takeover — so tuning the cascade showed you a cream placeholder
       // that is no longer where the transition goes.
       if(pv) pv.addEventListener('click',function(){
-        if(window.csOpenCaseStudy) window.csOpenCaseStudy();
+        if(window.openCaseStudyRoute) window.openCaseStudyRoute();
         else if(window.enterCaseStudy) window.enterCaseStudy();
       });
       var rs=document.getElementById('cCasReset');
@@ -14210,7 +14544,7 @@ f 2469//2469 2470//2470 2434//2434
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
             if(data.ctaUrl && data.ctaUrl!=='#') window.open(data.ctaUrl,'_blank','noopener');   // an explicit URL overrides the internal case-study takeover
-            else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
+            else if(window.openCaseStudyRoute) window.openCaseStudyRoute();   // deck, or the ring if that mode is on
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
         ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
@@ -14753,8 +15087,28 @@ f 2469//2469 2470//2470 2434//2434
         });
       }
 
+      // How long the curtain will wait at full coverage for hooks.gate() before giving up
+      // and revealing anyway. Generous, because the thing it usually waits for is a
+      // third-party iframe on someone else's connection — but bounded, because a curtain
+      // that never lifts is a broken page.
+      var GATE_MAX=6000;
+
       function frame(times, hooks, fired){
-        var now=performance.now()-tStart, fallMs=CFG.fall*1000;
+        var raw=performance.now(), fallMs=CFG.fall*1000;
+        var now=raw-tStart-fired.held;
+        // HOLD GATE. At full brick coverage the caller may not be ready to be revealed —
+        // the deck wrapper, for instance, is still loading an iframe, and tearing the
+        // curtain down on schedule would show a blank frame mid-load. Pinning `now` at
+        // exitStart freezes the bricks in the covered state rather than stalling the loop,
+        // so the shader keeps animating and the page never looks hung.
+        if(!fired.reveal && now>=times.exitStart && typeof hooks.gate==='function' && !fired.gateDone){
+          if(!fired.gateAt) fired.gateAt=raw;
+          if(raw-fired.gateAt<GATE_MAX && !hooks.gate()){
+            fired.held += raw-(fired.last||raw);
+            now = raw-tStart-fired.held;
+          } else fired.gateDone=true;
+        }
+        fired.last=raw;
         mat.uniforms.uTime.value=now/1000;
         if(scrim){
           // up with the fall, hold through the swap window, down with the exit
@@ -14820,13 +15174,16 @@ f 2469//2469 2470//2470 2434//2434
         meshes();
         running=true; tStart=performance.now();
         canvas.classList.add('run');
-        var fired={curtain:false,reveal:false};
+        var fired={curtain:false,reveal:false,held:0,gateAt:0,gateDone:false,last:0};
         // WALL-CLOCK GUARD. requestAnimationFrame stops in a backgrounded tab, so a visitor
         // who switches away mid-cascade would come back to a curtain that never tore itself
         // down and a page stuck behind it. The DOM version got this for free from setTimeout;
         // this restores it. Deliberately generous — it should only ever fire if frames stalled.
         clearTimeout(guard);
-        guard=setTimeout(function(){ finish(times,hooks,fired); }, times.done+1500);
+        // The guard has to outlast a full gate hold, or it would tear the curtain down
+        // while the caller is still legitimately waiting.
+        var gateAllow=(typeof hooks.gate==='function')?GATE_MAX:0;
+        guard=setTimeout(function(){ finish(times,hooks,fired); }, times.done+gateAllow+1500);
         frame(times,hooks,fired);
         return true;
       }
@@ -14868,6 +15225,9 @@ f 2469//2469 2470//2470 2434//2434
     // bricks cover the viewport completely, and whatever is behind them can be swapped
     // without the visitor seeing it. `hooks` is how a caller uses that:
     //
+    //   gate()             OPTIONAL. Polled once per frame at maximum coverage; while it
+    //                      returns false the curtain HOLDS (up to GATE_MAX) instead of
+    //                      revealing. Use it to cover a slow load rather than race it.
     //   onCurtainClosed()  fired at maximum coverage, before the reveal. Rebuild the world
     //                      here — this is the only moment nothing behind the curtain is
     //                      visible. The caller gets CFG.hold ms of cover after it fires.
@@ -14897,6 +15257,7 @@ f 2469//2469 2470//2470 2434//2434
           runCascadeReduced(hooks); return;
         }
         BrickField.run({
+          gate: hooks.gate,
           onCurtainClosed: hooks.onCurtainClosed,
           onReveal: function(){
             boxScene.style.opacity = '0';
@@ -14921,17 +15282,29 @@ f 2469//2469 2470//2470 2434//2434
       cascadeTimers.push(setTimeout(function(){
         if(hooks.onCurtainClosed) hooks.onCurtainClosed();
       }, FADE));
+      // The scrim honours hooks.gate exactly like the brick curtain does — otherwise a
+      // reduced-motion visitor gets the blank-iframe flash the gate exists to prevent.
+      // Polls instead of holding a frame loop, since this path has no rAF of its own.
+      var REDUCED_GATE_MAX=6000;
+      function whenReady(cb){
+        if(typeof hooks.gate!=='function'){ cb(); return; }
+        var t0=Date.now();
+        (function poll(){
+          if(hooks.gate() || Date.now()-t0>=REDUCED_GATE_MAX){ cb(); return; }
+          cascadeTimers.push(setTimeout(poll,80));
+        })();
+      }
       cascadeTimers.push(setTimeout(function(){
-        boxScene.style.opacity = '0';
-        if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
+        whenReady(function(){
+          boxScene.style.opacity = '0';
+          if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
+          cascadeTimers.push(setTimeout(function(){ cascadeEl.classList.remove('run'); }, 60));
+          cascadeTimers.push(setTimeout(function(){
+            cascadeEl.className = '';
+            if(hooks.onDone) hooks.onDone();
+          }, FADE + 60));
+        });
       }, FADE + COVER));
-      cascadeTimers.push(setTimeout(function(){
-        cascadeEl.classList.remove('run');
-      }, FADE + COVER + 60));
-      cascadeTimers.push(setTimeout(function(){
-        cascadeEl.className = '';
-        if(hooks.onDone) hooks.onDone();
-      }, FADE + COVER + FADE + 60));
     }
 
     window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset,
