@@ -1272,6 +1272,22 @@
       <div class="ctl"><span class="brk-note" id="ringHubStat">default holo form</span></div>
       <label class="resetbtn" id="cRingHubUp" style="display:block;text-align:center;cursor:pointer">⬆ Replace centre object (.glb)<input type="file" id="cRingHubFile" accept=".glb,.gltf" hidden></label>
       <button class="resetbtn" id="cRingHubReset">⟲ Reset centre object</button>
+
+      <div class="ctl sec"><label style="color:var(--holo)">Chapter object</label></div>
+      <div class="ctl"><label>Chapter</label><select id="cChSel"></select></div>
+      <div class="ctl"><label>Ring size <b id="vChR">0.34</b></label><input type="range" id="cChR" min="0.08" max="1.4" step="0.02" value="0.34"></div>
+      <div class="ctl"><label>Focus size <b id="vChFR">0.55</b></label><input type="range" id="cChFR" min="0.2" max="3.5" step="0.05" value="0.55"></div>
+
+      <div class="ctl"><span class="brk-note" id="chRingStat">ring view · default</span></div>
+      <label class="resetbtn" id="cChRingUp" style="display:block;text-align:center;cursor:pointer">⬆ Ring view object<input type="file" id="cChRingFile" accept=".glb,.gltf,.obj,.svg,.stp,.step,image/*" hidden></label>
+      <div class="ctl"><input type="text" id="cChRingVid" placeholder="…or video URL (.mp4/.webm)"></div>
+      <button class="resetbtn" id="cChRingReset">⟲ Reset ring view</button>
+
+      <div class="ctl"><span class="brk-note" id="chFocStat">focus view · falls back to ring</span></div>
+      <label class="resetbtn" id="cChFocUp" style="display:block;text-align:center;cursor:pointer">⬆ Focus override<input type="file" id="cChFocFile" accept=".glb,.gltf,.obj,.svg,.stp,.step,image/*" hidden></label>
+      <div class="ctl"><input type="text" id="cChFocVid" placeholder="…or video URL (.mp4/.webm)"></div>
+      <button class="resetbtn" id="cChFocReset">⟲ Reset focus override</button>
+      <div class="ctl"><span class="brk-note">Accepts .glb/.gltf/.obj/.svg/.stp and bitmaps. Video must be a direct .mp4/.webm served with CORS — a YouTube or Vimeo embed page is an iframe and cannot be drawn into WebGL.</span></div>
     </div><!-- /#dbg-ring -->
 
     <!-- ── Case study (chapter ring) ──
@@ -11473,7 +11489,11 @@ f 2469//2469 2470//2470 2434//2434
       ease:0.04,            // orbit easing per frame — MUST stay below animate()'s 0.06 camera
                             // lerp, or the camera trails the orbit and cuts a chord across the
                             // middle instead of swinging round the outside
-      dim:0.28 };           // how far the hub and the other chapters fade back while one is focused
+      dim:0.28,             // how far the hub and the other chapters fade back while one is focused
+      objR:0.34,            // half-extent an uploaded chapter object is fitted to OUT ON THE RING
+      objFocusR:0.55 };     // …and once that chapter is the focused subject. Sized against the
+                            // gap the framing leaves: the chapter sits at chapterFrac with the
+                            // booklet's top edge at ~52%, so ~1.1 units of diameter clears both
 
     var csPid=null, csNodes=[], csSelIdx=-1, csAtChapter=false, csHub=null, csRootLabel='';
     var _csUp=new THREE.Vector3();
@@ -11514,11 +11534,13 @@ f 2469//2469 2470//2470 2434//2434
         var hint=document.getElementById('csHint'); if(hint) hint.classList.remove('show');
         var cs=document.getElementById('cs-root');
         if(cs){ cs.classList.remove('cs-focus-panel'); cs.classList.remove('active'); }
+        csNodes.forEach(function(n){ csClearNodeObj(n); n._tier=null; });   // stops chapter videos
         csAtChapter=false; csSelIdx=-1; csPid=null;
       }
     });
 
     function csBuildRing(pid){
+      csNodes.forEach(csClearNodeObj);   // stop any videos before their nodes are thrown away
       var g=csScene.ensureGroup();
       for(var k=g.children.length-1;k>=0;k--){   // wipe the previous project's ring
         var o=g.children[k]; g.remove(o);
@@ -11565,7 +11587,9 @@ f 2469//2469 2470//2470 2434//2434
         layer.appendChild(lbl);
         csNodes.push({ch:ch,mesh:mesh,hit:hit,lbl:lbl,pos:mesh.position});
       });
+      csApplyChapterObjs(true);
       csBuildStepper();
+      if(window.__csRefreshChapters) window.__csRefreshChapters();
     }
 
     // Swap the placeholder centre form for an uploaded .glb, run through the same holo
@@ -11588,6 +11612,157 @@ f 2469//2469 2470//2470 2434//2434
         });
       }).catch(function(){});
     }
+
+    // ══════ PER-CHAPTER OBJECTS ═══════════════════════════════════════════════
+    // Two tiers, mirroring how a project reads as a PLANET out in the galaxy and as a KIT
+    // BOX once you focus it. `chmesh:` is what a chapter looks like sitting on the ring;
+    // `chfocus:` is what replaces it once that chapter is the subject. Focus falls back to
+    // the ring visual, which falls back to the built-in holo sphere — so setting either
+    // tier alone is valid, and setting only the ring tier just means "same object, closer".
+    //
+    // Storage is split the way everything else in this file is split, and for the same
+    // reason: binary uploads (.glb/.gltf/.obj/.svg/.stp/bitmap) go to IndexedDB and stay
+    // local to this browser until the file is committed, while a VIDEO is only a URL, so it
+    // goes to copyOvr and syncs to every visitor — which is the entire point of putting a
+    // video on a public case study.
+    //
+    // ONE SLOT HOLDS ONE THING: setting a video clears that slot's upload and uploading
+    // clears that slot's video, so there is never a precedence question to answer.
+    function csObjKey(slot,pid,chId){ return (slot==='focus'?'chfocus:':'chmesh:')+pid+':'+chId; }
+    function csVidKey(slot,pid,chId){ return 'chvid:'+pid+':'+chId+':'+slot; }
+
+    function csSlotRec(slot,pid,chId){
+      var vid=(typeof copyOvr!=='undefined')?copyOvr[csVidKey(slot,pid,chId)]:null;
+      if(vid) return Promise.resolve({kind:'video',url:vid});
+      if(!window.BRICStore) return Promise.resolve(null);
+      return BRICStore.get(csObjKey(slot,pid,chId))
+        .then(function(r){ return r||null; }).catch(function(){ return null; });
+    }
+
+    // Holo surface for a chapter object — FX_MOON, so it matches the hub and the orbiting
+    // artifacts rather than the kit box's heavier FX_BOX treatment.
+    function csOvrMat(map,flat){
+      var m=new THREE.MeshBasicMaterial({map:map||null,color:0xffffff,fog:false,
+            side:flat?THREE.DoubleSide:THREE.FrontSide,transparent:true,depthWrite:!flat});
+      if(map&&THREE.LinearEncoding!==undefined){ map.encoding=THREE.LinearEncoding; map.needsUpdate=true; }
+      addFx(m,FX_MOON,false); return m;
+    }
+    // Flat media (bitmap, video) hangs on a plane that billboards to the camera — a chapter
+    // object is looked at from wherever the ring has swung to, so a fixed-facing plane would
+    // vanish edge-on at most angles.
+    function csPlaneFor(tex,ar,R){
+      var pw=ar>=1?R*2:R*2*ar, ph=ar>=1?R*2/ar:R*2;
+      var mesh=new THREE.Mesh(new THREE.PlaneGeometry(pw,ph), csOvrMat(tex,true));
+      mesh.userData.billboard=true; return mesh;
+    }
+
+    // record → Object3D. Async throughout: GLB, STEP, bitmaps and video all decode off-thread.
+    function csBuildObj(rec,R,cb){
+      if(!rec){ cb(null); return; }
+      try{
+        if(rec.kind==='glb'){ loadGLBScene(rec.buffer,function(sc,err){ cb(sc?buildHoloGLB(sc,FX_MOON,R):null,err); }); return; }
+        if(rec.kind==='step'){ parseSTEP(rec.buffer,function(g,err){ cb(g?buildHoloGLB(g,FX_MOON,R):null,err); }); return; }
+        if(rec.kind==='svg'){ var gs=parseSVGGeo(rec.text,R,rec.depth||0.3,rec.axis||'z');
+          cb(gs?new THREE.Mesh(gs,csOvrMat(null,false)):null, gs?null:'SVGLoader not ready'); return; }
+        if(rec.kind==='obj'){ var go=parseUploadedOBJ(rec.text,R);
+          cb(go?new THREE.Mesh(go,csOvrMat(null,false)):null, go?null:'OBJ parse failed'); return; }
+        if(rec.kind==='image'){ var im=new Image();
+          im.onload=function(){ var t=new THREE.Texture(im); if(THREE.sRGBEncoding) t.encoding=THREE.sRGBEncoding; t.needsUpdate=true;
+            cb(csPlaneFor(t,(im.naturalWidth||1)/(im.naturalHeight||1),R)); };
+          im.onerror=function(){ cb(null,'image failed to decode'); };
+          im.src=rec.dataURL; return; }
+        if(rec.kind==='video'){
+          // muted+playsInline is what lets this autoplay at all; crossOrigin is what keeps the
+          // texture from tainting. A URL that sends no CORS headers loads but cannot be drawn.
+          var v=document.createElement('video');
+          v.crossOrigin='anonymous'; v.loop=true; v.muted=true; v.playsInline=true;
+          v.autoplay=true; v.preload='auto';
+          // Parked in the document, not left detached. A detached <video> textures fine in
+          // Chrome but Safari/iOS will not reliably decode one, and display:none stops
+          // playback outright — so it lives off-screen at 1px instead.
+          v.setAttribute('playsinline','');
+          v.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+          document.body.appendChild(v);
+          v.addEventListener('loadeddata',function(){
+            var t=new THREE.VideoTexture(v);
+            var o=csPlaneFor(t,(v.videoWidth||16)/(v.videoHeight||9),R);
+            o.userData.video=v;            // teardown needs the element back to stop it
+            // A looping clip is motion. Under prefers-reduced-motion the frame that is already
+            // decoded stays up as a still, which is the same bargain the brick cascade strikes.
+            if(!csReducedMotion()) v.play().catch(function(){});
+            cb(o);
+          },{once:true});
+          v.addEventListener('error',function(){ cb(null,'video failed to load: '+rec.url); },{once:true});
+          v.src=rec.url; v.load(); return; }
+      }catch(e){ cb(null,String((e&&e.message)||e)); return; }
+      cb(null,'unsupported kind: '+rec.kind);
+    }
+
+    // A detached chapter object must give its GPU memory back, and a video must actually STOP
+    // — an unreferenced <video> keeps decoding frames for as long as it has a src.
+    function csDisposeObj(o){
+      if(!o) return;
+      if(o.userData && o.userData.video){
+        try{ var v=o.userData.video; v.pause(); v.removeAttribute('src'); v.load();
+             if(v.parentNode) v.parentNode.removeChild(v); }catch(e){}
+      }
+      o.traverse(function(c){
+        if(c.geometry) c.geometry.dispose();
+        if(c.material){
+          if(c.material.map && c.material.map.dispose) c.material.map.dispose();
+          if(c.material.dispose) c.material.dispose();
+        }
+      });
+    }
+    function csClearNodeObj(n){ if(n && n.ovr){ n.mesh.remove(n.ovr); csDisposeObj(n.ovr); n.ovr=null; } }
+
+    function csReducedMotion(){
+      try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+      catch(e){ return false; }
+    }
+    // Browsers suspend media in a hidden document, and do not always resume it when the tab
+    // comes back. Same family of trap as the cascade's rAF stall — worth handling explicitly
+    // rather than leaving a chapter's video frozen on whatever frame it stopped at.
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden || !csScene.active || csReducedMotion()) return;
+      csNodes.forEach(function(n){
+        var v=n.ovr && n.ovr.userData && n.ovr.userData.video;
+        if(v && v.paused) v.play().catch(function(){});
+      });
+    });
+
+    // Resolve and mount the right visual for one node. Only rebuilds when the node's TIER
+    // changes (ring ⇄ focus) — stepping around a ten-chapter ring otherwise re-decodes ten
+    // GLBs per step. Pass force=true when the underlying record or size dial changed.
+    function csNodeVisual(i,force){
+      var n=csNodes[i]; if(!n||!csPid) return;
+      var focusTier=(csAtChapter && i===csSelIdx);
+      var tier=focusTier?'focus':'ring';
+      if(!force && n._tier===tier) return;
+      n._tier=tier;
+      var R=focusTier?CS_RING.objFocusR:CS_RING.objR;
+      // Every swap takes a ticket. An upload that resolves after the reader has already moved
+      // on must not mount itself onto a node that has since changed tier.
+      var token=(n._tok=(n._tok||0)+1);
+      function place(obj){
+        if(n._tok!==token){ csDisposeObj(obj); return; }
+        csClearNodeObj(n);
+        if(obj){ n.ovr=obj; n.mesh.add(obj); }
+        csMark();
+      }
+      csSlotRec(tier,csPid,n.ch.id).then(function(rec){
+        if(!rec && focusTier) return csSlotRec('ring',csPid,n.ch.id);   // focus falls back to the ring visual
+        return rec;
+      }).then(function(rec){
+        if(n._tok!==token) return;
+        if(!rec){ place(null); return; }
+        csBuildObj(rec,R,function(obj,err){
+          if(err) console.warn('[ring] chapter object ('+n.ch.id+'/'+tier+'):',err);
+          place(obj);
+        });
+      }).catch(function(){ place(null); });
+    }
+    function csApplyChapterObjs(force){ csNodes.forEach(function(n,i){ csNodeVisual(i,force); }); }
 
     // The 1..N stepper is the instruction-manual nav from the original direction, flattened:
     // the right rail became this strip plus the ring itself.
@@ -11613,7 +11788,14 @@ f 2469//2469 2470//2470 2434//2434
         n.lbl.classList.toggle('sel',on);
         n.lbl.style.opacity = (csAtChapter && !on) ? String(CS_RING.dim) : '';
         var m=n.mesh.material;
-        if(m){ m.color.setHex(on?0xF0D080:0x78E0D6); m.transparent=true; m.opacity = on?1:dim; }
+        // an uploaded chapter object stands in for the sphere entirely — the sphere goes to
+        // zero rather than being hidden, so the halo behind it still reads as a glow
+        if(m){ m.color.setHex(on?0xF0D080:0x78E0D6); m.transparent=true;
+               m.opacity = n.ovr ? 0 : (on?1:dim); m.depthWrite = !n.ovr; }
+        if(n.ovr) n.ovr.traverse(function(o){
+          if(o.material){ o.material.transparent=true;
+            if(o.userData._baseOp==null) o.userData._baseOp=(o.material.opacity!=null?o.material.opacity:1);
+            o.material.opacity=o.userData._baseOp*(on?1:dim); } });
         var halo=n.mesh.children&&n.mesh.children[0];
         if(halo&&halo.material){ halo.material.color.setHex(on?0xE9A73E:0x5ABFB8);
                                  halo.material.opacity = 0.16*(on?1:dim); }
@@ -11643,6 +11825,8 @@ f 2469//2469 2470//2470 2434//2434
         o.look.lerp(csTgt.look,k);
       }
       csNodes.forEach(function(n){
+        // flat media (bitmap/video) has to keep facing the camera as the ring swings past it
+        if(n.ovr && n.ovr.userData.billboard) n.ovr.lookAt(camera.position);
         var s=projWorld(n.pos);
         if(!s.vis){ n.lbl.style.display='none'; return; }
         _csUp.set(n.pos.x,n.pos.y+CS_RING.nodeR*1.8,n.pos.z);
@@ -11724,7 +11908,10 @@ f 2469//2469 2470//2470 2434//2434
     };
 
     function csOverview(){
-      csAtChapter=false; csSelIdx=-1; csMark();
+      csAtChapter=false; csSelIdx=-1;
+      csApplyChapterObjs();   // whatever was focused drops back to its ring visual
+      if(window.__csRefreshChapters) window.__csRefreshChapters();
+      csMark();
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');
       csTgt=null;   // overview frames directly; nothing to ease toward
       csScene.orbit.fitPoints(csNodes.map(function(n){ return [n.pos.x,n.pos.y,n.pos.z]; }), {min:9, extra:3.2});
@@ -11752,6 +11939,8 @@ f 2469//2469 2470//2470 2434//2434
       var visH = 2*R*Math.tan((camera.fov*Math.PI/180)/2);
       csTgt = { yaw:(i/csNodes.length)*Math.PI*2, pitch:CS_RING.chapterPitch, radius:R,
                 look:new THREE.Vector3(n.pos.x, n.pos.y - (0.5-CS_RING.chapterFrac)*visH, n.pos.z) };
+      csApplyChapterObjs();   // the newly focused chapter takes its focus visual; the old one reverts
+      if(window.__csRefreshChapters) window.__csRefreshChapters();
       if(snap){ var o=csScene.orbit;
         o.yaw=csTgt.yaw; o.pitch=csTgt.pitch; o.radius=csTgt.radius; o.look.copy(csTgt.look);
         camSnap=true; }   // and skip the glide — see the camSnap note in animate()
@@ -13361,7 +13550,8 @@ f 2469//2469 2470//2470 2434//2434
     // ── Chapter ring panel: camera dials + centre object ───────────────────────
     // Values live in copyOvr['csRing'] so they sync and export like all authored content.
     (function wireRingPanel(){
-      var DEF={chapterPitch:0.13, chapterDist:4.2, chapterFrac:0.32, radius:6.4, ease:0.04, dim:0.28};
+      var DEF={chapterPitch:0.13, chapterDist:4.2, chapterFrac:0.32, radius:6.4, ease:0.04, dim:0.28,
+               objR:0.34, objFocusR:0.55};
       function cur(){ var o=copyOvr['csRing']; return (o&&typeof o==='object')?o:{}; }
       function put(k,v){ var o=cur(); o[k]=v; copyOvr['csRing']=o; persistCopy(); CS_RING[k]=v; }
       // apply any stored overrides at boot, before the ring is ever built
@@ -13370,7 +13560,8 @@ f 2469//2469 2470//2470 2434//2434
       var ROWS=[['chapterPitch','cRingPitch','vRingPitch',2],['chapterDist','cRingDist','vRingDist',1],
                 ['chapterFrac','cRingFrac','vRingFrac',2],
                 ['radius','cRingRad','vRingRad',1],['ease','cRingEase','vRingEase',3],
-                ['dim','cRingDim','vRingDim',2]];
+                ['dim','cRingDim','vRingDim',2],
+                ['objR','cChR','vChR',2],['objFocusR','cChFR','vChFR',2]];
       ROWS.forEach(function(r){
         var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
         if(!el) return;
@@ -13383,6 +13574,7 @@ f 2469//2469 2470//2470 2434//2434
           if(r[0]==='radius'){ if(csScene.active && csPid){ csBuildRing(csPid); csMark();
                                  if(csAtChapter) csSelect(csSelIdx); else csOverview(); } }
           else if(r[0]==='dim'){ csMark(); }
+          else if(r[0]==='objR'||r[0]==='objFocusR'){ csApplyChapterObjs(true); }   // refit at the new size
           else if(csAtChapter && csSelIdx>=0){ csSelect(csSelIdx); }
         });
       });
@@ -13416,7 +13608,120 @@ f 2469//2469 2470//2470 2434//2434
           refreshHubStat(); if(typeof toast==='function') toast('centre object reset');
         });
       });
+
+      // ── Chapter object slots ────────────────────────────────────────────────
+      // The picker defaults to whatever chapter is focused, so the common case — "I am
+      // looking at this chapter and want to change it" — needs no extra selection step.
+      function chList(){ return (typeof csNodes!=='undefined')?csNodes:[]; }
+      function chIdx(){
+        var sel=document.getElementById('cChSel');
+        var v=sel?parseInt(sel.value,10):-1;
+        if(!(v>=0) && csSelIdx>=0) v=csSelIdx;
+        return (v>=0 && v<chList().length)?v:-1;
+      }
+      function fillChSel(){
+        var sel=document.getElementById('cChSel'); if(!sel) return;
+        var keep=sel.value, list=chList();
+        sel.innerHTML='';
+        list.forEach(function(n,i){
+          var o=document.createElement('option');
+          o.value=String(i); o.textContent=(i+1<10?'0':'')+(i+1)+' · '+n.ch.title;
+          sel.appendChild(o);
+        });
+        // Follow the focused chapter rather than holding a stale pick: the tool edits what
+        // you are looking at, so there is no way to be aiming at a chapter off screen.
+        if(csAtChapter && csSelIdx>=0) sel.value=String(csSelIdx);
+        else if(keep!=='' && keep!=null && list[parseInt(keep,10)]) sel.value=keep;
+        refreshChStat();
+      }
+      function slotLabel(slot,rec){
+        if(!rec) return slot==='ring' ? 'ring view · default holo sphere'
+                                      : 'focus view · falls back to ring';
+        if(rec.kind==='video') return slot+' view · video · syncs to visitors';
+        return slot+' view · '+rec.kind+(rec.name?' · '+rec.name:'')+' · this browser only';
+      }
+      function refreshChStat(){
+        var i=chIdx(), rs=document.getElementById('chRingStat'), fs=document.getElementById('chFocStat');
+        if(!rs||!fs) return;
+        if(i<0||!csPid){ rs.textContent='open a case study first'; fs.textContent=''; return; }
+        var chId=chList()[i].ch.id;
+        csSlotRec('ring',csPid,chId).then(function(r){ rs.textContent=slotLabel('ring',r); });
+        csSlotRec('focus',csPid,chId).then(function(r){ fs.textContent=slotLabel('focus',r); });
+        var rv=document.getElementById('cChRingVid'), fv=document.getElementById('cChFocVid');
+        if(rv) rv.value=copyOvr[csVidKey('ring',csPid,chId)]||'';
+        if(fv) fv.value=copyOvr[csVidKey('focus',csPid,chId)]||'';
+      }
+
+      // Read an upload into the same record shape the focus-view box replacement already uses,
+      // so both tiers understand every format this file can already parse.
+      function readUpload(file,cb){
+        var ext=(file.name.split('.').pop()||'').toLowerCase(), rd=new FileReader();
+        function done(mk,how){ rd.onload=function(e){ cb(mk(e.target.result)); }; rd[how](file); }
+        if(isImageFile(file,ext))      done(function(v){ return {kind:'image',dataURL:v,name:file.name,uploaded:true}; },'readAsDataURL');
+        else if(ext==='svg')           done(function(v){ return {kind:'svg',text:v,depth:0.3,axis:'z',name:file.name,uploaded:true}; },'readAsText');
+        else if(ext==='obj')           done(function(v){ return {kind:'obj',text:v,name:file.name,uploaded:true}; },'readAsText');
+        else if(ext==='glb'||ext==='gltf') done(function(v){ return {kind:'glb',buffer:v,name:file.name,uploaded:true}; },'readAsArrayBuffer');
+        else if(ext==='stp'||ext==='step') done(function(v){ return {kind:'step',buffer:v,name:file.name,uploaded:true}; },'readAsArrayBuffer');
+        else cb(null,'unsupported: .'+ext);
+      }
+      function afterSlotChange(i,msg){
+        csNodeVisual(i,true); refreshChStat();
+        if(typeof toast==='function') toast(msg);
+      }
+      // Each setter clears the OTHER kind for its slot — one slot, one thing.
+      function setUpload(slot,i,rec){
+        var chId=chList()[i].ch.id, vk=csVidKey(slot,csPid,chId);
+        if(copyOvr[vk]!=null){ delete copyOvr[vk]; persistCopy(); }
+        BRICStore.set(csObjKey(slot,csPid,chId),rec).then(function(){ afterSlotChange(i,slot+' object ✓'); });
+      }
+      function setVideo(slot,i,url){
+        var chId=chList()[i].ch.id;
+        BRICStore.del(csObjKey(slot,csPid,chId)).then(function(){
+          copyOvr[csVidKey(slot,csPid,chId)]=url; persistCopy();
+          afterSlotChange(i,slot+' video ✓');
+        });
+      }
+      function clearSlot(slot,i){
+        var chId=chList()[i].ch.id, vk=csVidKey(slot,csPid,chId);
+        if(copyOvr[vk]!=null){ delete copyOvr[vk]; persistCopy(); }
+        BRICStore.del(csObjKey(slot,csPid,chId)).then(function(){ afterSlotChange(i,slot+' reset'); });
+      }
+
+      function needChapter(){
+        var i=chIdx();
+        if(i<0||!csPid){ if(typeof toast==='function') toast('open a case study first'); return -1; }
+        return i;
+      }
+      [['ring','cChRingFile','cChRingVid','cChRingReset'],
+       ['focus','cChFocFile','cChFocVid','cChFocReset']].forEach(function(r){
+        var slot=r[0];
+        var fEl=document.getElementById(r[1]);
+        if(fEl) fEl.addEventListener('change',function(){
+          var file=fEl.files[0]; if(!file) return;
+          var i=needChapter(); if(i<0) return;
+          readUpload(file,function(rec,err){
+            if(!rec){ if(typeof toast==='function') toast(err||'could not read file'); return; }
+            setUpload(slot,i,rec);
+          });
+          fEl.value='';   // so re-picking the same file fires change again
+        });
+        var vEl=document.getElementById(r[2]);
+        if(vEl) vEl.addEventListener('change',function(){
+          var i=needChapter(); if(i<0) return;
+          var url=vEl.value.trim();
+          if(url) setVideo(slot,i,url); else clearSlot(slot,i);
+        });
+        var rEl=document.getElementById(r[3]);
+        if(rEl) rEl.addEventListener('click',function(){
+          var i=needChapter(); if(i<0) return;
+          clearSlot(slot,i);
+        });
+      });
+      var chSel=document.getElementById('cChSel');
+      if(chSel) chSel.addEventListener('change',refreshChStat);
+
       window.__csRefreshHubStat=refreshHubStat;
+      window.__csRefreshChapters=fillChSel;   // called when a ring is built / a chapter is picked
     })();
 
     // ── Brick library panel ────────────────────────────────────────────────────

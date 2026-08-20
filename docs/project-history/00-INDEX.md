@@ -19,6 +19,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [box-replacement-focus.md](box-replacement-focus.md) — "Replace box" upload, swap the kit box for a custom asset per project
 - [bric-build-progress.md](bric-build-progress.md) — Figma DS component build state, button state model, token API gotchas
 - [bric-framer-translation.md](bric-framer-translation.md) — deferred: rebuilding the stepped button in Framer as a code component
+- [case-study-chapter-ring.md](case-study-chapter-ring.md) — Aug 19 2026: chapter ring framing maths, arrive-vs-swing, and the two-tier per-chapter objects
 - [case-study-direction.md](case-study-direction.md) — full history of the galaxy → focus → box-open → case-study transition direction
 - [case-study-page-brief-jul8.md](case-study-page-brief-jul8.md) — confirmed case-study page direction, Framer/CMS build target
 - [color-decisions.md](color-decisions.md) — locked palette (B1 Vivid Gold), two-register color model, link color
