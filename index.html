@@ -13989,8 +13989,12 @@ f 2469//2469 2470//2470 2434//2434
         if(canvas) return;
         canvas=document.createElement('canvas');
         canvas.id='cascade-gl';
-        var host=document.getElementById('cascade');
-        (host&&host.parentNode?host.parentNode:document.body).insertBefore(canvas, host||null);
+        // ATTACH TO BODY, never beside #cascade. #cascade lives inside #cs-root, which is
+        // opacity:0 unless .active — and the constellation path deliberately never adds
+        // .active (domTakeover:false). Putting the canvas there made it inherit opacity 0:
+        // it rendered correctly every frame, into something invisible. Its own fixed
+        // position and z-index handle stacking without a parent.
+        document.body.appendChild(canvas);
         renderer=new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true});
         renderer.setClearColor(0x000000,0);
         scene=new THREE.Scene();
