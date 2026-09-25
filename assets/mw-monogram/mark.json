@@ -81,8 +81,8 @@
     "fadeStart": 0.5,
     "fadeEnd": 8,
     "fadeCurve": 1.1,
-    "fadeMidColor": "#2f7fd0",
-    "fadeColor": "#061a24",
+    "fadeMidColor": "#3fb5ab",
+    "fadeColor": "#04120f",
     "spacing": 0.35,
     "slice": 0.15
   },
@@ -109,7 +109,7 @@
   },
   "cmf": {
     "preset": "metal",
-    "baseColor": "#dcefff",
+    "baseColor": "#dff5f1",
     "accentColor": "#07090d",
     "environment": "hero",
     "fins": {
