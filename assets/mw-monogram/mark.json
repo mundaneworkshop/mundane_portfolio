@@ -115,7 +115,7 @@
     "fins": {
       "metal": 1,
       "polish": 0.86,
-      "glow": 0,
+      "glow": 0.85,
       "haze": 0
     },
     "housing": {

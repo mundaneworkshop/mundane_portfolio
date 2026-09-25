@@ -9614,8 +9614,70 @@ f 2469//2469 2470//2470 2434//2434
     function setSiteVisible(v){ galaxy.children.forEach(function(c){ if(c!==starPoints && c!==mwMount) c.visible=v; }); }
     var MW_ENTRY_Y=1.9, MW_DOCK_Y=0.17, MW_ENTRY_MUL=1.7, MW_DOCK_MUL=0.62;   // entry (beam height, big) → docked (plate height, emitter-sized)
     var _mwQ=new THREE.Matrix4(), mwPoseSet=false;   // the studio's saved pose, as seen from the home camera
+    var mwTiltQ=new THREE.Quaternion(), _mwDockStartQ=new THREE.Quaternion(), _mwIdentQ=new THREE.Quaternion();   // tilt-on-a-corner (entry) → identity/flat+grid-aligned (docked)
     var _mwM=new THREE.Matrix4(), _mwInv=new THREE.Matrix4(), _mwS=new THREE.Matrix4();
     var _mwEye=new THREE.Vector3(), _mwUp=new THREE.Vector3(), _mwC=new THREE.Vector3(), _mwCam=new THREE.Vector3();
+
+    // ── Boot reveal: once docked, the rest of the scene cascades in stage by stage (glow → beam →
+    // ring text → gatekeeper → base grid → planets, each staggered) rather than popping in at once.
+    // Each stage's opacity/visibility runs through bootFlickAmt — a jittery power-up ramp, not a
+    // smooth fade — so it reads as a hologram stuttering on rather than a cross-dissolve.
+    var BOOT_T0=null, BOOT_DONE=(mwPhase!=='entry');
+    var bootLogoGate=BOOT_DONE, bootPlanetGate=null;
+    var BOOT_STAGE={ glow:0.00, beam:0.45, ring:0.85, head:1.25, grid:1.65, planets:2.05 };
+    var BOOT_DUR=0.55, BOOT_PLANET_STAGGER=0.045, FLICK_TICKS=9;
+    function bootFlickAmt(u){   // u: 0..1 progress through a stage's window → jittery on-ness, settles at 1
+      if(u<=0) return 0; if(u>=1) return 1;
+      var tick=Math.floor(u*FLICK_TICKS); var h=Math.sin(tick*12.9898+4.1414)*43758.5453; h-=Math.floor(h);
+      var onProb=0.22+0.7*(tick/FLICK_TICKS), ramp=Math.min(1,u*1.15);
+      return (h<onProb)?ramp:ramp*0.1;
+    }
+    function bootWinVal(delay){ if(BOOT_T0==null) return 1; return bootFlickAmt((clock.getElapsedTime()-BOOT_T0-delay)/BOOT_DUR); }
+    function updateBootReveal(){
+      if(BOOT_T0==null || BOOT_DONE) return;
+      var vBeam=bootWinVal(BOOT_STAGE.beam), vRing=bootWinVal(BOOT_STAGE.ring), vHead=bootWinVal(BOOT_STAGE.head), vGrid=bootWinVal(BOOT_STAGE.grid);
+      beam.visible=vBeam>0.3;
+      ringEn.visible=ringAur.visible=vRing>0.3;
+      bootLogoGate=vHead>0.3;
+      studPlane.visible=vGrid>0.3;
+      ZONES.forEach(function(z){ z.mesh.visible=vGrid>0.3; });
+      if(!bootPlanetGate) bootPlanetGate=planets.map(function(){ return false; });
+      var allDone=(vBeam>=1 && vRing>=1 && vHead>=1 && vGrid>=1);
+      planets.forEach(function(p,i){ var v=bootWinVal(BOOT_STAGE.planets+i*BOOT_PLANET_STAGGER); bootPlanetGate[i]=v>0.3; if(v<1) allDone=false; });
+      if(allDone){ BOOT_DONE=true; setSiteVisible(true); bootLogoGate=true; bootPlanetGate=bootPlanetGate.map(function(){ return true; }); }
+    }
+
+    // Docked emitter: swap the baked studio-metal render for a holographic treatment (matches the rest
+    // of the scene, instead of a shiny "real" object distracting from everything projected around it).
+    // Samples the SAME rendered canvas, but keys alpha off its luminance — the mark's lit edges/facets
+    // become the visible "signal" — instead of showing the literal metal colors.
+    var MWHOLO_FRAG=[
+      'uniform sampler2D map;',
+      'uniform float time; uniform float scanIntensity; uniform float fresnelPow; uniform float glitch;',
+      'uniform vec3 baseColor; uniform vec3 hotColor; uniform float opBase;',
+      'varying vec3 vN; varying vec3 vV; varying float vWY; varying vec2 vUv;',
+      'void main(){',
+      '  vec4 tex=texture2D(map,vUv);',
+      '  if(tex.a<0.04) discard;',   // outside the mark's silhouette (same edge the metal material alpha-tested on)
+      '  float lum=dot(tex.rgb,vec3(0.299,0.587,0.114));',
+      '  float sig=clamp(lum*1.6,0.3,1.0);',   // whole silhouette reads; the metal render\'s lit facets read brighter
+      '  float scan=pow(sin(vWY*16.0-time*2.0)*0.5+0.5,2.2)*scanIntensity+0.08;',
+      '  float flk=sin(time*29.3)*0.035+sin(time*13.1)*0.025+1.0;',
+      '  float band=glitch*smoothstep(0.05,0.0,abs(vWY-mod(time*0.3,3.0)+1.5))*0.7;',
+      '  vec3 col=mix(baseColor,hotColor,sig*0.7+band)*(0.6+scan*0.9+band);',
+      '  float a=(0.55+sig*0.4)*(0.55+scan*0.6+band)*opBase*flk;',
+      '  gl_FragColor=vec4(col,clamp(a,0.0,1.0));',
+      '}'
+    ].join('\n');
+    var mwHoloMat=null, mwHoloPer=null;
+    function ensureMwHoloMat(){
+      if(mwHoloMat || !mwTex) return;
+      mwHoloPer={ map:{value:mwTex}, baseColor:{value:new THREE.Color(DARK.line)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, opBase:{value:0} };
+      var uniforms=Object.assign({},SHU,mwHoloPer);
+      mwHoloMat=new THREE.ShaderMaterial({ uniforms:uniforms, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:RING_HOLO_VERT, fragmentShader:MWHOLO_FRAG });
+      mwHoloMat.__per=mwHoloPer; holoMats.push({mat:mwHoloMat,per:mwHoloPer,role:'mwEmitter'});
+    }
+
     function mwLoad(){
       mwState='loading';
       function fail(err){ mwState='failed'; console.error('[mw-monogram]',err);
@@ -9637,11 +9699,13 @@ f 2469//2469 2470//2470 2434//2434
       document.head.appendChild(el);
     }
     // Entry gate → dock: the click listener below calls this when mwPhase is 'entry' and the click hit
-    // mwQuad. mwUpdate drives mwMount from the beam spot down to the emitter over DOCK_DUR, then reveals
-    // the rest of the galaxy (setSiteVisible) and hands the beam to the gatekeeper.
+    // mwQuad. mwUpdate drives mwMount from the beam spot down to the emitter over DOCK_DUR — sliding its
+    // orientation from spinning-on-a-corner down to a flat, grid-aligned rest (see mwUpdate) — then the
+    // boot reveal cascades the rest of the galaxy in and hands the beam to the gatekeeper.
     function startDock(){
       if(mwPhase!=='entry') return;
       mwPhase='docking'; mwDockStart=clock.getElapsedTime();
+      _mwDockStartQ.copy(logo.quaternion).multiply(mwTiltQ);   // freeze the current spin+tilt — slerp source down to flat/grid-aligned
       camElev=0; camZoom=1; manualRot=0;   // settle the camera pull-back onto a clean home framing
       document.body.classList.remove('mw-entrygate');
     }
@@ -9651,20 +9715,25 @@ f 2469//2469 2470//2470 2434//2434
       if(on && mwState==='idle') mwLoad();
       if(mwPhase==='docking'){
         mwDockT=Math.min(1,(clock.getElapsedTime()-mwDockStart)/DOCK_DUR);
-        if(mwDockT>=1){ mwPhase='docked'; setSiteVisible(true); }
+        if(mwDockT>=1){ mwPhase='docked'; BOOT_T0=clock.getElapsedTime(); }
       }
       var docked=(mwPhase==='docked');
       var ease=mwDockT<1?(mwDockT*mwDockT*(3-2*mwDockT)):1;   // smoothstep
-      mwMount.quaternion.copy(logo.quaternion);   // ride the same continuous y-spin the head uses
+      // Orientation: spinning + tilted-on-a-corner during entry (spin-only on the mount; the tilt is
+      // applied separately below via _mwQ, same as before). Docking/docked: slerp the frozen spin+tilt
+      // pose down to identity — flat face down, grid-aligned — and hold there; the spin stops for good.
+      if(mwPhase==='entry') mwMount.quaternion.copy(logo.quaternion);
+      else mwMount.quaternion.copy(_mwDockStartQ).slerp(_mwIdentQ,ease);
       mwMount.position.set(0,(mwPhase==='entry')?MW_ENTRY_Y:THREE.MathUtils.lerp(MW_ENTRY_Y,MW_DOCK_Y,ease),0);
       mwMount.updateMatrixWorld(true);
       var sizeMul=(mwPhase==='entry')?MW_ENTRY_MUL:THREE.MathUtils.lerp(MW_ENTRY_MUL,MW_DOCK_MUL,ease);
 
       // Beam occupant (gatekeeper): the head, or any uploaded custom logo — always at the logo spot,
-      // shown once docked. No longer tied to the mwMono toggle, which now only governs the base emitter.
+      // staggered in via bootLogoGate once docked. No longer tied to the mwMono toggle, which now only
+      // governs the base emitter.
       var glb=logo.userData.glbGroup;
-      if(glb) glb.visible=docked;
-      holoHead.visible=docked && !glb; glowShell.visible=docked && !glb;
+      if(glb) glb.visible=docked && bootLogoGate;
+      holoHead.visible=docked && !glb && bootLogoGate; glowShell.visible=docked && !glb && bootLogoGate;
 
       var live=on && mwState==='ready';
       if(mwQuad) mwQuad.visible=live;
@@ -9673,7 +9742,7 @@ f 2469//2469 2470//2470 2434//2434
       // monogram units → mount-local → world
       var k=MW_DIAM/(2*mwMono.radius)*(params.mwScale!=null?params.mwScale:1.4)*sizeMul;
       camera.updateMatrixWorld();
-      if(!mwPoseSet){
+      if(!mwPoseSet && mwPhase==='entry'){
         // Stand the mark on its point: the studio's line of sight (mark.json view.orbit — the body
         // diagonal, for the iso-from-below look) goes to the mount's vertical axis, so the spin turns
         // it in place about that diagonal. The studio's screen-up leans away from the home camera,
@@ -9685,9 +9754,22 @@ f 2469//2469 2470//2470 2434//2434
           if(away.lengthSq()<1e-9) away.set(0,0,-1);
           _mwQ.fromArray(mwMono.poseFor(new THREE.Vector3(0,1,0), away.normalize()));
         }
+        mwTiltQ.setFromRotationMatrix(_mwQ);
         mwPoseSet=true;
       }
-      _mwM.copy(mwMount.matrixWorld).multiply(_mwQ).multiply(_mwS.makeScale(k,k,k)); _mwInv.copy(_mwM).invert();
+      // Docked: swap the baked-metal card for the holographic treatment, and ramp it in (boot "glow" stage).
+      if(docked){
+        ensureMwHoloMat();
+        if(mwHoloMat){
+          if(mwQuad.material!==mwHoloMat) mwQuad.material=mwHoloMat;
+          mwHoloMat.uniforms.opBase.value=bootWinVal(BOOT_STAGE.glow)*fadeK;
+        }
+      }
+      // Entry/docking still carries the tilt as a separate post-multiply (mount is spin-only there);
+      // once docked, mwMount's own quaternion already IS the resting orientation — don't tilt it again.
+      if(mwPhase==='entry') _mwM.copy(mwMount.matrixWorld).multiply(_mwQ).multiply(_mwS.makeScale(k,k,k));
+      else _mwM.copy(mwMount.matrixWorld).multiply(_mwS.makeScale(k,k,k));
+      _mwInv.copy(_mwM).invert();
       _mwCam.setFromMatrixPosition(camera.matrixWorld);
       _mwEye.copy(_mwCam).applyMatrix4(_mwInv);
       _mwUp.set(0,1,0).transformDirection(camera.matrixWorld);
@@ -9703,7 +9785,7 @@ f 2469//2469 2470//2470 2434//2434
       mwQuad.position.copy(_mwC);
       mwQuad.scale.setScalar(2*fr.halfSize*sW);
       mwQuad.up.set(worldUpX,worldUpY,worldUpZ); mwQuad.lookAt(_mwCam);
-      mwQuad.material.opacity=fadeK;
+      if(!docked) mwQuad.material.opacity=fadeK;
     }
 
     // ---------- emitter on plate + beam ----------
@@ -11365,6 +11447,10 @@ f 2469//2469 2470//2470 2434//2434
           h.per.baseColor.value.setHex(dark?0x5ABFB8:0x1A6862);
           h.per.hotColor.value.setHex(dark?0xAAF5EE:0x0C3D38);
           h.per.opBase.value=dark?1.0:0.85;
+        } else if(h.role==='mwEmitter'){
+          h.per.baseColor.value.setHex(dark?0x5ABFB8:0x1A6862);
+          h.per.hotColor.value.setHex(dark?0xAAF5EE:0x0C3D38);
+          // opBase is driven every frame by the boot-glow ramp in mwUpdate — leave it alone here.
         } else {
           h.per.baseColor.value.setHex(dark?0x5ABFB8:0x1A6862);
           h.per.hotColor.value.setHex(dark?0xAAF5EE:0x0C3D38);
@@ -13260,7 +13346,7 @@ f 2469//2469 2470//2470 2434//2434
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
         planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
-      else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=true; }   // entry gate/docking: leave planets hidden (setSiteVisible owns them until the site boots)
+      else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=bootPlanetGate?bootPlanetGate[pv]:true; }   // entry gate/docking: hidden (setSiteVisible/updateBootReveal own them until the site boots)
 
       // LOGO bottom clip (stud): position a world-space plane at a fraction up the logo's bounds.
       if(logo.userData.glbGroup && params.logoClip>0.0001){
@@ -13296,6 +13382,7 @@ f 2469//2469 2470//2470 2434//2434
       var lw=new THREE.Vector3(); logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
 
       mwUpdate(focused?fade:1);
+      updateBootReveal();
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
         // (1) depth-only pre-pass of the logo alone → buffer holds the front-most logo surface
