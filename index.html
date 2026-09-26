@@ -1244,8 +1244,10 @@
       <div class="ctl"><label>Emitter height <b id="vMwDockY">-0.40</b></label><input type="range" id="cMwDockY" min="-1" max="1" step="0.02" value="-0.40"></div>
       <div class="ctl"><label>Beam intensity · bottom <b id="vBeamBottom">0.80</b></label><input type="range" id="cBeamBottom" min="0" max="1" step="0.02" value="0.80"></div>
       <div class="ctl"><label>Beam intensity · top <b id="vBeamTop">0.20</b></label><input type="range" id="cBeamTop" min="0" max="1" step="0.02" value="0.20"></div>
-      <div class="ctl"><label>Dock duration <b id="vDockDur">1.00</b></label><input type="range" id="cDockDur" min="0.2" max="3" step="0.05" value="1.00"></div>
-      <div class="ctl"><label>Cascade stage gap <b id="vBootGap">0.14</b></label><input type="range" id="cBootGap" min="0" max="1" step="0.02" value="0.14"></div>
+      <div class="ctl"><label>Beam gradient curve <b id="vBeamCurve">0.40</b></label><input type="range" id="cBeamCurve" min="0.1" max="3" step="0.05" value="0.40"></div>
+      <div class="ctl"><label>Beam intensity · focus view <b id="vBeamFocusMul">0.40</b></label><input type="range" id="cBeamFocusMul" min="0" max="1" step="0.02" value="0.40"></div>
+      <div class="ctl"><label>Dock duration <b id="vDockDur">0.60</b></label><input type="range" id="cDockDur" min="0.2" max="3" step="0.05" value="0.60"></div>
+      <div class="ctl"><label>Cascade stage gap <b id="vBootGap">0.08</b></label><input type="range" id="cBootGap" min="0" max="1" step="0.02" value="0.08"></div>
       <div class="ctl"><label>Cascade stage flicker-in <b id="vBootStageDur">0.21</b></label><input type="range" id="cBootStageDur" min="0.05" max="1.2" step="0.02" value="0.21"></div>
       <div class="ctl"><label>Cascade planet stagger <b id="vBootPlanetStagger">0.03</b></label><input type="range" id="cBootPlanetStagger" min="0" max="0.2" step="0.005" value="0.03"></div>
       <div class="ctl"><label>Logo holographic <b id="vLogoHolo">1.0</b></label><input type="range" id="cLogoHolo" min="0" max="1" step="0.05" value="1.0"></div>
@@ -1258,6 +1260,8 @@
       <div class="ctl sec"><label>Planets &amp; moons</label></div>
       <div class="ctl"><label style="opacity:.55;font-size:8px">Planet FX + tint · per zone</label></div>
       <div id="zoneFxCtls"></div>
+      <div class="ctl"><label style="opacity:.55;font-size:8px">Planet FX + tint · per planet (overrides its zone)</label></div>
+      <div id="planetFxCtls"></div>
       <div class="menudiv"></div>
       <div class="ctl"><label>Moon FX color</label><input type="color" id="cMoonHot" value="#AAF5EE"><input type="text" id="cMoonHotHex" value="#AAF5EE" class="hexin"></div>
       <div class="ctl"><label>Moon tint</label><input type="color" id="cMoonTint" value="#5ABFB8"><input type="text" id="cMoonTintHex" value="#5ABFB8" class="hexin"></div>
@@ -1871,7 +1875,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:1.0, bootGap:0.14, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.60, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
     renderer.setPixelRatio(1); renderer.setSize(W,H);
@@ -1889,7 +1893,7 @@
     // starfield — nothing else in the galaxy boots until it's clicked (see startDock/mwUpdate). mwPhase
     // drives both the camera framing (ENTRY_* vs HOME_*, below) and which scene objects are visible.
     var ENTRY_POS=new THREE.Vector3(0,2.7,4.3), ENTRY_LOOK=new THREE.Vector3(0,1.9,0);
-    var mwPhase='entry', mwDockStart=null, mwDockT=0, DOCK_DUR=1.0;   // fallback default — live value is params.dockDur (debug panel)
+    var mwPhase='entry', mwDockStart=null, mwDockT=0, DOCK_DUR=0.60;   // fallback default — live value is params.dockDur (debug panel)
     try{
       var _hasRoute=location.pathname.replace(/^\/+|\/+$/g,'').length>0;      // deep link (/work/…, /cv, /holonet) — skip the gate, land straight in context
       var _reducedMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -9639,7 +9643,7 @@ f 2469//2469 2470//2470 2434//2434
     var BOOT_T0=null, BOOT_DONE=(mwPhase!=='entry');
     var bootLogoGate=BOOT_DONE, bootPlanetGate=null, bootPlanetVal=null, bootGridVal=BOOT_DONE?1:0;   // bootPlanetVal/bootGridVal: continuous 0..1, drive the matching label flicker-in (planets, zones)
     var FLICK_TICKS=9;
-    function bootGap(){ return params.bootGap!=null?params.bootGap:0.14; }
+    function bootGap(){ return params.bootGap!=null?params.bootGap:0.08; }
     function bootStageDur(){ return params.bootStageDur!=null?params.bootStageDur:0.21; }
     function bootPlanetStagger(){ return params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03; }
     function bootFlickAmt(u,ticks){   // u: 0..1 progress through a stage's window → jittery on-ness, settles at 1
@@ -9786,7 +9790,10 @@ f 2469//2469 2470//2470 2434//2434
       holoHead.visible=docked && !glb && bootLogoGate; glowShell.visible=docked && !glb && bootLogoGate;
 
       var live=on && mwState==='ready';
-      if(mwQuad) mwQuad.visible=live;
+      // mwQuad is added straight to `scene` (not `galaxy`, since it's a camera-facing billboard, not
+      // a normal object) — so CV/HoloNet (MWSubScene) hiding `galaxy.visible` to hand the canvas over
+      // never touched it, and the docked emitter kept faintly rendering underneath those views.
+      if(mwQuad) mwQuad.visible=live && galaxy.visible;
       emitter.visible=docked && !live; spark.visible=docked && !live;   // plain teal base = fallback when the monogram is off/loading
       if(!mwQuad || !mwQuad.visible) return;
       // monogram units → mount-local → world
@@ -9857,7 +9864,7 @@ f 2469//2469 2470//2470 2434//2434
     ].join('\n');
     var BEAM_FRAG=[
       'uniform float time; uniform float scanIntensity; uniform float fresnelPow; uniform float glitch; uniform float glitchAmt;',
-      'uniform vec3 baseColor; uniform vec3 hotColor; uniform float beamBottom; uniform float beamTop;',
+      'uniform vec3 baseColor; uniform vec3 hotColor; uniform float beamBottom; uniform float beamTop; uniform float beamCurve;',
       'varying vec3 vN; varying vec3 vV; varying float vWY; varying float vLocalY;',
       'void main(){',
       '  vec3 N=normalize(vN); vec3 V=normalize(vV);',
@@ -9865,13 +9872,16 @@ f 2469//2469 2470//2470 2434//2434
       '  float scan=pow(sin(vWY*14.0-time*1.6)*0.5+0.5,2.4)*scanIntensity+0.06;',
       '  float flk=sin(time*29.3)*0.035+sin(time*13.1)*0.025+1.0;',
       '  float band=glitch*glitchAmt*smoothstep(0.3,0.0,abs(vWY-mod(time*0.25,8.0)+4.0));',   // glitchAmt: continuous intensity, not just the on/off "glitch" gate
-      '  float grad=mix(beamBottom,beamTop,vLocalY);',   // beamBottom at the source (vLocalY=0), beamTop at the far/wide end (vLocalY=1)
+      // beamCurve<1: a sharp initial dropoff near the source (vLocalY=0) that eases into a soft
+      // plateau toward the top — the IG-11 droid-head reference (bright column at the emitter,
+      // diffuse haze above), not a straight linear ramp between the two stops.
+      '  float grad=mix(beamBottom,beamTop,pow(clamp(vLocalY,0.0,1.0),beamCurve));',
       '  float a=(fr*0.85+scan*0.55+band)*grad*flk;',
       '  vec3 col=mix(baseColor,hotColor,fr+band)*(0.75+scan*0.9+band);',
       '  gl_FragColor=vec4(col,clamp(a,0.0,1.0));',
       '}'
     ].join('\n');
-    var beamHoloPer={ baseColor:{value:new THREE.Color(DARK.beam)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, beamBottom:{value:params.beamBottom!=null?params.beamBottom:0.80}, beamTop:{value:params.beamTop!=null?params.beamTop:0.20} };
+    var beamHoloPer={ baseColor:{value:new THREE.Color(DARK.beam)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, beamBottom:{value:params.beamBottom!=null?params.beamBottom:0.80}, beamTop:{value:params.beamTop!=null?params.beamTop:0.20}, beamCurve:{value:params.beamCurve!=null?params.beamCurve:0.4} };
     var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG });
     holoMats.push({mat:beamMat,per:beamHoloPer,role:'beam'}); // no push to beamMats; theme handled via holoMats
     var beam=new THREE.Mesh(new THREE.CylinderGeometry(2.3,0.18,4.0,28,1,true),beamMat); beam.position.y=2.0; galaxy.add(beam);
@@ -11524,8 +11534,9 @@ f 2469//2469 2470//2470 2434//2434
           h.per.opBase.value=dark?0.9:0.78;
         } else if(h.role==='beam'){
           h.per.baseColor.value.setHex(dark?DARK.beam:0x1A6862);
-          var _bBot=params.beamBottom!=null?params.beamBottom:0.80, _bTop=params.beamTop!=null?params.beamTop:0.20;
-          h.per.beamBottom.value=dark?_bBot:Math.min(1,_bBot*2); h.per.beamTop.value=dark?_bTop:Math.min(1,_bTop*2);
+          // beamBottom/beamTop themselves are NOT set here — the per-frame block in animate() (near
+          // `var fade=...`) recomputes them every frame anyway (dark/light theme boost + focus-view
+          // dimming), so a write here would just be overwritten on the very next frame regardless.
         } else if(h.role==='ring'){
           h.per.baseColor.value.setHex(dark?0x5ABFB8:0x1A6862);
           h.per.hotColor.value.setHex(dark?0xAAF5EE:0x0C3D38);
@@ -11592,8 +11603,10 @@ f 2469//2469 2470//2470 2434//2434
     bind('cSpin','vSpin',function(v){ params.spin=v; },1);
     bind('cStud','vStud',function(v){ params.studSize=v; drawStuds(); },2);
     bind('cGap','vGap',function(v){ params.studGap=v; drawStuds(); },2);
-    bind('cBeamBottom','vBeamBottom',function(v){ params.beamBottom=v; beamHoloPer.beamBottom.value=v; },2);
-    bind('cBeamTop','vBeamTop',function(v){ params.beamTop=v; beamHoloPer.beamTop.value=v; },2);
+    bind('cBeamBottom','vBeamBottom',function(v){ params.beamBottom=v; },2);
+    bind('cBeamTop','vBeamTop',function(v){ params.beamTop=v; },2);
+    bind('cBeamCurve','vBeamCurve',function(v){ params.beamCurve=v; beamHoloPer.beamCurve.value=v; },2);
+    bind('cBeamFocusMul','vBeamFocusMul',function(v){ params.beamFocusMul=v; },2);
     function applySpread(){ planets.forEach(function(p){ var hp=spotPos(p.userData.spot); p.userData.homePos.copy(hp); if(focused!==p) p.userData.posTarget.copy(hp); }); }
     // Debug: re-roll every planet's spot within its OWN radial zone (keeps zone membership, shuffles placement).
     // Re-scatter planets with breathing room: even angular slots per zone + staggered inner/outer rings +
@@ -13179,11 +13192,22 @@ f 2469//2469 2470//2470 2434//2434
       return m; })();
     function zoneFxFor(zoneId){ return zoneFx[zoneId] || {hot:'#F0D080',tint:'#E9A73E'}; }
     function persistZoneFx(){ copyOvr['zonefx']=zoneFx; persistCopy(); }
-    // Apply each planet's holo colors from ITS zone; moons stay on the global moon tint/FX.
+    // Per-planet override, one layer more specific than the zone: absent = "inherit the zone's tint/FX"
+    // (or the hardcoded HoloNet purple for 'contact'), same shape as zoneFx but keyed by planet id.
+    var planetFx=(function(){ var saved=(copyOvr&&copyOvr['planetfx'])||{}, m={};
+      Object.keys(saved).forEach(function(id){ if(saved[id]) m[id]={hot:saved[id].hot,tint:saved[id].tint}; });
+      return m; })();
+    function persistPlanetFx(){ copyOvr['planetfx']=planetFx; persistCopy(); }
+    function planetFxResolved(id,zoneId){   // what a planet's hot/tint currently resolve to, override or not
+      if(planetFx[id]) return planetFx[id];
+      if(id==='contact') return {hot:'#C8AAFF',tint:'#A06AF0'};
+      return zoneFxFor(zoneId);
+    }
+    // Apply each planet's holo colors from its per-planet override if set, else ITS zone; moons stay
+    // on the global moon tint/FX.
     function applyHoloColors(){
-      planetHoloMats.forEach(function(e){ var per=e.per||e;
-        if(e.id==='contact'){ per.baseColor.value.set('#A06AF0'); per.hotColor.value.set('#C8AAFF'); return; }   // HoloNet accent (purple) — distinct from its zone
-        var fx=zoneFxFor(e.zone); per.baseColor.value.set(fx.tint); per.hotColor.value.set(fx.hot); });
+      planetHoloMats.forEach(function(e){ var per=e.per||e; var fx=planetFxResolved(e.id,e.zone);
+        per.baseColor.value.set(fx.tint); per.hotColor.value.set(fx.hot); });
       moonHoloMats.forEach(function(p){ p.baseColor.value.set(params.moonTint); p.hotColor.value.set(params.moonHot); });
     }
     // Generate one FX + one tint control per zone (rebuilt whenever zones change).
@@ -13204,9 +13228,39 @@ f 2469//2469 2470//2470 2434//2434
       });
     }
     function refreshZoneFxCtls(){ buildZoneFxCtls(); }
+    // One FX + one tint control per PLANET (finer than the per-zone controls above), plus a reset
+    // back to "inherit from zone". Rebuilt whenever the planet list changes.
+    function buildPlanetFxCtls(){
+      var box=document.getElementById('planetFxCtls'); if(!box) return; box.innerHTML='';
+      planets.forEach(function(p){
+        var id=p.userData.id, title=(CASES[id]&&CASES[id].title)||id;
+        function cur(key){ return planetFxResolved(id,p.userData.zone)[key]; }
+        var hdr=document.createElement('div'); hdr.className='ctl';
+        hdr.style.cssText='display:flex;justify-content:space-between;align-items:center;opacity:.6;font-size:8px;letter-spacing:1px;text-transform:uppercase;margin-top:4px';
+        var hspan=document.createElement('span'); hspan.textContent=title; hdr.appendChild(hspan);
+        var rst=document.createElement('button'); rst.type='button'; rst.className='tbtn'; rst.textContent='↺ zone'; rst.title='Reset to the zone default';
+        rst.style.cssText='padding:1px 6px;font-size:8px;opacity:.8';
+        rst.addEventListener('click',function(){ delete planetFx[id]; applyHoloColors(); persistPlanetFx(); buildPlanetFxCtls(); });
+        hdr.appendChild(rst); box.appendChild(hdr);
+        function mkRow(key,label){
+          var row=document.createElement('div'); row.className='ctl';
+          var lab=document.createElement('label'); lab.textContent=label; row.appendChild(lab);
+          var c=document.createElement('input'); c.type='color'; c.value=cur(key);
+          var h=document.createElement('input'); h.type='text'; h.className='hexin'; h.value=cur(key);
+          function apply(v){ v=(v||'').trim(); if(v[0]!=='#')v='#'+v; if(!/^#[0-9a-fA-F]{6}$/.test(v))return;
+            if(!planetFx[id]) planetFx[id]={hot:cur('hot'),tint:cur('tint')};   // first edit forks off the current (zone-inherited) pair
+            planetFx[id][key]=v; c.value=v; h.value=v; applyHoloColors(); persistPlanetFx(); }
+          c.addEventListener('input',function(){ apply(c.value); });
+          h.addEventListener('input',function(){ apply(h.value); });
+          row.appendChild(c); row.appendChild(h); box.appendChild(row);
+        }
+        mkRow('hot', title+' · FX'); mkRow('tint', title+' · tint');
+      });
+    }
+    function refreshPlanetFxCtls(){ buildPlanetFxCtls(); }
     colorCtl('cLogoHot','cLogoHotHex',function(v){ logoHot.value.set(v); params.logoHot=v; });
     colorCtl('cLogoTint','cLogoTintHex',function(v){ logoTint.value.set(v); params.logoTint=v; });
-    buildZoneFxCtls(); applyHoloColors();
+    buildZoneFxCtls(); buildPlanetFxCtls(); applyHoloColors();
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
@@ -13230,22 +13284,24 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:1.0,bootGap:0.14,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.60,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
       setCtl('cMwEntryMul','vMwEntryMul',(params.mwEntryMul!=null?params.mwEntryMul:0.95).toFixed(2));
       setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.40).toFixed(2));
-      setCtl('cDockDur','vDockDur',(params.dockDur!=null?params.dockDur:1.0).toFixed(2));
-      setCtl('cBootGap','vBootGap',(params.bootGap!=null?params.bootGap:0.14).toFixed(2));
+      setCtl('cDockDur','vDockDur',(params.dockDur!=null?params.dockDur:0.60).toFixed(2));
+      setCtl('cBootGap','vBootGap',(params.bootGap!=null?params.bootGap:0.08).toFixed(2));
       setCtl('cBootStageDur','vBootStageDur',(params.bootStageDur!=null?params.bootStageDur:0.21).toFixed(2));
       setCtl('cBootPlanetStagger','vBootPlanetStagger',(params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03).toFixed(3));
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
       setCtl('cStarSize','vStarSize',params.starSize.toFixed(2)); setCtl('cSpin','vSpin',params.spin.toFixed(1));
       setCtl('cStud','vStud',params.studSize.toFixed(2)); setCtl('cGap','vGap',params.studGap.toFixed(2)); setCtl('cBeamBottom','vBeamBottom',(params.beamBottom!=null?params.beamBottom:0.80).toFixed(2)); setCtl('cBeamTop','vBeamTop',(params.beamTop!=null?params.beamTop:0.20).toFixed(2));
+      setCtl('cBeamCurve','vBeamCurve',(params.beamCurve!=null?params.beamCurve:0.4).toFixed(2)); beamHoloPer.beamCurve.value=(params.beamCurve!=null?params.beamCurve:0.4);
+      setCtl('cBeamFocusMul','vBeamFocusMul',(params.beamFocusMul!=null?params.beamFocusMul:0.4).toFixed(2));
       setCtl('cGrid','vGrid',params.gridOpacity.toFixed(2)); setCtl('cSpread','vSpread',params.planetSpread.toFixed(1)); setCtl('cObjScale','vObjScale',(params.objScale!=null?params.objScale:1).toFixed(2)); setCtl('cMoonSpd','vMoonSpd',params.moonSpeed.toFixed(1)); setCtl('cMoonDist','vMoonDist',(params.moonDist!=null?params.moonDist:1).toFixed(2)); setCtl('cMoonScale','vMoonScale',(params.moonScale!=null?params.moonScale:1).toFixed(2)); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); setCtl('cZone','vZone',params.zoneSteps);
       rt.setSize(Math.floor(W/params.pixel),Math.floor(H/params.pixel)); postMat.uniforms.levels.value=params.levels;
-      rebuildZones(); buildStars(); drawStuds(); beamHoloPer.beamBottom.value=(params.beamBottom!=null?params.beamBottom:0.80); beamHoloPer.beamTop.value=(params.beamTop!=null?params.beamTop:0.20); studFad.base=params.gridOpacity; applySpread();
+      rebuildZones(); buildStars(); drawStuds(); beamHoloPer.beamCurve.value=(params.beamCurve!=null?params.beamCurve:0.4); studFad.base=params.gridOpacity; applySpread();
       setCtl('cMbAlpha','vMbAlpha',(params.mbAlpha!=null?params.mbAlpha:0.88).toFixed(2));
       if(typeof applyManualFx==='function') applyManualFx();
       document.getElementById('cWheel').checked=params.wheelInvert;
@@ -13278,6 +13334,7 @@ f 2469//2469 2470//2470 2434//2434
       document.getElementById('cLogoHot').value=params.logoHot; document.getElementById('cLogoHotHex').value=params.logoHot;
       document.getElementById('cLogoTint').value=params.logoTint; document.getElementById('cLogoTintHex').value=params.logoTint;
       if(typeof refreshZoneFxCtls==='function') refreshZoneFxCtls();
+      if(typeof refreshPlanetFxCtls==='function') refreshPlanetFxCtls();
       document.getElementById('cMoonHot').value=params.moonHot; document.getElementById('cMoonHotHex').value=params.moonHot;
       document.getElementById('cMoonTint').value=params.moonTint; document.getElementById('cMoonTintHex').value=params.moonTint;
       if(params.holoCustom) applyHoloColors();
@@ -13420,6 +13477,15 @@ f 2469//2469 2470//2470 2434//2434
         var cpp=Math.cos(focusPitch), spp=Math.sin(focusPitch); camPos.set(camLook.x+Math.sin(focusYaw)*cpp*focusRadius, camLook.y+spp*focusRadius, camLook.z+Math.cos(focusYaw)*cpp*focusRadius); }
       galaxy.position.lerp(galTargetPos,0.07); galaxy.scale.setScalar(galaxy.scale.x+(galTargetScale-galaxy.scale.x)*0.07);
       focusAmount+=((focused?1:0)-focusAmount)*0.08; var fade=1-0.82*focusAmount;
+      // Beam intensity: dark/light theme boost (light theme reads weaker through additive blending,
+      // same ~2x the theme switch used to apply directly) times a focus-view dim — eases smoothly with
+      // focusAmount exactly like the logo's own opacity does just below, rather than a hard cut the
+      // instant a project focuses. params.beamFocusMul is the "global default while focused" surfaced
+      // in the debug panel (Beam intensity · focus view).
+      var _beamBot=params.beamBottom!=null?params.beamBottom:0.80, _beamTop=params.beamTop!=null?params.beamTop:0.20;
+      var _beamThemeMul=dark?1:2; var _beamFocusMul=THREE.MathUtils.lerp(1,(params.beamFocusMul!=null?params.beamFocusMul:0.4),focusAmount);
+      beamHoloPer.beamBottom.value=Math.min(1,_beamBot*_beamThemeMul*_beamFocusMul);
+      beamHoloPer.beamTop.value=Math.min(1,_beamTop*_beamThemeMul*_beamFocusMul);
       var GS=(params.objScale!=null?params.objScale:1);   // global size/scale knob (logo + planets; moons scale with their parent planet)
       logo.rotation.y=t*0.35*params.spin; logo.scale.setScalar(GS); holoUniforms.time.value=t; glowMat.uniforms.time.value=t;
       var holoFocused=focused&&params.focusMode==='hologram'; var logoOpBase=dark?0.82:0.68; holoUniforms.opacity.value=holoFocused?0:logoOpBase*(focused?fade:1);
