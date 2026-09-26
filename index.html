@@ -1222,7 +1222,6 @@
       <div class="menudiv"></div>
       <div class="ctl"><label>Zone edge steps <b id="vZone">8</b></label><input type="range" id="cZone" min="3" max="16" step="1" value="8"></div>
       <div class="ctl"><label>Beam intensity <b id="vBeam">0.13</b></label><input type="range" id="cBeam" min="0" max="0.2" step="0.01" value="0.13"></div>
-      <div class="ctl"><label>Beam dropoff <b id="vBeamDropoff">2.50</b></label><input type="range" id="cBeamDropoff" min="0" max="8" step="0.1" value="2.50"></div>
       <div class="menudiv"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cAuto" checked> Auto-rotate</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cInvert" checked> Invert drag up/down</label></div>
@@ -1242,10 +1241,11 @@
       <div class="ctl"><label class="chk"><input type="checkbox" id="cMwPose" checked> Monogram in studio pose</label></div>
       <div class="ctl"><label>Monogram scale <b id="vMwScale">1.40</b></label><input type="range" id="cMwScale" min="0.3" max="3" step="0.05" value="1.40"></div>
       <div class="ctl"><label>Entry size <b id="vMwEntryMul">0.95</b></label><input type="range" id="cMwEntryMul" min="0.3" max="2.5" step="0.05" value="0.95"></div>
-      <div class="ctl"><label>Emitter height <b id="vMwDockY">-0.12</b></label><input type="range" id="cMwDockY" min="-1" max="1" step="0.02" value="-0.12"></div>
-      <div class="ctl"><label>Dock duration <b id="vDockDur">1.10</b></label><input type="range" id="cDockDur" min="0.2" max="3" step="0.05" value="1.10"></div>
-      <div class="ctl"><label>Cascade stage gap <b id="vBootGap">0.28</b></label><input type="range" id="cBootGap" min="0" max="1" step="0.02" value="0.28"></div>
-      <div class="ctl"><label>Cascade stage flicker-in <b id="vBootStageDur">0.35</b></label><input type="range" id="cBootStageDur" min="0.05" max="1.2" step="0.02" value="0.35"></div>
+      <div class="ctl"><label>Emitter height <b id="vMwDockY">-0.40</b></label><input type="range" id="cMwDockY" min="-1" max="1" step="0.02" value="-0.40"></div>
+      <div class="ctl"><label>Beam dropoff <b id="vBeamDropoff">2.50</b></label><input type="range" id="cBeamDropoff" min="0" max="8" step="0.1" value="2.50"></div>
+      <div class="ctl"><label>Dock duration <b id="vDockDur">1.00</b></label><input type="range" id="cDockDur" min="0.2" max="3" step="0.05" value="1.00"></div>
+      <div class="ctl"><label>Cascade stage gap <b id="vBootGap">0.14</b></label><input type="range" id="cBootGap" min="0" max="1" step="0.02" value="0.14"></div>
+      <div class="ctl"><label>Cascade stage flicker-in <b id="vBootStageDur">0.21</b></label><input type="range" id="cBootStageDur" min="0.05" max="1.2" step="0.02" value="0.21"></div>
       <div class="ctl"><label>Cascade planet stagger <b id="vBootPlanetStagger">0.03</b></label><input type="range" id="cBootPlanetStagger" min="0" max="0.2" step="0.005" value="0.03"></div>
       <div class="ctl"><label>Logo holographic <b id="vLogoHolo">1.0</b></label><input type="range" id="cLogoHolo" min="0" max="1" step="0.05" value="1.0"></div>
       <div class="ctl"><label>Logo clip bottom <b id="vLogoClip">0.00</b></label><input type="range" id="cLogoClip" min="0" max="0.45" step="0.01" value="0.00"></div>
@@ -1870,7 +1870,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.12, dockDur:1.1, bootGap:0.28, bootStageDur:0.35, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beam:0.13, beamDropoff:2.5, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:1.0, bootGap:0.14, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beam:0.13, beamDropoff:2.5, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
     renderer.setPixelRatio(1); renderer.setSize(W,H);
@@ -1888,7 +1888,7 @@
     // starfield — nothing else in the galaxy boots until it's clicked (see startDock/mwUpdate). mwPhase
     // drives both the camera framing (ENTRY_* vs HOME_*, below) and which scene objects are visible.
     var ENTRY_POS=new THREE.Vector3(0,2.7,4.3), ENTRY_LOOK=new THREE.Vector3(0,1.9,0);
-    var mwPhase='entry', mwDockStart=null, mwDockT=0, DOCK_DUR=1.1;   // fallback default — live value is params.dockDur (debug panel)
+    var mwPhase='entry', mwDockStart=null, mwDockT=0, DOCK_DUR=1.0;   // fallback default — live value is params.dockDur (debug panel)
     try{
       var _hasRoute=location.pathname.replace(/^\/+|\/+$/g,'').length>0;      // deep link (/work/…, /cv, /holonet) — skip the gate, land straight in context
       var _reducedMotion=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -9624,7 +9624,7 @@ f 2469//2469 2470//2470 2434//2434
     var mwMono=null, mwQuad=null, mwTex=null, mwState='idle';
     var mwMount=new THREE.Group(); galaxy.add(mwMount);
     function setSiteVisible(v){ galaxy.children.forEach(function(c){ if(c!==starPoints && c!==mwMount) c.visible=v; }); }
-    var MW_ENTRY_Y=1.9, MW_DOCK_Y=-0.12, MW_ENTRY_MUL=0.95, MW_DOCK_MUL=0.62;   // fallback defaults — live values come from params.mwEntryMul/mwDockY (debug panel), these are only used if those are unset
+    var MW_ENTRY_Y=1.9, MW_DOCK_Y=-0.40, MW_ENTRY_MUL=0.95, MW_DOCK_MUL=0.62;   // fallback defaults — live values come from params.mwEntryMul/mwDockY (debug panel), these are only used if those are unset
     var _mwQ=new THREE.Matrix4(), mwPoseSet=false;   // the studio's saved pose, as seen from the home camera
     var mwTiltQ=new THREE.Quaternion(), _mwDockStartQ=new THREE.Quaternion(), _mwIdentQ=new THREE.Quaternion();   // tilt-on-a-corner (entry) → identity/flat+grid-aligned (docked)
     var _mwM=new THREE.Matrix4(), _mwInv=new THREE.Matrix4(), _mwS=new THREE.Matrix4();
@@ -9638,37 +9638,42 @@ f 2469//2469 2470//2470 2434//2434
     var BOOT_T0=null, BOOT_DONE=(mwPhase!=='entry');
     var bootLogoGate=BOOT_DONE, bootPlanetGate=null, bootPlanetVal=null, bootGridVal=BOOT_DONE?1:0;   // bootPlanetVal/bootGridVal: continuous 0..1, drive the matching label flicker-in (planets, zones)
     var FLICK_TICKS=9;
-    function bootGap(){ return params.bootGap!=null?params.bootGap:0.28; }
-    function bootStageDur(){ return params.bootStageDur!=null?params.bootStageDur:0.35; }
+    function bootGap(){ return params.bootGap!=null?params.bootGap:0.14; }
+    function bootStageDur(){ return params.bootStageDur!=null?params.bootStageDur:0.21; }
     function bootPlanetStagger(){ return params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03; }
-    function bootFlickAmt(u){   // u: 0..1 progress through a stage's window → jittery on-ness, settles at 1
+    function bootFlickAmt(u,ticks){   // u: 0..1 progress through a stage's window → jittery on-ness, settles at 1
+      ticks=ticks||FLICK_TICKS;
       if(u<=0) return 0; if(u>=1) return 1;
-      var tick=Math.floor(u*FLICK_TICKS); var h=Math.sin(tick*12.9898+4.1414)*43758.5453; h-=Math.floor(h);
-      var onProb=0.22+0.7*(tick/FLICK_TICKS), ramp=Math.min(1,u*1.15);
+      var tick=Math.floor(u*ticks); var h=Math.sin(tick*12.9898+4.1414)*43758.5453; h-=Math.floor(h);
+      var onProb=0.22+0.7*(tick/ticks), ramp=Math.min(1,u*1.15);
       return (h<onProb)?ramp:ramp*0.1;
     }
     function bootWinVal(delay){ if(BOOT_T0==null) return 1; return bootFlickAmt((clock.getElapsedTime()-BOOT_T0-delay)/bootStageDur()); }
     function updateBootReveal(){
       if(BOOT_T0==null || BOOT_DONE) return;
       var g=bootGap();
-      var vBeam=bootWinVal(1*g), vRing=bootWinVal(2*g), vHead=bootWinVal(3*g), vGrid=bootWinVal(4*g);
+      var vBeam=bootWinVal(1*g), vRing=bootWinVal(2*g), vHead=bootWinVal(3*g);
       beam.visible=vBeam>0.3;
       // Respect a saved "hide this ring" choice (marquee editor, copyOvr) throughout the cascade —
       // otherwise the ring pops back visible the instant the cascade finishes, clobbering it.
       ringEn.visible=(vRing>0.3) && !copyOvr['ringEnHidden'];
       ringAur.visible=(vRing>0.3) && !copyOvr['ringAurHidden'];
       bootLogoGate=vHead>0.3;
-      // The grid is one big surface — a plain on/off toggle like the planets get reads as a single
-      // full-screen strobe, not a flicker. Ride the same jittery curve as a continuous OPACITY jitter
-      // instead (applied after the generic fadables pass already ran this frame, so this wins), so it
-      // reads as staticky/flickering rather than one hard blink.
+      // The grid is one big surface — a single short on/off blip (the same window every other stage
+      // gets) reads as one pop, not a flicker; there's nothing else on screen at that scale to make it
+      // read as "flickering" the way several small staggered planets do. Give it its own longer window
+      // with more ticks so it visibly stutters on several times before settling — a fluorescent tube
+      // powering up, not a light switch — and hold planets back until that settles.
+      var gridDelay=4*g, gridDur=bootStageDur()*3, gridTicks=FLICK_TICKS*2;
+      var vGrid=bootFlickAmt((clock.getElapsedTime()-BOOT_T0-gridDelay)/gridDur, gridTicks);
       studPlane.visible=vGrid>0.05;
-      if(vGrid<1) studMatPlane.opacity=studFad.base*vGrid;
+      if(vGrid<1) studMatPlane.opacity=studFad.base*vGrid;   // continuous jitter (applied after the generic fadables pass already ran this frame, so this wins) — reads as staticky/flickering rather than one hard blink
       bootGridVal=vGrid;   // zone labels ride this too (see the ZONES label-opacity line) — same premature-visibility bug the planet labels had
       ZONES.forEach(function(z){ z.mesh.visible=vGrid>0.3; });
       if(!bootPlanetGate){ bootPlanetGate=planets.map(function(){ return false; }); bootPlanetVal=planets.map(function(){ return 0; }); }
       var allDone=(vBeam>=1 && vRing>=1 && vHead>=1 && vGrid>=1);
-      planets.forEach(function(p,i){ var v=bootWinVal(5*g+i*bootPlanetStagger()); bootPlanetGate[i]=v>0.3; bootPlanetVal[i]=v; if(v<1) allDone=false; });
+      var planetsDelay=gridDelay+gridDur;   // start right after the grid's own extended flicker settles
+      planets.forEach(function(p,i){ var v=bootWinVal(planetsDelay+i*bootPlanetStagger()); bootPlanetGate[i]=v>0.3; bootPlanetVal[i]=v; if(v<1) allDone=false; });
       if(allDone){
         BOOT_DONE=true; setSiteVisible(true);   // catch-all for anything not explicitly staged above
         ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];   // ...except don't let that catch-all override a saved ring-hide choice
@@ -9701,7 +9706,10 @@ f 2469//2469 2470//2470 2434//2434
     var mwHoloMat=null, mwHoloPer=null;
     function ensureMwHoloMat(){
       if(mwHoloMat || !mwTex) return;
-      mwHoloPer={ map:{value:mwTex}, baseColor:{value:new THREE.Color(DARK.line)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, opBase:{value:0} };
+      // glitch:{value:0} here is deliberate — it overrides the shared SHU.glitch reference (Object.assign
+      // below takes SHU first, this object second, so its keys win) so the global "Glitch bands" toggle
+      // never puts a glitch band on the monogram; it's isolated from that effect entirely.
+      mwHoloPer={ map:{value:mwTex}, baseColor:{value:new THREE.Color(DARK.line)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, opBase:{value:0}, glitch:{value:0} };
       var uniforms=Object.assign({},SHU,mwHoloPer);
       mwHoloMat=new THREE.ShaderMaterial({ uniforms:uniforms, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:RING_HOLO_VERT, fragmentShader:MWHOLO_FRAG });
       mwHoloMat.__per=mwHoloPer; holoMats.push({mat:mwHoloMat,per:mwHoloPer,role:'mwEmitter'});
@@ -13210,15 +13218,15 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.12,dockDur:1.1,bootGap:0.28,bootStageDur:0.35,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,beamDropoff:2.5,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:1.0,bootGap:0.14,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,beamDropoff:2.5,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
       setCtl('cMwEntryMul','vMwEntryMul',(params.mwEntryMul!=null?params.mwEntryMul:0.95).toFixed(2));
-      setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.12).toFixed(2));
-      setCtl('cDockDur','vDockDur',(params.dockDur!=null?params.dockDur:1.1).toFixed(2));
-      setCtl('cBootGap','vBootGap',(params.bootGap!=null?params.bootGap:0.28).toFixed(2));
-      setCtl('cBootStageDur','vBootStageDur',(params.bootStageDur!=null?params.bootStageDur:0.35).toFixed(2));
+      setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.40).toFixed(2));
+      setCtl('cDockDur','vDockDur',(params.dockDur!=null?params.dockDur:1.0).toFixed(2));
+      setCtl('cBootGap','vBootGap',(params.bootGap!=null?params.bootGap:0.14).toFixed(2));
+      setCtl('cBootStageDur','vBootStageDur',(params.bootStageDur!=null?params.bootStageDur:0.21).toFixed(2));
       setCtl('cBootPlanetStagger','vBootPlanetStagger',(params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03).toFixed(3));
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
       setCtl('cStarSize','vStarSize',params.starSize.toFixed(2)); setCtl('cSpin','vSpin',params.spin.toFixed(1));
