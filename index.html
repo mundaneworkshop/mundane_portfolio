@@ -1222,6 +1222,7 @@
       <div class="menudiv"></div>
       <div class="ctl"><label>Zone edge steps <b id="vZone">8</b></label><input type="range" id="cZone" min="3" max="16" step="1" value="8"></div>
       <div class="ctl"><label>Beam intensity <b id="vBeam">0.13</b></label><input type="range" id="cBeam" min="0" max="0.2" step="0.01" value="0.13"></div>
+      <div class="ctl"><label>Beam dropoff <b id="vBeamDropoff">2.50</b></label><input type="range" id="cBeamDropoff" min="0" max="8" step="0.1" value="2.50"></div>
       <div class="menudiv"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cAuto" checked> Auto-rotate</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cInvert" checked> Invert drag up/down</label></div>
@@ -1869,7 +1870,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.12, dockDur:1.1, bootGap:0.28, bootStageDur:0.35, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beam:0.13, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.12, dockDur:1.1, bootGap:0.28, bootStageDur:0.35, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beam:0.13, beamDropoff:2.5, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
     renderer.setPixelRatio(1); renderer.setSize(W,H);
@@ -1937,7 +1938,7 @@
       '  float fr=pow(1.0-abs(dot(V,N)),fresnelPow);',
       '  float scan=pow(sin(vWY*14.0-time*1.6)*0.5+0.5,2.4)*scanIntensity+0.06;',
       '  float flk=sin(time*29.3)*0.035+sin(time*13.1)*0.025+1.0;',
-      '  float band=glitch*smoothstep(0.05,0.0,abs(vWY-mod(time*0.25,8.0)+4.0))*0.65;',
+      '  float band=glitch*smoothstep(0.3,0.0,abs(vWY-mod(time*0.25,8.0)+4.0))*0.65;',   // widened from 0.05: at that width the toggle's effect was practically imperceptible
       '  float a=(fr*0.85+scan*0.55+band)*opBase*flk;',
       '  vec3 col=mix(baseColor,hotColor,fr+band)*(0.75+scan*0.9+band);',
       '  gl_FragColor=vec4(col,clamp(a,0.0,1.0));',
@@ -1967,7 +1968,7 @@
       '  float fr=pow(1.0-abs(dot(V,N)),fresnelPow);',
       '  float scan=pow(sin(vWY*14.0-time*1.6)*0.5+0.5,2.4)*scanIntensity+0.06;',
       '  float flk=sin(time*29.3)*0.035+sin(time*13.1)*0.025+1.0;',
-      '  float band=glitch*smoothstep(0.05,0.0,abs(vWY-mod(time*0.25,8.0)+4.0))*0.65;',
+      '  float band=glitch*smoothstep(0.3,0.0,abs(vWY-mod(time*0.25,8.0)+4.0))*0.65;',   // widened from 0.05: at that width the toggle's effect was practically imperceptible
       '  vec3 col=mix(baseColor,hotColor,fr+band)*(0.75+scan*0.9+band);',
       '  float a=texA*(0.5+fr*0.85+scan*0.55+band)*opBase*flk;',
       '  gl_FragColor=vec4(col,clamp(a,0.0,1.0));',
@@ -9590,7 +9591,7 @@ f 2469//2469 2470//2470 2434//2434
         '  float fr=pow(1.0-abs(dot(V,N)),fresnelPow);',
         '  float scan=pow(sin(vY*22.0-time*1.4)*0.5+0.5,2.2)*scanIntensity+0.06;',
         '  float flk=sin(time*31.7)*0.04+sin(time*11.3)*0.03+1.0;',
-        '  float band=glitch*smoothstep(0.06,0.0,abs(vY-mod(time*0.22,2.0)+1.0))*0.7;',
+        '  float band=glitch*smoothstep(0.3,0.0,abs(vY-mod(time*0.22,2.0)+1.0))*0.7;',   // widened from 0.06: at that width the toggle's effect was practically imperceptible
         '  float a=(fr*0.8+scan*0.5+band)*opacity*flk;',
         '  vec3 col=mix(holoColor,holoHot,fr+band)*(0.8+scan*0.9+band);',
         '  gl_FragColor=vec4(col,clamp(a,0.0,1.0));',
@@ -9635,7 +9636,7 @@ f 2469//2469 2470//2470 2434//2434
     // smooth fade — so it reads as a hologram stuttering on rather than a cross-dissolve. Timing
     // (params.dockDur/bootGap/bootStageDur/bootPlanetStagger) is live-tunable in the debug panel.
     var BOOT_T0=null, BOOT_DONE=(mwPhase!=='entry');
-    var bootLogoGate=BOOT_DONE, bootPlanetGate=null, bootPlanetVal=null;   // bootPlanetVal: continuous 0..1, drives the matching label flicker-in
+    var bootLogoGate=BOOT_DONE, bootPlanetGate=null, bootPlanetVal=null, bootGridVal=BOOT_DONE?1:0;   // bootPlanetVal/bootGridVal: continuous 0..1, drive the matching label flicker-in (planets, zones)
     var FLICK_TICKS=9;
     function bootGap(){ return params.bootGap!=null?params.bootGap:0.28; }
     function bootStageDur(){ return params.bootStageDur!=null?params.bootStageDur:0.35; }
@@ -9652,14 +9653,27 @@ f 2469//2469 2470//2470 2434//2434
       var g=bootGap();
       var vBeam=bootWinVal(1*g), vRing=bootWinVal(2*g), vHead=bootWinVal(3*g), vGrid=bootWinVal(4*g);
       beam.visible=vBeam>0.3;
-      ringEn.visible=ringAur.visible=vRing>0.3;
+      // Respect a saved "hide this ring" choice (marquee editor, copyOvr) throughout the cascade —
+      // otherwise the ring pops back visible the instant the cascade finishes, clobbering it.
+      ringEn.visible=(vRing>0.3) && !copyOvr['ringEnHidden'];
+      ringAur.visible=(vRing>0.3) && !copyOvr['ringAurHidden'];
       bootLogoGate=vHead>0.3;
-      studPlane.visible=vGrid>0.3;
+      // The grid is one big surface — a plain on/off toggle like the planets get reads as a single
+      // full-screen strobe, not a flicker. Ride the same jittery curve as a continuous OPACITY jitter
+      // instead (applied after the generic fadables pass already ran this frame, so this wins), so it
+      // reads as staticky/flickering rather than one hard blink.
+      studPlane.visible=vGrid>0.05;
+      if(vGrid<1) studMatPlane.opacity=studFad.base*vGrid;
+      bootGridVal=vGrid;   // zone labels ride this too (see the ZONES label-opacity line) — same premature-visibility bug the planet labels had
       ZONES.forEach(function(z){ z.mesh.visible=vGrid>0.3; });
       if(!bootPlanetGate){ bootPlanetGate=planets.map(function(){ return false; }); bootPlanetVal=planets.map(function(){ return 0; }); }
       var allDone=(vBeam>=1 && vRing>=1 && vHead>=1 && vGrid>=1);
       planets.forEach(function(p,i){ var v=bootWinVal(5*g+i*bootPlanetStagger()); bootPlanetGate[i]=v>0.3; bootPlanetVal[i]=v; if(v<1) allDone=false; });
-      if(allDone){ BOOT_DONE=true; setSiteVisible(true); bootLogoGate=true; bootPlanetGate=bootPlanetGate.map(function(){ return true; }); bootPlanetVal=bootPlanetVal.map(function(){ return 1; }); }
+      if(allDone){
+        BOOT_DONE=true; setSiteVisible(true);   // catch-all for anything not explicitly staged above
+        ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];   // ...except don't let that catch-all override a saved ring-hide choice
+        bootLogoGate=true; bootGridVal=1; bootPlanetGate=bootPlanetGate.map(function(){ return true; }); bootPlanetVal=bootPlanetVal.map(function(){ return 1; });
+      }
     }
 
     // Docked emitter: swap the baked studio-metal render for a holographic treatment (matches the rest
@@ -9722,7 +9736,10 @@ f 2469//2469 2470//2470 2434//2434
       mwPhase='docking'; mwDockStart=clock.getElapsedTime();
       _mwDockStartQ.copy(logo.quaternion).multiply(mwTiltQ);   // freeze the current spin+tilt — slerp source down to flat/grid-aligned
       camElev=0; camZoom=1; manualRot=0;   // settle the camera pull-back onto a clean home framing
-      document.body.classList.remove('mw-entrygate');
+      // NOTE: 'mw-entrygate' is removed once docking actually COMPLETES (see mwUpdate's mwDockT>=1
+      // branch), not here at click time — it used to be removed here, which let #labels/#msgStars/
+      // #msgCanvas/#menu/#hint (all CSS-gated by that class, with no cascade timing of their own) pop
+      // in instantly while the monogram was still mid-descent, before anything else had even started.
     }
     // Per frame, before the scene renders into rt.
     function mwUpdate(fadeK){
@@ -9730,7 +9747,7 @@ f 2469//2469 2470//2470 2434//2434
       if(on && mwState==='idle') mwLoad();
       if(mwPhase==='docking'){
         mwDockT=Math.min(1,(clock.getElapsedTime()-mwDockStart)/(params.dockDur!=null?params.dockDur:DOCK_DUR));
-        if(mwDockT>=1){ mwPhase='docked'; BOOT_T0=clock.getElapsedTime(); }
+        if(mwDockT>=1){ mwPhase='docked'; BOOT_T0=clock.getElapsedTime(); document.body.classList.remove('mw-entrygate'); }
       }
       var docked=(mwPhase==='docked');
       var ease=mwDockT<1?(mwDockT*mwDockT*(3-2*mwDockT)):1;   // smoothstep
@@ -9805,8 +9822,39 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     // ---------- emitter on plate + beam ----------
-    var beamHoloPer={ baseColor:{value:new THREE.Color(DARK.beam)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, opBase:{value:params.beam} };
-    var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:HOLO_VERT, fragmentShader:HOLO_FRAG });
+    // Dedicated beam shaders (not the shared HOLO_VERT/FRAG planets/moons/rings use) — same holo
+    // formula, plus a vertical gradient (vLocalY: 0 at the cone's narrow "source" end near the
+    // emitter, 1 at its wide far end) so the beam reads as a hologram actually being projected —
+    // very bright at the source, falling off quickly going up — instead of a flat glow tube.
+    // vLocalY is coupled to this cone's own geometry height (4.0, centered at local Y=0) below.
+    var BEAM_VERT=[
+      'varying vec3 vN; varying vec3 vV; varying float vWY; varying float vLocalY;',
+      'void main(){',
+      '  vN=normalize(normalMatrix*normal);',
+      '  vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz;',
+      '  vWY=(modelMatrix*vec4(position,1.0)).y;',
+      '  vLocalY=clamp((position.y+2.0)/4.0,0.0,1.0);',
+      '  gl_Position=projectionMatrix*mv;',
+      '}'
+    ].join('\n');
+    var BEAM_FRAG=[
+      'uniform float time; uniform float scanIntensity; uniform float fresnelPow; uniform float glitch;',
+      'uniform vec3 baseColor; uniform vec3 hotColor; uniform float opBase; uniform float beamDropoff;',
+      'varying vec3 vN; varying vec3 vV; varying float vWY; varying float vLocalY;',
+      'void main(){',
+      '  vec3 N=normalize(vN); vec3 V=normalize(vV);',
+      '  float fr=pow(1.0-abs(dot(V,N)),fresnelPow);',
+      '  float scan=pow(sin(vWY*14.0-time*1.6)*0.5+0.5,2.4)*scanIntensity+0.06;',
+      '  float flk=sin(time*29.3)*0.035+sin(time*13.1)*0.025+1.0;',
+      '  float band=glitch*smoothstep(0.3,0.0,abs(vWY-mod(time*0.25,8.0)+4.0))*0.65;',   // widened from 0.05: at that width the toggle's effect was practically imperceptible
+      '  float drop=exp(-vLocalY*beamDropoff);',
+      '  float a=(fr*0.85+scan*0.55+band)*opBase*flk*drop;',
+      '  vec3 col=mix(baseColor,hotColor,fr+band)*(0.75+scan*0.9+band);',
+      '  gl_FragColor=vec4(col,clamp(a,0.0,1.0));',
+      '}'
+    ].join('\n');
+    var beamHoloPer={ baseColor:{value:new THREE.Color(DARK.beam)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, opBase:{value:params.beam}, beamDropoff:{value:params.beamDropoff!=null?params.beamDropoff:2.5} };
+    var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG });
     holoMats.push({mat:beamMat,per:beamHoloPer,role:'beam'}); // no push to beamMats; theme handled via holoMats
     var beam=new THREE.Mesh(new THREE.CylinderGeometry(2.3,0.18,4.0,28,1,true),beamMat); beam.position.y=2.0; galaxy.add(beam);
     var emMat=new THREE.MeshBasicMaterial({color:DARK.line,transparent:true,opacity:0.6}); lineMats.push(emMat); fadables.push({mat:emMat,base:0.6,owner:null});
@@ -11526,6 +11574,7 @@ f 2469//2469 2470//2470 2434//2434
     bind('cStud','vStud',function(v){ params.studSize=v; drawStuds(); },2);
     bind('cGap','vGap',function(v){ params.studGap=v; drawStuds(); },2);
     bind('cBeam','vBeam',function(v){ params.beam=v; beamHoloPer.opBase.value=v; },2);
+    bind('cBeamDropoff','vBeamDropoff',function(v){ params.beamDropoff=v; beamHoloPer.beamDropoff.value=v; },2);
     function applySpread(){ planets.forEach(function(p){ var hp=spotPos(p.userData.spot); p.userData.homePos.copy(hp); if(focused!==p) p.userData.posTarget.copy(hp); }); }
     // Debug: re-roll every planet's spot within its OWN radial zone (keeps zone membership, shuffles placement).
     // Re-scatter planets with breathing room: even angular slots per zone + staggered inner/outer rings +
@@ -13161,7 +13210,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.12,dockDur:1.1,bootGap:0.28,bootStageDur:0.35,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.12,dockDur:1.1,bootGap:0.28,bootStageDur:0.35,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beam:0.13,beamDropoff:2.5,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
@@ -13173,10 +13222,10 @@ f 2469//2469 2470//2470 2434//2434
       setCtl('cBootPlanetStagger','vBootPlanetStagger',(params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03).toFixed(3));
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
       setCtl('cStarSize','vStarSize',params.starSize.toFixed(2)); setCtl('cSpin','vSpin',params.spin.toFixed(1));
-      setCtl('cStud','vStud',params.studSize.toFixed(2)); setCtl('cGap','vGap',params.studGap.toFixed(2)); setCtl('cBeam','vBeam',params.beam.toFixed(2));
+      setCtl('cStud','vStud',params.studSize.toFixed(2)); setCtl('cGap','vGap',params.studGap.toFixed(2)); setCtl('cBeam','vBeam',params.beam.toFixed(2)); setCtl('cBeamDropoff','vBeamDropoff',(params.beamDropoff!=null?params.beamDropoff:2.5).toFixed(2));
       setCtl('cGrid','vGrid',params.gridOpacity.toFixed(2)); setCtl('cSpread','vSpread',params.planetSpread.toFixed(1)); setCtl('cObjScale','vObjScale',(params.objScale!=null?params.objScale:1).toFixed(2)); setCtl('cMoonSpd','vMoonSpd',params.moonSpeed.toFixed(1)); setCtl('cMoonDist','vMoonDist',(params.moonDist!=null?params.moonDist:1).toFixed(2)); setCtl('cMoonScale','vMoonScale',(params.moonScale!=null?params.moonScale:1).toFixed(2)); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); setCtl('cZone','vZone',params.zoneSteps);
       rt.setSize(Math.floor(W/params.pixel),Math.floor(H/params.pixel)); postMat.uniforms.levels.value=params.levels;
-      rebuildZones(); buildStars(); drawStuds(); beamHoloPer.opBase.value=params.beam; studFad.base=params.gridOpacity; applySpread();
+      rebuildZones(); buildStars(); drawStuds(); beamHoloPer.opBase.value=params.beam; beamHoloPer.beamDropoff.value=(params.beamDropoff!=null?params.beamDropoff:2.5); studFad.base=params.gridOpacity; applySpread();
       setCtl('cMbAlpha','vMbAlpha',(params.mbAlpha!=null?params.mbAlpha:0.88).toFixed(2));
       if(typeof applyManualFx==='function') applyManualFx();
       document.getElementById('cWheel').checked=params.wheelInvert;
@@ -13401,13 +13450,13 @@ f 2469//2469 2470//2470 2434//2434
         var oh=occRay.intersectObjects(occluders,false), occluded=false;
         if(oh.length){ var fg=oh[0].object.parent; if(oh[0].object!==p.userData.hitProxy && fg!==p && oh[0].distance<dist-0.15) occluded=true; }
         p.userData.label.style.zIndex=Math.round(200000-dist*1000);   // closer object → label on top
-        var bootLbl=bootPlanetVal?bootPlanetVal[pi]:1;   // cascade the label in alongside its planet, not ahead of it
+        var bootLbl=bootPlanetVal?bootPlanetVal[pi]:(BOOT_DONE?1:0);   // cascade the label in alongside its planet, not ahead of it (and not before the cascade has even started)
         p.userData.label.style.opacity=(focused?0:((s.vis&&!occluded)?bootLbl:0));   // MERGE: hide planet label in focus (info is in the manual)
         if(p.userData.moonGrp.visible){ p.userData.moons.forEach(function(m){ if(m.userData.label) m.userData.label.style.opacity=0; }); } });   // artifact labels are hidden entirely (per request) — clicking the moon still focuses it
       ZONES.forEach(function(z){ var s=projLocal(z.anchor); z.label.style.left=s.x+'px'; z.label.style.top=s.y+'px';
         var zOcc=false;
         if(s.vis && !focused && _logoOccMeshes.length){ var zw=z.anchor.clone(); galaxy.localToWorld(zw); var zd=zw.clone().sub(camera.position),zdist=zd.length(); zd.normalize(); occRay.set(camera.position,zd); var zh=occRay.intersectObjects(_logoOccMeshes,false); if(zh.length&&zh[0].distance<zdist-0.1) zOcc=true; }
-        z.label.style.opacity=(focused?0:(s.vis&&!zOcc?1:0)); });
+        z.label.style.opacity=(focused?0:(s.vis&&!zOcc?bootGridVal:0)); });   // cascade with the grid, not ahead of it
       var lw=new THREE.Vector3(); logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
 
       mwUpdate(focused?fade:1);
