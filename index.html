@@ -9905,7 +9905,7 @@ f 2469//2469 2470//2470 2434//2434
       '}'
     ].join('\n');
     var beamHoloPer={ baseColor:{value:new THREE.Color(DARK.beam)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, beamBottom:{value:params.beamBottom!=null?params.beamBottom:0.80}, beamTop:{value:params.beamTop!=null?params.beamTop:0.20}, beamCurve:{value:params.beamCurve!=null?params.beamCurve:0.4} };
-    var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG });
+    var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.FrontSide, vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG });
     holoMats.push({mat:beamMat,per:beamHoloPer,role:'beam'}); // no push to beamMats; theme handled via holoMats
     var beam=new THREE.Mesh(new THREE.CylinderGeometry(2.3,0.18,4.0,28,1,true),beamMat); beam.position.y=2.0; galaxy.add(beam);
     var emMat=new THREE.MeshBasicMaterial({color:DARK.line,transparent:true,opacity:0.6}); lineMats.push(emMat); fadables.push({mat:emMat,base:0.6,owner:null});
@@ -10157,6 +10157,12 @@ f 2469//2469 2470//2470 2434//2434
     }
     function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); z.label.classList.toggle('on',z.id===id); }); }
     renderer.domElement.addEventListener('pointermove',function(){
+      if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
+        var overMono=false;
+        if(mwPhase==='entry' && mwQuad && mwQuad.visible){ ray.setFromCamera(mouse,camera); overMono=ray.intersectObject(mwQuad,false).length>0; }
+        if(renderer&&renderer.domElement) renderer.domElement.style.cursor=overMono?'pointer':'default';
+        return;
+      }
       if(focused && !editMode && !document.body.classList.contains('mw-altfocus')){
         // kit box face hover: raycast against the hit mesh only
         var hit=focused.userData.hit;
