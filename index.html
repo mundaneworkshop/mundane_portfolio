@@ -1824,52 +1824,34 @@
     // through a serverless function with the secret key, reads happen straight from the client, RLS
     // restricts this key to SELECT-only) — supabase-js is already loaded in <head> before this IIFE runs.
     //
-    // Merge rule: compare the server's newest row against localStorage['bric_copy_syncedAt'] (this
-    // browser's own last successful reconcile-or-save). If the server has changed more recently than
-    // that, the server wins outright — this browser's local copy gets replaced. Only when the server
-    // hasn't changed since our last sync (true on a first-ever migration boot, since the table starts
-    // empty) does local win, and only then do we push it up. This is NOT the same as "admin token present
-    // → local always wins": that would let a second, stale admin browser (e.g. an old phone still
-    // carrying ?admintoken= from months ago) clobber newer edits made from a different device, since it
-    // has no way to know it's the stale one. Comparing against this browser's OWN last-synced timestamp
-    // fixes that — the stale phone's syncedAt is old, so the server (which changed more recently, from
-    // the other device) correctly wins there instead.
+    // ONE-WAY ONLY (fixed 2026-09-29): this used to also push local -> server when it decided the
+    // server "hadn't changed since our last sync" — a timestamp-race heuristic that silently clobbered
+    // newer edits (a stale admin browser, or a direct Supabase edit, reloading at the wrong moment would
+    // overwrite them with its own stale local copy). That's the exact bug elsewhere in this file's
+    // pushContentSave() comment already describes fixing once (search "Server sync is now explicit-only")
+    // — this function just never got the same treatment. The only thing allowed to write to the server
+    // is now the SAVE button. Reconcile only ever pulls, and skips entirely (leaving local alone) when
+    // 'bric_copy_dirty' says this browser has an edit that hasn't been through SAVE yet — see persistCopy()
+    // and pushContentSave() below, which set/clear that flag.
     function reconcileServerContent(){
       return new Promise(function(resolve){
         var TIMEOUT_MS=2200, settled=false;
         function done(){ if(settled) return; settled=true; resolve(); }
         var timer=setTimeout(function(){ console.warn('[mw-seed] content reconcile timed out — continuing with local copy'); done(); },TIMEOUT_MS);
+        var dirty=null; try{ dirty=localStorage.getItem('bric_copy_dirty'); }catch(e){}
+        if(dirty){ clearTimeout(timer); done(); return; }   // unsaved local edit from THIS browser — never overwrite it with a pull
         if(!(window.supabase && window.supabase.createClient)){ clearTimeout(timer); done(); return; }
         var CO_SB_URL='https://ynfkjppwpcnxuvjqmsun.supabase.co', CO_SB_KEY='sb_publishable_F-J3YhAcVl62xre8rW94HQ_QuddWwQF';
         var coSb=window.supabase.createClient(CO_SB_URL,CO_SB_KEY);
-        coSb.from('content_overrides').select('key,value,updated_at').then(function(res){
+        coSb.from('content_overrides').select('key,value').then(function(res){
           clearTimeout(timer); if(settled) return;
           if(res.error){ console.warn('[mw-seed] content reconcile failed',res.error); done(); return; }
           var rows=res.data||[];
-          var serverMax=0;
-          rows.forEach(function(r){ var t=Date.parse(r.updated_at); if(!isNaN(t) && t>serverMax) serverMax=t; });
-          var syncedAtRaw=null; try{ syncedAtRaw=localStorage.getItem('bric_copy_syncedAt'); }catch(e){}
-          var syncedAt=syncedAtRaw?Date.parse(syncedAtRaw):0;
-          var serverChanged = rows.length>0 && (!syncedAtRaw || serverMax>syncedAt);
-          if(serverChanged){
+          if(rows.length){
             var merged={}; rows.forEach(function(r){ merged[r.key]=r.value; });
             if(window.BRICStore) BRICStore.setCopy(merged);
-            try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
-            done();
-          } else {
-            // nothing new server-side since our last sync (or the table is still empty) — this browser's
-            // local copy is authoritative; push it up so the server converges. For the admin's own
-            // browser on first load after this feature ships, this is what silently migrates existing
-            // edits into the server store, with no manual export step.
-            var local=(window.BRICStore&&BRICStore.getCopy)?BRICStore.getCopy():{};
-            var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-            if(token && local && Object.keys(local).length){
-              fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:local})})
-                .then(function(){ try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){} })
-                .catch(function(err){ console.warn('[mw-seed] content push failed',err); });
-            }
-            done();
           }
+          done();
         }).catch(function(err){ clearTimeout(timer); console.warn('[mw-seed] content reconcile failed',err); done(); });
       });
     }
@@ -12441,8 +12423,13 @@ f 2469//2469 2470//2470 2434//2434
     // debounced timer, which is what caused edits to go missing: refresh (or close the tab) within the 800ms
     // debounce window, or while the fetch was still in flight, and the push simply never happened, silently.
     // Server sync is now explicit-only, via the SAVE button (see saveBtn's handler below) — persistCopy() just
-    // marks the in-memory state dirty so the button/banner can say so.
-    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); markContentDirty(); }
+    // marks the in-memory state dirty so the button/banner can say so. It ALSO persists that dirty flag to
+    // localStorage ('bric_copy_dirty') — reconcileServerContent() (pre-boot IIFE, near the top of this file)
+    // reads it BEFORE _csDirty below even exists (that var is redeclared fresh on every boot), so a page
+    // reload right after an edit — e.g. a structural hide/rename's own location.reload() — doesn't get its
+    // unsaved edit immediately overwritten by a pull from the server. Cleared only in pushContentSave()'s
+    // success branch, once the edit has actually reached the server.
+    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); try{ localStorage.setItem('bric_copy_dirty','1'); }catch(e){} markContentDirty(); }
     var _csInFlight=false, _csDirty=false, _csLastFailMsg=null;
     var _editBannerDefaultText='✎ edit mode — click an object to select · edit it in the panel';
     function markContentDirty(){ _csDirty=true; updateSaveBtnState(); updateSyncBanner(); }
@@ -12488,7 +12475,7 @@ f 2469//2469 2470//2470 2434//2434
         .then(function(res){
           if(!res.ok){ _csLastFailMsg=(res.body&&res.body.error)||'try again'; return {ok:false,reason:_csLastFailMsg}; }
           _csLastFailMsg=null; _csDirty=false;
-          try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
+          try{ localStorage.removeItem('bric_copy_dirty'); }catch(e){}   // reached the server — reconcile can pull again on the next boot
           return {ok:true};
         })
         .catch(function(e){ _csLastFailMsg=e.message; return {ok:false,reason:e.message}; })
