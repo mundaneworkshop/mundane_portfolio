@@ -114,6 +114,12 @@
      (<768px) where 3D drag-orbit is less reliable; hidden ≥768px. See HANDOFF: RESPONSIVE below. */
   #menu{position:absolute;top:62px;right:22px;z-index:20;width:238px;background:var(--panel);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:0;padding:15px 14px}
   @media (min-width:768px){ #menu{ display:none; } }
+  /* The zone/planet list's hide-show-rename controls (✕/⤺ per row, add-zone) only live in this
+     menu — the mesh-select edit panel is texture/mesh only. Hiding it ≥768px (above) accidentally
+     took those controls away from desktop Edit Mode too, with nothing to replace them. Force it
+     back on whenever editing, regardless of width; body.mw-casestudy/body.edit-focus below still
+     win (same specificity, later in source) since the zone list isn't relevant inside a focused view. */
+  body.editing #menu{ display:block; }
   #menu h2{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo);margin-bottom:11px;display:flex;justify-content:space-between}
   #menu .grp{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:11px 0 6px;font-family:var(--display)}
   .navbtn{display:flex;align-items:center;justify-content:space-between;width:100%;font-family:var(--grotesk);font-weight:500;font-size:12px;letter-spacing:.5px;text-align:left;color:var(--amber);background:transparent;border:none;padding:9px 12px;margin-bottom:5px;cursor:pointer;transition:background .16s,color .16s;text-transform:uppercase;
@@ -149,7 +155,7 @@
 
   /* ── LABELS ── */
   #labels{position:absolute;inset:0;z-index:10;pointer-events:none}
-  .plabel{position:absolute;transform:translate(-50%,-150%);font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;color:var(--holo);transition:opacity .25s}
+  .plabel{position:absolute;transform:translate(-50%,-150%);font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-align:center;white-space:nowrap;color:var(--holo);transition:opacity .25s}
   .plabel.amber,.plabel.locked{transform:translate(-50%,6px);background:var(--panel);padding:4px 11px;
     clip-path:var(--clip-step);}
   .plabel.amber{color:var(--amber-hot)}
@@ -165,6 +171,41 @@
   .plabel.hot small{opacity:.9}
   .zlabel{position:absolute;transform:translate(-50%,-50%);font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:3px;text-transform:uppercase;white-space:nowrap;color:var(--line-dim);transition:.25s;pointer-events:none}
   .zlabel.on{color:var(--holo)}
+  /* Uncharted-territory zone label: a corrupted-signal glitch on hover (zlabel.on), instead of
+     the plain brighten every other zone label gets — RGB-split copies (::before/::after, driven
+     by data-text since pseudo-content can't read the div's own textContent) jitter and clip in
+     short bursts against a mostly-still base line. */
+  .zlabel-uncharted.on{animation:zg-jitter 2.6s infinite steps(1)}
+  .zlabel-uncharted.on::before,.zlabel-uncharted.on::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%}
+  .zlabel-uncharted.on::before{color:var(--amber,#E9A73E);animation:zg-slice-r 2.6s infinite steps(1)}
+  .zlabel-uncharted.on::after{color:var(--holo,#5ABFB8);animation:zg-slice-b 2.6s infinite steps(1)}
+  @keyframes zg-jitter{
+    0%,7%,100%{transform:translate(-50%,-50%);opacity:1}
+    8%{transform:translate(calc(-50% - 3px),-50%);opacity:.7}
+    9%{transform:translate(calc(-50% + 2px),-50%);opacity:1}
+    9.5%,34%{transform:translate(-50%,-50%)}
+    35%{transform:translate(calc(-50% - 4px),-50%);opacity:.5}
+    36%{transform:translate(calc(-50% + 3px),-50%);opacity:1}
+    37%,62%{transform:translate(-50%,-50%)}
+    63%{transform:translate(calc(-50% - 2px),-50%);opacity:.6}
+    64%{transform:translate(-50%,-50%);opacity:1}
+  }
+  @keyframes zg-slice-r{
+    0%,7%,9.5%,34%,37%,62%,64%,100%{clip-path:inset(0 0 0 0);transform:translate(0,0)}
+    8%{clip-path:inset(20% 0 40% 0);transform:translate(3px,0)}
+    9%{clip-path:inset(60% 0 10% 0);transform:translate(-2px,0)}
+    35%{clip-path:inset(10% 0 65% 0);transform:translate(-4px,0)}
+    36%{clip-path:inset(0 0 0 0)}
+    63%{clip-path:inset(45% 0 15% 0);transform:translate(2px,0)}
+  }
+  @keyframes zg-slice-b{
+    0%,7%,9.5%,34%,37%,62%,64%,100%{clip-path:inset(0 0 0 0);transform:translate(0,0)}
+    8%{clip-path:inset(55% 0 5% 0);transform:translate(-3px,0)}
+    9%{clip-path:inset(15% 0 55% 0);transform:translate(2px,0)}
+    35%{clip-path:inset(60% 0 5% 0);transform:translate(4px,0)}
+    36%{clip-path:inset(0 0 0 0)}
+    63%{clip-path:inset(5% 0 50% 0);transform:translate(-2px,0)}
+  }
 
   /* ── CASE PANEL ── */
   #casepanel{position:absolute;top:0;left:0;bottom:0;z-index:25;width:340px;max-width:78vw;background:var(--panel);backdrop-filter:blur(10px);border-right:1px solid var(--border);padding:78px 26px 26px;transform:translateX(-110%);transition:transform .5s cubic-bezier(.16,1,.3,1)}
@@ -1807,52 +1848,34 @@
     // through a serverless function with the secret key, reads happen straight from the client, RLS
     // restricts this key to SELECT-only) — supabase-js is already loaded in <head> before this IIFE runs.
     //
-    // Merge rule: compare the server's newest row against localStorage['bric_copy_syncedAt'] (this
-    // browser's own last successful reconcile-or-save). If the server has changed more recently than
-    // that, the server wins outright — this browser's local copy gets replaced. Only when the server
-    // hasn't changed since our last sync (true on a first-ever migration boot, since the table starts
-    // empty) does local win, and only then do we push it up. This is NOT the same as "admin token present
-    // → local always wins": that would let a second, stale admin browser (e.g. an old phone still
-    // carrying ?admintoken= from months ago) clobber newer edits made from a different device, since it
-    // has no way to know it's the stale one. Comparing against this browser's OWN last-synced timestamp
-    // fixes that — the stale phone's syncedAt is old, so the server (which changed more recently, from
-    // the other device) correctly wins there instead.
+    // ONE-WAY ONLY (fixed 2026-09-29): this used to also push local -> server when it decided the
+    // server "hadn't changed since our last sync" — a timestamp-race heuristic that silently clobbered
+    // newer edits (a stale admin browser, or a direct Supabase edit, reloading at the wrong moment would
+    // overwrite them with its own stale local copy). That's the exact bug elsewhere in this file's
+    // pushContentSave() comment already describes fixing once (search "Server sync is now explicit-only")
+    // — this function just never got the same treatment. The only thing allowed to write to the server
+    // is now the SAVE button. Reconcile only ever pulls, and skips entirely (leaving local alone) when
+    // 'bric_copy_dirty' says this browser has an edit that hasn't been through SAVE yet — see persistCopy()
+    // and pushContentSave() below, which set/clear that flag.
     function reconcileServerContent(){
       return new Promise(function(resolve){
         var TIMEOUT_MS=2200, settled=false;
         function done(){ if(settled) return; settled=true; resolve(); }
         var timer=setTimeout(function(){ console.warn('[mw-seed] content reconcile timed out — continuing with local copy'); done(); },TIMEOUT_MS);
+        var dirty=null; try{ dirty=localStorage.getItem('bric_copy_dirty'); }catch(e){}
+        if(dirty){ clearTimeout(timer); done(); return; }   // unsaved local edit from THIS browser — never overwrite it with a pull
         if(!(window.supabase && window.supabase.createClient)){ clearTimeout(timer); done(); return; }
         var CO_SB_URL='https://ynfkjppwpcnxuvjqmsun.supabase.co', CO_SB_KEY='sb_publishable_F-J3YhAcVl62xre8rW94HQ_QuddWwQF';
         var coSb=window.supabase.createClient(CO_SB_URL,CO_SB_KEY);
-        coSb.from('content_overrides').select('key,value,updated_at').then(function(res){
+        coSb.from('content_overrides').select('key,value').then(function(res){
           clearTimeout(timer); if(settled) return;
           if(res.error){ console.warn('[mw-seed] content reconcile failed',res.error); done(); return; }
           var rows=res.data||[];
-          var serverMax=0;
-          rows.forEach(function(r){ var t=Date.parse(r.updated_at); if(!isNaN(t) && t>serverMax) serverMax=t; });
-          var syncedAtRaw=null; try{ syncedAtRaw=localStorage.getItem('bric_copy_syncedAt'); }catch(e){}
-          var syncedAt=syncedAtRaw?Date.parse(syncedAtRaw):0;
-          var serverChanged = rows.length>0 && (!syncedAtRaw || serverMax>syncedAt);
-          if(serverChanged){
+          if(rows.length){
             var merged={}; rows.forEach(function(r){ merged[r.key]=r.value; });
             if(window.BRICStore) BRICStore.setCopy(merged);
-            try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
-            done();
-          } else {
-            // nothing new server-side since our last sync (or the table is still empty) — this browser's
-            // local copy is authoritative; push it up so the server converges. For the admin's own
-            // browser on first load after this feature ships, this is what silently migrates existing
-            // edits into the server store, with no manual export step.
-            var local=(window.BRICStore&&BRICStore.getCopy)?BRICStore.getCopy():{};
-            var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
-            if(token && local && Object.keys(local).length){
-              fetch('/api/content-save',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({entries:local})})
-                .then(function(){ try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){} })
-                .catch(function(err){ console.warn('[mw-seed] content push failed',err); });
-            }
-            done();
           }
+          done();
         }).catch(function(err){ clearTimeout(timer); console.warn('[mw-seed] content reconcile failed',err); done(); });
       });
     }
@@ -2088,10 +2111,10 @@
         {id:'w0',title:'Meta Horizon Worlds',sub:'01 · charted',locked:false,hidden:false},
         {id:'w1',title:'Slate Auto',sub:'02 · charted',locked:false,hidden:false},
         {id:'w2',title:'Josh.ai',sub:'03 · charted',locked:false,hidden:false}]},
-      {id:'play',name:'Playground',kind:'play',hidden:false,planets:[
-        {id:'p0',title:'Minifigure Me',sub:'playground',locked:false,hidden:false},
-        {id:'p1',title:'Gift Guru',sub:'playground',locked:false,hidden:false},
-        {id:'p2',title:'Dinner Decider',sub:'playground',locked:false,hidden:false}]},
+      {id:'play',name:'Uncharted Territory',kind:'play',hidden:false,planets:[
+        {id:'p0',title:'Minifigure Me',sub:'playground',locked:false,hidden:true},
+        {id:'p1',title:'Gift Guru',sub:'playground',locked:false,hidden:true},
+        {id:'p2',title:'Dinner Decider',sub:'playground',locked:false,hidden:true}]},
       {id:'profile',name:'Personal',kind:'util',hidden:false,planets:[
         {id:'cv',title:'CV',sub:'profile',locked:false,hidden:false},
         {id:'contact',title:'Contact',sub:'profile',locked:false,hidden:false}]},
@@ -10003,7 +10026,7 @@ f 2469//2469 2470//2470 2434//2434
     var logoLabel=mkLabelEl('','');
 
     // zone labels
-    ZONES.forEach(function(z){ var d=document.createElement('div'); d.className='zlabel'; d.textContent=z.name; document.getElementById('labels').appendChild(d); z.label=d;
+    ZONES.forEach(function(z){ var d=document.createElement('div'); d.className='zlabel'+(z.kind==='play'?' zlabel-uncharted':''); d.textContent=z.name; if(z.kind==='play') d.setAttribute('data-text',z.name); document.getElementById('labels').appendChild(d); z.label=d;
       z.anchor=new THREE.Vector3(Math.cos(z.center)*(PLATE-1.2),0.05,Math.sin(z.center)*(PLATE-1.2)); });
 
     // ---------- projection ----------
@@ -10177,10 +10200,12 @@ f 2469//2469 2470//2470 2434//2434
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
 
     function activate(ud){
+      // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
+      // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
+      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
       if(ud.id==='cv'){ openCV(ud.id); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ openContact(ud.id); return; }
       if(ud.locked){ openLockedPanel(ud.id); return; }
-      if(ud.kind==='social'){ openCase(ud.id); return; }
       openCase(ud.id); }
     function planetById(id){ return planets.find(function(p){return p.userData.id===id;}); }
 
@@ -12717,8 +12742,13 @@ f 2469//2469 2470//2470 2434//2434
     // debounced timer, which is what caused edits to go missing: refresh (or close the tab) within the 800ms
     // debounce window, or while the fetch was still in flight, and the push simply never happened, silently.
     // Server sync is now explicit-only, via the SAVE button (see saveBtn's handler below) — persistCopy() just
-    // marks the in-memory state dirty so the button/banner can say so.
-    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); markContentDirty(); }
+    // marks the in-memory state dirty so the button/banner can say so. It ALSO persists that dirty flag to
+    // localStorage ('bric_copy_dirty') — reconcileServerContent() (pre-boot IIFE, near the top of this file)
+    // reads it BEFORE _csDirty below even exists (that var is redeclared fresh on every boot), so a page
+    // reload right after an edit — e.g. a structural hide/rename's own location.reload() — doesn't get its
+    // unsaved edit immediately overwritten by a pull from the server. Cleared only in pushContentSave()'s
+    // success branch, once the edit has actually reached the server.
+    function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); try{ localStorage.setItem('bric_copy_dirty','1'); }catch(e){} markContentDirty(); }
     var _csInFlight=false, _csDirty=false, _csLastFailMsg=null;
     var _editBannerDefaultText='✎ edit mode — click an object to select · edit it in the panel';
     function markContentDirty(){ _csDirty=true; updateSaveBtnState(); updateSyncBanner(); }
@@ -12764,7 +12794,7 @@ f 2469//2469 2470//2470 2434//2434
         .then(function(res){
           if(!res.ok){ _csLastFailMsg=(res.body&&res.body.error)||'try again'; return {ok:false,reason:_csLastFailMsg}; }
           _csLastFailMsg=null; _csDirty=false;
-          try{ localStorage.setItem('bric_copy_syncedAt', new Date().toISOString()); }catch(e){}
+          try{ localStorage.removeItem('bric_copy_dirty'); }catch(e){}   // reached the server — reconcile can pull again on the next boot
           return {ok:true};
         })
         .catch(function(e){ _csLastFailMsg=e.message; return {ok:false,reason:e.message}; })
@@ -12891,7 +12921,7 @@ f 2469//2469 2470//2470 2434//2434
       // for every existing project); every other kind (social planets) has always been active, so it stays that way.
       if(c.ctaActive==null) c.ctaActive=(c.kind!=='work')||!!window.CASE_STUDY_CTA_ENABLED;
       if(c.cta==null) c.cta=_soc?(id==='ig'?'OPEN INSTAGRAM ↗':id==='li'?'OPEN LINKEDIN ↗':'OPEN LINK ↗'):(c.ctaActive?'VIEW CASE STUDY →':'Case study coming soon');
-      if(c.ctaUrl==null) c.ctaUrl=_soc?(id==='ig'?'https://instagram.com/':id==='li'?'https://linkedin.com/':'#'):'#';
+      if(c.ctaUrl==null) c.ctaUrl=_soc?(id==='ig'?'https://www.instagram.com/jas0n_0n_a_bike/':id==='li'?'https://www.linkedin.com/in/jason-hsin-00378837/':'#'):'#';
       if(c.ctaHidden==null) c.ctaHidden=false;
       if(!c.marquee) c.marquee=Object.assign({},MARQ_DEF);
     });
@@ -12957,8 +12987,9 @@ f 2469//2469 2470//2470 2434//2434
     (function buildZoneEdit(){
       ZONES.forEach(function(z){ if(!z.label) return;
         var k='zone:'+z.id+':name';
-        if(copyOvr[k]!=null){ z.name=copyOvr[k]; z.label.textContent=copyOvr[k]; }
+        if(copyOvr[k]!=null){ z.name=copyOvr[k]; z.label.textContent=copyOvr[k]; if(z.label.hasAttribute('data-text')) z.label.setAttribute('data-text',copyOvr[k]); }
         z.label.addEventListener('blur',function(){ var v=z.label.textContent.replace(/\s+$/,''); z.name=v; copyOvr[k]=v;
+          if(z.label.hasAttribute('data-text')) z.label.setAttribute('data-text',v);   // keep the glitch pseudo-elements (attr(data-text)) in sync with an edited zone name
           var mz=galaxyModel.filter(function(x){return x.id===z.id;})[0]; if(mz){ mz.name=v; copyOvr['galaxyModel']=galaxyModel; }   // keep menu header in sync
           persistCopy(); if(typeof buildMenu==='function') buildMenu(); });
         z.label.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); z.label.blur(); } });
@@ -14374,11 +14405,17 @@ f 2469//2469 2470//2470 2434//2434
     //
     // Both are optional and both fire on the reduced-motion path too, at the same times, so
     // no caller ever has to branch on the visitor's motion preference.
+    // SHELVED (2026-09-28): the brick cascade is on hold pending further design passes — see
+    // docs/project-history/case-study-direction.md. Flip this back to true to restore it; nothing
+    // else needs to change, since runCascade() below falls back to the reduced-motion scrim
+    // transition (a plain opacity fade, no bricks) whenever it's false, on the same hook timeline.
+    var CASCADE_ENABLED = false;
+
     function runCascade(styleName, hooks) {
       hooks = hooks || {};
       loadCfg();                       // pick up any authored tunables before timing anything
       styleName = CFG.style || styleName;
-      if(prefersReducedMotion()) return runCascadeReduced(hooks);
+      if(!CASCADE_ENABLED || prefersReducedMotion()) return runCascadeReduced(hooks);
       buildCascade(styleName);
       void cascadeEl.offsetWidth;                    // flush layout before animating
       cascadeEl.classList.add('run');
