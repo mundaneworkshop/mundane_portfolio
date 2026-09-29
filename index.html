@@ -114,6 +114,12 @@
      (<768px) where 3D drag-orbit is less reliable; hidden ≥768px. See HANDOFF: RESPONSIVE below. */
   #menu{position:absolute;top:62px;right:22px;z-index:20;width:238px;background:var(--panel);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:0;padding:15px 14px}
   @media (min-width:768px){ #menu{ display:none; } }
+  /* The zone/planet list's hide-show-rename controls (✕/⤺ per row, add-zone) only live in this
+     menu — the mesh-select edit panel is texture/mesh only. Hiding it ≥768px (above) accidentally
+     took those controls away from desktop Edit Mode too, with nothing to replace them. Force it
+     back on whenever editing, regardless of width; body.mw-casestudy/body.edit-focus below still
+     win (same specificity, later in source) since the zone list isn't relevant inside a focused view. */
+  body.editing #menu{ display:block; }
   #menu h2{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo);margin-bottom:11px;display:flex;justify-content:space-between}
   #menu .grp{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:11px 0 6px;font-family:var(--display)}
   .navbtn{display:flex;align-items:center;justify-content:space-between;width:100%;font-family:var(--grotesk);font-weight:500;font-size:12px;letter-spacing:.5px;text-align:left;color:var(--amber);background:transparent;border:none;padding:9px 12px;margin-bottom:5px;cursor:pointer;transition:background .16s,color .16s;text-transform:uppercase;
