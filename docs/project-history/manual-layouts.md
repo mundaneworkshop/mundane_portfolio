@@ -21,6 +21,8 @@ The MW monogram (`mwQuad`, the docked base emitter) stayed visible during projec
 - **Saved camera views:** views saved before this had zoom ≈1.8–2.0 baked in to dodge the old panel. Without `fit:1` they now keep only their yaw/pitch; views saved under stage-fit carry `fit:1` and keep zoom/panY as fine-tuning.
 - Debug → Instruction manual: layout seg, "Fit kit box + moons to the free stage" (off = original fixed-radius framing), Stage fill, Stage max height.
 
+- **Zoom stop:** wheel zoom-in is floored at 55% of the fitted distance (`STAGE_ZOOM_MIN`) and never closer than 0.35 units to the nearest content (`STAGE_NEAR_GAP`); `params.focusZoom` is pulled up to that floor so scrolling back out responds immediately. Without it the camera ended up inside the box, the projection maths blew up and the lens shift (now also clamped to ±1.2 NDC) flung the scene off to the right.
+
 ## Decisions / next
 - Sep 30 2026: designer likes **dock**; **auto stays the default**. Drawer's Details toggle removed (see above).
 - **Mobile is deferred to a dedicated pass.** Intended direction: full phone width; top ⅓ of the screen for the kit box / artifact moon (side-swipe to switch focus between them), bottom ⅔ an auto-layout-wrap of the manual contents. The current drawer at <720px is only a stopgap. `window.MWStage` is already the hook: a phone layout just publishes a top-⅓ rect.

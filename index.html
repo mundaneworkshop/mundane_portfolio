@@ -10358,8 +10358,8 @@ f 2469//2469 2470//2470 2434//2434
     // rectangle's centre. The fit is measured from a FIXED reference orientation (yaw 0 / pitch 0.28), not
     // the live one, so orbiting doesn't make the framing breathe. focusZoom stays a multiplier on top
     // (1.2 = exactly "fill"), so saved per-project views + mouse-wheel zoom keep their meaning.
-    var STAGE_ZOOM_REF=1.2, STAGE_REF_PITCH=0.28;
-    var _sf={ok:false,dist:2.3,sx:0,sy:0}, _sfBox=new THREE.Box3(), _sfTmp=new THREE.Box3(), _sfP=new THREE.Vector3(), _sfPts=[];
+    var STAGE_ZOOM_REF=1.2, STAGE_REF_PITCH=0.28, STAGE_ZOOM_MIN=0.55, STAGE_NEAR_GAP=0.35;   // zoom-in stop: 55% of the fitted distance, and ≥0.35 units from the nearest content
+    var _sf={ok:false,dist:2.3,k:1,sx:0,sy:0}, _sfBox=new THREE.Box3(), _sfTmp=new THREE.Box3(), _sfP=new THREE.Vector3(), _sfPts=[];
     function sfObjBox(o,out){   // world AABB of an object's VISIBLE meshes (skips the hidden kit flaps etc.)
       out.makeEmpty();
       o.traverseVisible(function(c){
@@ -10402,10 +10402,16 @@ f 2469//2469 2470//2470 2434//2434
       // never let the content grow past `stageMaxH` of the WINDOW height, however big the free stage is (huge monitors)
       var Sw=2*(st.r-st.l)/W_*fill, Sh=Math.min(2*(st.b-st.t)/H_*fill, 2*(params.stageMaxH!=null?params.stageMaxH:0.58)), lo=0.3, hi=80;
       for(var k=0;k<22;k++){ var mid=(lo+hi)/2; extents(mid); if((ex.maxX-ex.minX)<=Sw && (ex.maxY-ex.minY)<=Sh) hi=mid; else lo=mid; }
-      var dFit=hi, dAct=dFit*(params.focusZoom/STAGE_ZOOM_REF);
+      // ZOOM STOP: the wheel can only zoom in to STAGE_ZOOM_MIN of the fitted distance, and never so close that the
+      // nearest part of the content gets within STAGE_NEAR_GAP of the lens — past that the projection maths blows up
+      // (points behind/at the camera) and the lens shift used to fling everything off to the right.
+      var maxQd=-1e9; for(var qi=0;qi<n;qi++) if(qd[qi]>maxQd) maxQd=qd[qi];
+      var dFit=hi, dAct=Math.max(dFit*Math.max(params.focusZoom/STAGE_ZOOM_REF,STAGE_ZOOM_MIN), maxQd+STAGE_NEAR_GAP);
+      var kAct=dAct/dFit;
+      var zFloor=kAct*STAGE_ZOOM_REF; if(params.focusZoom<zFloor-0.001){ params.focusZoom=zFloor; setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }   // keep the param honest so scrolling back out responds at once
       extents(dAct);
       var tcx=(st.l+st.r)/W_-1, tcy=1-(st.t+st.b)/H_;
-      return { dist:dFit, sx:tcx-(ex.minX+ex.maxX)/2, sy:tcy-(ex.minY+ex.maxY)/2 };
+      return { dist:dFit, k:kAct, sx:Math.max(-1.2,Math.min(1.2,tcx-(ex.minX+ex.maxX)/2)), sy:Math.max(-1.2,Math.min(1.2,tcy-(ex.minY+ex.maxY)/2)) };
     }
     function stageLens(){   // call once per frame after the camera is placed
       var W_=window.innerWidth, H_=window.innerHeight;
@@ -13948,7 +13954,7 @@ f 2469//2469 2470//2470 2434//2434
         var sfr=stageFit(), _fr=focusRadius;
         if(sfr){ if(!_sf.ok){ _sf.dist=sfr.dist; _sf.sx=sfr.sx; _sf.sy=sfr.sy; _sf.ok=true; }
           else { _sf.dist+=(sfr.dist-_sf.dist)*0.12; _sf.sx+=(sfr.sx-_sf.sx)*0.12; _sf.sy+=(sfr.sy-_sf.sy)*0.12; }
-          _fr=_sf.dist*(params.focusZoom/STAGE_ZOOM_REF); } else { _sf.ok=false; _sf.sx*=0.88; _sf.sy*=0.88; }   // nothing to fit → release any old lens shift instead of leaving the box parked off-centre   // no stage published (or fit off) → the original fixed-radius framing
+          _fr=_sf.dist*sfr.k; } else { _sf.ok=false; _sf.sx*=0.88; _sf.sy*=0.88; }   // nothing to fit → release any old lens shift instead of leaving the box parked off-centre   // no stage published (or fit off) → the original fixed-radius framing
         var cpp=Math.cos(focusPitch), spp=Math.sin(focusPitch); camPos.set(camLook.x+Math.sin(focusYaw)*cpp*_fr, camLook.y+spp*_fr, camLook.z+Math.cos(focusYaw)*cpp*_fr); }
       if(!focused){ _sf.ok=false; _sf.sx*=0.88; _sf.sy*=0.88; }   // leaving focus: let the lens shift ease back to centre
       galaxy.position.lerp(galTargetPos,0.07); galaxy.scale.setScalar(galaxy.scale.x+(galTargetScale-galaxy.scale.x)*0.07);
