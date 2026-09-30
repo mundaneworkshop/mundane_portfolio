@@ -12755,7 +12755,11 @@ f 2469//2469 2470//2470 2434//2434
     // unsaved edit immediately overwritten by a pull from the server. Cleared only in pushContentSave()'s
     // success branch, once the edit has actually reached the server.
     function persistCopy(){ if(window.BRICStore) BRICStore.setCopy(copyOvr); try{ localStorage.setItem('bric_copy_dirty','1'); }catch(e){} markContentDirty(); }
-    var _csInFlight=false, _csDirty=false, _csLastFailMsg=null;
+    // _csDirty is seeded from the persisted flag so an unsynced edit survives a reload: without this the SAVE
+    // button read plain "save" and pushContentSave() bailed with 'nothing to sync' after a reload until the
+    // next edit. READ-ONLY here — a passive load never sets the flag or pushes; only persistCopy() sets it and
+    // only a successful pushContentSave() clears it.
+    var _csInFlight=false, _csDirty=(function(){ try{ return localStorage.getItem('bric_copy_dirty')==='1'; }catch(e){ return false; } })(), _csLastFailMsg=null;
     var _editBannerDefaultText='✎ edit mode — click an object to select · edit it in the panel';
     function markContentDirty(){ _csDirty=true; updateSaveBtnState(); updateSyncBanner(); }
     function updateSaveBtnState(){
@@ -12787,6 +12791,8 @@ f 2469//2469 2470//2470 2434//2434
         el.style.background='#E9A73E'; el.style.color='#0E0F12'; el.style.border='';
       }
     }
+    // Reflect the persisted dirty flag on first paint (button label now; banner is a no-op until Edit Mode opens, then setEditMode() re-runs it).
+    updateSaveBtnState(); updateSyncBanner();
     // Explicit, manual server push — called only from saveBtn's click handler. Returns a promise resolving to
     // {ok, skipped, reason} so the caller can toast a specific outcome instead of a generic "saved".
     function pushContentSave(){
