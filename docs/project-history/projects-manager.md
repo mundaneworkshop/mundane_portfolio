@@ -2,7 +2,9 @@
 
 One fixed 2D panel (`#projMgr`, toolbar button **▤ projects**, Edit Mode only) for adding / removing / renaming / hiding **zones** and the **planets** inside them. It replaced three fragile paths:
 
-1. The `#menu` sidebar's ＋/✕/⤺ buttons, every one of which ended in `structuralApply()` → `location.reload()` (slow, no live preview). `structuralApply`, `handleMenuEdit` and the `mw_reedit` re-enter-Edit-Mode hook are gone; `#menu` is navigation only now (plus the editable idx numbers).
+1. The `#menu` sidebar's ＋/✕/⤺ buttons, every one of which ended in `structuralApply()` → `location.reload()` (slow, no live preview). `structuralApply`, `handleMenuEdit` and the `mw_reedit` re-enter-Edit-Mode hook are gone.
+
+**The `#menu` sidebar itself was then removed entirely** (Sep 29, per designer: it was the mobile nav — shown <768px, forced on in desktop Edit Mode only as a workaround — and mobile gets its own dedicated pass once desktop is design/feature-locked). Gone with it: `buildMenu`/`wireMenu`, the `@media (min-width:768px)` rule (the only responsive breakpoint in the file), the editable per-row idx numbers (`p.idx`) and the editable menu title (`menuTitle`). Planets are reached by clicking them in the scene. When the mobile pass happens it needs a fresh nav design, not a revival of this one.
 2. Click-to-rename on the projected 3D zone/planet labels. Their screen position is a live 3D→2D projection that drifts with the camera, so they were genuinely hard to hit. The labels are **no longer contentEditable** (`zoneEditNodes` / `labelEditNodes` are kept, empty, because `setInlineEditing()` iterates them); saved names are still restored onto them at boot.
 3. Index-keyed inline edits of the sidebar (`#menu .grp`, `.navbtn > span:first-child` in `INLINE_SELS`). See "Bug found" below.
 
@@ -21,9 +23,8 @@ The **Mesh Select** mode + `#editPanel` (texture / mesh / box faces / marquee) i
 
 ## Bugs found and fixed on the way
 
-- **Index-keyed menu overrides** (`k:#menu .grp:N`, `k:.navbtn > span:first-child:N`): any structural change shifted saved names onto the wrong buttons. With Playground emptied, Profile's "CV" button rendered "MINIFIGURE ME". Those selectors are out of `INLINE_SELS`; the legacy keys are inert and get purged on the first explicit panel edit (never on load — a passive load must not dirty the copy). **Visible consequence:** the sidebar (the mobile nav) now shows the model's zone names (`Work`, `Social`) instead of the stale header overrides (`CASE STUDIES`, `SOCIALS`); rename in the panel to taste.
+- **Index-keyed menu overrides** (`k:#menu .grp:N`, `k:.navbtn > span:first-child:N`): any structural change shifted saved names onto the wrong buttons. With Playground emptied, Profile's "CV" button rendered "MINIFIGURE ME". Those selectors are out of `INLINE_SELS`; the legacy keys (plus `menuTitle`) are inert and get purged on the first explicit panel edit (never on load — a passive load must not dirty the copy).
 - **Hidden planets rendered and stayed clickable in prod view.** The per-frame passes in `animate()` overwrote `applyHiddenVisibility()` with the boot gate, and hidden planets stayed in the raycast list. Now `planetShown()` gates both and `refreshHitLists()` rebuilds `planetHits` / `editHits` / `zoneHits` in place (other code holds those arrays). Never surfaced before because no live planet was hidden.
-- Hiding a zone hid only its header in the sidebar; its planets stayed listed.
 - `editIds` (which ids get their uploaded mesh/texture restored from IndexedDB at boot) was a hardcoded list (`w0,w1,w2,p0,p1,p2,cv,contact,li,ig`), so planets added in Edit Mode never got their uploads back after a reload. It's derived from the live planets now.
 - The window-level **D** shortcut (toggle Debug) fired inside text inputs; typing "Dinner Decider" into any field popped the debug panel. It now has the same input guard as **H**.
 

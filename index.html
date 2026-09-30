@@ -108,40 +108,7 @@
   body.author-mode .admin-only{display:inline-block}
   #wordmark{font-family:var(--display);font-weight:600;letter-spacing:4px;font-size:13px;color:var(--a3);text-transform:uppercase;opacity:.6}
 
-  /* ── CASE FILES MENU ── */
-  /* Desktop/tablet navigate by clicking planets directly in the 3D scene — this panel used to float
-     top-right at all sizes and clip over planet hit-targets. Reserved for the condensed mobile layout
-     (<768px) where 3D drag-orbit is less reliable; hidden ≥768px. See HANDOFF: RESPONSIVE below. */
-  #menu{position:absolute;top:62px;right:22px;z-index:20;width:238px;background:var(--panel);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:0;padding:15px 14px}
-  @media (min-width:768px){ #menu{ display:none; } }
-  /* The zone/planet list's hide-show-rename controls (✕/⤺ per row, add-zone) only live in this
-     menu — the mesh-select edit panel is texture/mesh only. Hiding it ≥768px (above) accidentally
-     took those controls away from desktop Edit Mode too, with nothing to replace them. Force it
-     back on whenever editing, regardless of width; body.mw-casestudy/body.edit-focus below still
-     win (same specificity, later in source) since the zone list isn't relevant inside a focused view. */
-  body.editing #menu{ display:block; }
-  #menu h2{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo);margin-bottom:11px;display:flex;justify-content:space-between}
-  #menu .grp{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:11px 0 6px;font-family:var(--display)}
-  .navbtn{display:flex;align-items:center;justify-content:space-between;width:100%;font-family:var(--grotesk);font-weight:500;font-size:12px;letter-spacing:.5px;text-align:left;color:var(--amber);background:transparent;border:none;padding:9px 12px;margin-bottom:5px;cursor:pointer;transition:background .16s,color .16s;text-transform:uppercase;
-    clip-path:var(--clip-step);}
-  .navbtn .idx{font-size:9px;font-family:var(--mono);opacity:.7}
-  .navbtn:hover,.navbtn.hot{background:rgba(233,167,62,.18);color:var(--amber-hot)}
-  .navbtn.active{background:var(--amber);color:var(--on-brand)}
-  .navbtn.holonet{color:#A06AF0}   /* HoloNet accent (purple) */
-  .navbtn.holonet:hover,.navbtn.holonet.hot{background:rgba(160,106,240,.18);color:#C8AAFF}
-  .navbtn.holonet.active{background:#A06AF0;color:#160a2e}
-  .navbtn.holo{color:var(--line);background:transparent;cursor:pointer}   /* no constant fill — only lights on hover/selected, like charted rows */
-  .navbtn.holo:hover,.navbtn.holo.hot{background:rgba(90,191,184,.2);color:var(--holo)}
-  .navbtn.holo.active{background:var(--holo);color:var(--bg,#070c0c)}
-  /* editable idx (number / ?) at the right edge of each row */
-  body.editing #menu .idx.editable{cursor:text}
-  body.editing #menu .idx.editable:hover{outline:1px dashed var(--border);outline-offset:2px}
-  .menudiv{height:1px;background:var(--border);margin:11px 0}
-  .row2{display:flex;gap:6px;flex-wrap:wrap}
-  .row2 .navbtn{flex:1;justify-content:center;padding:9px 6px}
-  /* Hidden zones/planets stay out of the nav entirely — restoring / removing / renaming them lives in the
-     Projects Manager panel (#projMgr), not in this list. */
-  #menu .is-hidden{display:none}
+  .menudiv{height:1px;background:var(--border);margin:11px 0}   /* (debug panel divider) */
 
   /* ── LABELS ── */
   #labels{position:absolute;inset:0;z-index:10;pointer-events:none}
@@ -225,7 +192,7 @@
      only the interactive pieces capture clicks */
   #cs-root.active #box-scene, #cs-root.active #manual-scene, #cs-root.active #csExit{pointer-events:auto}
   /* in focus, the static galaxy chrome (Case Files panel + dev controls) disappears */
-  body.cs-focus #menu, body.cs-focus #topright{opacity:0;pointer-events:none;transition:opacity .35s ease}
+  body.cs-focus #topright{opacity:0;pointer-events:none;transition:opacity .35s ease}
   .cs-placeholder{font-family:Space Mono,monospace;font-size:13px;letter-spacing:2px;color:#78E0D6;text-transform:uppercase;text-align:center;line-height:1.8}
   #csExit{font-family:Space Mono,monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#F0B848;background:transparent;border:1px solid rgba(240,184,72,.4);padding:8px 16px;cursor:pointer;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:9700}
 
@@ -760,12 +727,12 @@
   .cs-step:hover{color:var(--holo);border-color:var(--line)}
   .cs-step.on{background:var(--amber);color:var(--on-brand);border-color:var(--amber);font-weight:700}
   /* the galaxy's own chrome stands down while a case study owns the canvas */
-  body.mw-casestudy #menu, body.mw-casestudy #hint{display:none}
+  body.mw-casestudy #hint{display:none}
   /* ── Entry gate: pre-boot state — just the monogram + starfield; everything else fades out/in.
      #topbar stays reachable (admin-only buttons inside it are already hidden for non-authors via the
      .admin-only rule above) so the debug panel — and its entry/dock-timing sliders — is tunable while
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
-  body.mw-entrygate #labels, body.mw-entrygate #menu, body.mw-entrygate #hint,
+  body.mw-entrygate #labels, body.mw-entrygate #hint,
   body.mw-entrygate #msgToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
   #entryHint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--line-dim);pointer-events:none;opacity:0;transition:opacity .4s ease}
   body.mw-entrygate #entryHint{opacity:.75}
@@ -777,12 +744,10 @@
   .altfocus{position:absolute;inset:0;z-index:18;display:none;align-items:center;justify-content:center;pointer-events:none}
   .altfocus.show{display:flex;pointer-events:auto}
   .altfocus > *{pointer-events:auto}
-  body.mw-altfocus #menu{opacity:0;pointer-events:none;transition:opacity .35s ease}   /* hide the right nav, but keep the top bar (Edit / Debug) reachable while focused */
   /* ── Hide UI mode (H key / button) ── */
   /* breadcrumb nav stays put through "hide UI" — it's viewer navigation, not admin chrome; only the
      admin-only topright cluster (wordmark + save/edit/debug/hide-ui) fades out */
   body.ui-hidden #topright{opacity:0;pointer-events:none;transition:opacity .3s ease}
-  body.ui-hidden #menu{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #msgToggle{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #status{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #debug{opacity:0;pointer-events:none;transition:opacity .3s ease}
@@ -907,7 +872,6 @@
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
   /* Hide Case Files nav chrome while editing in focus view */
-  body.edit-focus #menu{display:none}
   /* Tag add/remove controls (Edit Mode) */
   .manual-tag .tag-x{margin-left:5px;color:#E9A73E;cursor:pointer;font-weight:700;opacity:.7}
   .manual-tag .tag-x:hover{opacity:1}
@@ -930,8 +894,8 @@
   /* ── PROJECTS MANAGER (Edit Mode) ──
      One fixed, screen-anchored 2D panel listing every zone and its planets as plain form controls — the
      single place to add / remove / rename / hide them. Deliberately NOT a projected 3D label (those drift
-     with camera motion and were hard to click) and deliberately on the LEFT so it never sits over #menu /
-     #editPanel (both right-anchored). Generated from galaxyModel by pmRender(). */
+     with camera motion and were hard to click) and deliberately on the LEFT so it never sits over
+     #editPanel (right-anchored). Generated from galaxyModel by pmRender(). */
   #projMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.pm-open #projMgr{display:flex}
   body.edit-focus #projMgr, body.cs-focus #projMgr, body.mw-casestudy #projMgr, body.mw-entrygate #projMgr, body.mw-altfocus #projMgr, body.ui-hidden #projMgr{display:none}
@@ -1271,11 +1235,6 @@
       <button class="tbtn admin-only" id="hideUIBtn">⊘ hide ui</button>
       <div id="wordmark">Mundane Workshop</div>
     </div>
-  </div>
-
-  <div id="menu">
-    <h2><span id="menuTitleTxt">Projects</span> <span id="menuCount" style="color:var(--muted);font-weight:400">//00</span></h2>
-    <div id="menuBody"><!-- generated from galaxyModel by buildMenu() --></div>
   </div>
 
   <div id="debug">
@@ -2171,8 +2130,6 @@
     // the merged Profile zone inherits an old cv/contact zone name if one was set.
     galaxyModel.forEach(function(z){ var ov=_bootCopy['zone:'+z.id+':name']; if(ov==null&&z.id==='profile') ov=_bootCopy['zone:cv:name']||_bootCopy['zone:contact:name']; if(ov!=null&&ov!=='') z.name=ov;
       z.hidden=!!z.hidden; (z.planets||[]).forEach(function(p){ p.hidden=!!p.hidden; }); });
-    // Editable menu title (h2). Persisted as 'menuTitle'.
-    var menuTitle=(_bootCopy['menuTitle']!=null&&_bootCopy['menuTitle']!=='')?_bootCopy['menuTitle']:'Projects';
     // Single-slug routes for the two bespoke views (CV route, HoloNet comm console) — editable in their Edit Mode panels.
     var cvSlug=(_bootCopy['cvSlug']!=null&&_bootCopy['cvSlug']!=='')?_bootCopy['cvSlug']:'cv';
     var holonetSlug=(_bootCopy['holonetSlug']!=null&&_bootCopy['holonetSlug']!=='')?_bootCopy['holonetSlug']:'holonet';
@@ -9832,7 +9789,7 @@ f 2469//2469 2470//2470 2434//2434
       camElev=0; camZoom=1; manualRot=0;   // settle the camera pull-back onto a clean home framing
       // NOTE: 'mw-entrygate' is removed once docking actually COMPLETES (see mwUpdate's mwDockT>=1
       // branch), not here at click time — it used to be removed here, which let #labels/#msgStars/
-      // #msgCanvas/#menu/#hint (all CSS-gated by that class, with no cascade timing of their own) pop
+      // #msgCanvas/#hint (all CSS-gated by that class, with no cascade timing of their own) pop
       // in instantly while the monogram was still mid-descent, before anything else had even started.
     }
     // Per frame, before the scene renders into rt.
@@ -10196,12 +10153,9 @@ f 2469//2469 2470//2470 2434//2434
       if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
       else { camZoom=clamp(camZoom+dir*0.06,0.4,2.2); } },{passive:false});
-    function setHot(id,on){ var b=document.querySelector('.navbtn[data-planet="'+id+'"]'); if(b)b.classList.toggle('hot',on); }
-    // SINGLE source of truth for galaxy hover. Both the canvas raycast AND the nav-menu buttons call this,
-    // so `hovered` always reflects reality and a highlight can never get stuck (the old menu path set .hot
-    // without updating `hovered`, so canvas-empty hover couldn't detect a change to clear it).
+    // SINGLE source of truth for galaxy hover, so `hovered` always reflects reality and a highlight can never get stuck.
     function setHovered(grp){ if(grp===hovered) return; hovered=grp;
-      planets.forEach(function(p){ var on=(p===hovered); p.userData.target=on?1.3:1; setHot(p.userData.id,on);
+      planets.forEach(function(p){ var on=(p===hovered); p.userData.target=on?1.3:1;
         if(p.userData.label){ p.userData.label.classList.toggle('hot',on);
           var lc=p.userData.labelColors; if(lc) p.userData.label.style.color=(on?lc.hot:lc.tint); } });
       if(renderer&&renderer.domElement) renderer.domElement.style.cursor=hovered?'pointer':'default';
@@ -10396,7 +10350,7 @@ f 2469//2469 2470//2470 2434//2434
       focused.userData.hit.layers.disable(1);
       focused.userData.moonGrp.visible=false; focused.userData.posTarget.copy(focused.userData.homePos); focused.userData.target=1; focused.userData.moons.forEach(function(m){m.userData.label.style.opacity=0;}); }
       focused=null; focusedMoon=null; hovered=null; autoRotate=params.autoRotate; manualRot=galaxy.rotation.y; camLook.copy(HOME_LOOK); galTargetPos.set(0,0,0); galTargetScale=1; document.body.classList.remove('mw-planet');
-      planets.forEach(function(p){ p.userData.target=1; setHot(p.userData.id,false); if(p.userData.label) p.userData.label.classList.remove('hot'); });   // clear any leftover highlight
+      planets.forEach(function(p){ p.userData.target=1; if(p.userData.label) p.userData.label.classList.remove('hot'); });   // clear any leftover highlight
       document.getElementById('casepanel').className=''; setCrumb('',[]);
       if(typeof altFocusCleanup==='function') altFocusCleanup();   // hide CV/Contact bespoke overlays
       document.getElementById('cs-root').classList.remove('cs-focus-panel');   // MERGE Stage 2: exit booklet focus panel
@@ -11251,7 +11205,7 @@ f 2469//2469 2470//2470 2434//2434
       if(msgCtx){ if(msgCanvas.width!==Math.ceil(W/P)||msgCanvas.height!==Math.ceil(H/P)) resizeMsgCanvas(); msgCtx.clearRect(0,0,msgCanvas.width,msgCanvas.height); }
       var t=(window.performance&&performance.now?performance.now():Date.now())*0.001;
       if(hide && hoveredMsg) hideMsgHover();
-      var holoOn=!!(hovered && hovered.userData && hovered.userData.id==='contact' && !hide);   // hovering the HoloNet node (planet or menu button)
+      var holoOn=!!(hovered && hovered.userData && hovered.userData.id==='contact' && !hide);   // hovering the HoloNet node (planet)
       if(holoOn && hovered.position) holonetNode=projLocal(hovered.position);
       holonetT += ((holoOn?1:0)-holonetT)*(params.hnFade!=null?params.hnFade:0.16);
       var links=!!(holonetT>0.02 && holonetNode && holonetNode.vis && msgCtx);
@@ -11526,60 +11480,13 @@ f 2469//2469 2470//2470 2434//2434
     document.getElementById('cpEnter').addEventListener('click',enterCaseStudy);
     document.getElementById('csExit').addEventListener('click',exitCaseStudy);
 
-    // ── MODEL-DRIVEN MENU: generated from galaxyModel; hover→highlight, click→focus, edit-mode +/- controls ──
+    // ── GALAXY MODEL persistence + structural editing ──
     function persistModel(){ if(typeof copyOvr!=='undefined'){ copyOvr['galaxyModel']=galaxyModel; if(typeof persistCopy==='function') persistCopy(); } }
     // Structural edits (add/remove/hide/rename zones + planets) are made in the Projects Manager panel (pmRender & co, below)
-    // and applied LIVE by syncSceneToModel() — no reload. This menu is navigation only (plus the editable idx numbers/title).
+    // and applied LIVE by syncSceneToModel() — no reload. (There is no sidebar nav any more — planets are reached by clicking them in the scene.)
     // What a planet is CALLED right now: its saved title override (the same one the 3D label, booklet and FX list show),
     // else the model's. Zone names are already merged into the model at boot / by the panel.
     function planetTitle(p){ var o=(typeof copyOvr!=='undefined')?copyOvr['case:'+p.id+':title']:null; return (o!=null&&o!=='')?o:p.title; }
-    function defaultIdx(p,pi){ return p.locked?'?':('0'+(pi+1)).slice(-2); }
-    function buildMenu(){
-      var body=document.getElementById('menuBody'); if(!body) return; body.innerHTML=''; var visZ=0;
-      var mt=document.getElementById('menuTitleTxt'); if(mt) mt.textContent=menuTitle;
-      galaxyModel.forEach(function(z){
-        if(!z.hidden) visZ++;
-        var grp=document.createElement('div'); grp.className='grp'+(z.hidden?' is-hidden':''); grp.setAttribute('data-zone',z.id);
-        var nm=document.createElement('span'); nm.textContent=z.name; grp.appendChild(nm);
-        body.appendChild(grp);
-        var compact=(z.kind==='util'||z.kind==='social');
-        var row=document.createElement('div'); row.className=(compact?'row2':'')+(z.hidden?' is-hidden':'');   // a hidden zone takes its planets out of the nav with it
-        (z.planets||[]).forEach(function(p,pi){
-          var btn=document.createElement('button'); btn.className='navbtn'+(p.locked?' holo':'')+(p.hidden?' is-hidden':'')+(p.id==='contact'?' holonet':'');
-          btn.setAttribute('data-planet',p.id); btn.setAttribute('data-zone',z.id);
-          var t=document.createElement('span'); t.textContent=planetTitle(p); btn.appendChild(t);
-          if(!compact){
-            var ix=document.createElement('span'); ix.className='idx editable'; ix.setAttribute('data-planet',p.id);
-            ix.textContent=(p.idx!=null&&p.idx!=='')?p.idx:defaultIdx(p,pi); btn.appendChild(ix);
-            ix.addEventListener('blur',function(){ p.idx=ix.textContent.replace(/\s+$/,''); persistModel(); });   // live (no reload)
-            ix.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ix.blur(); } });
-          }
-          row.appendChild(btn);
-        });
-        body.appendChild(row);
-      });
-      var mc=document.getElementById('menuCount'); if(mc) mc.textContent='//'+('0'+visZ).slice(-2);
-      if(typeof setInlineEditing==='function' && typeof editMode!=='undefined' && editMode){ syncMenuEditable(); }   // keep idx editable after a live rebuild
-      wireMenu();
-    }
-    function syncMenuEditable(){ var on=(typeof editMode!=='undefined')&&editMode;
-      Array.prototype.forEach.call(document.querySelectorAll('#menu .idx.editable'),function(el){ el.contentEditable=on?'true':'false'; });
-      var mt=document.getElementById('menuTitleTxt'); if(mt){ mt.contentEditable=on?'true':'false'; mt.classList.toggle('inline-edit-on',on); }
-    }
-    var _menuWired=false;
-    function wireMenu(){
-      if(_menuWired) return; _menuWired=true; var body=document.getElementById('menuBody');
-      body.addEventListener('mouseover',function(e){
-        var b=e.target.closest&&e.target.closest('.navbtn[data-planet]'); if(b){ if(focused)return; if(b.classList.contains('is-hidden'))return; setHovered(planetById(b.getAttribute('data-planet'))||null); return; }
-        var g=e.target.closest&&e.target.closest('.grp[data-zone]'); if(g){ if(!focused)setZone(g.getAttribute('data-zone')); }
-      });
-      body.addEventListener('mouseleave',function(){ if(!focused) setHovered(null); });
-      body.addEventListener('click',function(e){
-        if(editMode && e.target.closest && e.target.closest('.idx.editable')){ return; }   // clicking the idx in Edit Mode edits it, doesn't navigate
-        var b=e.target.closest&&e.target.closest('.navbtn[data-planet]'); if(b&&!b.classList.contains('is-hidden')){ if(focused)goHome(); var g=planetById(b.getAttribute('data-planet')); if(g) activate(g.userData); }
-      });
-    }
-    // Toggle scene visibility of soft-deleted (hidden) planets: shown dimmed only while editing.
     // A soft-deleted (hidden) planet is shown dimmed in Edit Mode only. The per-frame visibility passes in animate()
     // consult planetShown() too — they used to overwrite this with the boot gate every frame, so a hidden planet
     // rendered (and stayed clickable) in prod view.
@@ -11594,7 +11501,6 @@ f 2469//2469 2470//2470 2434//2434
       if(grp.userData.hidden){ var show=!!editMode; grp.visible=show; if(grp.userData.label) grp.userData.label.style.display=show?'':'none'; }
       else if(grp.userData.label) grp.userData.label.style.display=''; });   // un-hidden live → label comes back
       refreshHitLists(); }
-    buildMenu();
 
     // ---------- theme ----------
     // Galaxy view is dark-only by default (light-mode toggle removed). Case-study pages handle their own light mode via #page-takeover / #cs-root.
@@ -12772,7 +12678,7 @@ f 2469//2469 2470//2470 2434//2434
     function setEditMode(on){ editMode=on; clearSel();
       var b=document.getElementById('editBtn'); if(b) b.classList.toggle('on',on);
       var banner=document.getElementById('editBanner'); if(banner) banner.style.display=on?'block':'none';
-      document.body.classList.toggle('editing',on);   // reveals menu +/- zone & planet controls + dimmed hidden items
+      document.body.classList.toggle('editing',on);   // reveals dimmed hidden items
       if(typeof applyHiddenVisibility==='function') applyHiddenVisibility();
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
       if(typeof setInlineEditing==='function') setInlineEditing(on);
@@ -12875,10 +12781,9 @@ f 2469//2469 2470//2470 2434//2434
     // Keyed PER SELECTOR + index (stable: adding/removing a selector won't shift other groups' keys).
     // NOTE: snapshot cells + the CTA button are NOT here — they're rendered + edited PER-PROJECT by applyData
     // (global inline keys made them shared across every project). See projectDataForBooklet / applyData.
-    // NOTE: '#menu .grp' and '.navbtn > span:first-child' used to be listed here. They were keyed by DOM INDEX, so any structural
-    // change (a zone emptied/hidden, a planet added) shifted every saved name onto the wrong button — e.g. Profile's "CV" button
-    // rendering "MINIFIGURE ME". Zone + planet names now come from galaxyModel and are edited in the Projects Manager panel.
-    var INLINE_SELS=['#wordmark','#hint','#statusL','#statusR','#menu h2','.flip-hint','.back-header span','.front-title','.front-pieces','.front-band-text','.cover-label','.art-chip'];
+    // NOTE: the sidebar nav (#menu) and its index-keyed inline edits ('#menu .grp', '.navbtn > span:first-child', '#menu h2') are gone —
+    // zone + planet names come from galaxyModel and are edited in the Projects Manager panel.
+    var INLINE_SELS=['#wordmark','#hint','#statusL','#statusR','.flip-hint','.back-header span','.front-title','.front-pieces','.front-band-text','.cover-label','.art-chip'];
     var inlineNodes=[];
     function commitInline(n){
       var v=n.el.innerText.replace(/\s+$/,'');
@@ -12916,7 +12821,6 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof labelEditNodes!=='undefined') labelEditNodes.forEach(function(el){ el.contentEditable=on?'true':'false'; el.classList.toggle('inline-edit-on',on); });
       if(typeof zoneEditNodes!=='undefined') zoneEditNodes.forEach(function(el){ el.contentEditable=on?'true':'false'; el.classList.toggle('inline-edit-on',on); });
       if(typeof syncCrumbEdit==='function') syncCrumbEdit();
-      if(typeof syncMenuEditable==='function') syncMenuEditable();   // idx (number/?) + menu title editable in Edit Mode
       updateMarqueePanel();
       if(focusedMoon) showMoonManual(focusedMoon);   // re-render artifact links with/without edit affordances
       else if(cvScene.active){ if(cvSelId) cvShowBooklet(cvSelId); }   // CV route: re-render the NODE booklet (not the cv project)
@@ -12982,10 +12886,10 @@ f 2469//2469 2470//2470 2434//2434
       if(!c.marquee) c.marquee=Object.assign({},MARQ_DEF);
     }
     Object.keys(CASES).forEach(finalizeCase);
-    // restore saved per-project copy (title/body/kicker/snapshot/tags/cta/marquee) → CASES + nav/planet labels
+    // restore saved per-project copy (title/body/kicker/snapshot/tags/cta/marquee) → CASES + planet labels
     function restoreCaseOverrides(id){
       ['kicker','title','body','snapshot','tags','cta','ctaUrl','ctaHidden','ctaActive','marquee','extraLinks','slug'].forEach(function(f){ var k='case:'+id+':'+f; if(copyOvr[k]!=null){ CASES[id][f]=copyOvr[k];
-        if(f==='title'){ var b=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(b)b.textContent=copyOvr[k];
+        if(f==='title'){
           var g=planetById(id); if(g&&g.userData.labelTitle){ g.userData.labelTitle.textContent=copyOvr[k]; } }
       } });
     }
@@ -13025,7 +12929,7 @@ f 2469//2469 2470//2470 2434//2434
       var id=grp.userData.id, t=grp.userData.labelTitle, s=grp.userData.labelSub;
       if(s){ var sk='plabel:'+id+':sub'; if(copyOvr[sk]!=null) s.textContent=copyOvr[sk]; }
       if(t && !CASES[id]){ var _sv=(copyOvr['case:'+id+':title']!=null)?copyOvr['case:'+id+':title']:copyOvr['plabel:'+id+':title'];   // playground titles (saved either way) → label + menu
-        if(_sv!=null){ t.textContent=_sv; var _bb=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(_bb)_bb.textContent=_sv; } }
+        if(_sv!=null){ t.textContent=_sv;} }
     }
     planets.forEach(restorePlanetLabelText);
     // ── ZONE NAME: the radial zone labels are no longer click-to-edit (same drift problem as the planet labels) — zones are
@@ -13041,10 +12945,6 @@ f 2469//2469 2470//2470 2434//2434
     (function(){ var r=copyOvr['crumb:root']; crumbRootEl.textContent='⌂ '+((r!=null&&r!=='')?r:CRUMB_ROOT_DEFAULT); })();
     crumbRootEl.addEventListener('blur',function(){ var t=crumbRootEl.textContent.replace(/^[⌂\s▸]*/,'').replace(/\s+$/,''); copyOvr['crumb:root']=t; persistCopy(); crumbRootEl.textContent='⌂ '+(t||CRUMB_ROOT_DEFAULT); });
     crumbRootEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); crumbRootEl.blur(); } });
-    // Editable menu title (h2)
-    var _mtEl=document.getElementById('menuTitleTxt');
-    if(_mtEl){ _mtEl.addEventListener('blur',function(){ menuTitle=_mtEl.textContent.replace(/\s+$/,'')||'Projects'; copyOvr['menuTitle']=menuTitle; persistCopy(); _mtEl.textContent=menuTitle; });
-      _mtEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); _mtEl.blur(); } }); }
     function renderCrumb(){ crumbPathEl.innerHTML='';
       crumbSegs.forEach(function(seg,i){
         var sep=document.createElement('span'); sep.textContent=' ▸ '; sep.style.opacity='.55'; crumbPathEl.appendChild(sep);
@@ -13345,8 +13245,8 @@ f 2469//2469 2470//2470 2434//2434
 
     // ══════ PROJECTS MANAGER ═════════════════════════════════════════════════════════════════════════════
     // Fixed 2D panel (#projMgr) listing every zone + its planets as plain form controls. Replaces three fragile paths:
-    // the #menu ＋/✕ buttons (each ended in a full location.reload()), click-to-rename on the projected 3D zone/planet
-    // labels, and index-keyed menu inline edits. Every edit mutates galaxyModel, then syncSceneToModel() reconciles the LIVE
+    // the old sidebar's ＋/✕ buttons (each ended in a full location.reload()), click-to-rename on the projected 3D zone/planet
+    // labels, and index-keyed sidebar inline edits (the sidebar itself has since been removed). Every edit mutates galaxyModel, then syncSceneToModel() reconciles the LIVE
     // scene to it — the same things boot builds from the model, minus the reload. Edits flow through persistModel() →
     // persistCopy() (sets bric_copy_dirty) and reach the server only via the SAVE button (pushContentSave) — nothing here
     // pushes, and nothing here runs on a passive page load.
@@ -13365,8 +13265,9 @@ f 2469//2469 2470//2470 2434//2434
     function pmUrlOk(v){ return v===''||/^(https?:\/\/|mailto:)/i.test(v); }   // no javascript:/data: URLs — this value ends up in window.open()
     function pmVisibleCount(z){ return (z.planets||[]).filter(function(p){ return !p.hidden; }).length; }
     function pmHasBuiltin(z){ return (z.planets||[]).some(function(p){ return PM_BUILTIN[p.id]; }); }
-    // Legacy menu inline edits were keyed by DOM index (see INLINE_SELS note) — inert now, so drop them on the first explicit edit.
-    function pmPurgeLegacyMenuKeys(){ Object.keys(copyOvr).forEach(function(k){ if(/^k:#menu \.grp:\d+$/.test(k)||/^k:\.navbtn > span:first-child:\d+$/.test(k)) delete copyOvr[k]; }); }
+    // The sidebar nav is gone; its saved inline edits (keyed by DOM index) and menu title are dead keys — drop them on the first explicit edit
+    // (never on load: a passive load must not dirty the copy).
+    function pmPurgeLegacyMenuKeys(){ Object.keys(copyOvr).forEach(function(k){ if(k==='menuTitle'||k==='menuHeading'||/^k:#menu /.test(k)||/^k:\.navbtn /.test(k)) delete copyOvr[k]; }); }
     // Every persisted key that belongs to the given planet/zone ids: whole ':'-segment match (case:<id>:title, spot:<id>, camview:moon:<id>:0 …).
     function pmKeysFor(ids){ return Object.keys(copyOvr).filter(function(k){
       if(k==='galaxyModel'||k.indexOf('k:')===0||k.indexOf('inline:')===0) return false;
@@ -13444,7 +13345,7 @@ f 2469//2469 2470//2470 2434//2434
       planets.forEach(function(g){ var s=g.userData.spot; copyOvr['spot:'+g.userData.id]={ang:s.ang,rad:s.rad,y:s.y,jx:s.jx,jz:s.jz}; });
       // 4 · dependents
       setZone(null); applyHiddenVisibility();   // (also refreshes the raycast lists)
-      buildMenu(); buildZoneFxCtls(); buildPlanetFxCtls(); applyHoloColors();
+      buildZoneFxCtls(); buildPlanetFxCtls(); applyHoloColors();
       refreshEditPanel();
     }
 
@@ -13452,13 +13353,13 @@ f 2469//2469 2470//2470 2434//2434
     function pmSetZoneName(z,v){
       z.name=v; copyOvr['zone:'+z.id+':name']=v;
       var sz=zoneById[z.id]; if(sz){ sz.name=v; if(sz.label){ sz.label.textContent=v; if(sz.label.hasAttribute('data-text')) sz.label.setAttribute('data-text',v); } }
-      rebuildZoneDef(); buildMenu(); buildZoneFxCtls();
+      rebuildZoneDef(); buildZoneFxCtls();
     }
     function pmSetPlanetTitle(p,v){
       p.title=v; copyOvr['case:'+p.id+':title']=v; delete copyOvr['plabel:'+p.id+':title'];   // same key the label/booklet/nav already read
       if(CASES[p.id]) CASES[p.id].title=v;
       var g=planetById(p.id); if(g&&g.userData.labelTitle) g.userData.labelTitle.textContent=v;
-      buildMenu(); buildPlanetFxCtls();
+      buildPlanetFxCtls();
     }
     function pmSetPlanetSub(p,v){
       p.sub=v; copyOvr['plabel:'+p.id+':sub']=v;
@@ -13582,7 +13483,7 @@ f 2469//2469 2470//2470 2434//2434
           if(pmArmed&&pmArmed.kind===kind&&pmArmed.id===id) pmRemove(kind,zid,pid);
           else { pmArmed={kind:kind,id:id}; clearTimeout(pmArmedT); pmArmedT=setTimeout(pmDisarm,8000); pmRender(); } }
       });
-      // Names apply as you type (live preview in the scene + menu); they're persisted on commit (blur / Enter) so we don't
+      // Names apply as you type (live preview in the scene); they're persisted on commit (blur / Enter) so we don't
       // rewrite the whole copy blob on every keystroke.
       panel.addEventListener('input',function(e){
         var f=e.target.getAttribute&&e.target.getAttribute('data-pm-field'); if(!f) return;
