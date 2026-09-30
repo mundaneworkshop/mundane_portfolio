@@ -13747,10 +13747,12 @@ f 2469//2469 2470//2470 2434//2434
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
+        // self-heal: a stage measured for a different window size (missed/ignored resize event) is re-laid-out now
+        if(window.MWStage && (window.MWStage.W!==window.innerWidth || window.MWStage.H!==window.innerHeight) && window.CS && CS.relayout) CS.relayout();
         var sfr=stageFit(), _fr=focusRadius;
         if(sfr){ if(!_sf.ok){ _sf.dist=sfr.dist; _sf.sx=sfr.sx; _sf.sy=sfr.sy; _sf.ok=true; }
           else { _sf.dist+=(sfr.dist-_sf.dist)*0.12; _sf.sx+=(sfr.sx-_sf.sx)*0.12; _sf.sy+=(sfr.sy-_sf.sy)*0.12; }
-          _fr=_sf.dist*(params.focusZoom/STAGE_ZOOM_REF); } else _sf.ok=false;   // no stage published (or fit off) → the original fixed-radius framing
+          _fr=_sf.dist*(params.focusZoom/STAGE_ZOOM_REF); } else { _sf.ok=false; _sf.sx*=0.88; _sf.sy*=0.88; }   // nothing to fit → release any old lens shift instead of leaving the box parked off-centre   // no stage published (or fit off) → the original fixed-radius framing
         var cpp=Math.cos(focusPitch), spp=Math.sin(focusPitch); camPos.set(camLook.x+Math.sin(focusYaw)*cpp*_fr, camLook.y+spp*_fr, camLook.z+Math.cos(focusYaw)*cpp*_fr); }
       if(!focused){ _sf.ok=false; _sf.sx*=0.88; _sf.sy*=0.88; }   // leaving focus: let the lens shift ease back to centre
       galaxy.position.lerp(galTargetPos,0.07); galaxy.scale.setScalar(galaxy.scale.x+(galTargetScale-galaxy.scale.x)*0.07);
@@ -14373,7 +14375,7 @@ f 2469//2469 2470//2470 2434//2434
     function mlPublish(st,mode){
       var root=document.documentElement;
       if(!st){ window.MWStage=null; ['--stage-cx','--stage-cy','--stage-w','--stage-h'].forEach(function(k){ root.style.removeProperty(k); }); return; }
-      window.MWStage={ l:st.l, t:st.t, r:st.r, b:st.b, mode:mode };
+      window.MWStage={ l:st.l, t:st.t, r:st.r, b:st.b, mode:mode, W:window.innerWidth, H:window.innerHeight };
       root.style.setProperty('--stage-cx',((st.l+st.r)/2)+'px'); root.style.setProperty('--stage-cy',((st.t+st.b)/2)+'px');
       root.style.setProperty('--stage-w',(st.r-st.l)+'px');     root.style.setProperty('--stage-h',(st.b-st.t)+'px');
     }
@@ -14395,7 +14397,7 @@ f 2469//2469 2470//2470 2434//2434
       return true;
     }
     var _mlRaf=0;
-    function mlRelayoutSoon(){ if(_mlRaf) return; _mlRaf=requestAnimationFrame(function(){ _mlRaf=0; if(manualScene.classList.contains('visible') && phase==='focus') layoutManual(); }); }
+    function mlRelayoutSoon(){ if(_mlRaf) return; _mlRaf=requestAnimationFrame(function(){ _mlRaf=0; if(manualScene.classList.contains('visible')) layoutManual(); }); }
     window.addEventListener('resize',mlRelayoutSoon);
     // content growing/shrinking (Edit Mode adding links/rows, a moon with fewer fields) re-measures the stage
     if(window.ResizeObserver) new ResizeObserver(function(){ if(mlMode) mlRelayoutSoon(); }).observe(manualBook);
