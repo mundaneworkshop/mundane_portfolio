@@ -139,19 +139,9 @@
   .menudiv{height:1px;background:var(--border);margin:11px 0}
   .row2{display:flex;gap:6px;flex-wrap:wrap}
   .row2 .navbtn{flex:1;justify-content:center;padding:9px 6px}
-  /* ── EDIT-MODE zone/planet controls (generated menu) ── */
-  #menu .grp{display:flex;align-items:center;justify-content:space-between}
-  #menu .edit-only{display:none}
-  body.editing #menu .edit-only{display:inline-flex;align-items:center}
+  /* Hidden zones/planets stay out of the nav entirely — restoring / removing / renaming them lives in the
+     Projects Manager panel (#projMgr), not in this list. */
   #menu .is-hidden{display:none}
-  body.editing #menu .navbtn.is-hidden{display:flex;opacity:.4}
-  body.editing #menu .grp.is-hidden{display:flex;opacity:.4}
-  #menu .mini{font-family:var(--mono);font-size:11px;line-height:1;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:2px 5px;margin-left:4px;border-radius:0;transition:.12s}
-  #menu .mini:hover{border-color:var(--line);color:var(--line)}
-  #menu .navbtn .planet-ctl{margin-left:6px}
-  #menu .addzone-btn{display:none}
-  body.editing #menu .addzone-btn{display:block;width:100%;margin-top:10px;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--muted);background:transparent;border:1px dashed var(--border);padding:8px;cursor:pointer;text-transform:uppercase;transition:.12s}
-  body.editing #menu .addzone-btn:hover{border-color:var(--line);color:var(--line)}
 
   /* ── LABELS ── */
   #labels{position:absolute;inset:0;z-index:10;pointer-events:none}
@@ -936,6 +926,51 @@
   #marqueePanel .mq-ctl label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.7);display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
   #marqueePanel .mq-ctl b{min-width:32px;text-align:right;color:#E9A73E;font-variant-numeric:tabular-nums}
   #marqueePanel .mq-ctl input[type=range]{flex:1;min-width:80px}
+
+  /* ── PROJECTS MANAGER (Edit Mode) ──
+     One fixed, screen-anchored 2D panel listing every zone and its planets as plain form controls — the
+     single place to add / remove / rename / hide them. Deliberately NOT a projected 3D label (those drift
+     with camera motion and were hard to click) and deliberately on the LEFT so it never sits over #menu /
+     #editPanel (both right-anchored). Generated from galaxyModel by pmRender(). */
+  #projMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
+  body.pm-open #projMgr{display:flex}
+  body.edit-focus #projMgr, body.cs-focus #projMgr, body.mw-casestudy #projMgr, body.mw-entrygate #projMgr, body.mw-altfocus #projMgr, body.ui-hidden #projMgr{display:none}
+  #projMgr .pm-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px}
+  #projMgr .pm-title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#E9A73E}
+  #projMgr .pm-close{font-family:inherit;font-size:12px;line-height:1;background:transparent;border:1px solid rgba(233,167,62,.35);color:rgba(240,237,232,.7);cursor:pointer;padding:3px 7px;border-radius:2px}
+  #projMgr .pm-close:hover{border-color:#E9A73E;color:#E9A73E}
+  #projMgr .pm-tools{display:flex;align-items:center;gap:10px;padding:0 12px 10px;border-bottom:1px solid rgba(233,167,62,.22)}
+  #projMgr .pm-note{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.45);line-height:1.5}
+  #projMgr .pm-newzone{flex:none;font-family:var(--display,'Chakra Petch',sans-serif);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:#E9A73E;border:1px solid #E9A73E;color:#0E0F12;padding:7px 12px;cursor:pointer;border-radius:2px}
+  #projMgr .pm-newzone:hover{background:#F0D080;border-color:#F0D080}
+  #projMgr .pm-body{flex:1;min-height:0;overflow-y:auto;padding:8px 12px 4px}
+  #projMgr .pm-zone{border:1px solid rgba(233,167,62,.3);border-radius:3px;padding:8px;margin-bottom:10px;background:rgba(233,167,62,.04)}
+  #projMgr .pm-zone.is-hidden{border-style:dashed;border-color:rgba(240,237,232,.22);background:transparent}
+  #projMgr .pm-row{display:flex;align-items:center;gap:6px}
+  #projMgr input[type=text]{flex:1;min-width:0;background:rgba(0,0,0,.35);border:1px solid rgba(233,167,62,.3);color:#F0EDE8;font-family:'Space Mono',monospace;font-size:11px;padding:5px 7px;border-radius:2px;box-sizing:border-box}
+  #projMgr input[type=text]:focus{outline:none;border-color:#E9A73E;background:rgba(0,0,0,.5)}
+  #projMgr .pm-znm{font-weight:700;letter-spacing:1px;text-transform:uppercase}
+  #projMgr .is-hidden input[type=text]{opacity:.5}
+  #projMgr .pm-btn{flex:none;font-family:inherit;font-size:9px;letter-spacing:1px;text-transform:uppercase;line-height:1;background:transparent;border:1px solid rgba(233,167,62,.35);color:rgba(240,237,232,.75);cursor:pointer;padding:6px 7px;border-radius:2px;white-space:nowrap}
+  #projMgr .pm-btn:hover:not(:disabled){border-color:#E9A73E;color:#E9A73E}
+  #projMgr .pm-btn:disabled{opacity:.35;cursor:not-allowed}
+  /* fixed widths: arming a remove button swaps its label, and it must not shift under the cursor (a shifted layout put "hide" under the confirming click) */
+  #projMgr .pm-zactions .pm-danger{min-width:86px}
+  #projMgr .pm-planet .pm-danger{min-width:62px}
+  #projMgr .pm-btn.pm-danger{text-align:center}
+  #projMgr .pm-btn.pm-danger:hover:not(:disabled){border-color:#ff6b6b;color:#ff6b6b}
+  #projMgr .pm-btn.pm-confirm{background:#8a1f1f;border-color:#ff6b6b;color:#fff}
+  #projMgr .pm-zactions{display:flex;justify-content:flex-end;gap:6px;margin:6px 0 8px}
+  #projMgr .pm-count{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.45);margin:6px 0 0}
+  #projMgr .pm-planets{list-style:none;margin:0;padding:0}
+  #projMgr .pm-planet{padding:6px 0;border-top:1px solid rgba(233,167,62,.14)}
+  #projMgr .pm-planet .pm-row + .pm-row{margin-top:5px}
+  #projMgr .pm-psub{font-size:10px;color:rgba(240,237,232,.75)}
+  #projMgr .pm-empty{font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.4);padding:6px 0;text-transform:uppercase}
+  #projMgr .pm-addp{width:100%;margin-top:6px;padding:7px;border-style:dashed;text-align:center}
+  #projMgr .pm-foot{min-height:0;padding:0 12px;font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.7)}
+  #projMgr .pm-foot:not(:empty){padding:8px 12px;border-top:1px solid rgba(233,167,62,.22);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  #projMgr .pm-lock{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.4)}
   #debug input[type=color]{vertical-align:middle;width:26px;height:18px;padding:0;border:1px solid rgba(90,191,184,.25);background:transparent;cursor:pointer}
   /* Label: Chakra Petch · value: Space Mono with teal glow */
   #debug label{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
@@ -1216,6 +1251,14 @@
     <div class="mq-ctl"><label>Height <b id="vMarqHeightAur">3.70</b><input type="range" id="cMarqHeightAur" min="0.5" max="10.0" step="0.1" value="3.7"></label></div>
   </div>
 
+  <!-- PROJECTS MANAGER: zones + planets as plain form controls (Edit Mode). Body is generated from galaxyModel by pmRender(). -->
+  <div id="projMgr" role="dialog" aria-label="Projects Manager">
+    <div class="pm-head"><span class="pm-title">Projects Manager</span><button type="button" class="pm-close" id="pmClose" aria-label="Close Projects Manager">✕</button></div>
+    <div class="pm-tools"><button type="button" class="pm-newzone" id="pmNewZone" data-pm="new-zone">＋ New zone</button><span class="pm-note">changes apply live<br>SAVE to sync</span></div>
+    <div class="pm-body" id="pmBody"></div>
+    <div class="pm-foot" id="pmFoot" role="status" aria-live="polite"></div>
+  </div>
+
   <div id="topbar">
     <div id="breadcrumb"><span class="home" id="homeBtn">⌂ Mundane Workshop</span> <span id="crumbpath"></span></div>
     <div id="topright">
@@ -1223,6 +1266,7 @@
       <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
       <button class="tbtn admin-only" id="editBtn">✎ edit</button>
       <button class="tbtn admin-only" id="meshModeBtn" title="When on, clicking a project/artifact selects it for mesh/box editing instead of opening its content">⛭ mesh select</button>
+      <button class="tbtn admin-only" id="pmBtn" title="Add, remove, rename and hide zones and the planets inside them (Edit Mode)">▤ projects</button>
       <button class="tbtn admin-only" id="debugBtn">⚙ debug</button>
       <button class="tbtn admin-only" id="hideUIBtn">⊘ hide ui</button>
       <div id="wordmark">Mundane Workshop</div>
@@ -2138,18 +2182,24 @@
     var ZONE_DEF=[];
     function rebuildZoneDef(){ ZONE_DEF=modelVisibleZones().map(function(z){ return {id:z.id,name:z.name,count:zonePlanetWeight(z),kind:z.kind}; }); }
     rebuildZoneDef();
-    var totalItems=ZONE_DEF.reduce(function(s,z){return s+z.count;},0)||1;
+    var totalItems=1;
     var ZONES=[], zoneById={};
     function squircleRadius(theta,R){ return R/Math.pow(Math.pow(Math.abs(Math.cos(theta)),NEXP)+Math.pow(Math.abs(Math.sin(theta)),NEXP),1/NEXP); }
-    var zoneBnd=[0]; (function(){ var n=ZONE_DEF.length; for(var i=0;i<n;i++){ zoneBnd.push(zoneBnd[i]+(ZONE_DEF[i].count/totalItems)*Math.PI*2); } })();
-    (function(){ ZONE_DEF.forEach(function(zd,zi){
-        var sB=zoneBnd[zi], eB=zoneBnd[zi+1], cen=(sB+eB)/2;
-        var mat=new THREE.MeshBasicMaterial({color:DARK.line,transparent:true,opacity:0.05,side:THREE.DoubleSide,depthWrite:false}); zoneMats.push(mat);
-        var mesh=new THREE.Mesh(new THREE.BufferGeometry(),mat); mesh.rotation.x=Math.PI/2; mesh.position.y=0.004;
-        mesh.userData={zone:zd.id,isZone:true,mat:mat,target:0.05,cur:0.05};
-        galaxy.add(mesh);
-        ZONES.push({id:zd.id,name:zd.name,kind:zd.kind,a0:sB,a1:eB,center:cen,mesh:mesh}); zoneById[zd.id]=ZONES[ZONES.length-1];
-      }); })();
+    // Wedge boundaries: each visible zone owns an angular slice proportional to its weight. Re-run after any
+    // structural change (add/remove/hide a zone or planet), then layoutZones() + rebuildZones() below.
+    var zoneBnd=[0];
+    function computeZoneBounds(){ totalItems=ZONE_DEF.reduce(function(s,z){return s+z.count;},0)||1; zoneBnd=[0]; var n=ZONE_DEF.length; for(var i=0;i<n;i++){ zoneBnd.push(zoneBnd[i]+(ZONE_DEF[i].count/totalItems)*Math.PI*2); } }
+    function makeZone(zd){
+      var mat=new THREE.MeshBasicMaterial({color:DARK.line,transparent:true,opacity:0.05,side:THREE.DoubleSide,depthWrite:false}); zoneMats.push(mat);
+      var mesh=new THREE.Mesh(new THREE.BufferGeometry(),mat); mesh.rotation.x=Math.PI/2; mesh.position.y=0.004;
+      mesh.userData={zone:zd.id,isZone:true,mat:mat,target:0.05,cur:0.05};
+      galaxy.add(mesh);
+      var z={id:zd.id,name:zd.name,kind:zd.kind,a0:0,a1:0,center:0,mesh:mesh}; ZONES.push(z); zoneById[zd.id]=z; return z;
+    }
+    // Copy the current bounds onto each ZONES entry (a0/a1/center) and re-aim its floating label anchor.
+    function layoutZones(){ ZONES.forEach(function(z,zi){ z.a0=zoneBnd[zi]; z.a1=zoneBnd[zi+1]; z.center=(z.a0+z.a1)/2;
+      z.anchor=new THREE.Vector3(Math.cos(z.center)*(PLATE-1.2),0.05,Math.sin(z.center)*(PLATE-1.2)); }); }
+    computeZoneBounds(); ZONE_DEF.forEach(makeZone); layoutZones();
     function rebuildZones(){
       var n=ZONE_DEF.length, zrng=mulberry32(99), OFF=[-0.075,-0.04,0,0.04,0.075], K=Math.round(params.zoneSteps);
       var profiles=[]; for(var j=0;j<n;j++){ var ba=zoneBnd[j], Rb=squircleRadius(ba,PLATE), pts=[];
@@ -10017,17 +10067,19 @@ f 2469//2469 2470//2470 2434//2434
       planets.forEach(function(p){ p.userData.moons.forEach(function(m){ tog(m.material); if(m.userData.glbGroup) m.userData.glbGroup.traverse(function(o){ if(o.isMesh) tog(o.material); }); }); }); }
     // Planets are created from the model — every planet of every VISIBLE zone (hidden planets included so
     // they can show, dimmed, in Edit Mode; their scene visibility is toggled by applyHiddenVisibility()).
-    modelVisibleZones().forEach(function(z){ (z.planets||[]).forEach(function(p){
+    function addModelPlanet(z,p){
       var label=p.title+(p.sub?('<small>'+p.sub+'</small>'):'');
       addPlanet(p.id, z.id, z.kind, label, p.locked);
       var grp=planets[planets.length-1]; if(grp){ grp.userData.hidden=!!p.hidden; }
-    }); });
+      return grp;
+    }
+    modelVisibleZones().forEach(function(z){ (z.planets||[]).forEach(function(p){ addModelPlanet(z,p); }); });
 
     var logoLabel=mkLabelEl('','');
 
     // zone labels
-    ZONES.forEach(function(z){ var d=document.createElement('div'); d.className='zlabel'+(z.kind==='play'?' zlabel-uncharted':''); d.textContent=z.name; if(z.kind==='play') d.setAttribute('data-text',z.name); document.getElementById('labels').appendChild(d); z.label=d;
-      z.anchor=new THREE.Vector3(Math.cos(z.center)*(PLATE-1.2),0.05,Math.sin(z.center)*(PLATE-1.2)); });
+    function makeZoneLabel(z){ var d=document.createElement('div'); d.className='zlabel'+(z.kind==='play'?' zlabel-uncharted':''); d.textContent=z.name; if(z.kind==='play') d.setAttribute('data-text',z.name); document.getElementById('labels').appendChild(d); z.label=d; return d; }
+    ZONES.forEach(makeZoneLabel);   // (anchors already set by layoutZones)
 
     // ---------- projection ----------
     function projLocal(v3){ var v=v3.clone(); galaxy.localToWorld(v); v.project(camera); return {x:(v.x*0.5+0.5)*W,y:(-v.y*0.5+0.5)*H,vis:v.z<1}; }
@@ -11476,8 +11528,11 @@ f 2469//2469 2470//2470 2434//2434
 
     // ── MODEL-DRIVEN MENU: generated from galaxyModel; hover→highlight, click→focus, edit-mode +/- controls ──
     function persistModel(){ if(typeof copyOvr!=='undefined'){ copyOvr['galaxyModel']=galaxyModel; if(typeof persistCopy==='function') persistCopy(); } }
-    function structuralApply(){ persistModel(); try{ sessionStorage.setItem('mw_reedit','1'); }catch(e){} location.reload(); }   // structural change → persist + reload (boot rebuilds from model; stays in Edit Mode)
-    function newZoneId(){ var i=1, ids=galaxyModel.map(function(z){return z.id;}); while(ids.indexOf('zone'+i)>=0) i++; return 'zone'+i; }
+    // Structural edits (add/remove/hide/rename zones + planets) are made in the Projects Manager panel (pmRender & co, below)
+    // and applied LIVE by syncSceneToModel() — no reload. This menu is navigation only (plus the editable idx numbers/title).
+    // What a planet is CALLED right now: its saved title override (the same one the 3D label, booklet and FX list show),
+    // else the model's. Zone names are already merged into the model at boot / by the panel.
+    function planetTitle(p){ var o=(typeof copyOvr!=='undefined')?copyOvr['case:'+p.id+':title']:null; return (o!=null&&o!=='')?o:p.title; }
     function defaultIdx(p,pi){ return p.locked?'?':('0'+(pi+1)).slice(-2); }
     function buildMenu(){
       var body=document.getElementById('menuBody'); if(!body) return; body.innerHTML=''; var visZ=0;
@@ -11486,31 +11541,23 @@ f 2469//2469 2470//2470 2434//2434
         if(!z.hidden) visZ++;
         var grp=document.createElement('div'); grp.className='grp'+(z.hidden?' is-hidden':''); grp.setAttribute('data-zone',z.id);
         var nm=document.createElement('span'); nm.textContent=z.name; grp.appendChild(nm);
-        var zc=document.createElement('span'); zc.className='edit-only';
-        zc.innerHTML='<button class="mini" data-act="addp" data-zone="'+z.id+'" title="add planet">＋</button>'
-          +(z.hidden?'<button class="mini" data-act="showz" data-zone="'+z.id+'" title="restore zone">⤺</button>'
-                    :'<button class="mini" data-act="hidez" data-zone="'+z.id+'" title="remove zone">✕</button>');
-        grp.appendChild(zc); body.appendChild(grp);
+        body.appendChild(grp);
         var compact=(z.kind==='util'||z.kind==='social');
-        var row=document.createElement('div'); if(compact) row.className='row2';
+        var row=document.createElement('div'); row.className=(compact?'row2':'')+(z.hidden?' is-hidden':'');   // a hidden zone takes its planets out of the nav with it
         (z.planets||[]).forEach(function(p,pi){
           var btn=document.createElement('button'); btn.className='navbtn'+(p.locked?' holo':'')+(p.hidden?' is-hidden':'')+(p.id==='contact'?' holonet':'');
           btn.setAttribute('data-planet',p.id); btn.setAttribute('data-zone',z.id);
-          var t=document.createElement('span'); t.textContent=p.title; btn.appendChild(t);
+          var t=document.createElement('span'); t.textContent=planetTitle(p); btn.appendChild(t);
           if(!compact){
             var ix=document.createElement('span'); ix.className='idx editable'; ix.setAttribute('data-planet',p.id);
             ix.textContent=(p.idx!=null&&p.idx!=='')?p.idx:defaultIdx(p,pi); btn.appendChild(ix);
             ix.addEventListener('blur',function(){ p.idx=ix.textContent.replace(/\s+$/,''); persistModel(); });   // live (no reload)
             ix.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); ix.blur(); } });
           }
-          var pc=document.createElement('span'); pc.className='edit-only planet-ctl';
-          pc.innerHTML=(p.hidden?'<button class="mini" data-act="showp" data-zone="'+z.id+'" data-planet="'+p.id+'" title="restore">⤺</button>'
-                              :'<button class="mini" data-act="hidep" data-zone="'+z.id+'" data-planet="'+p.id+'" title="remove">✕</button>');
-          btn.appendChild(pc); row.appendChild(btn);
+          row.appendChild(btn);
         });
         body.appendChild(row);
       });
-      var az=document.createElement('button'); az.className='addzone-btn'; az.setAttribute('data-act','addzone'); az.textContent='＋ add zone'; body.appendChild(az);
       var mc=document.getElementById('menuCount'); if(mc) mc.textContent='//'+('0'+visZ).slice(-2);
       if(typeof setInlineEditing==='function' && typeof editMode!=='undefined' && editMode){ syncMenuEditable(); }   // keep idx editable after a live rebuild
       wireMenu();
@@ -11518,17 +11565,6 @@ f 2469//2469 2470//2470 2434//2434
     function syncMenuEditable(){ var on=(typeof editMode!=='undefined')&&editMode;
       Array.prototype.forEach.call(document.querySelectorAll('#menu .idx.editable'),function(el){ el.contentEditable=on?'true':'false'; });
       var mt=document.getElementById('menuTitleTxt'); if(mt){ mt.contentEditable=on?'true':'false'; mt.classList.toggle('inline-edit-on',on); }
-    }
-    function handleMenuEdit(el){
-      var act=el.getAttribute('data-act'), zid=el.getAttribute('data-zone'), pid=el.getAttribute('data-planet');
-      if(act==='addzone'){ var nz=newZoneId(); galaxyModel.push({id:nz,name:'New Zone',kind:'work',hidden:false,planets:[{id:nz+'_p0',title:'New World',sub:'01 · charted',locked:false,hidden:false}]}); structuralApply(); return; }
-      var z=galaxyModel.filter(function(x){return x.id===zid;})[0]; if(!z) return;
-      if(act==='addp'){ z.planets.push({id:z.id+'_p'+Date.now().toString(36),title:'New World',sub:'charted',locked:false,hidden:false}); structuralApply(); return; }
-      if(act==='hidez'){ z.hidden=true; structuralApply(); return; }
-      if(act==='showz'){ z.hidden=false; structuralApply(); return; }
-      var p=(z.planets||[]).filter(function(x){return x.id===pid;})[0];
-      if(act==='hidep'&&p){ p.hidden=true; structuralApply(); return; }
-      if(act==='showp'&&p){ p.hidden=false; structuralApply(); return; }
     }
     var _menuWired=false;
     function wireMenu(){
@@ -11539,13 +11575,25 @@ f 2469//2469 2470//2470 2434//2434
       });
       body.addEventListener('mouseleave',function(){ if(!focused) setHovered(null); });
       body.addEventListener('click',function(e){
-        var mini=e.target.closest&&(e.target.closest('.mini')||e.target.closest('.addzone-btn')); if(mini){ e.stopPropagation(); handleMenuEdit(mini); return; }
         if(editMode && e.target.closest && e.target.closest('.idx.editable')){ return; }   // clicking the idx in Edit Mode edits it, doesn't navigate
         var b=e.target.closest&&e.target.closest('.navbtn[data-planet]'); if(b&&!b.classList.contains('is-hidden')){ if(focused)goHome(); var g=planetById(b.getAttribute('data-planet')); if(g) activate(g.userData); }
       });
     }
     // Toggle scene visibility of soft-deleted (hidden) planets: shown dimmed only while editing.
-    function applyHiddenVisibility(){ planets.forEach(function(grp){ if(grp.userData&&grp.userData.hidden){ var show=!!editMode; grp.visible=show; if(grp.userData.label) grp.userData.label.style.display=show?'':'none'; } }); }
+    // A soft-deleted (hidden) planet is shown dimmed in Edit Mode only. The per-frame visibility passes in animate()
+    // consult planetShown() too — they used to overwrite this with the boot gate every frame, so a hidden planet
+    // rendered (and stayed clickable) in prod view.
+    function planetShown(p){ return !(p.userData&&p.userData.hidden) || !!editMode; }
+    // Raycast targets: hidden planets are excluded outside Edit Mode. Mutated IN PLACE — other code holds these arrays.
+    function refreshHitLists(){
+      planetHits.length=0; planets.forEach(function(p){ if(planetShown(p)&&p.userData.hitProxy) planetHits.push(p.userData.hitProxy); });
+      editHits.length=0; planetHits.forEach(function(h){ editHits.push(h); }); editHits.push(holoHead);
+      zoneHits.length=0; ZONES.forEach(function(z){ zoneHits.push(z.mesh); });
+    }
+    function applyHiddenVisibility(){ planets.forEach(function(grp){ if(!grp.userData) return;
+      if(grp.userData.hidden){ var show=!!editMode; grp.visible=show; if(grp.userData.label) grp.userData.label.style.display=show?'':'none'; }
+      else if(grp.userData.label) grp.userData.label.style.display=''; });   // un-hidden live → label comes back
+      refreshHitLists(); }
     buildMenu();
 
     // ---------- theme ----------
@@ -11602,7 +11650,7 @@ f 2469//2469 2470//2470 2434//2434
     var isAuthor = document.body.classList.contains('author-mode');
     function bind(id,vid,fn,fix){ var el=document.getElementById(id); el.addEventListener('input',function(){ var v=parseFloat(el.value); document.getElementById(vid).textContent=(fix!==undefined?v.toFixed(fix):v); fn(v); }); }
     document.getElementById('debugBtn').addEventListener('click',function(){ document.getElementById('debug').classList.toggle('open'); });
-    window.addEventListener('keydown',function(e){ if(isAuthor && (e.key==='d'||e.key==='D')){ document.getElementById('debug').classList.toggle('open'); } });
+    window.addEventListener('keydown',function(e){ if(isAuthor && (e.key==='d'||e.key==='D') && !e.target.matches('input,textarea,select,[contenteditable="true"]')){ document.getElementById('debug').classList.toggle('open'); } });   // (input guard: typing a "d" into any text field used to toggle this panel)
 
     // ---------- hide UI (H key + button) ----------
     // Visitor default omits the edit/debug affordances (those buttons don't exist for them);
@@ -12551,7 +12599,7 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     // Clickable set (planet hit proxies + the logo head).
-    var editIds=['w0','w1','w2','p0','p1','p2','cv','contact','li','ig','logo'];
+    var editIds=planets.map(function(p){ return p.userData.id; }).concat(['logo']);   // derived from the model (was a hardcoded id list, so planets added in Edit Mode never had their uploaded meshes/textures restored)
     holoHead.userData.editId='logo';
     var editHits=planetHits.concat([holoHead]);
     function clearSel(){ editSel=null; logoEdit=false; moonSel=null; }
@@ -12729,12 +12777,10 @@ f 2469//2469 2470//2470 2434//2434
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
       if(typeof setInlineEditing==='function') setInlineEditing(on);
       if(typeof updateSyncBanner==='function') updateSyncBanner();
-      if(!on) setMeshSelectMode(false); }   // don't leave the "clicks select mesh" trap armed for next time Edit Mode opens
+      if(!on){ setMeshSelectMode(false); if(typeof pmOpen==='function') pmOpen(false); } }   // don't leave the "clicks select mesh" trap armed for next time Edit Mode opens; the Projects Manager is an Edit Mode panel
     var _eb=document.getElementById('editBtn'); if(_eb) _eb.addEventListener('click',function(){ setEditMode(!editMode); });
     function setMeshSelectMode(on){ meshSelectMode=on; var b=document.getElementById('meshModeBtn'); if(b) b.classList.toggle('on',on); }
     var _mmb=document.getElementById('meshModeBtn'); if(_mmb) _mmb.addEventListener('click',function(){ setMeshSelectMode(!meshSelectMode); });
-    // After a structural (zone/planet) change we reload; this flag re-enters Edit Mode at the END of boot so the designer isn't kicked to prod view.
-    var _reenterEdit=false; try{ if(sessionStorage.getItem('mw_reedit')){ sessionStorage.removeItem('mw_reedit'); _reenterEdit=true; } }catch(e){}
     var _vsb=document.getElementById('viewSetBtn'); if(_vsb) _vsb.addEventListener('click',saveCamView);
     var _vrb=document.getElementById('viewResetBtn'); if(_vrb) _vrb.addEventListener('click',resetCamView);
 
@@ -12829,7 +12875,10 @@ f 2469//2469 2470//2470 2434//2434
     // Keyed PER SELECTOR + index (stable: adding/removing a selector won't shift other groups' keys).
     // NOTE: snapshot cells + the CTA button are NOT here — they're rendered + edited PER-PROJECT by applyData
     // (global inline keys made them shared across every project). See projectDataForBooklet / applyData.
-    var INLINE_SELS=['#wordmark','#hint','#statusL','#statusR','#menu h2','#menu .grp','.navbtn > span:first-child','.flip-hint','.back-header span','.front-title','.front-pieces','.front-band-text','.cover-label','.art-chip'];
+    // NOTE: '#menu .grp' and '.navbtn > span:first-child' used to be listed here. They were keyed by DOM INDEX, so any structural
+    // change (a zone emptied/hidden, a planet added) shifted every saved name onto the wrong button — e.g. Profile's "CV" button
+    // rendering "MINIFIGURE ME". Zone + planet names now come from galaxyModel and are edited in the Projects Manager panel.
+    var INLINE_SELS=['#wordmark','#hint','#statusL','#statusR','#menu h2','.flip-hint','.back-header span','.front-title','.front-pieces','.front-band-text','.cover-label','.art-chip'];
     var inlineNodes=[];
     function commitInline(n){
       var v=n.el.innerText.replace(/\s+$/,'');
@@ -12912,14 +12961,15 @@ f 2469//2469 2470//2470 2434//2434
     // unused in storage. This previously only covered `locked` planets — the Playground projects are NOT
     // locked, so they silently lost every manual edit on reload. Defaults here mirror openCase()'s own lazy
     // fallback exactly, so a project with no overrides looks identical to before.
-    planets.forEach(function(p){ var id=p.userData.id; if(CASES[id]) return;
+    function seedCaseFor(p){ var id=p.userData.id; if(CASES[id]) return;
       CASES[id]= p.userData.locked
         ? {kind:'work',kicker:'Signal encrypted',title:'??? · undiscovered',body:'This sector remains uncharted. Add the case study here in Edit Mode.'}
-        : {kind:'work',kicker:'Case file',title:(p.userData.labelTitle?p.userData.labelTitle.textContent:id),body:'New world. Add your case study here in Edit Mode.'};
-    });
+        : {kind:(p.userData.kind==='social'?'social':'work'),kicker:'Case file',title:(p.userData.labelTitle?p.userData.labelTitle.textContent:id),body:'New world. Add your case study here in Edit Mode.'};
+    }
+    planets.forEach(seedCaseFor);
     // Per-project right-page (snapshot) + CTA defaults — each project owns its own copy now.
     var SNAP_DEF=[{k:'Role',v:'Senior Designer<br>System Lead'},{k:'Timeline',v:'Jan–Sep 2024<br>9 months'},{k:'Outcome',v:'↑ 60%',amber:true},{k:'Impact on',v:'Eng velocity'},{k:'Platforms',v:'Web · iOS<br>Android'},{k:'Libraries',v:'5 → 1'}];
-    Object.keys(CASES).forEach(function(id){ var c=CASES[id];
+    function finalizeCase(id){ var c=CASES[id];
       if(!c.snapshot) c.snapshot=SNAP_DEF.map(function(o){ return {k:o.k,v:o.v,amber:!!o.amber}; });
       if(!c.tags) c.tags=['Product Design','Design Systems','Scale','0→1'];
       var _soc=(c.kind==='social');
@@ -12930,14 +12980,16 @@ f 2469//2469 2470//2470 2434//2434
       if(c.ctaUrl==null) c.ctaUrl=_soc?(id==='ig'?'https://www.instagram.com/jas0n_0n_a_bike/':id==='li'?'https://www.linkedin.com/in/jason-hsin-00378837/':'#'):'#';
       if(c.ctaHidden==null) c.ctaHidden=false;
       if(!c.marquee) c.marquee=Object.assign({},MARQ_DEF);
-    });
+    }
+    Object.keys(CASES).forEach(finalizeCase);
     // restore saved per-project copy (title/body/kicker/snapshot/tags/cta/marquee) → CASES + nav/planet labels
-    Object.keys(CASES).forEach(function(id){
+    function restoreCaseOverrides(id){
       ['kicker','title','body','snapshot','tags','cta','ctaUrl','ctaHidden','ctaActive','marquee','extraLinks','slug'].forEach(function(f){ var k='case:'+id+':'+f; if(copyOvr[k]!=null){ CASES[id][f]=copyOvr[k];
         if(f==='title'){ var b=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(b)b.textContent=copyOvr[k];
           var g=planetById(id); if(g&&g.userData.labelTitle){ g.userData.labelTitle.textContent=copyOvr[k]; } }
       } });
-    });
+    }
+    Object.keys(CASES).forEach(restoreCaseOverrides);
     // Build the per-project booklet data (content + edit callbacks) and re-render helpers.
     function saveCaseField(id,f,v){ if(CASES[id]){ CASES[id][f]=v; } copyOvr['case:'+id+':'+f]=v; persistCopy(); }
     function reShowProject(id){ if(window.CS && CS.showBooklet) CS.showBooklet(projectDataForBooklet(id)); }
@@ -12965,43 +13017,24 @@ f 2469//2469 2470//2470 2434//2434
         // activating a still-placeholder label swaps it to a real default; a custom label already in place is left alone
         onCtaActive:function(v){ saveCaseField(id,'ctaActive',v); if(v&&(!c.cta||c.cta==='Case study coming soon')) saveCaseField(id,'cta','VIEW CASE STUDY →'); reShowProject(id); } };
     }
-    // ── PLANET LABEL EDITING: title + secondary (small) line are click-to-edit on the canvas in Edit Mode ──
-    var labelEditNodes=[];
-    (function buildLabelEdit(){
-      planets.forEach(function(grp){
-        var id=grp.userData.id, t=grp.userData.labelTitle, s=grp.userData.labelSub;
-        if(s){ var sk='plabel:'+id+':sub'; if(copyOvr[sk]!=null) s.textContent=copyOvr[sk];
-          s.addEventListener('blur',function(){ copyOvr[sk]=s.innerText.replace(/\s+$/,''); persistCopy(); });
-          s.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); s.blur(); } });
-          labelEditNodes.push(s); }
-        if(t){
-          // Title stays unified with the case title so the label, nav button, and manual match.
-          t.addEventListener('blur',function(){ var v=t.innerText.replace(/\s+$/,'');
-            if(CASES[id]){ CASES[id].title=v; copyOvr['case:'+id+':title']=v;
-              var b=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(b)b.textContent=v; }
-            else { copyOvr['plabel:'+id+':title']=v; }
-            persistCopy(); });
-          t.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); t.blur(); } });
-          labelEditNodes.push(t);
-          if(!CASES[id]){ var _sv=(copyOvr['case:'+id+':title']!=null)?copyOvr['case:'+id+':title']:copyOvr['plabel:'+id+':title'];   // playground titles (saved either way) → label + menu
-            if(_sv!=null){ t.textContent=_sv; var _bb=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(_bb)_bb.textContent=_sv; } }
-        }
-      });
-    })();
-    // ── ZONE RENAME: radial zone labels are click-to-edit in galaxy Edit Mode (persisted) ──
-    var zoneEditNodes=[];
-    (function buildZoneEdit(){
-      ZONES.forEach(function(z){ if(!z.label) return;
-        var k='zone:'+z.id+':name';
-        if(copyOvr[k]!=null){ z.name=copyOvr[k]; z.label.textContent=copyOvr[k]; if(z.label.hasAttribute('data-text')) z.label.setAttribute('data-text',copyOvr[k]); }
-        z.label.addEventListener('blur',function(){ var v=z.label.textContent.replace(/\s+$/,''); z.name=v; copyOvr[k]=v;
-          if(z.label.hasAttribute('data-text')) z.label.setAttribute('data-text',v);   // keep the glitch pseudo-elements (attr(data-text)) in sync with an edited zone name
-          var mz=galaxyModel.filter(function(x){return x.id===z.id;})[0]; if(mz){ mz.name=v; copyOvr['galaxyModel']=galaxyModel; }   // keep menu header in sync
-          persistCopy(); if(typeof buildMenu==='function') buildMenu(); });
-        z.label.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); z.label.blur(); } });
-        zoneEditNodes.push(z.label);
-      });
-    })();
+    // ── PLANET LABEL TEXT: restore saved subtitle/title onto each 3D label. The labels themselves are no longer click-to-edit
+    // (their screen position is a live projection that drifts with the camera, which made them genuinely hard to hit) —
+    // titles + subtitles are edited in the Projects Manager panel, which writes the same 'plabel:<id>:sub' / 'case:<id>:title' keys. ──
+    var labelEditNodes=[];   // kept (empty) for setInlineEditing()
+    function restorePlanetLabelText(grp){
+      var id=grp.userData.id, t=grp.userData.labelTitle, s=grp.userData.labelSub;
+      if(s){ var sk='plabel:'+id+':sub'; if(copyOvr[sk]!=null) s.textContent=copyOvr[sk]; }
+      if(t && !CASES[id]){ var _sv=(copyOvr['case:'+id+':title']!=null)?copyOvr['case:'+id+':title']:copyOvr['plabel:'+id+':title'];   // playground titles (saved either way) → label + menu
+        if(_sv!=null){ t.textContent=_sv; var _bb=document.querySelector('#menu .navbtn[data-planet="'+id+'"] span'); if(_bb)_bb.textContent=_sv; } }
+    }
+    planets.forEach(restorePlanetLabelText);
+    // ── ZONE NAME: the radial zone labels are no longer click-to-edit (same drift problem as the planet labels) — zones are
+    // renamed in the Projects Manager panel, which writes 'zone:<id>:name' AND the model. Here we only restore a saved name. ──
+    var zoneEditNodes=[];   // kept (empty) for setInlineEditing()
+    ZONES.forEach(function(z){ if(!z.label) return;
+      var k='zone:'+z.id+':name';
+      if(copyOvr[k]!=null){ z.name=copyOvr[k]; z.label.textContent=copyOvr[k]; if(z.label.hasAttribute('data-text')) z.label.setAttribute('data-text',copyOvr[k]); }
+    });
     // ── BREADCRUMB: editable steps (Edit Mode, persisted) · 'galaxy' step removed · root renamed to "Mundane Workshop" ──
     var crumbRootEl=document.getElementById('homeBtn'), crumbPathEl=document.getElementById('crumbpath');
     var CRUMB_ROOT_DEFAULT='Mundane Workshop', crumbCtx='', crumbSegs=[];
@@ -13078,32 +13111,33 @@ f 2469//2469 2470//2470 2434//2434
     // while applying a restored mesh (bad geometry, a null group, etc.) vanished with zero console output,
     // which is why the fresh-visitor "planets render as plain spheres" bug was invisible for so long.
     // Every catch now logs id + error so the real failure (if any) is visible in devtools on next load.
-    (function restoreOverrides(){
+    function restorePlanetOverrides(id){
       if(!window.BRICStore) return;
-      editIds.forEach(function(id){
-        BRICStore.get('mesh:'+id).then(function(rec){ if(!rec) return;
-          if(rec.kind==='obj'){ applyMeshTo(id,parseUploadedOBJ(rec.text,meshRadiusFor(id))); planetMeshOvr[id]={kind:'obj',name:rec.name}; }
-          else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,meshRadiusFor(id),rec.depth||0.3,rec.axis||'z'); if(g){ applyMeshTo(id,g); planetMeshOvr[id]={kind:'svg',name:rec.name}; } else { console.warn('[mw-restore] parseSVGGeo returned null for',id,rec.name); } }
-          else if(rec.kind==='glb'){
-            // NOTE: this used to be held back (mwHeldLogo) while the monogram was on, back when the
-            // monogram replaced the head. It no longer does — the monogram lives at the base emitter,
-            // the head/uploaded logo always lives in the beam — so a custom logo restores normally.
-            if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } }); }
-            else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
-          }
-          else if(rec.kind==='step'){ parseSTEP(rec.buffer,function(group){ if(!group) return;
-            if(id==='logo'){ applyTexturedGLBToLogo(group); planetMeshOvr.logo={kind:'step',name:rec.name}; }
-            else { var g3=mergeGroupGeo(group,meshRadiusFor(id)); if(g3){ applyMeshTo(id,g3); planetMeshOvr[id]={kind:'step',name:rec.name}; } }
-          }); }
-        }).catch(function(err){ console.error('[mw-restore] mesh:'+id,err); });
-        BRICStore.get('tex:'+id).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(id,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] tex:'+id,err); });
-        BRICStore.get('boxtex:'+id).then(function(rec){ if(rec){ BOX_FACES.forEach(function(f){ if(rec[f]) applyTextureTo(id,rec[f],true,f); }); } }).catch(function(err){ console.error('[mw-restore] boxtex:'+id,err); });
-        // FOCUS-VIEW BOX REPLACEMENT: cache the record; applied on focus (or now, if already focused on this box).
-        BRICStore.get('boxmesh:'+id).then(function(rec){ if(!rec) return; boxOvrData[id]=rec; boxOvr[id]={kind:rec.kind,name:rec.name};
-          if(focused&&focused.userData.id===id&&focused.userData._matBak) applyBoxReplacementFromData(id); }).catch(function(err){ console.error('[mw-restore] boxmesh:'+id,err); });
-      });
-      // moon (artifact) mesh + texture overrides
-      planets.forEach(function(grp){ grp.userData.moons.forEach(function(m){ var mid=m.userData.editId;
+      BRICStore.get('mesh:'+id).then(function(rec){ if(!rec) return;
+        if(rec.kind==='obj'){ applyMeshTo(id,parseUploadedOBJ(rec.text,meshRadiusFor(id))); planetMeshOvr[id]={kind:'obj',name:rec.name}; }
+        else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,meshRadiusFor(id),rec.depth||0.3,rec.axis||'z'); if(g){ applyMeshTo(id,g); planetMeshOvr[id]={kind:'svg',name:rec.name}; } else { console.warn('[mw-restore] parseSVGGeo returned null for',id,rec.name); } }
+        else if(rec.kind==='glb'){
+          // NOTE: this used to be held back (mwHeldLogo) while the monogram was on, back when the
+          // monogram replaced the head. It no longer does — the monogram lives at the base emitter,
+          // the head/uploaded logo always lives in the beam — so a custom logo restores normally.
+          if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } }); }
+          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
+        }
+        else if(rec.kind==='step'){ parseSTEP(rec.buffer,function(group){ if(!group) return;
+          if(id==='logo'){ applyTexturedGLBToLogo(group); planetMeshOvr.logo={kind:'step',name:rec.name}; }
+          else { var g3=mergeGroupGeo(group,meshRadiusFor(id)); if(g3){ applyMeshTo(id,g3); planetMeshOvr[id]={kind:'step',name:rec.name}; } }
+        }); }
+      }).catch(function(err){ console.error('[mw-restore] mesh:'+id,err); });
+      BRICStore.get('tex:'+id).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(id,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] tex:'+id,err); });
+      BRICStore.get('boxtex:'+id).then(function(rec){ if(rec){ BOX_FACES.forEach(function(f){ if(rec[f]) applyTextureTo(id,rec[f],true,f); }); } }).catch(function(err){ console.error('[mw-restore] boxtex:'+id,err); });
+      // FOCUS-VIEW BOX REPLACEMENT: cache the record; applied on focus (or now, if already focused on this box).
+      BRICStore.get('boxmesh:'+id).then(function(rec){ if(!rec) return; boxOvrData[id]=rec; boxOvr[id]={kind:rec.kind,name:rec.name};
+        if(focused&&focused.userData.id===id&&focused.userData._matBak) applyBoxReplacementFromData(id); }).catch(function(err){ console.error('[mw-restore] boxmesh:'+id,err); });
+    }
+    // moon (artifact) mesh + texture overrides
+    function restoreMoonOverrides(grp){
+      if(!window.BRICStore) return;
+      grp.userData.moons.forEach(function(m){ var mid=m.userData.editId;
         BRICStore.get('mesh:'+mid).then(function(rec){ if(!rec) return;
           if(rec.kind==='obj') m.geometry=parseUploadedOBJ(rec.text,0.12);
           else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,0.12,rec.depth||0.3,rec.axis||'z'); if(g) m.geometry=g; }
@@ -13111,8 +13145,10 @@ f 2469//2469 2470//2470 2434//2434
           else if(rec.kind==='step') parseSTEP(rec.buffer,function(group){ if(group) applyGLBSceneToMoon(mid,group); });
         }).catch(function(err){ console.error('[mw-restore] moon mesh:'+mid,err); });
         BRICStore.get('tex:'+mid).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(mid,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] moon tex:'+mid,err); });
-      }); });
-    })();
+      });
+    }
+    editIds.forEach(restorePlanetOverrides);
+    planets.forEach(restoreMoonOverrides);
 
     // ── global save ──────────────────────────────────────────────────────────
     // Local state (params/slots/mesh overrides/box textures) always writes to localStorage synchronously here —
@@ -13306,6 +13342,266 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cLogoHot','cLogoHotHex',function(v){ logoHot.value.set(v); params.logoHot=v; });
     colorCtl('cLogoTint','cLogoTintHex',function(v){ logoTint.value.set(v); params.logoTint=v; });
     buildZoneFxCtls(); buildPlanetFxCtls(); applyHoloColors();
+
+    // ══════ PROJECTS MANAGER ═════════════════════════════════════════════════════════════════════════════
+    // Fixed 2D panel (#projMgr) listing every zone + its planets as plain form controls. Replaces three fragile paths:
+    // the #menu ＋/✕ buttons (each ended in a full location.reload()), click-to-rename on the projected 3D zone/planet
+    // labels, and index-keyed menu inline edits. Every edit mutates galaxyModel, then syncSceneToModel() reconciles the LIVE
+    // scene to it — the same things boot builds from the model, minus the reload. Edits flow through persistModel() →
+    // persistCopy() (sets bric_copy_dirty) and reach the server only via the SAVE button (pushContentSave) — nothing here
+    // pushes, and nothing here runs on a passive page load.
+    var PM_BUILTIN={cv:1,contact:1};   // backed by bespoke views (CV route / HoloNet): can be hidden, not removed
+    var pmUndo=null;                   // {msg, run} — set by a removal, consumed by the panel's undo button
+    var pmArmed=null;                  // {kind:'zone'|'planet', id} — a remove button clicked once, awaiting its confirming second click
+    var pmArmedT=0;
+
+    // ── model helpers ──
+    function pmZone(zid){ return galaxyModel.filter(function(z){ return z.id===zid; })[0]; }
+    function pmPlanet(z,pid){ return z?(z.planets||[]).filter(function(p){ return p.id===pid; })[0]:null; }
+    function pmUid(prefix){ return prefix+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36); }   // never reused, so a removed item's leftovers can't leak into a new one
+    function pmSubOf(p){ var o=copyOvr['plabel:'+p.id+':sub']; return (o!=null)?o:(p.sub||''); }
+    // Social planets don't open a booklet — clicking one deep-links to CASES[id].ctaUrl ('#' = not set), so the panel is the only place to set it.
+    function pmUrlOf(p){ var c=CASES[p.id], u=(c&&c.ctaUrl)||''; return u==='#'?'':u; }
+    function pmUrlOk(v){ return v===''||/^(https?:\/\/|mailto:)/i.test(v); }   // no javascript:/data: URLs — this value ends up in window.open()
+    function pmVisibleCount(z){ return (z.planets||[]).filter(function(p){ return !p.hidden; }).length; }
+    function pmHasBuiltin(z){ return (z.planets||[]).some(function(p){ return PM_BUILTIN[p.id]; }); }
+    // Legacy menu inline edits were keyed by DOM index (see INLINE_SELS note) — inert now, so drop them on the first explicit edit.
+    function pmPurgeLegacyMenuKeys(){ Object.keys(copyOvr).forEach(function(k){ if(/^k:#menu \.grp:\d+$/.test(k)||/^k:\.navbtn > span:first-child:\d+$/.test(k)) delete copyOvr[k]; }); }
+    // Every persisted key that belongs to the given planet/zone ids: whole ':'-segment match (case:<id>:title, spot:<id>, camview:moon:<id>:0 …).
+    function pmKeysFor(ids){ return Object.keys(copyOvr).filter(function(k){
+      if(k==='galaxyModel'||k.indexOf('k:')===0||k.indexOf('inline:')===0) return false;
+      var seg=k.split(':'); return ids.some(function(id){ return seg.indexOf(id)>=0; }); }); }
+
+    // ── LIVE SCENE RECONCILER ──
+    // Reconcile the running scene to galaxyModel. Order matters: zone wedges first (planets are placed inside them), then planets.
+    function pmDropZone(z){
+      galaxy.remove(z.mesh); if(z.mesh.geometry) z.mesh.geometry.dispose();
+      var mat=z.mesh.userData.mat, mi=zoneMats.indexOf(mat); if(mi>=0) zoneMats.splice(mi,1); if(mat) mat.dispose();
+      if(z.label&&z.label.parentNode) z.label.parentNode.removeChild(z.label);
+      delete zoneById[z.id]; var zi=ZONES.indexOf(z); if(zi>=0) ZONES.splice(zi,1);
+    }
+    function pmDropPlanet(g){
+      var idx=planets.indexOf(g); if(idx>=0){ planets.splice(idx,1); if(bootPlanetGate){ bootPlanetGate.splice(idx,1); bootPlanetVal.splice(idx,1); } }
+      galaxy.remove(g);
+      if(g.userData.label&&g.userData.label.parentNode) g.userData.label.parentNode.removeChild(g.userData.label);
+      var ownMats=g.userData.mats||[], moonPers=[];
+      g.userData.moons.forEach(function(m){ if(m.userData.label&&m.userData.label.parentNode) m.userData.label.parentNode.removeChild(m.userData.label); if(m.material&&m.material.__per) moonPers.push(m.material.__per); });
+      // per-frame registries — otherwise their uniforms keep being driven for materials nothing renders any more
+      for(var i=fadables.length-1;i>=0;i--){ if(fadables[i].owner===g) fadables.splice(i,1); }
+      for(var j=holoMats.length-1;j>=0;j--){ if(ownMats.indexOf(holoMats[j].mat)>=0) holoMats.splice(j,1); }
+      for(var k=planetHoloMats.length-1;k>=0;k--){ if(planetHoloMats[k].id===g.userData.id) planetHoloMats.splice(k,1); }
+      for(var q=moonHoloMats.length-1;q>=0;q--){ if(moonPers.indexOf(moonHoloMats[q])>=0) moonHoloMats.splice(q,1); }
+      ownMats.forEach(function(m){ if(m.dispose) m.dispose(); });
+      var ei=editIds.indexOf(g.userData.id); if(ei>=0) editIds.splice(ei,1);
+    }
+    // Everything boot does to a planet AFTER addPlanet(), for one planet (mirrors the whole-array passes above: fitHitProxy, case seed/restore,
+    // label text, saved spot, moon count/labels, saved mesh + texture overrides).
+    function pmInitPlanet(g){
+      var id=g.userData.id; fitHitProxy(g);
+      seedCaseFor(g); finalizeCase(id); restoreCaseOverrides(id); restorePlanetLabelText(g);
+      var sp=copyOvr['spot:'+id]; if(sp){ g.userData.spot={ang:sp.ang,rad:sp.rad,y:sp.y,jx:sp.jx,jz:sp.jz}; var hp=spotPos(g.userData.spot); g.userData.homePos.copy(hp); g.userData.posTarget.copy(hp); g.position.copy(hp); }
+      var mk='mooncount:'+id; if(copyOvr[mk]!=null){ while(g.userData.moons.length<copyOvr[mk]) addMoon(g); while(g.userData.moons.length>copyOvr[mk]) removeLastMoon(g); }
+      g.userData.moons.forEach(setMoonLabel);
+      if(editIds.indexOf(id)<0) editIds.splice(editIds.length-1,0,id);   // keep 'logo' last
+      restorePlanetOverrides(id); restoreMoonOverrides(g);
+      if(bootPlanetGate){ bootPlanetGate[planets.indexOf(g)]=true; bootPlanetVal[planets.indexOf(g)]=1; }
+      g.userData.base=0.01;   // grows in via the per-frame scale lerp — a free "it appeared" cue
+    }
+    function syncSceneToModel(){
+      if(focused) goHome();
+      setHovered(null); clearSel();
+      var oldWedge={}; ZONES.forEach(function(z){ oldWedge[z.id]={a0:z.a0,a1:z.a1}; });
+      // 1 · zones ─ drop the ones no longer visible, add new ones, follow model order/names, recompute wedges
+      rebuildZoneDef();
+      ZONES.slice().forEach(function(z){ if(!ZONE_DEF.some(function(zd){ return zd.id===z.id; })) pmDropZone(z); });
+      var ordered=ZONE_DEF.map(function(zd){
+        var z=zoneById[zd.id]; if(!z){ z=makeZone(zd); makeZoneLabel(z); }
+        z.name=zd.name; z.kind=zd.kind; z.label.textContent=zd.name; if(z.label.hasAttribute('data-text')) z.label.setAttribute('data-text',zd.name);
+        return z; });
+      ZONES.length=0; ordered.forEach(function(z){ ZONES.push(z); });
+      computeZoneBounds(); layoutZones(); rebuildZones();
+      // 2 · planets ─ every planet of every visible zone (hidden ones included: dimmed in Edit Mode)
+      var want={}; modelVisibleZones().forEach(function(z){ (z.planets||[]).forEach(function(p){ want[p.id]=true; }); });
+      planets.slice().forEach(function(g){ if(!want[g.userData.id]) pmDropPlanet(g); });
+      var fresh=[];
+      modelVisibleZones().forEach(function(z){ (z.planets||[]).forEach(function(p){
+        var g=planetById(p.id);
+        if(!g){ g=addModelPlanet(z,p); pmInitPlanet(g); fresh.push(g); } else { g.userData.hidden=!!p.hidden; } }); });
+      // 3 · planets that were already there keep their relative place inside their zone's wedge as it grows/shrinks
+      planets.forEach(function(g){ if(fresh.indexOf(g)>=0) return;
+        var zn=zoneById[g.userData.zone], ow=oldWedge[g.userData.zone]; if(!zn) return;
+        var sp=g.userData.spot, f=null;
+        if(ow && ow.a1>ow.a0){
+          if(Math.abs(ow.a0-zn.a0)<1e-6 && Math.abs(ow.a1-zn.a1)<1e-6) return;   // wedge unchanged
+          f=(sp.ang-ow.a0)/(ow.a1-ow.a0);
+        }
+        if(f==null||isNaN(f)) f=0.12+rng()*0.76;          // no previous wedge to measure against → land somewhere inside
+        f=Math.min(0.88,Math.max(0.12,f));               // a saved angle that sat outside its own wedge gets pulled to its nearest edge
+        var ns={ang:zn.a0+f*(zn.a1-zn.a0),rad:sp.rad,y:sp.y,jx:sp.jx,jz:sp.jz}; g.userData.spot=ns;
+        var hp=spotPos(ns); g.userData.homePos.copy(hp); g.userData.posTarget.copy(hp); });   // eased into place by the per-frame lerp
+      // Freeze every planet's spot: the boot-time fallback draws from a seeded RNG in creation order, so without this a
+      // reload after adding/removing anything would reshuffle whichever planets had no saved spot.
+      planets.forEach(function(g){ var s=g.userData.spot; copyOvr['spot:'+g.userData.id]={ang:s.ang,rad:s.rad,y:s.y,jx:s.jx,jz:s.jz}; });
+      // 4 · dependents
+      setZone(null); applyHiddenVisibility();   // (also refreshes the raycast lists)
+      buildMenu(); buildZoneFxCtls(); buildPlanetFxCtls(); applyHoloColors();
+      refreshEditPanel();
+    }
+
+    // ── name edits (live, non-structural — no panel re-render so the field being typed in keeps focus) ──
+    function pmSetZoneName(z,v){
+      z.name=v; copyOvr['zone:'+z.id+':name']=v;
+      var sz=zoneById[z.id]; if(sz){ sz.name=v; if(sz.label){ sz.label.textContent=v; if(sz.label.hasAttribute('data-text')) sz.label.setAttribute('data-text',v); } }
+      rebuildZoneDef(); buildMenu(); buildZoneFxCtls();
+    }
+    function pmSetPlanetTitle(p,v){
+      p.title=v; copyOvr['case:'+p.id+':title']=v; delete copyOvr['plabel:'+p.id+':title'];   // same key the label/booklet/nav already read
+      if(CASES[p.id]) CASES[p.id].title=v;
+      var g=planetById(p.id); if(g&&g.userData.labelTitle) g.userData.labelTitle.textContent=v;
+      buildMenu(); buildPlanetFxCtls();
+    }
+    function pmSetPlanetSub(p,v){
+      p.sub=v; copyOvr['plabel:'+p.id+':sub']=v;
+      var g=planetById(p.id); if(g&&g.userData.labelSub) g.userData.labelSub.textContent=v;
+    }
+
+    function pmSetPlanetUrl(p,v){ if(!pmUrlOk(v)) return; var u=v||'#'; if(CASES[p.id]) CASES[p.id].ctaUrl=u; copyOvr['case:'+p.id+':ctaUrl']=u; }
+
+    // ── structural commit: reconcile the scene, persist, redraw the panel ──
+    function pmCommit(msg,opts){
+      opts=opts||{};
+      pmPurgeLegacyMenuKeys(); syncSceneToModel(); persistModel();
+      pmUndo=opts.undo||null; pmArmed=null; clearTimeout(pmArmedT);
+      pmRender(msg||''); if(opts.focus) pmFocus(opts.focus);
+    }
+    function pmAddPlanet(zid){
+      var z=pmZone(zid); if(!z) return; var p={id:pmUid(z.id+'_p'),title:'New World',sub:'charted',locked:false,hidden:false};
+      (z.planets=z.planets||[]).push(p);
+      pmCommit(z.hidden?'Added to "'+z.name+'" — the zone is hidden, so it won\'t show until you show the zone':'Added a planet to "'+z.name+'"',
+        {focus:'[data-pm-field="ptitle"][data-planet="'+p.id+'"]'});
+    }
+    function pmAddZone(){
+      var zid=pmUid('z'), p={id:pmUid(zid+'_p'),title:'New World',sub:'charted',locked:false,hidden:false};
+      galaxyModel.push({id:zid,name:'New Zone',kind:'work',hidden:false,planets:[p]});
+      pmCommit('Added a new zone',{focus:'[data-pm-field="zname"][data-zone="'+zid+'"]'});
+    }
+    function pmToggleZone(zid){ var z=pmZone(zid); if(!z) return; z.hidden=!z.hidden; pmCommit(z.hidden?'Hid "'+z.name+'" (content kept)':'Showing "'+z.name+'"'); }
+    function pmTogglePlanet(zid,pid){ var p=pmPlanet(pmZone(zid),pid); if(!p) return; p.hidden=!p.hidden; pmCommit(p.hidden?'Hid "'+planetTitle(p)+'" (content kept)':'Showing "'+planetTitle(p)+'"'); }
+    // Permanent removal. Everything stored for the item is snapshotted first so Undo can put it all back.
+    function pmRemove(kind,zid,pid){
+      var z=pmZone(zid); if(!z) return; var zi=galaxyModel.indexOf(z), ids, label, planetsGone;
+      if(kind==='zone'){ if(pmHasBuiltin(z)) return; planetsGone=(z.planets||[]).slice(); ids=[z.id].concat(planetsGone.map(function(p){ return p.id; })); label='zone "'+z.name+'"'+(planetsGone.length?' and its '+planetsGone.length+' planet'+(planetsGone.length===1?'':'s'):''); }
+      else { var p=pmPlanet(z,pid); if(!p||PM_BUILTIN[p.id]) return; planetsGone=[p]; ids=[p.id]; label='"'+planetTitle(p)+'"'; }
+      var pi=(kind==='planet')?z.planets.indexOf(planetsGone[0]):-1;
+      var keys=pmKeysFor(ids), savedKeys={}; keys.forEach(function(k){ savedKeys[k]=copyOvr[k]; });
+      // planetfx / zonefx are id-keyed maps inside single keys (so pmKeysFor can't see them) — snapshot + clear those entries too
+      var savedCases={}, savedPlanetFx={}, savedZoneFx=null;
+      planetsGone.forEach(function(p){ if(CASES[p.id]) savedCases[p.id]=CASES[p.id]; if(planetFx[p.id]) savedPlanetFx[p.id]=planetFx[p.id]; });
+      if(kind==='zone' && zoneFx[z.id]) savedZoneFx=zoneFx[z.id];
+      // ─ do it
+      if(kind==='zone') galaxyModel.splice(zi,1); else z.planets.splice(pi,1);
+      keys.forEach(function(k){ delete copyOvr[k]; });
+      planetsGone.forEach(function(p){ delete CASES[p.id]; delete planetFx[p.id]; if(copyOvr['planetfx']) delete copyOvr['planetfx'][p.id]; });
+      if(kind==='zone'){ delete zoneFx[z.id]; if(copyOvr['zonefx']) delete copyOvr['zonefx'][z.id]; }
+      pmCommit('Removed '+label,{undo:{msg:'Removed '+label,run:function(){
+        if(kind==='zone') galaxyModel.splice(zi,0,z); else z.planets.splice(pi,0,planetsGone[0]);
+        Object.keys(savedKeys).forEach(function(k){ copyOvr[k]=savedKeys[k]; });
+        Object.keys(savedCases).forEach(function(id){ CASES[id]=savedCases[id]; });
+        Object.keys(savedPlanetFx).forEach(function(id){ planetFx[id]=savedPlanetFx[id]; if(copyOvr['planetfx']) copyOvr['planetfx'][id]=savedPlanetFx[id]; });
+        if(savedZoneFx){ zoneFx[z.id]=savedZoneFx; if(copyOvr['zonefx']) copyOvr['zonefx'][z.id]=savedZoneFx; }
+        pmCommit('Restored '+label); } }});
+    }
+
+    // ── panel rendering (DOM APIs only — names are user text, never innerHTML) ──
+    function pmEl(tag,cls,text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+    function pmButton(label,act,zid,pid,title,cls){ var b=pmEl('button','pm-btn'+(cls?' '+cls:''),label); b.type='button'; b.setAttribute('data-pm',act);
+      if(zid) b.setAttribute('data-zone',zid); if(pid) b.setAttribute('data-planet',pid); if(title){ b.title=title; b.setAttribute('aria-label',title); } return b; }
+    function pmField(cls,value,label,zid,pid,field){ var i=pmEl('input',cls); i.type='text'; i.value=value; i.setAttribute('aria-label',label);
+      i.setAttribute('data-zone',zid); if(pid) i.setAttribute('data-planet',pid); i.setAttribute('data-pm-field',field); i.autocomplete='off'; i.spellcheck=false; return i; }
+    function pmFocus(sel){ var el=document.querySelector('#projMgr '+sel); if(!el) return; el.focus(); if(el.select) el.select(); if(el.scrollIntoView) el.scrollIntoView({block:'nearest'}); }
+    function pmRender(msg){
+      var body=document.getElementById('pmBody'), foot=document.getElementById('pmFoot'); if(!body) return;
+      var st=body.scrollTop, ae=document.activeElement, keep=null;   // keep keyboard focus on "the same control" across the rebuild
+      if(ae&&body.contains(ae)){ keep='[data-pm'+(ae.getAttribute('data-pm-field')?'-field="'+ae.getAttribute('data-pm-field')+'"':'="'+ae.getAttribute('data-pm')+'"')+']'
+        +(ae.getAttribute('data-zone')?'[data-zone="'+ae.getAttribute('data-zone')+'"]':'')+(ae.getAttribute('data-planet')?'[data-planet="'+ae.getAttribute('data-planet')+'"]':''); }
+      body.innerHTML='';
+      if(!galaxyModel.length) body.appendChild(pmEl('div','pm-empty','no zones — add one above'));
+      galaxyModel.forEach(function(z){
+        var sec=pmEl('section','pm-zone'+(z.hidden?' is-hidden':'')); sec.setAttribute('data-zone',z.id);
+        sec.appendChild(pmEl('div','pm-row')).appendChild(pmField('pm-znm',z.name,'Zone name',z.id,null,'zname'));
+        var acts=pmEl('div','pm-zactions'), all=(z.planets||[]).length;
+        sec.appendChild(pmEl('div','pm-count',z.hidden?'hidden · '+all+' planet'+(all===1?'':'s'):pmVisibleCount(z)+' of '+all+' visible'));
+        acts.appendChild(pmButton(z.hidden?'show zone':'hide zone','toggle-zone',z.id,null,(z.hidden?'Show':'Hide')+' zone "'+z.name+'"'+(z.hidden?' in the galaxy':' (its content is kept)')));
+        var zArmed=pmArmed&&pmArmed.kind==='zone'&&pmArmed.id===z.id, zLocked=pmHasBuiltin(z);
+        var zr=pmButton(zArmed?'sure?':'remove zone','remove-zone',z.id,null,zLocked?'Cannot remove zone "'+z.name+'": it contains built-in views (CV / HoloNet) — hide it instead':(zArmed?'Click again to permanently remove zone "'+z.name+'" and its planets':'Permanently remove zone "'+z.name+'" and its planets (undo available right after)'),'pm-danger'+(zArmed?' pm-confirm':''));
+        if(zLocked) zr.disabled=true; acts.appendChild(zr); sec.appendChild(acts);
+        var ul=pmEl('ul','pm-planets');
+        (z.planets||[]).forEach(function(p){
+          var li=pmEl('li','pm-planet'+(p.hidden?' is-hidden':'')); li.setAttribute('data-planet',p.id);
+          var r1=pmEl('div','pm-row'); r1.appendChild(pmField('pm-ptitle',planetTitle(p),'Planet title (in zone "'+z.name+'")',z.id,p.id,'ptitle'));
+          r1.appendChild(pmButton(p.hidden?'show':'hide','toggle-planet',z.id,p.id,(p.hidden?'Show':'Hide')+' planet "'+planetTitle(p)+'"'+(p.hidden?'':' (its content is kept)')));
+          var pArmed=pmArmed&&pmArmed.kind==='planet'&&pmArmed.id===p.id;
+          var pr=pmButton(pArmed?'sure?':'remove','remove-planet',z.id,p.id,PM_BUILTIN[p.id]?'Cannot remove "'+planetTitle(p)+'": built-in view (CV / HoloNet) — hide it instead':(pArmed?'Click again to permanently remove planet "'+planetTitle(p)+'"':'Permanently remove planet "'+planetTitle(p)+'" (undo available right after)'),'pm-danger'+(pArmed?' pm-confirm':''));
+          if(PM_BUILTIN[p.id]) pr.disabled=true; r1.appendChild(pr); li.appendChild(r1);
+          li.appendChild(pmEl('div','pm-row')).appendChild(pmField('pm-psub',pmSubOf(p),'Subtitle for "'+planetTitle(p)+'"',z.id,p.id,'psub'));
+          if(z.kind==='social'){ var uf=pmField('pm-psub',pmUrlOf(p),'Link URL for "'+planetTitle(p)+'" (opens when the planet is clicked)',z.id,p.id,'purl'); uf.placeholder='https://…  (link URL)'; li.appendChild(pmEl('div','pm-row')).appendChild(uf); }
+          ul.appendChild(li); });
+        if(!all) ul.appendChild(pmEl('li','pm-empty','no planets yet'));
+        sec.appendChild(ul); sec.appendChild(pmButton('＋ add planet','add-planet',z.id,null,'Add a planet to zone "'+z.name+'"','pm-addp'));
+        body.appendChild(sec); });
+      body.scrollTop=st;
+      foot.innerHTML='';
+      if(msg){ foot.appendChild(pmEl('span',null,msg)); if(pmUndo){ foot.appendChild(pmButton('undo','undo')); } }
+      if(keep){ var again=document.querySelector('#projMgr '+keep); if(again) again.focus(); }
+    }
+    function pmOpen(on){
+      if(on&&!editMode) setEditMode(true);   // managing structure is an Edit Mode activity
+      document.body.classList.toggle('pm-open',!!on);
+      var b=document.getElementById('pmBtn'); if(b) b.classList.toggle('on',!!on);
+      if(on){ pmUndo=null; pmArmed=null; pmRender(); } }
+    function pmDisarm(){ if(pmArmed){ pmArmed=null; clearTimeout(pmArmedT); pmRender(); } }
+    (function wirePM(){
+      var panel=document.getElementById('projMgr'), btn=document.getElementById('pmBtn'); if(!panel||!btn) return;
+      btn.addEventListener('click',function(){ pmOpen(!document.body.classList.contains('pm-open')); });
+      document.getElementById('pmClose').addEventListener('click',function(){ pmOpen(false); });
+      panel.addEventListener('keydown',function(e){ e.stopPropagation();   // keep typed letters away from the window-level shortcuts (D = debug, H = hide UI …)
+        if(e.key==='Escape'){ pmOpen(false); return; }
+        if(e.key==='Enter' && e.target.matches('input')){ e.preventDefault(); e.target.blur(); } });
+      panel.addEventListener('click',function(e){
+        var b=e.target.closest&&e.target.closest('[data-pm]'); if(!b||b.disabled) return;
+        var act=b.getAttribute('data-pm'), zid=b.getAttribute('data-zone'), pid=b.getAttribute('data-planet');
+        // A remove button needs a second click on the SAME target; anything else disarms it.
+        if(pmArmed && !((act==='remove-zone'&&pmArmed.kind==='zone'&&pmArmed.id===zid)||(act==='remove-planet'&&pmArmed.kind==='planet'&&pmArmed.id===pid))){ pmArmed=null; clearTimeout(pmArmedT); }
+        if(act==='new-zone') pmAddZone();
+        else if(act==='add-planet') pmAddPlanet(zid);
+        else if(act==='toggle-zone') pmToggleZone(zid);
+        else if(act==='toggle-planet') pmTogglePlanet(zid,pid);
+        else if(act==='undo'){ if(pmUndo){ var u=pmUndo; pmUndo=null; u.run(); } }
+        else if(act==='remove-zone'||act==='remove-planet'){
+          var kind=(act==='remove-zone')?'zone':'planet', id=(kind==='zone')?zid:pid;
+          if(pmArmed&&pmArmed.kind===kind&&pmArmed.id===id) pmRemove(kind,zid,pid);
+          else { pmArmed={kind:kind,id:id}; clearTimeout(pmArmedT); pmArmedT=setTimeout(pmDisarm,8000); pmRender(); } }
+      });
+      // Names apply as you type (live preview in the scene + menu); they're persisted on commit (blur / Enter) so we don't
+      // rewrite the whole copy blob on every keystroke.
+      panel.addEventListener('input',function(e){
+        var f=e.target.getAttribute&&e.target.getAttribute('data-pm-field'); if(!f) return;
+        var z=pmZone(e.target.getAttribute('data-zone')), p=pmPlanet(z,e.target.getAttribute('data-planet')), v=e.target.value.replace(/\s+$/,'');
+        if(f==='zname'&&z&&v) pmSetZoneName(z,v);
+        else if(f==='ptitle'&&p&&v) pmSetPlanetTitle(p,v);
+        else if(f==='psub'&&p) pmSetPlanetSub(p,v);
+        else if(f==='purl'&&p) pmSetPlanetUrl(p,e.target.value.trim());
+      });
+      panel.addEventListener('change',function(e){
+        var f=e.target.getAttribute&&e.target.getAttribute('data-pm-field'); if(!f) return;
+        var z=pmZone(e.target.getAttribute('data-zone')), p=pmPlanet(z,e.target.getAttribute('data-planet'));
+        // invalid input snaps back to the current value and is NOT a change (so it doesn't flip SAVE to "unsynced")
+        if(f==='zname'&&z&&!e.target.value.trim()){ e.target.value=z.name; return; }             // a name can't be blank
+        if(f==='ptitle'&&p&&!e.target.value.trim()){ e.target.value=planetTitle(p); return; }
+        if(f==='purl'&&p&&!pmUrlOk(e.target.value.trim())){ e.target.value=pmUrlOf(p); if(typeof toast==='function') toast('link must start with http(s):// or mailto:'); return; }
+        pmPurgeLegacyMenuKeys(); persistModel(); pmUndo=null; document.getElementById('pmFoot').innerHTML='';
+      });
+    })();
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
@@ -13482,7 +13778,6 @@ f 2469//2469 2470//2470 2434//2434
     } catch(e){ console.warn('[bric] restore failed',e); }
 
     applyHiddenVisibility();                          // hide any soft-deleted planets in prod view
-    if(_reenterEdit) setEditMode(true);               // re-enter Edit Mode after a structural reload
 
     var clock=new THREE.Clock(); var _animateErrLogged=false;
     function animate(){ requestAnimationFrame(animate); if(csPaused) return;   // MERGE: freeze during case-study takeover
@@ -13559,8 +13854,8 @@ f 2469//2469 2470//2470 2434//2434
       camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
-        planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
-      else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=bootPlanetGate?bootPlanetGate[pv]:true; }   // entry gate/docking: hidden (setSiteVisible/updateBootReveal own them until the site boots)
+        planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } if(!planetShown(p)){ p.visible=false; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
+      else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=(bootPlanetGate?bootPlanetGate[pv]:true) && planetShown(planets[pv]); }   // entry gate/docking: hidden (setSiteVisible/updateBootReveal own them until the site boots)
 
       // LOGO bottom clip (stud): position a world-space plane at a fraction up the logo's bounds.
       if(logo.userData.glbGroup && params.logoClip>0.0001){
