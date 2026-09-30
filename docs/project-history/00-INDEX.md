@@ -9,6 +9,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Touching the galaxy/focus/case-study transition → [case-study-direction.md](case-study-direction.md) (long — the full history of the box-open + cascade feature)
 - Touching CV or HoloNet views → [cv-contact-focus-views.md](cv-contact-focus-views.md)
 - Touching the in-canvas editor / IndexedDB / localStorage persistence → [holotable-editor-and-glb.md](holotable-editor-and-glb.md)
+- Adding/removing/renaming/hiding zones or planets (the Projects Manager panel, live scene sync) → [projects-manager.md](projects-manager.md)
 - Adding any new tunable/parameter → [maximize-customization.md](maximize-customization.md) (standing rule: expose it, don't bake it)
 - Verifying any HTML/JS change → [workflow-html-verification.md](workflow-html-verification.md)
 - Figma design system (tokens, components, color, spacing, type) → [foundation-docs.md](foundation-docs.md), [color-decisions.md](color-decisions.md), [spacing-decisions.md](spacing-decisions.md), [visual-language-direction.md](visual-language-direction.md), [star-wars-visual-dna.md](star-wars-visual-dna.md), [bric-build-progress.md](bric-build-progress.md), [bric-framer-translation.md](bric-framer-translation.md)
@@ -32,6 +33,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [homepage-holotable-prototype.md](homepage-holotable-prototype.md) — original homepage concept + architecture
 - [instagram-focus-view.md](instagram-focus-view.md) — Instagram planet focus view (polaroid grid)
 - [maximize-customization.md](maximize-customization.md) — standing rule: expose tunables as editable content
+- [projects-manager.md](projects-manager.md) — Projects Manager panel: live add/remove/rename/hide of zones + planets, `syncSceneToModel()`, bugs found on the way
 - [spacing-decisions.md](spacing-decisions.md) — locked spacing tokens
 - [star-wars-visual-dna.md](star-wars-visual-dna.md) — Star Wars UI visual language analysis backing the aesthetic
 - [text-style-tokens-todo.md](text-style-tokens-todo.md) — todo for the real build: bind text to DS type tokens
