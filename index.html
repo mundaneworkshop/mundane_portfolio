@@ -1261,7 +1261,7 @@
       <button class="resetbtn" id="cRandomize">⤮ Randomize planet positions</button>
       <div class="ctl"><label>Galaxy default view</label><div class="seg"><button id="cGalCamSet">◎ Set current</button><button id="cGalCamReset">⟲ Reset</button></div></div>
       <div class="menudiv"></div>
-      <div class="ctl"><label>Zone edge steps <b id="vZone">8</b></label><input type="range" id="cZone" min="3" max="16" step="1" value="8"></div>
+      <div class="ctl"><label>Zone edge steps <b id="vZone">8</b></label><input type="range" id="cZone" min="4" max="16" step="1" value="8"></div>
       <div class="menudiv"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cAuto" checked> Auto-rotate</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cInvert" checked> Invert drag up/down</label></div>
@@ -1898,7 +1898,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.60, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:3, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.60, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
     renderer.setPixelRatio(1); renderer.setSize(W,H);
@@ -2111,7 +2111,7 @@
         {id:'w0',title:'Meta Horizon Worlds',sub:'01 · charted',locked:false,hidden:false},
         {id:'w1',title:'Slate Auto',sub:'02 · charted',locked:false,hidden:false},
         {id:'w2',title:'Josh.ai',sub:'03 · charted',locked:false,hidden:false}]},
-      {id:'play',name:'Uncharted Territory',kind:'play',hidden:false,planets:[
+      {id:'play',name:'Uncharted Territory',kind:'play',hidden:true,planets:[
         {id:'p0',title:'Minifigure Me',sub:'playground',locked:false,hidden:true},
         {id:'p1',title:'Gift Guru',sub:'playground',locked:false,hidden:true},
         {id:'p2',title:'Dinner Decider',sub:'playground',locked:false,hidden:true}]},
@@ -9905,7 +9905,7 @@ f 2469//2469 2470//2470 2434//2434
       '}'
     ].join('\n');
     var beamHoloPer={ baseColor:{value:new THREE.Color(DARK.beam)}, hotColor:{value:new THREE.Color(0xAAF5EE)}, beamBottom:{value:params.beamBottom!=null?params.beamBottom:0.80}, beamTop:{value:params.beamTop!=null?params.beamTop:0.20}, beamCurve:{value:params.beamCurve!=null?params.beamCurve:0.4} };
-    var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG });
+    var beamMat=new THREE.ShaderMaterial({ uniforms:Object.assign({},SHU,beamHoloPer), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.FrontSide, vertexShader:BEAM_VERT, fragmentShader:BEAM_FRAG });
     holoMats.push({mat:beamMat,per:beamHoloPer,role:'beam'}); // no push to beamMats; theme handled via holoMats
     var beam=new THREE.Mesh(new THREE.CylinderGeometry(2.3,0.18,4.0,28,1,true),beamMat); beam.position.y=2.0; galaxy.add(beam);
     var emMat=new THREE.MeshBasicMaterial({color:DARK.line,transparent:true,opacity:0.6}); lineMats.push(emMat); fadables.push({mat:emMat,base:0.6,owner:null});
@@ -10157,6 +10157,12 @@ f 2469//2469 2470//2470 2434//2434
     }
     function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); z.label.classList.toggle('on',z.id===id); }); }
     renderer.domElement.addEventListener('pointermove',function(){
+      if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
+        var overMono=false;
+        if(mwPhase==='entry' && mwQuad && mwQuad.visible){ ray.setFromCamera(mouse,camera); overMono=ray.intersectObject(mwQuad,false).length>0; }
+        if(renderer&&renderer.domElement) renderer.domElement.style.cursor=overMono?'pointer':'default';
+        return;
+      }
       if(focused && !editMode && !document.body.classList.contains('mw-altfocus')){
         // kit box face hover: raycast against the hit mesh only
         var hit=focused.userData.hit;
@@ -13323,7 +13329,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.60,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:3,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:3};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.60,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
@@ -13421,6 +13427,11 @@ f 2469//2469 2470//2470 2434//2434
         // instead of silently overriding it forever via the Object.assign above.
         if(savedV<3){ ['starCount','planetSpread','objScale','moonSpeed','moonDist','moonScale','focusZoom','zoneSteps','invertYFocus','focusMode','camRotDir','marqDirEn','marqHolo','marqFontSize','scanIntensity','fresnelPow','logoHolo','logoHot','logoTint','mfInt','mfHot','mfTint','bfInt','bfHot','bfTint','hnSpeed','hnDensity','hnConduit','hnFade','hnBright'].forEach(function(k){ params[k]=DEFAULTS[k]; }); }
         if(savedV<3){ params.cfgV=3; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
+        // migration v4: zoneSteps' old minimum (3) could produce a degenerate/self-intersecting zone-wedge
+        // ShapeGeometry — a bright streak cutting across a zone's floor at certain camera angles. Bumped the
+        // default (and the slider's own min=) to 4; migrate anyone whose saved params still have the old value.
+        if(savedV<4){ ['zoneSteps'].forEach(function(k){ params[k]=DEFAULTS[k]; }); }
+        if(savedV<4){ params.cfgV=4; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
       }
       applyParams();  // always sync debug-panel DOM to the live params (fresh defaults or restored+migrated), never leaves it on stale baked-in HTML values
       var SS=localStorage.getItem('bric_slots');
