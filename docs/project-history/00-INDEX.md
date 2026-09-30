@@ -4,7 +4,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 
 **Start here depending on what you're doing:**
 
-- Touching the manual/booklet, routing, or URL slugs → [url-slugs-routing.md](url-slugs-routing.md)
+- Touching the manual/booklet, routing, or URL slugs → [url-slugs-routing.md](url-slugs-routing.md); manual panel layout/camera framing → [manual-layouts.md](manual-layouts.md)
 - Touching GLB/3D model texture rendering → [glb-texture-rendering.md](glb-texture-rendering.md) (regressed 3×, has a REGRESSION GUARD banner in-code)
 - Touching the galaxy/focus/case-study transition → [case-study-direction.md](case-study-direction.md) (long — the full history of the box-open + cascade feature)
 - Touching CV or HoloNet views → [cv-contact-focus-views.md](cv-contact-focus-views.md)
@@ -31,6 +31,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [holotable-next-steps.md](holotable-next-steps.md) — open backlog as of Jun 20
 - [homepage-holotable-prototype.md](homepage-holotable-prototype.md) — original homepage concept + architecture
 - [instagram-focus-view.md](instagram-focus-view.md) — Instagram planet focus view (polaroid grid)
+- [manual-layouts.md](manual-layouts.md) — Sep 2026: responsive focus-view manual (dock/rail/drawer/auto) + camera stage-fit; monogram hidden in focus
 - [maximize-customization.md](maximize-customization.md) — standing rule: expose tunables as editable content
 - [spacing-decisions.md](spacing-decisions.md) — locked spacing tokens
 - [star-wars-visual-dna.md](star-wars-visual-dna.md) — Star Wars UI visual language analysis backing the aesthetic

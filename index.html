@@ -748,6 +748,123 @@
     font-family: var(--f-m); font-size: 10px;
     color: var(--c-dim); letter-spacing: 0.08em;
   }
+  /* ══════ MANUAL LAYOUTS — responsive arrangements of the project-focus instruction manual ══════
+     The panel's DOM never changes; only #manual-scene[data-ml] does. JS (CS layoutManual) picks the mode,
+     then publishes the panel-free part of the viewport as window.MWStage so the WebGL camera can centre +
+     fit the kit box and its artifact moons inside it (see stageFit in the frame loop).
+       dock   — wide bar along the bottom, content flows in three columns; the stage is everything above it
+       rail   — vertical panel docked to the right edge; the stage is everything left of it
+       drawer — compact bar (title / framing / tags / CTA) with a Details toggle that lifts the snapshot rows
+                and links up over the stage; also the phone layout
+     No data-ml (CV nodes, chapter ring) = the original centred bottom-third panel, untouched.
+     Everything positional is !important on purpose: showBooklet()/reset() still write inline top/margin
+     for that original layout, and those must not fight the modes below. */
+  #manual-scene[data-ml] {
+    position: absolute !important;
+    top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    transition: opacity .5s ease, transform .6s cubic-bezier(.34,1.06,.64,1) !important;
+  }
+  #manual-scene[data-ml] #manual-book { min-width: 0; max-width: none; width: 100%; display: flex; flex-direction: column; }
+  #manual-scene[data-ml] .manual-page { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--teal-dim) transparent; }
+  /* ── RAIL (right edge) ── */
+  #manual-scene[data-ml="rail"] {
+    top: 50% !important; right: var(--ml-gap, 24px) !important;
+    width: var(--ml-rail-w, 380px);
+    perspective-origin: 100% 50%;
+  }
+  #manual-scene[data-ml="rail"].visible { transform: translateY(-50%) !important; }
+  #manual-scene[data-ml="rail"]:not(.visible) { transform: translateY(-50%) translateX(28px) !important; }
+  #manual-scene[data-ml="rail"] #manual-book {
+    max-height: calc(100vh - 2 * var(--ml-gap, 24px));
+    transform-origin: 100% 50%; transform: rotateY(-7deg) !important;
+  }
+  #manual-scene[data-ml="rail"] .manual-page { padding: 26px 24px 24px; }
+  /* Edit Mode parks its 230px object-editor (#editPanel) on the right edge — the rail steps left of it */
+  body.edit-focus #manual-scene[data-ml="rail"] { right: calc(var(--ml-gap, 24px) + 254px) !important; }
+  #manual-scene[data-ml="rail"] .manual-framing { max-width: none; }
+  /* ── DOCK (bottom, wide) ── */
+  #manual-scene[data-ml="dock"] {
+    left: 50% !important; bottom: var(--ml-gap, 24px) !important;
+    width: min(1280px, calc(100vw - 2 * var(--ml-gap, 24px)));
+    perspective-origin: 50% 100%;
+  }
+  #manual-scene[data-ml="dock"].visible { transform: translateX(-50%) !important; }
+  #manual-scene[data-ml="dock"]:not(.visible) { transform: translateX(-50%) translateY(28px) !important; }
+  #manual-scene[data-ml="dock"] #manual-book {
+    max-height: calc(100vh - 2 * var(--ml-gap, 24px) - 56px);
+    transform-origin: 50% 100%; transform: rotateX(7deg) !important;
+  }
+  #manual-scene[data-ml="dock"] .manual-page {
+    display: grid; align-items: start;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(190px, .55fr);
+    grid-template-rows: auto auto auto auto auto 1fr;
+    column-gap: clamp(22px, 3vw, 44px);
+    padding: 24px 30px 26px;
+  }
+  #manual-scene[data-ml="dock"] .manual-title    { grid-column: 1; grid-row: 1; }
+  #manual-scene[data-ml="dock"] .manual-subtitle { grid-column: 1; grid-row: 2; }
+  #manual-scene[data-ml="dock"] .manual-slug     { grid-column: 1; grid-row: 3; }
+  #manual-scene[data-ml="dock"] .manual-framing  { grid-column: 1; grid-row: 4; max-width: none; }
+  #manual-scene[data-ml="dock"] .manual-tags     { grid-column: 1; grid-row: 5; margin-bottom: 0; }
+  #manual-scene[data-ml="dock"] .snap-grid       { grid-column: 2; grid-row: 1 / span 6; margin-bottom: 0; }
+  #manual-scene[data-ml="dock"] .manual-cta      { grid-column: 3; grid-row: 1; margin-top: 0; justify-content: flex-start; }
+  #manual-scene[data-ml="dock"] .manual-extralinks { grid-column: 3; grid-row: 2 / span 5; margin-top: 18px; }
+  /* ── DRAWER (bottom, compact; phone layout) ── */
+  #manual-scene[data-ml="drawer"] {
+    left: 50% !important; bottom: var(--ml-gap, 24px) !important;
+    width: min(1120px, calc(100vw - 2 * var(--ml-gap, 24px)));
+    perspective-origin: 50% 100%;
+  }
+  #manual-scene[data-ml="drawer"].visible { transform: translateX(-50%) !important; }
+  #manual-scene[data-ml="drawer"]:not(.visible) { transform: translateX(-50%) translateY(28px) !important; }
+  #manual-scene[data-ml="drawer"] #manual-book {
+    max-height: calc(100vh - 2 * var(--ml-gap, 24px) - 56px);
+    transform-origin: 50% 100%; transform: rotateX(5deg) !important;
+  }
+  #manual-scene[data-ml="drawer"] .manual-page {
+    display: grid; align-items: start;
+    grid-template-columns: minmax(0, 1fr) auto; column-gap: 28px;
+    padding: 20px 26px 20px;
+  }
+  #manual-scene[data-ml="drawer"] .manual-title    { grid-column: 1; grid-row: 1; margin-bottom: 8px; }
+  #manual-scene[data-ml="drawer"] .manual-subtitle { grid-column: 1; grid-row: 2; }
+  #manual-scene[data-ml="drawer"] .manual-slug     { grid-column: 1; grid-row: 3; }
+  #manual-scene[data-ml="drawer"] .manual-framing  { grid-column: 1; grid-row: 4; max-width: none; margin-bottom: 12px; }
+  #manual-scene[data-ml="drawer"] .manual-tags     { grid-column: 1; grid-row: 5; margin-bottom: 0; }
+  #manual-scene[data-ml="drawer"] .manual-cta      { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; align-self: start; }
+  /* Drawer is a deliberately TRUNCATED view: the point at this scale is the CTA (the case study holds the detail),
+     so the snapshot rows + extra links are dropped and the framing clamps to two lines. Artifact links (.links-mode)
+     are a moon manual's main content and stay. Edit Mode shows everything — you can't edit what you can't see. */
+  #manual-scene[data-ml="drawer"] .manual-framing { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  body.edit-focus #manual-scene[data-ml="drawer"] .manual-framing { display: block; }
+  #manual-scene[data-ml="drawer"] .snap-grid       { grid-column: 1 / -1; grid-row: 6; margin: 16px 0 0; }
+  #manual-scene[data-ml="drawer"] .snap-grid.links-mode { grid-column: 1; grid-row: 5; margin: 14px 0 0; }
+  #manual-scene[data-ml="drawer"] .manual-extralinks { grid-column: 1 / -1; grid-row: 7; margin-top: 16px; }
+  body:not(.edit-focus) #manual-scene[data-ml="drawer"] .snap-grid:not(.links-mode),
+  body:not(.edit-focus) #manual-scene[data-ml="drawer"] .manual-extralinks { display: none !important; }
+  /* phones: one column, CTA full-width under the tags */
+  @media (max-width: 640px) {
+    #manual-scene[data-ml="drawer"] .manual-page { grid-template-columns: minmax(0, 1fr); padding: 16px 18px 16px; }
+    #manual-scene[data-ml="drawer"] .manual-title { font-size: 22px; }
+    #manual-scene[data-ml="drawer"] .manual-cta { grid-column: 1; grid-row: 6; margin-top: 14px; }
+    #manual-scene[data-ml="drawer"] .manual-cta-btn { flex: 1 1 auto; }
+    #manual-scene[data-ml="drawer"] .snap-grid { grid-row: 8; }
+    #manual-scene[data-ml="drawer"] .snap-grid.links-mode { grid-row: 5; }
+    #manual-scene[data-ml="drawer"] .manual-extralinks { grid-row: 9; }
+  }
+  /* author-only layout switcher (under the breadcrumb while a project is focused) */
+  #ml-switch { position: fixed; top: 48px; left: 16px; z-index: 9800; display: none; align-items: center; gap: 8px;
+    font-family: var(--f-m, 'Space Mono', monospace); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(240,237,232,.4); }
+  body.author-mode.mw-planet:not(.mw-altfocus) #ml-switch { display: flex; }
+  body.ui-hidden #ml-switch { display: none !important; }
+  #ml-switch .seg { display: flex; border: 1px solid rgba(120,224,214,.3); clip-path: var(--clip-step); background: rgba(14,15,18,.7); }
+  #ml-switch .seg button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: rgba(240,237,232,.55); background: transparent; border: none; border-right: 1px solid rgba(120,224,214,.2); padding: 6px 10px; cursor: pointer; }
+  #ml-switch .seg button:last-child { border-right: none; }
+  #ml-switch .seg button:hover { color: rgba(240,237,232,.9); }
+  #ml-switch .seg button.on { color: #AAF5EE; background: rgba(120,224,214,.12); box-shadow: inset 0 0 0 1px rgba(120,224,214,.4); }
+
   /* ════════ /MERGE Stage 2 ════════ */
 
   /* ── CASE STUDY CONSTELLATION: chapter ring labels + stepper ── */
@@ -1367,6 +1484,10 @@
       <div class="menudiv"></div>
       <div class="ctl sec"><label>Instruction manual</label></div>
       <div class="ctl"><label>Panel opacity <b id="vMbAlpha">0.88</b></label><input type="range" id="cMbAlpha" min="0.4" max="1" step="0.02" value="0.88"></div>
+      <div class="ctl"><label>Manual layout</label><div class="seg"><button data-ml-pref="auto" class="on">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="rail">Rail</button><button data-ml-pref="drawer">Drawer</button></div></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cStageFit" checked> Fit kit box + moons to the free stage</label></div>
+      <div class="ctl"><label>Stage fill <b id="vStageFill">0.74</b></label><input type="range" id="cStageFill" min="0.4" max="1" step="0.02" value="0.74"></div>
+      <div class="ctl"><label>Stage max height <b id="vStageMaxH">0.58</b></label><input type="range" id="cStageMaxH" min="0.3" max="1" step="0.02" value="0.58"></div>
     </div><!-- /#dbg-planet -->
 
     <!-- ── HoloNet / Contact view ── -->
@@ -1447,14 +1568,14 @@
 
   <!-- ░░ Instagram focus view — light polaroid grid (shown in place of the kit box when 'ig' is focused) ░░ -->
   <style>
-    #ig-feed{ position:fixed; left:50%; top:38%; transform:translate(-50%,-50%);
+    #ig-feed{ position:fixed; left:var(--stage-cx,50%); top:var(--stage-cy,38%); transform:translate(-50%,-50%);   /* --stage-* = free area beside the manual (see MANUAL LAYOUTS) */
       z-index:40; pointer-events:none; opacity:0; visibility:hidden;
       transition:opacity .55s ease;
       /* scale continuously with the viewport instead of hard-capping at 520px — the old
          min(520px,60vw) meant the grid never resized across most normal desktop widths
          (anything wider than ~867px just sat at the 520px ceiling). min(vw,vh) keeps it
          inside the frame on short windows too, since the feed is vertically centered. */
-      width:clamp(280px, min(44vw, 62vh), 760px); }
+      width:clamp(280px, min(calc(var(--stage-w,100vw) * .44), calc(var(--stage-h,100vh) * .62)), 760px); }
     #ig-feed.show{ opacity:1; visibility:visible; pointer-events:auto; }
     #ig-feed .ig-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:26px 22px; perspective:1200px; }
     #ig-feed .ig-pol{ --rot:0deg; aspect-ratio:1 / 1.12; position:relative; cursor:pointer;
@@ -1572,6 +1693,9 @@
     <div class="mm-body" id="mmBody"></div>
     <button class="mm-del admin-only" id="mmDelete" title="Hides this star from your view only — delete for real via the Supabase dashboard">⌫ Delete message</button>
   </div></div>
+
+  <!-- Author-only: flip the project manual between layouts while a project is focused (same setting as Debug → Instruction manual). -->
+  <div id="ml-switch"><span>Manual layout</span><div class="seg"><button data-ml-pref="auto">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="rail">Rail</button><button data-ml-pref="drawer">Drawer</button></div><span class="ml-now"></span></div>
 
   <!-- MERGE Stage 2: case-study DOM layer — kit box + instruction booklet (focus panel) -->
   <div id="cs-root">
@@ -1898,7 +2022,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.60, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.60, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
     renderer.setPixelRatio(1); renderer.setSize(W,H);
@@ -9816,7 +9940,10 @@ f 2469//2469 2470//2470 2434//2434
       // mwQuad is added straight to `scene` (not `galaxy`, since it's a camera-facing billboard, not
       // a normal object) — so CV/HoloNet (MWSubScene) hiding `galaxy.visible` to hand the canvas over
       // never touched it, and the docked emitter kept faintly rendering underneath those views.
-      if(mwQuad) mwQuad.visible=live && galaxy.visible;
+      // fadeK (1−focusAmount from the frame loop) also gates visibility: once a project/artifact is
+      // focused the docked emitter must be GONE, not just dimmed — it sits under the focused kit box and
+      // its bounding cube used to clip through it. (Skipping the render also saves the studio pass.)
+      if(mwQuad) mwQuad.visible=live && galaxy.visible && fadeK>0.03;
       emitter.visible=docked && !live; spark.visible=docked && !live;   // plain teal base = fallback when the monogram is off/loading
       if(!mwQuad || !mwQuad.visible) return;
       // monogram units → mount-local → world
@@ -10216,6 +10343,70 @@ f 2469//2469 2470//2470 2434//2434
     function planetById(id){ return planets.find(function(p){return p.userData.id===id;}); }
 
     function setFocusCam(){ focusRadius=focusBaseR*params.focusZoom; }
+    // ── STAGE FIT (focus view) ─────────────────────────────────────────────────
+    // The instruction manual publishes the free rectangle of the screen as window.MWStage (see CS
+    // layoutManual). Each frame, while a project/artifact is focused, we work out — for the kit box and
+    // its moons, seen from the home orientation — (a) how far back the camera has to be for their
+    // projected bounds to fill `params.stageFill` of that rectangle, and (b) how far to slide the lens
+    // (camera.setViewOffset — a pure screen-space shift, no rotation) so the bounds centre lands on the
+    // rectangle's centre. The fit is measured from a FIXED reference orientation (yaw 0 / pitch 0.28), not
+    // the live one, so orbiting doesn't make the framing breathe. focusZoom stays a multiplier on top
+    // (1.2 = exactly "fill"), so saved per-project views + mouse-wheel zoom keep their meaning.
+    var STAGE_ZOOM_REF=1.2, STAGE_REF_PITCH=0.28;
+    var _sf={ok:false,dist:2.3,sx:0,sy:0}, _sfBox=new THREE.Box3(), _sfTmp=new THREE.Box3(), _sfP=new THREE.Vector3(), _sfPts=[];
+    function sfObjBox(o,out){   // world AABB of an object's VISIBLE meshes (skips the hidden kit flaps etc.)
+      out.makeEmpty();
+      o.traverseVisible(function(c){
+        if(!c.isMesh||!c.geometry) return;
+        var mt=Array.isArray(c.material)?c.material[0]:c.material;   // invisible click proxies (opacity 0 / no colour write) aren't part of what you SEE
+        if(mt && (mt.visible===false || mt.colorWrite===false || (mt.transparent && mt.opacity<=0.01))) return;
+        if(!c.geometry.boundingBox) c.geometry.computeBoundingBox();
+        c.updateWorldMatrix(true,false); _sfTmp.copy(c.geometry.boundingBox).applyMatrix4(c.matrixWorld); out.union(_sfTmp); });
+      return !out.isEmpty();
+    }
+    function sfAddBox(b,cx,cy,cz,gs){   // corners → offsets from the planet, undone of galaxy scale
+      for(var i=0;i<8;i++) _sfPts.push([((i&1?b.max.x:b.min.x)-cx)/gs, ((i&2?b.max.y:b.min.y)-cy)/gs, ((i&4?b.max.z:b.min.z)-cz)/gs]);
+    }
+    // → {dist,sx,sy} (sx/sy: NDC shift of the lens) or null when there is nothing to fit / fitting is off
+    function stageFit(){
+      var st=window.MWStage; if(!st||!focused||params.stageFit===false) return null;
+      var gs=galaxy.scale.x||1; focused.getWorldPosition(_sfP); var px=_sfP.x, py=_sfP.y, pz=_sfP.z;
+      _sfPts.length=0;
+      var lookRel;   // look target, relative to the planet (target frame)
+      if(focusedMoon){
+        if(!sfObjBox(focusedMoon,_sfBox)) return null; sfAddBox(_sfBox,px,py,pz,gs);
+        var cc=_sfBox.getCenter(new THREE.Vector3()); lookRel=[(cc.x-px)/gs,(cc.y-py)/gs,(cc.z-pz)/gs];
+      } else {
+        if(sfObjBox(focused.userData.hit,_sfBox)) sfAddBox(_sfBox,px,py,pz,gs);
+        if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){ if(sfObjBox(m,_sfBox)) sfAddBox(_sfBox,px,py,pz,gs); });
+        lookRel=[0,-FOCUSFRAME.lookDrop,0];
+      }
+      if(!_sfPts.length) return null;
+      var W_=window.innerWidth, H_=window.innerHeight;
+      var tY=Math.tan(camera.fov*Math.PI/360), tX=tY*camera.aspect;
+      var sp=Math.sin(STAGE_REF_PITCH), cp=Math.cos(STAGE_REF_PITCH);
+      var n=_sfPts.length, qx=new Array(n), qy=new Array(n), qd=new Array(n);   // per-point x, up, along-view offsets from the look target
+      for(var i=0;i<n;i++){ var a=_sfPts[i][0]-lookRel[0], b=_sfPts[i][1]-lookRel[1], c=_sfPts[i][2]-lookRel[2];
+        qx[i]=a; qy[i]=b*cp-c*sp; qd[i]=b*sp+c*cp; }
+      var ex={minX:0,maxX:0,minY:0,maxY:0};
+      function extents(d){ ex.minX=ex.minY=1e9; ex.maxX=ex.maxY=-1e9;
+        for(var i=0;i<n;i++){ var z=Math.max(0.05,d-qd[i]), x=qx[i]/(z*tX), y=qy[i]/(z*tY);
+          if(x<ex.minX)ex.minX=x; if(x>ex.maxX)ex.maxX=x; if(y<ex.minY)ex.minY=y; if(y>ex.maxY)ex.maxY=y; } }
+      var fill=(params.stageFill!=null?params.stageFill:0.74); if(focusedMoon) fill=Math.min(fill,0.6);
+      // never let the content grow past `stageMaxH` of the WINDOW height, however big the free stage is (huge monitors)
+      var Sw=2*(st.r-st.l)/W_*fill, Sh=Math.min(2*(st.b-st.t)/H_*fill, 2*(params.stageMaxH!=null?params.stageMaxH:0.58)), lo=0.3, hi=80;
+      for(var k=0;k<22;k++){ var mid=(lo+hi)/2; extents(mid); if((ex.maxX-ex.minX)<=Sw && (ex.maxY-ex.minY)<=Sh) hi=mid; else lo=mid; }
+      var dFit=hi, dAct=dFit*(params.focusZoom/STAGE_ZOOM_REF);
+      extents(dAct);
+      var tcx=(st.l+st.r)/W_-1, tcy=1-(st.t+st.b)/H_;
+      return { dist:dFit, sx:tcx-(ex.minX+ex.maxX)/2, sy:tcy-(ex.minY+ex.maxY)/2 };
+    }
+    function stageLens(){   // call once per frame after the camera is placed
+      var W_=window.innerWidth, H_=window.innerHeight;
+      if(Math.abs(_sf.sx)<0.0015 && Math.abs(_sf.sy)<0.0015 && !_sf.ok){ _sf.sx=_sf.sy=0; if(camera.view && camera.view.enabled) camera.clearViewOffset(); return; }
+      // ndc +x = content moves right → window moves left (negative offsetX); +y = content up → window down (positive offsetY)
+      camera.setViewOffset(W_,H_,-_sf.sx*W_/2,_sf.sy*H_/2,W_,H_);
+    }
     // ── FOCUS FRAMING TUNABLES ────────────────────────────────────────────────
     // The kit box is brought to a FIXED centre-stage anchor (no drift) and framed
     // in the upper region so it fills ~70–80% of the space ABOVE the manual.
@@ -10274,14 +10465,24 @@ f 2469//2469 2470//2470 2434//2434
     // ── SAVABLE FOCUS VIEW: per project/artifact. Stores RELATIVE spherical framing (yaw/pitch/zoom),
     // so the default view is resolution-independent (FOV-based) and looks right at any window size. ──
     function camViewKey(){ if(focusedMoon) return 'camview:'+focusedMoon.userData.editId; if(focused) return 'camview:'+focused.userData.id; return null; }
-    function applyCamView(key){ var v=copyOvr[key]; if(v){ if(v.yaw!=null)focusYaw=v.yaw; if(v.pitch!=null)focusPitch=v.pitch; if(v.zoom!=null)params.focusZoom=v.zoom; if(v.panY!=null)focusPanY=v.panY; setFocusCam(); } }
+    // Views saved BEFORE stage-fit existed (no `fit` flag) baked in a zoom/pan that pushed the box up out of the
+    // old bottom-third manual's way (zoom ~1.8–2.0). With the fit on, the stage owns distance + centring, so
+    // those keep only their authored ANGLE (yaw/pitch); a view saved under stage-fit carries fit:1 and keeps
+    // zoom/pan as fine-tuning multipliers on top of the fit.
+    function applyCamView(key){ var v=copyOvr[key]; var fitOn=params.stageFit!==false;
+      if(v){ if(v.yaw!=null)focusYaw=v.yaw; if(v.pitch!=null)focusPitch=v.pitch;
+        if(fitOn && !v.fit){ params.focusZoom=STAGE_ZOOM_REF; focusPanY=0; }
+        else { if(v.zoom!=null)params.focusZoom=v.zoom; if(v.panY!=null)focusPanY=v.panY; }
+        setFocusCam(); }
+      else if(fitOn){ params.focusZoom=STAGE_ZOOM_REF; }   // no saved view → exactly "fill" (don't inherit the last project's wheel zoom)
+      setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
     function saveCamView(){
       if(MWSub.active){ MWSub.active.orbit.saveView(); if(typeof toast==='function') toast('default view saved'); return; }
-      var k=camViewKey(); if(!k) return; copyOvr[k]={yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,panY:focusPanY}; persistCopy(); if(typeof toast==='function') toast('default view saved'); }
+      var k=camViewKey(); if(!k) return; copyOvr[k]={yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,panY:focusPanY,fit:(params.stageFit!==false?1:0)}; persistCopy(); if(typeof toast==='function') toast('default view saved'); }
     function resetCamView(){
       if(MWSub.active){ MWSub.active.orbit.clearView(); if(MWSub.active.onBack) cvOverview(); if(typeof toast==='function') toast('view reset'); return; }
       var k=camViewKey(); if(!k) return; delete copyOvr[k]; persistCopy();
-      focusYaw=0; focusPitch=0.28; focusPanY=0; params.focusZoom=1.0; focusBaseR=focusedMoon?MOONFRAME.boxR:FOCUSFRAME.boxR; setFocusCam(); if(typeof toast==='function') toast('view reset'); }
+      focusYaw=0; focusPitch=0.28; focusPanY=0; params.focusZoom=(params.stageFit!==false?STAGE_ZOOM_REF:1.0); focusBaseR=focusedMoon?MOONFRAME.boxR:FOCUSFRAME.boxR; setFocusCam(); if(typeof toast==='function') toast('view reset'); }
     function focusMoon(m){ focusedMoon=m; focusYaw=0; focusPitch=0.28; focusPanY=0; focusBaseR=MOONFRAME.boxR; setFocusCam(); applyCamView('camview:'+m.userData.editId); showMoonManual(m);
       if(focused){ var _pid=focused.userData.id, _pc=CASES[_pid]; var _ps=_pc?(_pc.slug||slugify(_pc.title||_pid)):_pid;
         var _meta=getMoonMeta(m); var _ms=_meta.slug||slugify(_meta.title||''); setRoute('/work/'+_ps+'/'+_ms); } }
@@ -11686,6 +11887,18 @@ f 2469//2469 2470//2470 2434//2434
       cs.style.setProperty('--mb-alpha',params.mbAlpha); }
     bind('cMbAlpha','vMbAlpha',function(v){ params.mbAlpha=v; applyManualFx(); },2);
     applyManualFx();
+    // Manual layout (dock / rail / drawer / auto) — the setting lives here, the layout engine in the booklet module (CS.relayout).
+    // Both the Debug seg and the author-only #ml-switch carry data-ml-pref and stay in step.
+    function setManualLayout(v){
+      if(v!=='dock'&&v!=='rail'&&v!=='drawer') v='auto';
+      params.manualLayout=v; window.__mwManualLayout=v;
+      [].forEach.call(document.querySelectorAll('[data-ml-pref]'),function(b){ b.classList.toggle('on',b.getAttribute('data-ml-pref')===v); });
+      if(window.CS && CS.relayout) CS.relayout();
+    }
+    [].forEach.call(document.querySelectorAll('[data-ml-pref]'),function(b){ b.addEventListener('click',function(){ setManualLayout(b.getAttribute('data-ml-pref')); }); });
+    var _csf=document.getElementById('cStageFit'); if(_csf) _csf.addEventListener('change',function(){ params.stageFit=this.checked; });
+    bind('cStageFill','vStageFill',function(v){ params.stageFill=v; },2);
+    bind('cStageMaxH','vStageMaxH',function(v){ params.stageMaxH=v; },2);
     document.getElementById('cWheel').addEventListener('change',function(){ params.wheelInvert=this.checked; });
     document.getElementById('cMoon').addEventListener('change',function(){ params.moonMotion=this.checked; });
     document.getElementById('cInvert').addEventListener('change',function(){ params.invertY=this.checked; });
@@ -13335,7 +13548,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.60,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.60,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     function applyParams(){
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
@@ -13355,6 +13568,10 @@ f 2469//2469 2470//2470 2434//2434
       rebuildZones(); buildStars(); drawStuds(); beamHoloPer.beamCurve.value=(params.beamCurve!=null?params.beamCurve:0.4); studFad.base=params.gridOpacity; applySpread();
       setCtl('cMbAlpha','vMbAlpha',(params.mbAlpha!=null?params.mbAlpha:0.88).toFixed(2));
       if(typeof applyManualFx==='function') applyManualFx();
+      setManualLayout(params.manualLayout||'auto');
+      var _csf2=document.getElementById('cStageFit'); if(_csf2) _csf2.checked=params.stageFit!==false;
+      setCtl('cStageFill','vStageFill',(params.stageFill!=null?params.stageFill:0.74).toFixed(2));
+      setCtl('cStageMaxH','vStageMaxH',(params.stageMaxH!=null?params.stageMaxH:0.58).toFixed(2));
       document.getElementById('cWheel').checked=params.wheelInvert;
       document.getElementById('cMoon').checked=params.moonMotion;
       document.getElementById('cInvert').checked=params.invertY;
@@ -13530,7 +13747,12 @@ f 2469//2469 2470//2470 2434//2434
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
-        var cpp=Math.cos(focusPitch), spp=Math.sin(focusPitch); camPos.set(camLook.x+Math.sin(focusYaw)*cpp*focusRadius, camLook.y+spp*focusRadius, camLook.z+Math.cos(focusYaw)*cpp*focusRadius); }
+        var sfr=stageFit(), _fr=focusRadius;
+        if(sfr){ if(!_sf.ok){ _sf.dist=sfr.dist; _sf.sx=sfr.sx; _sf.sy=sfr.sy; _sf.ok=true; }
+          else { _sf.dist+=(sfr.dist-_sf.dist)*0.12; _sf.sx+=(sfr.sx-_sf.sx)*0.12; _sf.sy+=(sfr.sy-_sf.sy)*0.12; }
+          _fr=_sf.dist*(params.focusZoom/STAGE_ZOOM_REF); } else _sf.ok=false;   // no stage published (or fit off) → the original fixed-radius framing
+        var cpp=Math.cos(focusPitch), spp=Math.sin(focusPitch); camPos.set(camLook.x+Math.sin(focusYaw)*cpp*_fr, camLook.y+spp*_fr, camLook.z+Math.cos(focusYaw)*cpp*_fr); }
+      if(!focused){ _sf.ok=false; _sf.sx*=0.88; _sf.sy*=0.88; }   // leaving focus: let the lens shift ease back to centre
       galaxy.position.lerp(galTargetPos,0.07); galaxy.scale.setScalar(galaxy.scale.x+(galTargetScale-galaxy.scale.x)*0.07);
       focusAmount+=((focused?1:0)-focusAmount)*0.08; var fade=1-0.82*focusAmount;
       // Beam intensity: dark/light theme boost (light theme reads weaker through additive blending,
@@ -13563,6 +13785,7 @@ f 2469//2469 2470//2470 2434//2434
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
       camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
+      stageLens();
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
         planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
@@ -13602,7 +13825,7 @@ f 2469//2469 2470//2470 2434//2434
         z.label.style.opacity=(focused?0:(s.vis&&!zOcc?bootGridVal:0)); });   // cascade with the grid, not ahead of it
       var lw=new THREE.Vector3(); logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
 
-      mwUpdate(focused?fade:1);
+      mwUpdate(1-focusAmount);   // eases out as a project focuses, back in as it exits (was a hard pop on exit)
       updateBootReveal();
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
@@ -14105,6 +14328,80 @@ f 2469//2469 2470//2470 2434//2434
       }
     }
 
+    var BOOK_MIN_TOP_PCT=6;   // never let the book's top edge go above 6% of viewport height
+
+    // ══════ MANUAL LAYOUTS (project / artifact focus only — see the MANUAL LAYOUTS css block) ══════
+    // A project's kit box + artifact moons live in the WebGL scene BEHIND this panel, so the panel's footprint
+    // decides how much of the screen the 3D content gets. Rather than one fixed bottom-third panel that
+    // crowds (or covers) the scene on shorter windows, the panel picks a mode per viewport and publishes the
+    // free rectangle as window.MWStage; the frame loop then centres + fits the kit box and moons inside it.
+    //   'auto' → phones get the drawer; otherwise whichever of dock/rail leaves the larger stage.
+    // The mode can be forced from the author-only switcher / Debug panel (window.__mwManualLayout).
+    var ML_TOP=48;                 // px reserved along the top (breadcrumb row)
+    var ML_CONTENT_ASPECT=1.6;     // rough w:h of box + moons, used only to compare dock vs rail in auto
+    var mlMode=null;
+    function mlIsProject(){ return document.body.classList.contains('mw-planet'); }
+    function mlPref(){ var p=window.__mwManualLayout; return (p==='dock'||p==='rail'||p==='drawer')?p:'auto'; }
+    function mlGap(){ return Math.round(Math.max(12,Math.min(28,window.innerWidth*0.016))); }
+    function mlSetMode(m){
+      var W=window.innerWidth, g=mlGap();
+      manualScene.style.setProperty('--ml-gap',g+'px');
+      manualScene.style.setProperty('--ml-rail-w',Math.round(Math.max(300,Math.min(420,W*0.26)))+'px');
+      manualScene.setAttribute('data-ml',m); mlMode=m;
+    }
+    // Apply `m`, force layout, and return the free stage rect it leaves (px, viewport coords).
+    function mlMeasure(m){
+      mlSetMode(m);
+      var W=window.innerWidth, H=window.innerHeight, g=mlGap();
+      if(m==='rail'){
+        return { l:0, t:ML_TOP, r:W-(parseFloat(getComputedStyle(manualScene).right)||g)-manualScene.offsetWidth-g, b:H-g };
+      }
+      // dock / drawer: everything above the bar
+      return { l:0, t:ML_TOP, r:W, b:H-g-manualScene.offsetHeight-10 };
+    }
+    function mlPick(){
+      var pref=mlPref(); if(pref!=='auto') return pref;
+      var W=window.innerWidth; if(W<720) return 'drawer';
+      var best='dock', bs=-1;
+      ['dock','rail'].forEach(function(m){
+        if(m==='rail' && W<900) return;
+        var st=mlMeasure(m), sc=Math.min((st.r-st.l)/ML_CONTENT_ASPECT, st.b-st.t);
+        if(sc>bs){ bs=sc; best=m; }
+      });
+      return best;
+    }
+    function mlPublish(st,mode){
+      var root=document.documentElement;
+      if(!st){ window.MWStage=null; ['--stage-cx','--stage-cy','--stage-w','--stage-h'].forEach(function(k){ root.style.removeProperty(k); }); return; }
+      window.MWStage={ l:st.l, t:st.t, r:st.r, b:st.b, mode:mode };
+      root.style.setProperty('--stage-cx',((st.l+st.r)/2)+'px'); root.style.setProperty('--stage-cy',((st.t+st.b)/2)+'px');
+      root.style.setProperty('--stage-w',(st.r-st.l)+'px');     root.style.setProperty('--stage-h',(st.b-st.t)+'px');
+    }
+    // → true if a stage layout took over (project focus); false = fall through to the original bottom panel.
+    function layoutManual(){
+      var page=manualBook.querySelector('.manual-page');
+      if(!mlIsProject()){
+        if(manualScene.hasAttribute('data-ml')){ manualScene.removeAttribute('data-ml'); mlMode=null;
+          ['--ml-gap','--ml-rail-w'].forEach(function(k){ manualScene.style.removeProperty(k); }); }
+        mlPublish(null); return false;
+      }
+      if(page){ page.style.maxHeight=''; page.style.overflowY=''; }
+      manualScene.style.top='';
+      var mode=mlPick(), st=mlMeasure(mode);
+      mlPublish(st,mode);
+      var sw=document.getElementById('ml-switch'); if(sw){ var pref=mlPref();
+        [].forEach.call(sw.querySelectorAll('button'),function(b){ b.classList.toggle('on',b.getAttribute('data-ml-pref')===pref); });
+        var lab=sw.querySelector('.ml-now'); if(lab) lab.textContent=(pref==='auto'?'→ '+mode:''); }
+      return true;
+    }
+    var _mlRaf=0;
+    function mlRelayoutSoon(){ if(_mlRaf) return; _mlRaf=requestAnimationFrame(function(){ _mlRaf=0; if(manualScene.classList.contains('visible') && phase==='focus') layoutManual(); }); }
+    window.addEventListener('resize',mlRelayoutSoon);
+    // content growing/shrinking (Edit Mode adding links/rows, a moon with fewer fields) re-measures the stage
+    if(window.ResizeObserver) new ResizeObserver(function(){ if(mlMode) mlRelayoutSoon(); }).observe(manualBook);
+    var _mlEdit=false;   // body classes flip constantly (box-hovered…) — only Edit Mode toggling (edit-focus) moves the rail
+    new MutationObserver(function(){ var e=document.body.classList.contains('edit-focus'); if(e!==_mlEdit){ _mlEdit=e; if(mlMode) mlRelayoutSoon(); } }).observe(document.body,{attributes:true,attributeFilter:['class']});
+
     // ── shared: measure + position the booklet so its visible content stays on-screen. Anchored
     // by content BOTTOM, so it adapts upward as content grows (e.g. more links added in Edit
     // Mode). If content is tall enough that even pinning near the top can't fit it, the panel
@@ -14112,9 +14409,11 @@ f 2469//2469 2470//2470 2434//2434
     // this is the only way to reach content that runs past the fold.
     // (Single flat panel since the Aug 2026 redesign — was a two-page spread needing a
     // left-vs-right Math.max() of two independently-measured columns; now it's one normal-flow
-    // column, so the panel's own rendered height already IS the content bottom.) ──
-    var BOOK_MIN_TOP_PCT=6;   // never let the book's top edge go above 6% of viewport height
+    // column, so the panel's own rendered height already IS the content bottom.)
+    // Project/artifact focus goes through layoutManual() above; this original bottom-third panel is now
+    // only used for CV nodes + the chapter ring, whose cameras still frame against a bottom-anchored panel. ──
     function _positionManualBook(){
+      if(layoutManual()) return;
       var H=window.innerHeight, breath=44;
       var bRect=manualBook.getBoundingClientRect();
       var ctaOffset=bRect.height;
@@ -14495,7 +14794,7 @@ f 2469//2469 2470//2470 2434//2434
       }, FADE + COVER + FADE + 60));
     }
 
-    window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset };
+    window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset, relayout: function(){ if(manualScene.classList.contains('visible')) layoutManual(); } };
   })();
   </script>
 </body>
