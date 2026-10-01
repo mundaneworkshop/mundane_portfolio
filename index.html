@@ -45,6 +45,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preload" as="font" type="font/woff2" href="assets/fonts/aurebesh/aurebesh-bold.woff2" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <!-- HoloNet backend: Supabase JS (UMD → window.supabase.createClient). Publishable key is safe to ship client-side by design; RLS on the messages table restricts it to read-only on approved rows. -->
 <!-- supabase-js — local copy first, CDN only if it is missing. Powers the HoloNet message
@@ -126,6 +127,11 @@
   .plabel.holonet.hot{box-shadow:0 0 12px rgba(160,106,240,.55),0 0 3px rgba(160,106,240,.85);color:#C8AAFF}
   .plabel.locked.hot{transform:translate(-50%,6px) scale(1.07);box-shadow:0 0 10px rgba(120,224,214,.4);color:var(--holo)}
   .plabel.hot small{opacity:.9}
+  /* glyph decode: unresolved characters render in Aurebesh when that font is installed (class set by GFX.aur()) */
+  .gfx-aur .gfx-u{font-family:'Aurebesh','Space Mono',monospace}
+  /* Aurebesh by Pixel Sagas (Neale Davidson) — web embedding permitted; license in assets/fonts/aurebesh/LICENSE.txt */
+  @font-face{font-family:'Aurebesh';src:url('assets/fonts/aurebesh/aurebesh-regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Aurebesh';src:url('assets/fonts/aurebesh/aurebesh-bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
   .zlabel{position:absolute;transform:translate(-50%,-50%);font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:3px;text-transform:uppercase;white-space:nowrap;color:var(--line-dim);transition:.25s;pointer-events:none}
   .zlabel.on{color:var(--holo)}
   /* Uncharted-territory zone label: a corrupted-signal glitch on hover (zlabel.on), instead of
@@ -1363,6 +1369,39 @@
     <div class="ctl"><label>Star size <b id="vStarSize">0.03</b></label><input type="range" id="cStarSize" min="0.02" max="0.16" step="0.01" value="0.03"></div>
     <div class="ctl"><label>Spin speed <b id="vSpin">0.4</b></label><input type="range" id="cSpin" min="0" max="3" step="0.1" value="0.4"></div>
     <div class="ctl"><label class="chk"><input type="checkbox" id="cCamRotDir"> Reverse camera rotation</label></div>
+    <div class="menudiv"></div>
+      <div class="ctl sec"><label>Glyph decode · ring (Aurebesh → Latin)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGxRingOn"> Enabled</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGxRingHover"> Replay on hover</label></div>
+      <div class="ctl"><label>Duration (ms) <b id="vGxRingDur">0</b></label><input type="range" id="cGxRingDur" min="100" max="6000" step="50"></div>
+      <div class="ctl"><label>Delay (ms) <b id="vGxRingDelay">0</b></label><input type="range" id="cGxRingDelay" min="0" max="3000" step="25"></div>
+      <div class="ctl"><label>Glyph tick (ms) <b id="vGxRingTick">0</b></label><input type="range" id="cGxRingTick" min="16" max="200" step="2"></div>
+      <div class="ctl"><label>Scatter <b id="vGxRingScatter">0</b></label><input type="range" id="cGxRingScatter" min="0" max="1" step="0.05"></div>
+    <button class="resetbtn" id="gxRingPlay">▶ Replay ring</button>
+    <div class="menudiv"></div>
+      <div class="ctl sec"><label>Glyph decode · planet labels (hover)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGxLblOn"> Enabled</label></div>
+      <div class="ctl"><label>Duration (ms) <b id="vGxLblDur">0</b></label><input type="range" id="cGxLblDur" min="100" max="6000" step="50"></div>
+      <div class="ctl"><label>Delay (ms) <b id="vGxLblDelay">0</b></label><input type="range" id="cGxLblDelay" min="0" max="3000" step="25"></div>
+      <div class="ctl"><label>Glyph tick (ms) <b id="vGxLblTick">0</b></label><input type="range" id="cGxLblTick" min="16" max="200" step="2"></div>
+      <div class="ctl"><label>Scatter <b id="vGxLblScatter">0</b></label><input type="range" id="cGxLblScatter" min="0" max="1" step="0.05"></div>
+    <button class="resetbtn" id="gxLblPlay">▶ Replay labels</button>
+    <div class="menudiv"></div>
+      <div class="ctl sec"><label>Glyph decode · text buttons (hover)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGxBtnOn"> Enabled</label></div>
+      <div class="ctl"><label>Duration (ms) <b id="vGxBtnDur">0</b></label><input type="range" id="cGxBtnDur" min="100" max="6000" step="50"></div>
+      <div class="ctl"><label>Delay (ms) <b id="vGxBtnDelay">0</b></label><input type="range" id="cGxBtnDelay" min="0" max="3000" step="25"></div>
+      <div class="ctl"><label>Glyph tick (ms) <b id="vGxBtnTick">0</b></label><input type="range" id="cGxBtnTick" min="16" max="200" step="2"></div>
+      <div class="ctl"><label>Scatter <b id="vGxBtnScatter">0</b></label><input type="range" id="cGxBtnScatter" min="0" max="1" step="0.05"></div>
+    <button class="resetbtn" id="gxBtnPlay">▶ Replay top-bar buttons</button>
+    <div class="menudiv"></div>
+      <div class="ctl sec"><label>Glyph decode · base-grid section names (hover)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGxZoneOn"> Enabled</label></div>
+      <div class="ctl"><label>Duration (ms) <b id="vGxZoneDur">0</b></label><input type="range" id="cGxZoneDur" min="100" max="6000" step="50"></div>
+      <div class="ctl"><label>Delay (ms) <b id="vGxZoneDelay">0</b></label><input type="range" id="cGxZoneDelay" min="0" max="3000" step="25"></div>
+      <div class="ctl"><label>Glyph tick (ms) <b id="vGxZoneTick">0</b></label><input type="range" id="cGxZoneTick" min="16" max="200" step="2"></div>
+      <div class="ctl"><label>Scatter <b id="vGxZoneScatter">0</b></label><input type="range" id="cGxZoneScatter" min="0" max="1" step="0.05"></div>
+    <button class="resetbtn" id="gxZonePlay">▶ Replay section names</button>
 
     <!-- ── Galaxy view ── -->
     <div class="dbg-ctx" id="dbg-galaxy">
@@ -2026,6 +2065,73 @@
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
     var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.60, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+
+    // ══════ GLYPH DECODE (Aurebesh → Latin) ══════
+    // One shared engine, three surfaces: the Latin marquee ring (canvas, on load + hover), planet labels (DOM, hover),
+    // and text buttons (DOM, hover). All tunable from Debug › Glyph decode. Vanilla rAF, no library; skipped entirely
+    // under prefers-reduced-motion. Unresolved characters show in Aurebesh when that font is installed, otherwise a glyph pool.
+    var GX_DEFAULTS={ gxRingOn:true,gxRingHover:true,gxRingDur:1800,gxRingDelay:300,gxRingTick:45,gxRingScatter:0.35,
+                      gxLblOn:true,gxLblDur:450,gxLblDelay:0,gxLblTick:35,gxLblScatter:0.3,
+                      gxBtnOn:true,gxBtnDur:380,gxBtnDelay:0,gxBtnTick:35,gxBtnScatter:0.3,
+                      gxZoneOn:true,gxZoneDur:500,gxZoneDelay:0,gxZoneTick:35,gxZoneScatter:0.3 };
+    Object.keys(GX_DEFAULTS).forEach(function(k){ if(params[k]==null) params[k]=GX_DEFAULTS[k]; });
+    var GFX=(function(){
+      var FALLBACK='⌖⍜⌿⍾⍍⍐⍙⊑⋔⋏☍⌰⟒⏃⏚⎅⟊⟟▞▚◢◣', LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ', FLICKER=0.3;
+      var rmq=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null, aurOK=false, fontsSettled=false, fontCbs=[], live={}, raf=0, uid=0;
+      function reduced(){ return !!(rmq&&rmq.matches); }
+      function aur(){ return aurOK; }   // true once the Aurebesh web font has loaded (detected by glyph width vs. monospace)
+      function measureAur(){ try{ var c=document.createElement('canvas').getContext('2d'); c.font='40px monospace'; var a=c.measureText('MWAEIO').width; c.font="40px 'Aurebesh', monospace"; return Math.abs(c.measureText('MWAEIO').width-a)>0.5; }catch(e){ return false; } }
+      function settle(){ if(fontsSettled) return; fontsSettled=true; aurOK=measureAur(); if(aurOK) document.documentElement.classList.add('gfx-aur'); fontCbs.splice(0).forEach(function(fn){ fn(); }); }
+      if(document.fonts&&document.fonts.load){ Promise.all([document.fonts.load("400 20px 'Aurebesh'"),document.fonts.load("700 20px 'Aurebesh'")]).then(settle,settle); setTimeout(settle,2500); } else settle();
+      function onFonts(fn){ if(fontsSettled) fn(); else fontCbs.push(fn); }
+      function pick(str){ return str.charAt(Math.floor(Math.random()*str.length)); }
+      function decodable(c){ return /[A-Za-z0-9]/.test(c); }
+      function glyphFor(c){ return aur()?(Math.random()<FLICKER?pick(LETTERS):c):pick(FALLBACK+LETTERS); }
+      function frame(r,el){ var out=new Array(r.n);
+        for(var i=0;i<r.n;i++){ var c=r.chars[i]; out[i]=(!r.dec[i]||el>=r.settle[i])?{c:c,r:true}:{c:glyphFor(c),r:false}; }
+        return out; }
+      function opts(K){ var P=params, g=function(k,d){ var v=P['gx'+K+k]; return v==null?d:+v; };
+        return { dur:Math.max(50,g('Dur',400)), delay:Math.max(0,g('Delay',0)), tick:Math.max(16,g('Tick',40)), scatter:Math.min(1,Math.max(0,g('Scatter',0.3))) }; }
+      function loop(){ raf=0; var now=performance.now(), keys=Object.keys(live);
+        keys.forEach(function(k){ var r=live[k]; if(!r) return; var el=now-r.t0;
+          if(el>=r.end){ delete live[k]; r.spec.render(frame(r,Infinity)); if(r.spec.done) r.spec.done(); return; }
+          if(el-r.last>=r.o.tick){ r.last=el; r.spec.render(frame(r,el)); } });
+        if(Object.keys(live).length) raf=requestAnimationFrame(loop); }
+      function cancel(key){ var r=live[key]; if(!r) return; delete live[key]; if(r.spec.done) r.spec.done(); }
+      // spec: {key, target, opts:{dur,delay,tick,scatter}, render(out[{c,r}]), done(), ifIdle}
+      function run(spec){
+        if(live[spec.key]){ if(spec.ifIdle) return null; cancel(spec.key); }
+        var o=spec.opts, chars=Array.from(spec.target), n=chars.length, dec=[], idx=[];
+        for(var i=0;i<n;i++){ dec[i]=decodable(chars[i]); if(dec[i]) idx.push(i); }
+        var m=idx.length, span=Math.max(0,o.dur-o.tick), settle=[];
+        idx.forEach(function(i,k){ var base=m>1?k/(m-1):0; settle[i]=o.delay+(base*(1-o.scatter)+Math.random()*o.scatter)*span; });
+        var r={spec:spec,chars:chars,n:n,dec:dec,settle:settle,o:o,t0:performance.now(),last:0,end:o.delay+o.dur};
+        live[spec.key]=r; spec.render(frame(r,0)); if(!raf) raf=requestAnimationFrame(loop); return r; }
+      function scrambled(target){ var chars=Array.from(target); return chars.map(function(c){ return decodable(c)?{c:glyphFor(c),r:false}:{c:c,r:true}; }); }
+      // ── DOM surfaces ──
+      function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+      function lock(L,noClip){ var s=L.__gfxLock; if(s){ s.n++; return; }   // freeze the box so Aurebesh glyph widths can't shove neighbours around
+        var w=L.offsetWidth; if(!w){ L.__gfxLock={n:1,none:true}; return; }
+        L.__gfxLock={n:1,w:L.style.width,bs:L.style.boxSizing,ov:L.style.overflow}; L.style.boxSizing='border-box'; L.style.width=w+'px'; if(!noClip) L.style.overflow='hidden'; }
+      function unlock(L){ var s=L.__gfxLock; if(!s||--s.n>0) return; if(!s.none){ L.style.width=s.w; L.style.boxSizing=s.bs; L.style.overflow=s.ov; } L.__gfxLock=null; }
+      function decodeEl(el,K,lockEl,noClip){
+        if(!params['gx'+K+'On']||reduced()||!el||el.isContentEditable||el.childElementCount>0) return;
+        var target=el.textContent; if(!/[A-Za-z0-9]/.test(target)) return;
+        if(!el.__gfxId) el.__gfxId='el'+(++uid);
+        var L=lockEl||el, hadAria=el.hasAttribute('aria-label');
+        var started=run({ key:el.__gfxId, ifIdle:true, target:target, opts:opts(K),
+          render:function(out){ var h='', plain=''; for(var i=0;i<out.length;i++){ plain+=out[i].c; h+=out[i].r?esc(out[i].c):'<span class="gfx-u">'+esc(out[i].c)+'</span>'; } el.innerHTML=h;
+            if(el.hasAttribute('data-text')) el.setAttribute('data-text',plain); },   // glitch-label pseudo layers mirror the scramble
+          done:function(){ el.textContent=target; if(el.hasAttribute('data-text')) el.setAttribute('data-text',target); unlock(L); if(!hadAria) el.removeAttribute('aria-label'); } });
+        if(started){ lock(L,noClip); if(!hadAria) el.setAttribute('aria-label',target); } }
+      function label(lb){ if(!lb) return; var t=lb.querySelector('.pl-title'), s=lb.querySelector('.pl-sub');
+        if(t) decodeEl(t,'Lbl',lb); if(s) decodeEl(s,'Lbl',lb); }
+      var BTN_SEL='button, [role="button"]';
+      document.addEventListener('mouseover',function(e){ var b=e.target&&e.target.closest?e.target.closest(BTN_SEL):null;
+        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')) return; decodeEl(b,'Btn'); });
+      return { run:run, cancel:cancel, opts:opts, scrambled:scrambled, reduced:reduced, aur:aur, decodeEl:decodeEl, label:label,
+              onFonts:onFonts, settled:function(){ return fontsSettled; }, isLive:function(k){ return !!live[k]; } };
+    })();
 
     var renderer=new THREE.WebGLRenderer({antialias:false,alpha:false});
     renderer.setPixelRatio(1); renderer.setSize(W,H);
@@ -10051,18 +10157,35 @@ f 2469//2469 2470//2470 2434//2434
     // Two independent ring strings (Latin + Aurebesh). Each ring draws its own via getText().
     var BIO_EN='MUNDANE WORKSHOP · RUN BY JASON HSIN · A PRODUCT DESIGNER WHO BUILDS DELIGHTFUL CONSUMER EXPERIENCES · ';
     var BIO_AUR='MUNDANE WORKSHOP · RUN BY JASON HSIN · A PRODUCT DESIGNER WHO BUILDS DELIGHTFUL CONSUMER EXPERIENCES · ';
-    function makeRing(radius,yPos,fontFamily,getText){
+    function makeRing(radius,yPos,fontFamily,getText,decodeKey){
       var cv=document.createElement('canvas'); cv.width=4096; cv.height=128; var cx=cv.getContext('2d');
       var tex=new THREE.CanvasTexture(cv); tex.wrapS=THREE.RepeatWrapping; tex.repeat.x=1;
       var mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending}); fadables.push({mat:mat,base:0.92,owner:null});
       var holoMat=makeRingHoloMat(tex);
-      function draw(col){ var T=getText()||' '; cx.clearRect(0,0,cv.width,cv.height); cx.fillStyle=col; cx.font="700 "+(params.marqFontSize||58)+"px "+fontFamily; cx.textBaseline='middle'; cx.textAlign='left';
+      var lastCol='#5ABFB8', dec=null;   // dec = live glyph-decode frame {out:[{c,r}],T} (null = draw plain text)
+      function draw(col){ if(col) lastCol=col; col=lastCol; var T=getText()||' '; cx.clearRect(0,0,cv.width,cv.height); cx.fillStyle=col; cx.font="700 "+(params.marqFontSize||58)+"px "+fontFamily; cx.textBaseline='middle'; cx.textAlign='left';
         var unit=Math.max(1,cx.measureText(T).width), n=Math.max(1,Math.round(cv.width/unit)), step=cv.width/n;
-        for(var i=0;i<n;i++){ cx.save(); cx.translate(i*step,0); cx.scale(step/unit,1); cx.fillText(T,0,72); cx.restore(); } tex.needsUpdate=true; }
+        if(dec && dec.T===T && dec.out.length){   // decoding: per-glyph so unresolved chars can use the Aurebesh face
+          var adv=unit/dec.out.length, sz=(params.marqFontSize||58), mono="700 "+sz+"px "+fontFamily, aurF=GFX.aur()?("700 "+sz+"px 'Aurebesh', "+fontFamily):mono; cx.textAlign='center';
+          for(var i=0;i<n;i++){ cx.save(); cx.translate(i*step,0); cx.scale(step/unit,1);
+            for(var k=0;k<dec.out.length;k++){ var g=dec.out[k]; cx.font=g.r?mono:aurF; cx.fillText(g.c,k*adv+adv/2,72); } cx.restore(); }
+        } else {
+          for(var i=0;i<n;i++){ cx.save(); cx.translate(i*step,0); cx.scale(step/unit,1); cx.fillText(T,0,72); cx.restore(); } }
+        tex.needsUpdate=true; }
       ringCanvases.push(draw);
-      var mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,0.5,64,1,true),mat); mesh.position.y=yPos; mesh.userData.basicMat=mat; mesh.userData.holoMat=holoMat; galaxy.add(mesh); return mesh;
+      var mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,0.5,64,1,true),mat); mesh.position.y=yPos; mesh.userData.basicMat=mat; mesh.userData.holoMat=holoMat; galaxy.add(mesh);
+      if(decodeKey){   // glyph decode: starts fully Aurebesh, resolves to Latin when started (page load after docking, hover, debug replay)
+        if(!GFX.reduced() && params.gxRingOn!==false){ dec={out:GFX.scrambled(getText()),T:getText()};
+          GFX.onFonts(function(){ if(dec && !GFX.isLive(decodeKey)){ dec={out:GFX.scrambled(getText()),T:getText()}; draw(); } }); }   // re-roll the held Aurebesh frame once the real font is in
+        mesh.userData.decode=function(ifIdle){
+          if(!params.gxRingOn||GFX.reduced()){ GFX.cancel(decodeKey); dec=null; draw(); return; }
+          GFX.run({ key:decodeKey, ifIdle:!!ifIdle, target:getText(), opts:GFX.opts('Ring'),
+            render:function(out){ dec={out:out,T:getText()}; draw(); }, done:function(){ dec=null; draw(); } }); };
+      }
+      return mesh;
     }
-    var ringEn=makeRing(2.4,4.1,"'Space Mono', monospace",function(){return BIO_EN;});
+    var ringEn=makeRing(2.4,4.1,"'Space Mono', monospace",function(){return BIO_EN;},'ring');
+    var ringBoot=false, ringHot=false;   // ringBoot: first decode fired after docking · ringHot: pointer currently over the ring
     var ringAur=makeRing(2.75,3.7,"'Aurebesh','Space Mono', monospace",function(){return BIO_AUR;});
 
     // ---------- planets + moons ----------
@@ -10283,12 +10406,12 @@ f 2469//2469 2470//2470 2434//2434
     // SINGLE source of truth for galaxy hover, so `hovered` always reflects reality and a highlight can never get stuck.
     function setHovered(grp){ if(grp===hovered) return; hovered=grp;
       planets.forEach(function(p){ var on=(p===hovered); p.userData.target=on?1.3:1;
-        if(p.userData.label){ p.userData.label.classList.toggle('hot',on);
+        if(p.userData.label){ var _was=p.userData.label.classList.contains('hot'); p.userData.label.classList.toggle('hot',on); if(on&&!_was) GFX.label(p.userData.label);
           var lc=p.userData.labelColors; if(lc) p.userData.label.style.color=(on?lc.hot:lc.tint); } });
       if(renderer&&renderer.domElement) renderer.domElement.style.cursor=hovered?'pointer':'default';
       if(hovered) setZone(hovered.userData.zone);
     }
-    function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); z.label.classList.toggle('on',z.id===id); }); }
+    function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); var _on=(z.id===id), _was=z.label.classList.contains('on'); z.label.classList.toggle('on',_on); if(_on&&!_was) GFX.decodeEl(z.label,'Zone',null,true); }); }
     renderer.domElement.addEventListener('pointermove',function(){
       if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
         var overMono=false;
@@ -10311,6 +10434,8 @@ f 2469//2469 2470//2470 2434//2434
       clearBoxHover();
       if(focused) return;
       ray.setFromCamera(mouse,camera);
+      var _rh=params.gxRingHover!==false && ringEn.visible && ringEn.userData.decode && ray.intersectObject(ringEn,false).length>0;   // ring hover replays the decode
+      if(_rh&&!ringHot) ringEn.userData.decode(true); ringHot=_rh;
       var ph=ray.intersectObjects(planetHits,false); var grp=ph.length?ph[0].object.parent:null;
       setHovered(grp);
       if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
@@ -11872,6 +11997,15 @@ f 2469//2469 2470//2470 2434//2434
     var _cma=document.getElementById('cMarqDirAur'); if(_cma) _cma.addEventListener('change',function(){ params.marqDirAur=this.checked?-1:1; });
     bind('cMarqSpeed','vMarqSpeed',function(v){ params.marqSpeedMult=v; },1);
     var _cmh=document.getElementById('cMarqHolo'); if(_cmh) _cmh.addEventListener('change',function(){ params.marqHolo=this.checked; setRingHolo(this.checked); });
+    // ── Glyph decode controls (enable + timing per surface) ──
+    ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K;
+      var on=document.getElementById('cGx'+K+'On'); if(on) on.addEventListener('change',function(){ params[pre+'On']=this.checked; if(K==='Ring') ringEn.userData.decode(); });
+      [['Dur',0],['Delay',0],['Tick',0],['Scatter',2]].forEach(function(sp){ var id='cGx'+K+sp[0]; if(document.getElementById(id)) bind(id,'vGx'+K+sp[0],function(v){ params[pre+sp[0]]=v; },sp[1]); }); });
+    var _gxh=document.getElementById('cGxRingHover'); if(_gxh) _gxh.addEventListener('change',function(){ params.gxRingHover=this.checked; });
+    document.getElementById('gxRingPlay').addEventListener('click',function(){ ringEn.userData.decode(); });
+    document.getElementById('gxLblPlay').addEventListener('click',function(){ planets.forEach(function(p){ var l=p.userData.label; if(l&&l.offsetWidth) GFX.label(l); }); });
+    document.getElementById('gxZonePlay').addEventListener('click',function(){ ZONES.forEach(function(z){ if(z.label&&z.label.offsetWidth) GFX.decodeEl(z.label,'Zone',null,true); }); });
+    document.getElementById('gxBtnPlay').addEventListener('click',function(){ [].forEach.call(document.querySelectorAll('#topbar .tbtn'),function(b){ if(b.offsetWidth) GFX.decodeEl(b,'Btn'); }); });
 
     // ── mesh upload ────────────────────────────────────────────────────
     var slotSvgTxt={logo:null,planet:null,moon:null};
@@ -13752,8 +13886,13 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
     var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.60,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    Object.assign(DEFAULTS,GX_DEFAULTS);   // glyph-decode params reset / export-diff like everything else
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
+    function applyGxCtls(){ ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K, on=document.getElementById('cGx'+K+'On'); if(on) on.checked=!!params[pre+'On'];
+        ['Dur','Delay','Tick','Scatter'].forEach(function(sp){ var el=document.getElementById('cGx'+K+sp); if(!el) return; var v=params[pre+sp]; el.value=v; document.getElementById('vGx'+K+sp).textContent=(sp==='Scatter'?(+v).toFixed(2):v); }); });
+      var h=document.getElementById('cGxRingHover'); if(h) h.checked=params.gxRingHover!==false; }
     function applyParams(){
+      applyGxCtls();
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
       setCtl('cMwEntryMul','vMwEntryMul',(params.mwEntryMul!=null?params.mwEntryMul:0.95).toFixed(2));
       setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.40).toFixed(2));
@@ -13974,6 +14113,7 @@ f 2469//2469 2470//2470 2434//2434
       glowMat.uniforms.opacity.value=holoFocused?0:0.2*(focused?fade:1);
       logo.visible=!holoFocused||focusAmount<0.05;
       SHU.time.value=t;
+      if(!ringBoot && mwPhase==='docked' && GFX.settled()){ ringBoot=true; if(ringEn.userData.decode) ringEn.userData.decode(); }   // page load: Aurebesh → Latin once the site is docked
       ringEn.rotation.y=t*0.12*params.spin*params.marqDirEn*params.marqSpeedMult; ringAur.rotation.y=-t*0.09*params.spin*params.marqDirAur*params.marqSpeedMult;
       planets.forEach(function(p){ var s=p.userData.base+(p.userData.target-p.userData.base)*0.18; p.userData.base=s; p.scale.setScalar(s*GS); p.position.lerp(p.userData.posTarget,0.08);
         if(focused===p && p.userData.hit.userData.boxFlat){ p.userData.hit.lookAt(camera.position); }   // flat-panel box replacement → billboard to camera
