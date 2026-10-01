@@ -10517,7 +10517,13 @@ f 2469//2469 2470//2470 2434//2434
         var cc=_sfBox.getCenter(new THREE.Vector3()); lookRel=[(cc.x-px)/gs,(cc.y-py)/gs,(cc.z-pz)/gs];
       } else {
         if(sfObjBox(focused.userData.hit,_sfBox)) sfAddBox(_sfBox,px,py,pz,gs);
-        if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){ if(sfObjBox(m,_sfBox)) sfAddBox(_sfBox,px,py,pz,gs); });
+        if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){
+          // measure each moon at its REST position — the idle float (moonMotion) would otherwise change the bounds every frame, and the fit (distance + lens shift) would bob/sway the camera with it
+          var _mu=m.userData, _mrr=_mu.r*(params.moonDist!=null?params.moonDist:1), _px=m.position.x, _py=m.position.y, _pz=m.position.z;
+          m.position.set(Math.cos(_mu.ang)*_mrr, 0, Math.sin(_mu.ang)*_mrr);
+          var _mok=sfObjBox(m,_sfBox);
+          m.position.set(_px,_py,_pz); m.updateMatrixWorld(true);
+          if(_mok) sfAddBox(_sfBox,px,py,pz,gs); });
         lookRel=[0,-FOCUSFRAME.lookDrop,0];
       }
       if(!_sfPts.length) return null;
