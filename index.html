@@ -129,6 +129,7 @@
   .plabel.hot small{opacity:.9}
   /* glyph decode: unresolved characters render in Aurebesh when that font is installed (class set by GFX.aur()) */
   .gfx-aur .gfx-u{font-family:'Aurebesh','Space Mono',monospace}
+  .gfx-u{line-height:0}   /* scrambled glyphs never add to the line box height */
   /* Aurebesh by Pixel Sagas (Neale Davidson) — web embedding permitted; license in assets/fonts/aurebesh/LICENSE.txt */
   @font-face{font-family:'Aurebesh';src:url('assets/fonts/aurebesh/aurebesh-regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
   @font-face{font-family:'Aurebesh';src:url('assets/fonts/aurebesh/aurebesh-bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
@@ -2110,20 +2111,27 @@
       function scrambled(target){ var chars=Array.from(target); return chars.map(function(c){ return decodable(c)?{c:glyphFor(c),r:false}:{c:c,r:true}; }); }
       // ── DOM surfaces ──
       function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
-      function lock(L,noClip){ var s=L.__gfxLock; if(s){ s.n++; return; }   // freeze the box so Aurebesh glyph widths can't shove neighbours around
-        var w=L.offsetWidth; if(!w){ L.__gfxLock={n:1,none:true}; return; }
-        L.__gfxLock={n:1,w:L.style.width,bs:L.style.boxSizing,ov:L.style.overflow}; L.style.boxSizing='border-box'; L.style.width=w+'px'; if(!noClip) L.style.overflow='hidden'; }
-      function unlock(L){ var s=L.__gfxLock; if(!s||--s.n>0) return; if(!s.none){ L.style.width=s.w; L.style.boxSizing=s.bs; L.style.overflow=s.ov; } L.__gfxLock=null; }
+      // Freeze the box (width + height, no wrapping, overflow clipped) BEFORE the first scrambled frame, so Aurebesh glyph
+      // metrics can never grow or shift the container. Anything wider/taller is cut off at the boundary. Ref-counted: a label's
+      // title + sub share one lock on the label.
+      function lock(L,noClip){ var s=L.__gfxLock; if(s){ s.n++; return; }
+        var w=L.offsetWidth, h=L.offsetHeight; if(!w||!h){ L.__gfxLock={n:1,none:true}; return; }
+        var st=L.style; L.__gfxLock={n:1,w:st.width,h:st.height,bs:st.boxSizing,ov:st.overflow,ws:st.whiteSpace,d:st.display};
+        if(getComputedStyle(L).display==='inline') st.display='inline-block';
+        st.boxSizing='border-box'; st.width=w+'px'; st.height=h+'px'; st.whiteSpace='nowrap'; if(!noClip) st.overflow='hidden'; }
+      function unlock(L){ var s=L.__gfxLock; if(!s||--s.n>0) return; if(!s.none){ var st=L.style; st.width=s.w; st.height=s.h; st.boxSizing=s.bs; st.overflow=s.ov; st.whiteSpace=s.ws; st.display=s.d; } L.__gfxLock=null; }
       function decodeEl(el,K,lockEl,noClip){
         if(!params['gx'+K+'On']||reduced()||!el||el.isContentEditable||el.childElementCount>0) return;
         var target=el.textContent; if(!/[A-Za-z0-9]/.test(target)) return;
         if(!el.__gfxId) el.__gfxId='el'+(++uid);
+        if(live[el.__gfxId]) return;   // already decoding: leave it alone (no restart, no second lock)
         var L=lockEl||el, hadAria=el.hasAttribute('aria-label');
-        var started=run({ key:el.__gfxId, ifIdle:true, target:target, opts:opts(K),
+        lock(L,noClip||el.hasAttribute('data-text'));   // glitch labels (data-text) keep their overhanging slices; everything else clips
+        if(!hadAria) el.setAttribute('aria-label',target);
+        run({ key:el.__gfxId, target:target, opts:opts(K),
           render:function(out){ var h='', plain=''; for(var i=0;i<out.length;i++){ plain+=out[i].c; h+=out[i].r?esc(out[i].c):'<span class="gfx-u">'+esc(out[i].c)+'</span>'; } el.innerHTML=h;
             if(el.hasAttribute('data-text')) el.setAttribute('data-text',plain); },   // glitch-label pseudo layers mirror the scramble
-          done:function(){ el.textContent=target; if(el.hasAttribute('data-text')) el.setAttribute('data-text',target); unlock(L); if(!hadAria) el.removeAttribute('aria-label'); } });
-        if(started){ lock(L,noClip); if(!hadAria) el.setAttribute('aria-label',target); } }
+          done:function(){ el.textContent=target; if(el.hasAttribute('data-text')) el.setAttribute('data-text',target); unlock(L); if(!hadAria) el.removeAttribute('aria-label'); } }); }
       function label(lb){ if(!lb) return; var t=lb.querySelector('.pl-title'), s=lb.querySelector('.pl-sub');
         if(t) decodeEl(t,'Lbl',lb); if(s) decodeEl(s,'Lbl',lb); }
       var BTN_SEL='button, [role="button"]';

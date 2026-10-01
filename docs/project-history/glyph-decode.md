@@ -14,7 +14,7 @@ Each surface has `On`, `Dur` (ms to fully resolved), `Delay` (ms held fully scra
 
 ## Engine (`GFX`, defined right after `var params`)
 - One shared `requestAnimationFrame` loop, per-key runs, `ifIdle` so a hover mid-run doesn't restart it.
-- DOM surfaces: only elements with no child elements; only `[A-Za-z0-9]` are scrambled (symbols/emoji stay). The element's box is width-locked during a run so Aurebesh glyph widths can't shift neighbours; everything is restored on completion. `aria-label` carries the real text while scrambled. Elements with `data-text` (the glitch "uncharted" zone label) mirror the scramble into it. Skipped for contenteditable, `#debug`, `[data-gfx="off"]`.
+- DOM surfaces: only elements with no child elements; only `[A-Za-z0-9]` are scrambled (symbols/emoji stay). The element's box (width, height, `white-space:nowrap`, `overflow:hidden`) is frozen **before the first scrambled frame** — locking after the first render measures the already-scrambled, wider/taller Aurebesh box, which is the bug this fixed. Overflow is clipped at the boundary; only `data-text` glitch labels skip the clip. Scrambled spans use `line-height:0` so they can't grow the line box. Everything is restored on completion. `aria-label` carries the real text while scrambled. Elements with `data-text` (the glitch "uncharted" zone label) mirror the scramble into it. Skipped for contenteditable, `#debug`, `[data-gfx="off"]`.
 - Ring: `makeRing(..., 'ring')` draws per-glyph while decoding; the canvas starts on a held fully-Aurebesh frame so Latin never flashes before the first decode.
 - `prefers-reduced-motion`: everything is skipped (plain text, no scramble).
 - No library: single-file/no-build site, and it's a text swap.
