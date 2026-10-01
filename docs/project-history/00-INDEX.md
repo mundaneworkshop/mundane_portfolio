@@ -27,6 +27,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [foundation-docs.md](foundation-docs.md) — design token architecture, Figma page structure
 - [galaxy-view-amend-jun23.md](galaxy-view-amend-jun23.md) — dynamic zone/planet model, per-zone FX, editable breadcrumb
 - [glb-texture-rendering.md](glb-texture-rendering.md) — INVARIANT rules for GLB decal/texture rendering, read before touching
+- [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
 - [holotable-backlog-jun20.md](holotable-backlog-jun20.md) — long log of feature rounds + bug fixes (marquee, box faces, SVG upload, etc.)
 - [holotable-editor-and-glb.md](holotable-editor-and-glb.md) — in-canvas Edit Mode architecture, persistence model, holo-FX pipeline
 - [holotable-next-steps.md](holotable-next-steps.md) — open backlog as of Jun 20
