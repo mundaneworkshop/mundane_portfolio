@@ -16,7 +16,8 @@ OUT = 'assets/tokens/bric-tokens.json'
 
 css = open(CSS).read()
 decl = {}
-for sel, body in re.findall(r'(:root|body\.light)\s*\{(.*?)\n\}', css, re.S):
+for sel, body in re.findall(r'(:root(?:,\.bric-dark)?|body\.light)\s*\{(.*?)\n\}', css, re.S):
+    sel = ':root' if sel.startswith(':root') else sel
     for name, val in re.findall(r'(--bric-[a-z0-9-]+):\s*([^;]+);', body):
         decl.setdefault(sel, {})[name] = val.strip()
 root, light = decl[':root'], decl['body.light']

@@ -57,9 +57,10 @@
 <script src="./vendor/supabase.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';document.head.appendChild(s);"></script>
 <style>
   :root{
-    --bg:#070c0c; --line:#5ABFB8; --line-dim:rgba(90,191,184,.5); --holo:#AAF5EE;
-    --amber:#E9A73E; --amber-hot:#F0B848; --on-brand:#1A0F02; --text:#F5F2EC; --muted:#94908A;
-    --panel:rgba(8,16,16,.78); --border:rgba(90,191,184,.3);
+    /* neutrals, structural teal, text and borders come from the BRIC tokens (assets/tokens/bric-tokens.css); re-declared in body.light below */
+    --bg:var(--bric-surface-scene); --line:var(--bric-schematic-line); --line-dim:var(--bric-schematic-line-dim); --holo:#AAF5EE;
+    --amber:#E9A73E; --amber-hot:#F0B848; --on-brand:var(--bric-content-on-brand); --text:var(--bric-content-primary); --muted:var(--bric-content-secondary);
+    --panel:rgba(8,16,16,.78); --border:var(--bric-border-default);
     --mono:'Space Mono',monospace; --grotesk:'Space Grotesk',sans-serif; --display:'Chakra Petch',sans-serif; --step:4px;
     --a4:#E9A73E; --a3:rgba(233,167,62,.65); --a2:rgba(233,167,62,.35); --a1:rgba(233,167,62,.18); --a0:rgba(233,167,62,.07);
     /* holo register accents (active states) — theme-aware */
@@ -69,9 +70,9 @@
     --clip-step:polygon(0 6px,0 3px,3px 3px,3px 0,6px 0, calc(100% - 6px) 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% 6px, 100% calc(100% - 6px),100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,calc(100% - 6px) 100%, 6px 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px),0 calc(100% - 6px));
   }
   body.light{
-    --bg:#ECE8E0; --line:#1F7A72; --line-dim:rgba(31,122,114,.55); --holo:#1F7A72;
-    --amber:#D4961E; --amber-hot:#E9A73E; --text:#111110; --muted:#525252;
-    --panel:rgba(245,242,236,.82); --border:rgba(31,122,114,.32);
+    --bg:var(--bric-surface-scene); --line:var(--bric-schematic-line); --line-dim:var(--bric-schematic-line-dim); --holo:#1F7A72;
+    --amber:#D4961E; --amber-hot:#E9A73E; --on-brand:var(--bric-content-on-brand); --text:var(--bric-content-primary); --muted:var(--bric-content-secondary);
+    --panel:rgba(245,242,236,.82); --border:var(--bric-border-default);
     /* darker holo accents for light surfaces (matches DS light-mode tokens) */
     --holo-fill:rgba(42,128,121,.16); --holo-edge:rgba(42,128,121,.55); --scan:rgba(42,128,121,.14);
     --amber-fill:rgba(168,118,26,.16); --amber-edge:rgba(122,86,20,.6); --amber-scan:rgba(122,86,20,.12);
@@ -172,17 +173,18 @@
   }
 
   /* ── CASE PANEL ── */
-  #casepanel{position:absolute;top:0;left:0;bottom:0;z-index:25;width:340px;max-width:78vw;background:var(--panel);backdrop-filter:blur(10px);border-right:1px solid var(--border);padding:78px 26px 26px;transform:translateX(-110%);transition:transform .5s cubic-bezier(.16,1,.3,1)}
+  #casepanel{position:absolute;top:0;left:0;bottom:0;z-index:25;width:340px;max-width:78vw;background:color-mix(in srgb,var(--bric-surface-raised) 90%,transparent);backdrop-filter:blur(10px);border-right:1px solid var(--bric-border-subtle);padding:78px 26px 26px;transform:translateX(-110%);transition:transform .5s cubic-bezier(.16,1,.3,1)}
   #casepanel.open{transform:translateX(0)}
-  #casepanel .kicker{font-family:var(--display);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
-  #casepanel h3{font-family:var(--display);font-weight:600;font-size:24px;letter-spacing:1px;color:var(--text);margin-bottom:14px;line-height:1.15}
+  #casepanel .kicker{font-family:var(--grotesk);font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+  #casepanel .kicker::before{content:'▸ '}
+  #casepanel h3{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.02em;color:var(--text);margin-bottom:14px;line-height:1.3}
   #casepanel .thumb{height:140px;border:1px solid var(--border);border-radius:0;margin-bottom:16px;background:repeating-linear-gradient(45deg,rgba(90,191,184,.06) 0 10px,transparent 10px 20px);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase}
-  #casepanel p{font-size:12px;line-height:1.7;color:var(--muted);margin-bottom:14px}
-  #casepanel .moons{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--line);margin-bottom:18px;line-height:1.9}
+  #casepanel p{font-size:13px;line-height:1.55;color:var(--muted);margin-bottom:14px;padding-top:14px;border-top:1px solid var(--bric-border-subtle)}
+  #casepanel .moons{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--line);margin-bottom:14px;padding-top:14px;line-height:1.9;border-top:1px solid var(--bric-border-subtle)}
   #casepanel .moons b{color:var(--holo);font-weight:400}
   /* Back button — amber register (real action), 0 radius */
   /* MERGE: View-case-study CTA (temporary in casepanel; booklet replaces this in Stage 2) */
-  #cpEnter{margin-bottom:10px}
+  #casepanel .cp-actions{display:flex;flex-direction:column;align-items:flex-start;gap:var(--bric-space-stud);padding-top:14px;border-top:1px solid var(--bric-border-subtle)}
 
   /* ── MERGE: case-study DOM layer (Stage 1 = placeholder over frozen WebGL) ── */
   #cs-root{position:fixed;inset:0;z-index:60;background:transparent;opacity:0;pointer-events:none;transition:opacity .5s ease;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:22px}
@@ -202,23 +204,25 @@
 
   /* ════════ MERGE Stage 2: kit box + instruction booklet (scoped to #cs-root) ════════ */
   /* SOURCE :root design tokens, scoped so they don't pollute the holotable globals */
+  /* The manual keeps its own scope but no longer its own palette: it is a .bric-dark subtree (the screen stays dark in light mode)
+     and every value below is a BRIC token. Text is the solid ladder (primary / secondary / tertiary). */
   #cs-root {
-    --bg:         #0E0F12;
-    --surface:    #14151A;
-    --amber:      #E9A73E;
-    --amber-hot:  #F0B848;
+    --bg:         var(--bric-surface-base);
+    --surface:    var(--bric-surface-raised);
+    --amber:      var(--bric-register-amber-text);
+    --amber-hot:  var(--bric-register-amber-text-hot);
     --amber-dim:  rgba(233,167,62,0.4);
     --amber-ghost:rgba(233,167,62,0.07);
-    --teal:       #78E0D6;
-    --teal-edge:  #AAF5EE;
-    --teal-hot:   #EAFEFB;
-    --teal-dim:   rgba(120,224,214,0.4);
+    --teal:       var(--bric-schematic-solid);
+    --teal-edge:  var(--bric-register-teal-edge);
+    --teal-hot:   var(--bric-register-teal-text-hot);
+    --teal-dim:   var(--bric-schematic-line-dim);
     --teal-ghost: rgba(120,224,214,0.06);
-    --border:     rgba(233,167,62,0.15);
-    --border-dim: rgba(120,224,214,0.14);
-    --c-primary:  rgba(240,237,232,0.92);
-    --c-secondary:rgba(240,237,232,0.62);
-    --c-dim:      rgba(240,237,232,0.5);
+    --border:     var(--bric-border-subtle);
+    --border-dim: var(--bric-border-subtle);
+    --c-primary:  var(--bric-content-primary);
+    --c-secondary:var(--bric-content-secondary);
+    --c-dim:      var(--bric-content-tertiary);
     /* instruction-manual panel FX — tunable live via Debug → Focus view → Instruction manual */
     --mb-alpha:    0.88;
     --f-d: 'Chakra Petch', sans-serif;
@@ -539,7 +543,8 @@
     max-width: 1040px;
     min-width: 580px;
     position: relative;
-    background: rgba(14,15,18,var(--mb-alpha));
+    background: rgba(14,15,18,var(--mb-alpha));   /* fallback for browsers without color-mix */
+    background: color-mix(in srgb, var(--bric-surface-base) calc(var(--mb-alpha) * 100%), transparent);
     background-image: radial-gradient(circle, var(--border-dim) 1px, transparent 1px);
     background-size: 15px 15px;
     transform: rotateX(20deg);
@@ -676,7 +681,6 @@
     margin-top: 16px;
   }
   .manual-cta-btn { }   /* look comes from .bric-btn--primary */
-  .manual-cta-btn:hover { background: var(--amber-hot); }
   /* .inline-edit-on:hover/:focus (generic affordance for editable text sitting directly on the page) strips
      the background down to a near-transparent tint — fine for plain text, but this is a solid button with
      dark text, so that would make it unreadable against the page. Keep it opaque while editing. */
@@ -887,23 +891,23 @@
   #msgToggle .sw-track{width:34px;height:16px;border:1px solid var(--border);background:rgba(160,106,240,.08);position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
   #msgToggle .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--muted);transition:transform .12s,background .12s,box-shadow .12s}
   #msgToggle .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);transition:color .1s}
-  #msgToggle.on .sw-track{border-color:#A06AF0}
+  #msgToggle.on .sw-track{border-color:var(--bric-holonet-text)}
   #msgToggle.on .sw-thumb{background:#C8AAFF;transform:translateX(18px);box-shadow:0 0 4px rgba(160,106,240,.6)}
   #msgToggle.on .sw-lbl{color:#C8AAFF}
-  #msgToggle:focus-visible .sw-track{border-color:#A06AF0}
+  #msgToggle:focus-visible .sw-track{border-color:var(--bric-holonet-text)}
   /* message stars layer */
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
   #msgCanvas{position:absolute;inset:0;z-index:12;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
   #msgStars{position:absolute;inset:0;z-index:13;pointer-events:none}
   .msgbeacon{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:auto;cursor:pointer}
   .msgbeacon .mb-dot,.msgbeacon .mb-ring{display:none}
-  #msgHover{position:absolute;display:none;box-sizing:border-box;overflow:hidden;transform:translateY(-100%);white-space:nowrap;font-family:var(--grotesk);font-size:13px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:#C8AAFF;background:rgba(10,8,18,.9);border:1px solid rgba(160,106,240,.45);padding:5px 9px;border-radius:2px;pointer-events:none;z-index:14}
+  #msgHover{position:absolute;display:none;box-sizing:border-box;overflow:hidden;transform:translateY(-100%);white-space:nowrap;font-family:var(--grotesk);font-size:13px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:var(--bric-holonet-hot);background:rgba(10,8,18,.9);border:1px solid rgba(160,106,240,.45);padding:5px 9px;border-radius:2px;pointer-events:none;z-index:14}
   #txLaunch{position:absolute;inset:0;z-index:50;display:none;pointer-events:none}
   #txLaunch.show{display:block}
   /* Contact comm console */
-  .ct-panel{width:460px;max-width:94vw;max-height:90vh;overflow:auto;background:rgba(10,18,17,.92);border:1px solid rgba(90,191,184,.34);border-radius:4px;padding:18px 18px 16px;font-family:var(--grotesk);backdrop-filter:blur(4px)}
-  .ct-head{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:3px;color:#AAF5EE;text-transform:uppercase;margin-bottom:12px}
-  .ct-rec{width:7px;height:7px;border-radius:50%;background:#A06AF0;box-shadow:0 0 6px #A06AF0}
+  .ct-panel{width:460px;max-width:94vw;max-height:90vh;overflow:auto;background:color-mix(in srgb,var(--bric-surface-raised) 92%,transparent);border:1px solid var(--bric-border-default);border-radius:var(--bric-corner-step);padding:18px 18px 16px;font-family:var(--grotesk);backdrop-filter:blur(4px)}
+  .ct-head{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:3px;color:var(--bric-schematic-edge);text-transform:uppercase;margin-bottom:12px}
+  .ct-rec{width:7px;height:7px;border-radius:50%;background:var(--bric-holonet-text);box-shadow:0 0 6px var(--bric-holonet-text)}
   .ct-fig{height:220px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
   .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
   /* GLB upload affordances appear only in Edit Mode */
@@ -911,17 +915,17 @@
   body.editing .ct-glbname.glb-up{display:block}
   body.editing .ct-upload.glb-up{display:inline-flex;margin-bottom:10px}
   .ct-fld{margin-bottom:11px}
-  .ct-fld label,.altfocus .ct-fld label{display:flex;justify-content:space-between;align-items:center;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;color:#6b8a85;text-transform:uppercase;margin-bottom:6px}
-  .ct-count{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:#6b8a85}
-  .ct-count.low{color:#E9A73E}
-  .ct-count.zero{color:#E24B4A}
-  #ctName,#ctMsg{width:100%;background:#0a1110;border:1px solid rgba(90,191,184,.3);color:#dff3ee;font-family:var(--grotesk);font-size:13px;padding:9px 11px;border-radius:2px;outline:none;box-sizing:border-box}
-  #ctName:focus,#ctMsg:focus{border-color:#5ABFB8}
+  .ct-fld label,.altfocus .ct-fld label{display:flex;justify-content:space-between;align-items:center;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;color:var(--bric-content-tertiary);text-transform:uppercase;margin-bottom:6px}
+  .ct-count{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--bric-content-tertiary)}
+  .ct-count.low{color:var(--bric-register-amber-text)}
+  .ct-count.zero{color:var(--bric-danger-solid)}
+  #ctName,#ctMsg{width:100%;background:var(--bric-surface-base);border:1px solid var(--bric-border-default);color:var(--bric-content-primary);font-family:var(--grotesk);font-size:13px;padding:9px 11px;border-radius:var(--bric-corner-step);outline:none;box-sizing:border-box}
+  #ctName:focus,#ctMsg:focus{border-color:var(--bric-schematic-line);box-shadow:inset 0 0 0 1px var(--bric-schematic-line)}
   .ct-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
   .ct-upload{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:transparent;border:1px dashed rgba(90,191,184,.4);border-radius:2px;padding:8px 10px;cursor:pointer}
   .ct-upload:hover{border-color:#5ABFB8}
   .ct-send{margin-left:auto}
-  .ct-note{font-family:var(--grotesk);font-size:13px;color:#6b8a85;align-self:center}
+  .ct-note{font-family:var(--grotesk);font-size:13px;color:var(--bric-content-tertiary);align-self:center}
   /* transmit (R2 trundle) + message modal */
   #r2Trundle{position:absolute;inset:0;z-index:19;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
   #r2Trundle.show{display:flex}
@@ -941,8 +945,8 @@
   .mm-name{font-family:var(--display);font-weight:500;font-size:15px;color:#dff3ee;margin-bottom:12px}
   .mm-body{font-size:13.5px;line-height:1.6;color:#d8cdec;border-top:1px solid rgba(160,106,240,.2);padding-top:11px;white-space:pre-wrap;word-break:break-word}
   /* admin delete — only in Edit Mode; remove this control once a real backend + auth exist */
-  .mm-del{display:none;margin-top:14px;font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#E2716F;background:transparent;border:1px solid rgba(226,113,111,.4);border-radius:2px;padding:7px 12px;cursor:pointer;transition:.12s}
-  .mm-del:hover{border-color:#E2716F;background:rgba(226,113,111,.1)}
+  .mm-del{display:none;margin-top:14px;font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--bric-danger-edge);background:transparent;border:1px solid rgba(226,113,111,.4);border-radius:2px;padding:7px 12px;cursor:pointer;transition:.12s}
+  .mm-del:hover{border-color:var(--bric-danger-edge);background:rgba(226,113,111,.1)}
   body.editing .mm-del{display:block}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -1580,8 +1584,10 @@
     <p id="cpBody">Placeholder.</p>
     <div class="moons" id="cpMoons"></div>
     <!-- MERGE Stage 2: per-project mesh + box-texture authoring relocated into #debug (booklet is now the focus panel) -->
-    <button id="cpEnter" class="bric-btn bric-btn--primary bric-btn--block">View case study ▸</button>
-    <button class="bric-btn bric-btn--sm" id="cpBack">◄ back to galaxy</button>
+    <div class="cp-actions">
+      <button id="cpEnter" class="bric-btn bric-btn--primary bric-btn--block">View case study ▸</button>
+      <button class="bric-btn bric-btn--sm" id="cpBack">◄ back to galaxy</button>
+    </div>
   </div>
 
   <!-- ░░ Instagram focus view — light polaroid grid (shown in place of the kit box when 'ig' is focused) ░░ -->
@@ -1682,7 +1688,7 @@
 
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
   <div id="contactFocus" class="altfocus">
-    <div class="ct-panel">
+    <div class="ct-panel bric-dark">
       <div class="ct-head"><span class="ct-rec"></span> Initiate transmission</div>
       <div id="ctFigSlot" class="ct-fig"></div>
       <div class="ct-fld"><label>Callsign <span class="ct-count" id="ctNameCount">40 / 40</span></label><input id="ctName" type="text" placeholder="who's transmitting?" maxlength="40"></div>
@@ -1716,7 +1722,7 @@
   <div id="ml-switch"><span>Manual layout</span><div class="seg"><button data-ml-pref="auto">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="rail">Rail</button><button data-ml-pref="drawer">Drawer</button></div><span class="ml-now"></span></div>
 
   <!-- MERGE Stage 2: case-study DOM layer — kit box + instruction booklet (focus panel) -->
-  <div id="cs-root">
+  <div id="cs-root" class="bric-dark">
 
     <!-- Box scene -->
     <div id="box-scene">
