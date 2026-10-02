@@ -98,6 +98,10 @@ Debug, Edit Mode and the other author-only panels take the same language as the 
 - Removed the superseded CSS for `.tbtn`, `#saveBtn`, the Debug segments, checkboxes and sliders, `.upload-btn`, `.axis-*`, the layout switcher, the Projects Manager buttons, `.tag-add`, `.link-add` and `.inline-edit-on`. `--clip-step` is now only used by `.plabel`, `.cs-step` and `#msgToggle`.
 - Not done: the toast, `#debug`'s remaining label colours inside JS-generated rows (verify in use), and a phone-width pass (author tools are desktop-only).
 
+## Dot matrix (Oct 2 2026)
+
+The panel texture is the BRIC dot matrix: Fine 8px, Balanced 16px, Coarse 32px tiles; the dot is `border/subtle` (translucent teal). Prod had off-grid 14px (`.elf::before`, box side flaps) and 15px (`#manual-book`) tiles; both are now 16px. The 8px and 32px tiles were already on grid. The box-face dots stay amber at 6% (box art = the work).
+
 ## Reference implementation (earlier prototype of `assets/bric-components.css`)
 
 Validated in a browser against the real token file in both themes. Roles: default = tertiary, `--secondary`, `--primary`; size `--sm`; `.is-active` for selected/current.
