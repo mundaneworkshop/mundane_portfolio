@@ -1,0 +1,91 @@
+/* BRIC DS — author tooling (toolbar, Debug, Edit Mode panels, Projects Manager, marquee, layout switcher).
+ * Same language as the visitor UI: Panel Chrome (raised fill, border/subtle hairlines, 11px tertiary headers), small BRIC buttons,
+ * Range Slider and Checkbox (Figma Components 01 / 03 / 06). Tokens only; theme-aware like the rest of the page.
+ * Loaded AFTER the page's inline <style> so it wins at equal specificity. Buttons get .bric-btn classes from the author adopter in index.html.
+ * No glyph decode on any of these — see the GFX skip list in index.html. Destructive actions (.pm-danger) have no Figma variant yet:
+ * they are the secondary look in the danger tokens. */
+
+/* ── panel surfaces ── */
+:is(#debug,#uploadpanel,#projMgr,#marqueePanel,#editPanel){background:color-mix(in srgb,var(--bric-surface-raised) 94%,transparent);border:1px solid var(--bric-border-subtle);border-radius:var(--bric-corner-step);color:var(--bric-interactive-text-idle);font-family:'Space Grotesk',sans-serif;backdrop-filter:blur(8px)}
+
+/* header rows: 11px tertiary uppercase, hairline under */
+#debug h3,#uploadpanel h3,#projMgr .pm-head{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--bric-content-tertiary);border-bottom:1px solid var(--bric-border-subtle)}
+#debug h3::after,#uploadpanel h3::after{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:var(--bric-content-disabled)}
+#projMgr .pm-head{padding:10px 12px}
+#projMgr .pm-title{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:var(--bric-content-tertiary)}
+#editPanel .ep-eyebrow{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--bric-schematic-line);margin-bottom:4px}
+#editPanel .ep-status{font:400 11px/16px 'Space Mono',monospace;color:var(--bric-content-secondary);margin-bottom:12px}
+#editPanel .ep-label{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--bric-content-secondary);margin-bottom:6px}
+#debug .menudiv{border-top:1px solid var(--bric-border-subtle)}
+#projMgr .pm-tools,#projMgr .pm-foot:not(:empty){border-color:var(--bric-border-subtle)}
+#editPanel #epMarq{border-top:1px solid var(--bric-border-subtle)}
+
+/* labels and readouts */
+#debug label,.upload-lbl,.subctl-lbl,.cp-mesh-lbl,#debug .chk,#marqueePanel .mq-ctl label,#marqueePanel .mq-lbl,#marqueePanel .mq-hide,#editPanel label{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--bric-interactive-text-idle)}
+#debug .ctl.sec>label{font-size:11px!important;letter-spacing:.12em;color:var(--bric-schematic-line)!important}
+#debug label b,.subctl-val,.upload-status,.cp-mesh-status,#marqueePanel .mq-ctl b{font:400 11px/16px 'Space Mono',monospace;letter-spacing:0;color:var(--bric-interactive-text-idle);text-shadow:none;font-variant-numeric:tabular-nums}
+#projMgr .pm-note,#projMgr .pm-count,#projMgr .pm-lock,#projMgr .pm-empty,#projMgr .pm-foot{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;color:var(--bric-content-tertiary)}
+#projMgr .pm-psub{font:400 11px/16px 'Space Mono',monospace;color:var(--bric-content-secondary)}
+
+/* text fields */
+#debug .hexin,#marqueePanel input[type=text],#projMgr input[type=text],#editPanel input[type=text],#editPanel select{background:var(--bric-surface-base);border:1px solid var(--bric-border-default);color:var(--bric-interactive-text-idle);font:400 11px/16px 'Space Mono',monospace;border-radius:var(--bric-corner-step);padding:5px 8px;box-sizing:border-box;outline:none}
+#debug .hexin:focus,#marqueePanel input[type=text]:focus,#projMgr input[type=text]:focus,#editPanel input[type=text]:focus,#editPanel select:focus{border-color:var(--bric-schematic-line);box-shadow:inset 0 0 0 1px var(--bric-schematic-line);background:var(--bric-surface-base)}
+#debug input[type=color],#editPanel input[type=color]{border:1px solid var(--bric-border-default);border-radius:var(--bric-corner-step);background:transparent;padding:0}
+
+/* range slider: 2px track (empty = outline/tag, fill = fill/default), 16px square thumb (Figma 03).
+   WebKit has no "progress" pseudo, so the filled part is a gradient driven by --p, which the author adopter in index.html keeps in sync. */
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range]){-webkit-appearance:none;appearance:none;display:block;width:100%;height:16px;margin:0;background:transparent;outline:none;cursor:pointer;border-radius:0}
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range])::-webkit-slider-runnable-track{height:2px;background:linear-gradient(to right,var(--bric-interactive-fill-default) var(--p,0%),var(--bric-interactive-outline-tag) var(--p,0%));border-radius:0}
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range])::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-7px;background:var(--bric-interactive-fill-default);border:0;border-radius:var(--bric-corner-step);box-shadow:none}
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range])::-moz-range-track{height:2px;background:var(--bric-interactive-outline-tag)}
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range])::-moz-range-progress{height:2px;background:var(--bric-interactive-fill-default)}
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range])::-moz-range-thumb{width:16px;height:16px;background:var(--bric-interactive-fill-default);border:0;border-radius:var(--bric-corner-step);box-shadow:none}
+:is(#debug input[type=range],.subctl-range,#marqueePanel .mq-ctl input[type=range],#editPanel input[type=range]):focus-visible::-webkit-slider-thumb{outline:2px solid var(--bric-interactive-outline-default);outline-offset:-4px}
+.subctl-range{flex:1}
+#marqueePanel .mq-ctl input[type=range]{flex:1;min-width:80px}
+
+/* checkbox: 20px box, fill/default when checked with an inset keyline and a check mark (Figma 01) */
+:is(#debug .chk input[type=checkbox],#marqueePanel input[type=checkbox],#editPanel input[type=checkbox]){-webkit-appearance:none;appearance:none;position:relative;flex-shrink:0;width:20px;height:20px;margin:0;border:0;border-radius:var(--bric-corner-step);background:transparent;box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default);cursor:pointer}
+:is(#debug .chk input[type=checkbox],#marqueePanel input[type=checkbox],#editPanel input[type=checkbox]):checked{background:var(--bric-interactive-fill-default);box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-default),inset 0 0 0 4px var(--bric-interactive-text-on-fill)}
+:is(#debug .chk input[type=checkbox],#marqueePanel input[type=checkbox],#editPanel input[type=checkbox]):checked::after{content:'';position:absolute;left:6px;top:4px;width:6px;height:9px;border:solid var(--bric-interactive-text-on-fill);border-width:0 1.5px 1.5px 0;transform:rotate(40deg)}
+:is(#debug .chk input[type=checkbox],#marqueePanel input[type=checkbox],#editPanel input[type=checkbox]):focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:2px}
+
+/* ── buttons: .bric-btn classes are added by the author adopter; these are the layout and state additions ── */
+.bric-btn.on{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none;box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-default),inset 0 0 0 3px var(--bric-interactive-text-on-fill)}   /* .on = .is-active for the author toggles and segments */
+.bric-btn.dirty{animation:bricDirty 1.4s ease-in-out infinite}   /* unsynced edits: the Save button pulses */
+@keyframes bricDirty{0%,100%{box-shadow:0 0 0 2px var(--bric-danger-text)}50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--bric-danger-text) 35%,transparent)}}
+.bric-btn--block{width:100%}
+.bric-btn--start{justify-content:flex-start}
+#debug .resetbtn{margin-top:var(--bric-space-stud)}
+#editPanel .bric-btn--block{margin-bottom:var(--bric-space-stud)}
+#editPanel .bric-btn--block:last-child{margin-bottom:0}
+#projMgr .pm-btn:disabled{opacity:1}
+#projMgr .pm-addp{width:100%;margin-top:var(--bric-space-stud)}
+/* destructive: secondary in the danger tokens; confirm is a solid fill */
+.bric-btn.pm-danger{color:var(--bric-danger-text);box-shadow:inset 0 0 0 1px var(--bric-danger-edge)}
+@media (hover:hover){.bric-btn.pm-danger:hover:not(:disabled){background:var(--bric-danger-deep);color:var(--bric-interactive-text-idle);box-shadow:inset 0 0 0 1px var(--bric-danger-text)}}
+.bric-btn.pm-confirm{background:var(--bric-danger-deep);color:var(--bric-interactive-text-idle);box-shadow:inset 0 0 0 1px var(--bric-danger-text)}
+
+/* segmented controls: a row of small tertiary buttons, the current one active */
+:is(#debug .seg,.axis-seg,#ml-switch .seg){display:flex;gap:var(--bric-space-half-stud);margin-top:2px;border:0;background:none}
+:is(#debug .seg,.axis-seg,#ml-switch .seg) .bric-btn{flex:1;padding:0 var(--bric-space-half-stud)}
+#ml-switch{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:var(--bric-content-secondary)}
+
+/* edit banner (mode indicator) and the view-set bar; is-dirty = unsynced edits, is-error = sync problem */
+#editBanner{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--bric-interactive-text-on-fill);background:var(--bric-interactive-fill-default);padding:4px var(--bric-space-2-stud);border-radius:var(--bric-corner-step);box-shadow:0 0 8px 0 var(--bric-fx-glow-near),0 0 24px 2px var(--bric-fx-glow-far)}
+#editBanner.is-dirty{animation:bricDirty 1.4s ease-in-out infinite}
+#editBanner.is-error{background:var(--bric-danger-deep);color:var(--bric-interactive-text-idle);box-shadow:inset 0 0 0 1px var(--bric-danger-text)}
+#viewSet .vs-hint{font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--bric-content-secondary)}
+
+/* inline copy-edit affordance: structural teal, not amber (author tooling is system chrome) */
+.inline-edit-on{outline:1px dashed var(--bric-schematic-line);outline-offset:2px;border-radius:var(--bric-corner-step)}
+.inline-edit-on:hover{background:var(--bric-schematic-scanline)}
+.inline-edit-on:focus{outline:1.5px solid var(--bric-schematic-line);background:var(--bric-schematic-fill)}
+.manual-tag .tag-x,.manual-link .ml-x{color:var(--bric-interactive-text-idle)}
+
+/* Projects Manager: structural borders instead of amber */
+#projMgr .pm-zone{border-color:var(--bric-border-default);border-radius:var(--bric-corner-step)}
+#projMgr .pm-zone.is-hidden{border-color:var(--bric-border-subtle)}
+#projMgr .pm-planet{border-top-color:var(--bric-border-subtle)}
+#projMgr .pm-foot:not(:empty){border-top-color:var(--bric-border-subtle)}
+#projMgr .pm-znm{letter-spacing:.08em}

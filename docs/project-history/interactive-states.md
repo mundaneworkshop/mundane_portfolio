@@ -74,6 +74,20 @@ Notes:
 - `.manual-cta-btn.disabled` and `[aria-disabled]` both map to the disabled look.
 - Not migrated: author-only tools (`.tbtn`, `.link-add`, `.tag-add`, debug and Projects Manager buttons), `.ct-upload`/`.glb-up` (author upload), `.mm-del` (destructive: no BRIC variant is designed), the `+`/`−` CV label controls, `#msgToggle`, `.cs-step`. `--clip-step` is still used by those and by panel chrome, so it stays until the panel-chrome PR.
 
+## Author UI (Oct 2 2026, branch `feat/bric-author-ui`)
+
+Debug, Edit Mode and the other author-only panels take the same language as the visitor UI. `assets/bric-author.css` (loaded after the page's inline `<style>`) holds the panel chrome, Range Slider and Checkbox; the buttons are `.bric-btn`.
+
+- **Buttons:** an author adopter script (end of `index.html`) adds the classes by selector and re-applies them to controls the page generates later (Projects Manager rows) via a `MutationObserver`. Save, Set default view and New zone are primary; the other toolbar buttons, `.pm-btn`, `.resetbtn`, `.upload-btn`, `.tag-add` and `.link-add` are secondary; the close button, segmented controls and face buttons are tertiary. `.on` is treated as `.is-active` (toggles and segments). Everything adopted gets `data-gfx="off"`.
+- **No glyph decode** on any of it: adopted controls are flagged `data-gfx="off"`, `#debug` was already excluded, and the decode listener now also returns while `body.editing` (Edit Mode) is on.
+- **Panel chrome:** raised fill, border/subtle, 11px tertiary header with a hairline (Debug, Upload, Projects Manager), 11px Space Grotesk labels with Space Mono readouts, token text fields with an inset focus ring. Section labels in Debug and the edit panel's eyebrow use the structural teal; amber no longer means "tooling".
+- **Range slider:** 2px track (empty = `interactive/outline/tag`, filled = `interactive/fill/default`), 16px square thumb. WebKit has no progress pseudo-element, so the fill is a gradient driven by `--p`, which the adopter keeps in sync (input events, and a wrapper on `HTMLInputElement.value` so values set from code are reflected).
+- **Checkbox:** 20px box, filled with an inset keyline and a check mark when checked.
+- **Edit panel markup** lost its inline colours (classes now); the banner states are `.is-dirty` (pulsing danger ring) and `.is-error` (danger fill) instead of inline amber and red. Inline copy-edit outlines are teal.
+- **Destructive:** `.pm-danger` is the secondary look in the danger tokens, `.pm-confirm` a solid danger fill. There is no Figma variant for either yet.
+- Removed the superseded CSS for `.tbtn`, `#saveBtn`, the Debug segments, checkboxes and sliders, `.upload-btn`, `.axis-*`, the layout switcher, the Projects Manager buttons, `.tag-add`, `.link-add` and `.inline-edit-on`. `--clip-step` is now only used by `.plabel`, `.cs-step` and `#msgToggle`.
+- Not done: the toast, `#debug`'s remaining label colours inside JS-generated rows (verify in use), and a phone-width pass (author tools are desktop-only).
+
 ## Reference implementation (earlier prototype of `assets/bric-components.css`)
 
 Validated in a browser against the real token file in both themes. Roles: default = tertiary, `--secondary`, `--primary`; size `--sm`; `.is-active` for selected/current.
