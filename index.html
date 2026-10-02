@@ -87,19 +87,12 @@
   #breadcrumb{pointer-events:auto}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
-  .tbtn{font-family:var(--display);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--a3);background:transparent;border:1px solid var(--a2);border-radius:0;padding:6px 12px;cursor:pointer;transition:background .05s,color .05s,border-color .05s;clip-path:var(--clip-step)}
-  .tbtn:hover{color:var(--a4);border-color:var(--a4);background:var(--a0)}
   /* Save = primary action — lit amber fill */
-  #saveBtn{background:var(--a4);border-color:var(--a4);color:var(--on-brand);font-weight:700}
-  #saveBtn:hover{background:var(--amber-hot);border-color:var(--amber-hot);color:var(--on-brand)}
   /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
      "on" class had no visual rule at all, so there was no way to tell edit mode was active from the
      button itself; meshModeBtn needs this even more since its state changes what a click DOES. */
-  .tbtn.on{background:var(--a4);border-color:var(--a4);color:var(--on-brand)}
   /* Unsynced content edits pending — saveBtn is always lit by default, so a text change alone is easy to miss;
      the pulse gives it motion so "you have something to save" reads at a glance, not just on close reading. */
-  #saveBtn.dirty{animation:saveDirtyPulse 1.4s ease-in-out infinite}
-  @keyframes saveDirtyPulse{0%,100%{box-shadow:0 0 0 2px #ff6b6b}50%{box-shadow:0 0 0 5px rgba(255,107,107,.35)}}
   /* HANDOFF: authoring-only controls (save/edit/debug/hide-ui). Regular visitors never see these —
      hidden unless body has .author-mode, which is set once by the small bootstrap script placed
      just above the main scene script, from a ?edit=1 URL param, persisted to localStorage so it
@@ -668,11 +661,6 @@
   }
   .manual-link .ml-x { margin-left:4px; color:var(--c-dim); font-size:14px; cursor:pointer; opacity:0; }
   .manual-link:hover .ml-x { opacity:1; }
-  .manual-links .link-add {
-    background:var(--amber-ghost); border:1px dashed var(--amber-dim);
-    color:var(--amber); font-family:var(--f-b); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
-    padding:8px 14px; cursor:pointer; clip-path:var(--clip-step);
-  }
   .manual-extralinks { display:none; margin-top:18px; }
   .manual-extralinks .ml-h { font-family:var(--f-b); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--c-dim); margin:0 0 8px; }
   .manual-cta {
@@ -803,11 +791,6 @@
     font-family: var(--f-m, 'Space Mono', monospace); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: rgba(240,237,232,.4); }
   body.author-mode.mw-planet:not(.mw-altfocus) #ml-switch { display: flex; }
   body.ui-hidden #ml-switch { display: none !important; }
-  #ml-switch .seg { display: flex; border: 1px solid rgba(120,224,214,.3); clip-path: var(--clip-step); background: rgba(14,15,18,.7); }
-  #ml-switch .seg button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: rgba(240,237,232,.55); background: transparent; border: none; border-right: 1px solid rgba(120,224,214,.2); padding: 6px 10px; cursor: pointer; }
-  #ml-switch .seg button:last-child { border-right: none; }
-  #ml-switch .seg button:hover { color: rgba(240,237,232,.9); }
-  #ml-switch .seg button.on { color: #AAF5EE; background: rgba(120,224,214,.12); box-shadow: inset 0 0 0 1px rgba(120,224,214,.4); }
 
   /* ════════ /MERGE Stage 2 ════════ */
 
@@ -978,12 +961,7 @@
   /* Tag add/remove controls (Edit Mode) */
   .manual-tag .tag-x{margin-left:5px;color:#E9A73E;cursor:pointer;font-weight:700;opacity:.7}
   .manual-tag .tag-x:hover{opacity:1}
-  .tag-add{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1px;color:#E9A73E;background:transparent;border:1px dashed rgba(233,167,62,.5);border-radius:3px;padding:2px 8px;cursor:pointer}
-  .tag-add:hover{background:rgba(233,167,62,.12)}
   /* INLINE COPY EDITING affordance (Edit Mode) */
-  .inline-edit-on{outline:1px dashed rgba(233,167,62,.85);outline-offset:2px;cursor:text;border-radius:2px;pointer-events:auto}
-  .inline-edit-on:hover{background:rgba(233,167,62,.10)}
-  .inline-edit-on:focus{outline:1.5px solid #E9A73E;background:rgba(233,167,62,.14)}
   #marqueePanel{display:none;position:fixed;top:96px;left:50%;transform:translateX(-50%);z-index:46;width:60vw;max-width:560px;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;padding:10px 12px;box-sizing:border-box}
   #marqueePanel .mq-row{display:flex;justify-content:space-between;align-items:center;margin:4px 0 3px}
   #marqueePanel .mq-lbl{font-family:'Space Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#E9A73E}
@@ -1004,12 +982,8 @@
   body.edit-focus #projMgr, body.cs-focus #projMgr, body.mw-casestudy #projMgr, body.mw-entrygate #projMgr, body.mw-altfocus #projMgr, body.ui-hidden #projMgr{display:none}
   #projMgr .pm-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px}
   #projMgr .pm-title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#E9A73E}
-  #projMgr .pm-close{font-family:inherit;font-size:12px;line-height:1;background:transparent;border:1px solid rgba(233,167,62,.35);color:rgba(240,237,232,.7);cursor:pointer;padding:3px 7px;border-radius:2px}
-  #projMgr .pm-close:hover{border-color:#E9A73E;color:#E9A73E}
   #projMgr .pm-tools{display:flex;align-items:center;gap:10px;padding:0 12px 10px;border-bottom:1px solid rgba(233,167,62,.22)}
   #projMgr .pm-note{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.45);line-height:1.5}
-  #projMgr .pm-newzone{flex:none;font-family:var(--display,'Chakra Petch',sans-serif);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:#E9A73E;border:1px solid #E9A73E;color:#0E0F12;padding:7px 12px;cursor:pointer;border-radius:2px}
-  #projMgr .pm-newzone:hover{background:#F0D080;border-color:#F0D080}
   #projMgr .pm-body{flex:1;min-height:0;overflow-y:auto;padding:8px 12px 4px}
   #projMgr .pm-zone{border:1px solid rgba(233,167,62,.3);border-radius:3px;padding:8px;margin-bottom:10px;background:rgba(233,167,62,.04)}
   #projMgr .pm-zone.is-hidden{border-style:dashed;border-color:rgba(240,237,232,.22);background:transparent}
@@ -1018,15 +992,10 @@
   #projMgr input[type=text]:focus{outline:none;border-color:#E9A73E;background:rgba(0,0,0,.5)}
   #projMgr .pm-znm{font-weight:700;letter-spacing:1px;text-transform:uppercase}
   #projMgr .is-hidden input[type=text]{opacity:.5}
-  #projMgr .pm-btn{flex:none;font-family:inherit;font-size:9px;letter-spacing:1px;text-transform:uppercase;line-height:1;background:transparent;border:1px solid rgba(233,167,62,.35);color:rgba(240,237,232,.75);cursor:pointer;padding:6px 7px;border-radius:2px;white-space:nowrap}
-  #projMgr .pm-btn:hover:not(:disabled){border-color:#E9A73E;color:#E9A73E}
-  #projMgr .pm-btn:disabled{opacity:.35;cursor:not-allowed}
   /* fixed widths: arming a remove button swaps its label, and it must not shift under the cursor (a shifted layout put "hide" under the confirming click) */
   #projMgr .pm-zactions .pm-danger{min-width:86px}
   #projMgr .pm-planet .pm-danger{min-width:62px}
   #projMgr .pm-btn.pm-danger{text-align:center}
-  #projMgr .pm-btn.pm-danger:hover:not(:disabled){border-color:#ff6b6b;color:#ff6b6b}
-  #projMgr .pm-btn.pm-confirm{background:#8a1f1f;border-color:#ff6b6b;color:#fff}
   #projMgr .pm-zactions{display:flex;justify-content:flex-end;gap:6px;margin:6px 0 8px}
   #projMgr .pm-count{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.45);margin:6px 0 0}
   #projMgr .pm-planets{list-style:none;margin:0;padding:0}
@@ -1043,21 +1012,10 @@
   #debug label{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
   #debug label b{font-family:var(--mono);font-size:9px;color:var(--line);font-weight:400;letter-spacing:.5px;text-shadow:0 0 5px rgba(90,191,184,.45)}
   /* Range sliders — 2px track, 2×14px thumb, teal register, 0 radius */
-  #debug input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;background:rgba(90,191,184,.14);outline:none;cursor:pointer;border-radius:0;display:block}
-  #debug input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:9px;height:9px;background:var(--line);border-radius:0;box-shadow:0 0 6px rgba(90,191,184,.6)}
-  #debug input[type=range]::-moz-range-thumb{width:9px;height:9px;background:var(--line);border:none;border-radius:0;box-shadow:0 0 6px rgba(90,191,184,.6)}
   /* Segment toggles — flush border container, 0 radius, teal holo fill on active */
-  #debug .seg{display:flex;gap:0;margin-top:2px;border:1px solid var(--border);clip-path:var(--clip-step)}
-  #debug .seg button{flex:1;font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:transparent;border:none;border-right:1px solid var(--border);padding:6px 4px;cursor:pointer;transition:background .1s,color .1s}
-  #debug .seg button:last-child{border-right:none}
-  #debug .seg button.on{color:var(--holo);background-color:var(--holo-fill);background-image:repeating-linear-gradient(0deg,var(--scan) 0 1px,transparent 1px 3px);box-shadow:inset 0 0 0 1px var(--holo-edge)}
   /* Custom checkboxes — 13×13 square, teal schematic register */
   #debug .chk{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
-  #debug .chk input[type=checkbox]{-webkit-appearance:none;appearance:none;width:13px;height:13px;flex-shrink:0;margin:0;border:1px solid rgba(90,191,184,.4);background:transparent;cursor:pointer;border-radius:0;transition:background .06s,border-color .06s}
-  #debug .chk input[type=checkbox]:checked{background-color:var(--holo-fill);border-color:var(--holo-edge);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='7' viewBox='0 0 9 7'%3E%3Cpath d='M1 3.5l2.5 2.5 4.5-5' stroke='%23AAF5EE' stroke-width='1.5' fill='none' stroke-linecap='square'/%3E%3C/svg%3E"),repeating-linear-gradient(0deg,var(--scan) 0 1px,transparent 1px 3px);background-repeat:no-repeat,repeat;background-position:center,center;box-shadow:0 0 5px rgba(90,191,184,.3)}
   /* Reset button — amber register, 0 radius */
-  #debug .resetbtn{width:100%;margin-top:6px;font-family:var(--display);font-size:8px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(233,167,62,.5);background:transparent;border:1px solid rgba(233,167,62,.22);border-radius:0;padding:8px;cursor:pointer;transition:background .1s,color .1s,border-color .1s;clip-path:var(--clip-step)}
-  #debug .resetbtn:hover{color:var(--a4);border-color:var(--a4);background:var(--a0)}
 
   /* ── UPLOAD PANEL ── */
   #uploadpanel{position:absolute;top:62px;right:22px;z-index:20;width:280px;background:var(--panel);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:0;padding:12px 14px;display:none}
@@ -1067,8 +1025,6 @@
   .upload-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .upload-lbl{font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);width:68px;flex-shrink:0}
   /* Upload browse — amber register, 0 radius */
-  .upload-btn{font-family:var(--display);font-size:8px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--a3);background:transparent;border:1px solid var(--a2);border-radius:0;padding:5px 9px;cursor:pointer;transition:.15s;white-space:nowrap;display:inline-block;clip-path:var(--clip-step)}
-  .upload-btn:hover{border-color:var(--a4);color:var(--a4);background:var(--a0)}
   .upload-btn input[type=file]{display:none}
   .upload-status{font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
   .upload-subctl{display:none;padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px}
@@ -1076,15 +1032,8 @@
   .subctl-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
   .subctl-lbl{font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);width:52px;flex-shrink:0}
   /* Sub-panel sliders — 2px track, 2×12px thumb */
-  .subctl-range{flex:1;-webkit-appearance:none;appearance:none;height:2px;background:rgba(90,191,184,.12);border-radius:0;outline:none;cursor:pointer}
-  .subctl-range::-webkit-slider-thumb{-webkit-appearance:none;width:8px;height:8px;background:var(--line);border-radius:0;box-shadow:0 0 5px rgba(90,191,184,.55)}
-  .subctl-range::-moz-range-thumb{width:8px;height:8px;background:var(--line);border:none;border-radius:0;box-shadow:0 0 5px rgba(90,191,184,.55)}
   .subctl-val{font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--line);width:28px;text-align:right;flex-shrink:0}
   /* Axis seg — flush, 0 radius */
-  .axis-seg{display:flex;clip-path:var(--clip-step)}
-  .axis-btn{font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;background:transparent;border:1px solid var(--border);border-right:none;color:var(--muted);padding:4px 10px;border-radius:0;cursor:pointer;transition:.15s}
-  .axis-btn:last-child{border-right:1px solid var(--border)}
-  .axis-btn.on{border-color:var(--line);color:var(--holo);background-color:var(--holo-fill);background-image:repeating-linear-gradient(0deg,var(--scan) 0 1px,transparent 1px 3px)}
   /* per-planet mesh upload in casepanel */
   .cp-mesh{border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px}
   .cp-mesh-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
@@ -1245,6 +1194,7 @@
     box-shadow: 0 0 8px color-mix(in srgb, var(--casc-holo,#78E0D6) 50%, transparent);
   }
 </style>
+<link rel="stylesheet" href="assets/bric-author.css" />
 </head>
 <body>
   <div id="scene"></div>
@@ -1252,55 +1202,55 @@
 
   <!-- EDIT MODE: shared hidden file input + active-mode banner -->
   <input type="file" id="editFile" accept=".obj,.glb,.gltf,.svg,.stp,.step,image/*" style="display:none">
-  <div id="editBanner" style="display:none;position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:40;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#0E0F12;background:#E9A73E;padding:5px 14px;border-radius:2px;max-width:min(620px,90vw);text-align:center;box-sizing:border-box">✎ edit mode — click an object to select · edit it in the panel</div>
+  <div id="editBanner" style="display:none;position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:40;max-width:min(620px,90vw);text-align:center;box-sizing:border-box">✎ edit mode — click an object to select · edit it in the panel</div>
   <!-- Save the current focus framing as this project/artifact's default view (Edit Mode, in focus). Drag + scroll to frame, then Set. -->
-  <div id="viewSet" style="display:none;position:fixed;top:130px;left:50%;transform:translateX(-50%);z-index:46;gap:6px;align-items:center;font-family:'Space Mono',monospace">
-    <button id="viewSetBtn" class="tbtn" style="background:rgba(14,15,18,.94);border:1px solid #E9A73E;color:#E9A73E;padding:6px 12px;font-size:10px;letter-spacing:1px">⊕ Set default view</button>
-    <button id="viewResetBtn" class="tbtn" style="background:rgba(14,15,18,.94);border:1px solid rgba(233,167,62,.4);color:#F0EDE8;padding:6px 9px;font-size:10px">↺</button>
-    <span style="font-size:8px;letter-spacing:1px;color:rgba(240,237,232,.55);background:rgba(14,15,18,.85);padding:5px 8px">drag orbit · shift-drag pan Y · scroll zoom</span>
+  <div id="viewSet" style="display:none;position:fixed;top:130px;left:50%;transform:translateX(-50%);z-index:46;gap:6px;align-items:center">
+    <button id="viewSetBtn" class="tbtn">⊕ Set default view</button>
+    <button id="viewResetBtn" class="tbtn">↺</button>
+    <span class="vs-hint">drag orbit · shift-drag pan Y · scroll zoom</span>
   </div>
-  <div id="editPanel" style="display:none;position:fixed;top:96px;right:22px;z-index:45;width:230px;background:rgba(14,15,18,.94);border:1px solid #E9A73E;border-radius:4px;padding:12px 14px;font-family:'Space Mono',monospace;color:#F0EDE8">
-    <div style="font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#E9A73E;margin-bottom:7px">Editing · <span id="epName">—</span></div>
-    <div id="epStatus" style="font-size:9px;color:rgba(240,237,232,.6);margin-bottom:11px">mesh: default</div>
-    <button id="epMesh" class="tbtn" style="display:block;width:100%;margin-bottom:6px;text-align:left">⬆ Mesh (.obj/.glb/.svg/.stp)</button>
-    <button id="epOpenBox" class="tbtn" style="display:none;width:100%;margin-bottom:6px;text-align:left">▸ Open kit box (faces)</button>
+  <div id="editPanel" style="display:none;position:fixed;top:96px;right:22px;z-index:45;width:230px;padding:12px 14px">
+    <div class="ep-eyebrow">Editing · <span id="epName">—</span></div>
+    <div id="epStatus" class="ep-status">mesh: default</div>
+    <button id="epMesh" class="tbtn bric-btn--block bric-btn--start">⬆ Mesh (.obj/.glb/.svg/.stp)</button>
+    <button id="epOpenBox" class="tbtn bric-btn--block bric-btn--start" style="display:none">▸ Open kit box (faces)</button>
     <!-- FOCUS VIEW: replace the whole kit box with an uploaded asset (.glb/.obj/.svg/.stp → holo mesh; bitmap → flat holo panel). Reversible via Reset. -->
-    <button id="epReplaceBox" class="tbtn" style="display:none;width:100%;margin-bottom:6px;text-align:left">⬆ Replace box (.glb/.obj/.svg/img)</button>
+    <button id="epReplaceBox" class="tbtn bric-btn--block bric-btn--start" style="display:none">⬆ Replace box (.glb/.obj/.svg/img)</button>
     <div id="epFaces" style="display:none;margin-bottom:8px">
-      <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,237,232,.5);margin-bottom:5px">Face</div>
+      <div class="ep-label">Face</div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">
-        <button class="epFace" data-face="front"  style="padding:4px 7px;font-size:9px;font-family:'Space Mono',monospace;border:1px solid rgba(233,167,62,.4);background:#E9A73E;color:#0E0F12;cursor:pointer;border-radius:2px">front</button>
-        <button class="epFace" data-face="back"   style="padding:4px 7px;font-size:9px;font-family:'Space Mono',monospace;border:1px solid rgba(233,167,62,.4);background:transparent;color:#F0EDE8;cursor:pointer;border-radius:2px">back</button>
-        <button class="epFace" data-face="top"    style="padding:4px 7px;font-size:9px;font-family:'Space Mono',monospace;border:1px solid rgba(233,167,62,.4);background:transparent;color:#F0EDE8;cursor:pointer;border-radius:2px">top</button>
-        <button class="epFace" data-face="bottom" style="padding:4px 7px;font-size:9px;font-family:'Space Mono',monospace;border:1px solid rgba(233,167,62,.4);background:transparent;color:#F0EDE8;cursor:pointer;border-radius:2px">bottom</button>
-        <button class="epFace" data-face="left"   style="padding:4px 7px;font-size:9px;font-family:'Space Mono',monospace;border:1px solid rgba(233,167,62,.4);background:transparent;color:#F0EDE8;cursor:pointer;border-radius:2px">left</button>
-        <button class="epFace" data-face="right"  style="padding:4px 7px;font-size:9px;font-family:'Space Mono',monospace;border:1px solid rgba(233,167,62,.4);background:transparent;color:#F0EDE8;cursor:pointer;border-radius:2px">right</button>
+        <button class="epFace" data-face="front">front</button>
+        <button class="epFace" data-face="back">back</button>
+        <button class="epFace" data-face="top">top</button>
+        <button class="epFace" data-face="bottom">bottom</button>
+        <button class="epFace" data-face="left">left</button>
+        <button class="epFace" data-face="right">right</button>
       </div>
     </div>
     <div id="epArtRow" style="display:none;align-items:center;gap:6px;margin-bottom:8px">
-      <span style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(240,237,232,.5);flex:1">Artifacts</span>
-      <button id="epArtDel" class="tbtn" style="padding:2px 9px">−</button>
-      <button id="epArtAdd" class="tbtn" style="padding:2px 9px">+</button>
+      <span class="ep-label" style="flex:1;margin:0">Artifacts</span>
+      <button id="epArtDel" class="tbtn">−</button>
+      <button id="epArtAdd" class="tbtn">+</button>
     </div>
-    <div id="epMarq" style="display:none;margin-bottom:8px;border-top:1px solid rgba(233,167,62,.22);padding-top:8px">
-      <label style="display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.6);margin-bottom:6px"><input type="checkbox" id="epMarqOn"> Side marquee</label>
-      <input type="text" id="epMarqText" placeholder="marquee text…" style="width:100%;box-sizing:border-box;margin-bottom:5px;background:rgba(0,0,0,.3);border:1px solid rgba(233,167,62,.25);color:#F0EDE8;font-family:'Space Mono',monospace;font-size:10px;padding:3px 5px">
-      <select id="epMarqFont" style="width:100%;box-sizing:border-box;margin-bottom:5px;background:rgba(0,0,0,.3);border:1px solid rgba(233,167,62,.25);color:#F0EDE8;font-family:'Space Mono',monospace;font-size:10px;padding:3px">
+    <div id="epMarq" style="display:none;margin-bottom:8px;padding-top:8px">
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input type="checkbox" id="epMarqOn"> Side marquee</label>
+      <input type="text" id="epMarqText" placeholder="marquee text…" style="width:100%;margin-bottom:5px">
+      <select id="epMarqFont" style="width:100%;margin-bottom:5px">
         <option value="'Space Mono', monospace">Space Mono</option>
         <option value="'Chakra Petch', sans-serif">Chakra Petch</option>
         <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
         <option value="'Aurebesh','Space Mono', monospace">Aurebesh</option>
       </select>
-      <div style="display:flex;align-items:center;gap:6px;font-size:9px;margin-bottom:5px">speed <input type="range" id="epMarqSpeed" min="0" max="0.6" step="0.02" style="flex:1"></div>
-      <div style="display:flex;align-items:center;gap:12px;font-size:9px;margin-bottom:5px">
-        <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="epMarqFlip"> flip text</label>
-        <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="epMarqMirror"> mirror</label>
-        <label style="display:flex;align-items:center;gap:5px"><input type="checkbox" id="epMarqRev"> reverse</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px"><span class="ep-label" style="margin:0">speed</span> <input type="range" id="epMarqSpeed" min="0" max="0.6" step="0.02" style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:5px">
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="epMarqFlip"> flip text</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="epMarqMirror"> mirror</label>
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="epMarqRev"> reverse</label>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:9px">bg <input type="color" id="epMarqBg" style="width:32px;height:20px;padding:0;border:none;background:none"> text <input type="color" id="epMarqFg" style="width:32px;height:20px;padding:0;border:none;background:none"></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="ep-label" style="margin:0">bg</span> <input type="color" id="epMarqBg" style="width:32px;height:20px"> <span class="ep-label" style="margin:0">text</span> <input type="color" id="epMarqFg" style="width:32px;height:20px"></div>
     </div>
-    <button id="epImage" class="tbtn" style="display:block;width:100%;margin-bottom:6px;text-align:left">⬆ Image (surface)</button>
-    <button id="epReset" class="tbtn" style="display:block;width:100%;text-align:left">↺ Reset object</button>
+    <button id="epImage" class="tbtn bric-btn--block bric-btn--start">⬆ Image (surface)</button>
+    <button id="epReset" class="tbtn bric-btn--block bric-btn--start">↺ Reset object</button>
   </div>
   <!-- CONTENT: marquee (ring) text editors — appear in Edit Mode; all other copy is click-to-edit inline -->
   <div id="marqueePanel">
@@ -2118,7 +2068,7 @@
         if(t) decodeEl(t,'Lbl',lb); if(s) decodeEl(s,'Lbl',lb); }
       var BTN_SEL='button, [role="button"], .bric-btn';
       document.addEventListener('mouseover',function(e){ var b=e.target&&e.target.closest?e.target.closest(BTN_SEL):null;
-        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],:disabled,.disabled')) return; decodeEl(b,'Btn'); });
+        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],:disabled,.disabled')||document.body.classList.contains('editing')) return; decodeEl(b,'Btn'); });   // no decode in Debug or Edit Mode
       // BRIC buttons: click ignites the glow (220ms stepped pulse, see assets/bric-components.css); keyboard activation for role=button spans
       document.addEventListener('click',function(e){ var b=e.target&&e.target.closest?e.target.closest('.bric-btn'):null; if(!b||reduced()) return;
         b.classList.remove('is-ignite'); void b.offsetWidth; b.classList.add('is-ignite'); setTimeout(function(){ b.classList.remove('is-ignite'); },240); });
@@ -12882,9 +12832,9 @@ f 2469//2469 2470//2470 2434//2434
       var isMoon=tid.indexOf('moon:')===0;
       var inBox=!!(focused&&focused.userData.id===tid);
       document.getElementById('epName').textContent= isMoon ? ('artifact '+(+tid.split(':')[2]+1)) : (tid+(inBox?' · kit box':''));
-      document.getElementById('epMesh').style.display=inBox?'none':'block';
-      var rbBtn=document.getElementById('epReplaceBox'); if(rbBtn) rbBtn.style.display=inBox?'block':'none';
-      document.getElementById('epOpenBox').style.display=(!inBox && !isMoon && tid!=='logo')?'block':'none';
+      document.getElementById('epMesh').style.display=inBox?'none':'flex';
+      var rbBtn=document.getElementById('epReplaceBox'); if(rbBtn) rbBtn.style.display=inBox?'flex':'none';
+      document.getElementById('epOpenBox').style.display=(!inBox && !isMoon && tid!=='logo')?'flex':'none';
       document.getElementById('epFaces').style.display=inBox?'block':'none';
       var artRow=document.getElementById('epArtRow'); if(artRow) artRow.style.display=inBox?'flex':'none';   // +/- artifacts when the box is focused
       var marqBox=document.getElementById('epMarq');   // per-project side-marquee editor (only when a project box is focused)
@@ -12905,7 +12855,7 @@ f 2469//2469 2470//2470 2434//2434
       if(inBox){ if(boxOvr[tid]){ document.getElementById('epStatus').textContent='box → '+(boxOvr[tid].name||boxOvr[tid].kind)+' · '+(focused?focused.userData.moons.length:0)+' artifacts'; }
         else { var set=BOX_FACES.filter(function(f){return boxt&&boxt[f+'Src'];}); document.getElementById('epStatus').textContent='faces: '+(set.length?set.join(', '):'none')+' · '+(focused?focused.userData.moons.length:0)+' artifacts'; } }
       else { document.getElementById('epStatus').textContent=ovr?('mesh: '+(ovr.name||ovr.kind)):'mesh: default'; }
-      Array.prototype.forEach.call(document.querySelectorAll('#epFaces .epFace'),function(b){ var on=b.getAttribute('data-face')===boxFace; b.style.background=on?'#E9A73E':'transparent'; b.style.color=on?'#0E0F12':'#F0EDE8'; });
+      Array.prototype.forEach.call(document.querySelectorAll('#epFaces .epFace'),function(b){ var on=b.getAttribute('data-face')===boxFace; b.classList.toggle('on',on); });
     }
     // ════════ Instagram focus view — per-slot image upload (Edit Mode) ════════
     // Content lives in BRICStore (IndexedDB) as Blobs under 'igfeed:0..5' — a clean,
@@ -13085,16 +13035,16 @@ f 2469//2469 2470//2470 2434//2434
       var token=null; try{ token=localStorage.getItem('mw_admintoken'); }catch(e){}
       if(!token && _csDirty){
         el.textContent='⚠ no admin token on this browser — edits are LOCAL ONLY · click SAVE (it will tell you it can\'t sync) or visit ?admintoken=YOUR_TOKEN once';
-        el.style.background='#8a1f1f'; el.style.color='#fff'; el.style.border='1px solid #ff6b6b';
+        el.classList.add('is-error'); el.classList.remove('is-dirty');
       } else if(_csLastFailMsg){
         el.textContent='⚠ content sync failed — edits are NOT reaching the server · '+_csLastFailMsg;
-        el.style.background='#8a1f1f'; el.style.color='#fff'; el.style.border='1px solid #ff6b6b';
+        el.classList.add('is-error'); el.classList.remove('is-dirty');
       } else if(_csDirty){
         el.textContent='✎ edit mode — unsynced changes · click SAVE (top right) to push them to the server';
-        el.style.background='#E9A73E'; el.style.color='#0E0F12'; el.style.border='';
+        el.classList.remove('is-error'); el.classList.add('is-dirty');   // state is styled in assets/bric-author.css (#editBanner)
       } else {
         el.textContent=_editBannerDefaultText;
-        el.style.background='#E9A73E'; el.style.color='#0E0F12'; el.style.border='';
+        el.classList.remove('is-error','is-dirty');
       }
     }
     // Reflect the persisted dirty flag on first paint (button label now; banner is a no-op until Edit Mode opens, then setEditMode() re-runs it).
@@ -15141,6 +15091,32 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     window.CS = { openFocus: openFocus, showBooklet: showBooklet, enterTransition: enterTransition, showCascade: showCascade, reset: reset, relayout: function(){ if(manualScene.classList.contains('visible')) layoutManual(); } };
+  })();
+  </script>
+
+  <!-- BRIC author UI adopter: author-only controls (toolbar, Debug, Edit Mode panels, Projects Manager, manual add buttons) take the .bric-btn look
+       (assets/bric-components.css + assets/bric-author.css) and are flagged data-gfx="off" so the glyph decode never runs on them. Also adopts controls the
+       page generates later (Projects Manager rows etc.) via a MutationObserver. First matching rule wins. -->
+  <script>
+  (function(){
+    var MAP=[
+      ['#saveBtn, #viewSetBtn, #projMgr .pm-newzone','bric-btn bric-btn--sm bric-btn--primary'],
+      ['.tbtn, #projMgr .pm-btn, #debug .resetbtn, .upload-btn, .tag-add, .manual-links .link-add','bric-btn bric-btn--sm bric-btn--secondary'],
+      ['#projMgr .pm-close, #debug .seg button, .axis-btn, #ml-switch .seg button, .epFace','bric-btn bric-btn--sm']
+    ];
+    var ALL=MAP.map(function(m){return m[0];}).join(',');
+    function adopt(el){ if(el.__bricAuthor) return; el.__bricAuthor=true;
+      for(var i=0;i<MAP.length;i++){ if(el.matches(MAP[i][0])){ MAP[i][1].split(' ').forEach(function(c){ el.classList.add(c); }); break; } }
+      el.setAttribute('data-gfx','off'); }
+    function scan(root){ if(root.nodeType!==1) return; if(root.matches(ALL)) adopt(root); var l=root.querySelectorAll(ALL); for(var i=0;i<l.length;i++) adopt(l[i]); }
+    // range sliders: keep --p (filled share of the track) in sync, including when the page sets .value from code
+    function fillOf(el){ var mn=+el.min||0, mx=el.max===''?100:+el.max, v=+el.value; el.style.setProperty('--p',(mx>mn?Math.max(0,Math.min(100,(v-mn)/(mx-mn)*100)):0)+'%'); }
+    var vd=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+    Object.defineProperty(HTMLInputElement.prototype,'value',{configurable:true,enumerable:vd.enumerable,get:vd.get,set:function(v){ vd.set.call(this,v); if(this.type==='range') fillOf(this); }});
+    document.addEventListener('input',function(e){ if(e.target&&e.target.type==='range') fillOf(e.target); },true);
+    function fillAll(root){ var l=(root.querySelectorAll?root.querySelectorAll('input[type=range]'):[]); for(var i=0;i<l.length;i++) fillOf(l[i]); }
+    scan(document.body); fillAll(document);
+    new MutationObserver(function(ms){ ms.forEach(function(m){ for(var i=0;i<m.addedNodes.length;i++){ scan(m.addedNodes[i]); fillAll(m.addedNodes[i]); } }); }).observe(document.body,{childList:true,subtree:true});
   })();
   </script>
 </body>
