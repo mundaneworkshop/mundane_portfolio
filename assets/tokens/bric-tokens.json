@@ -124,7 +124,7 @@
     "--bric-surface-base": {
       "type": "color",
       "dark": "#0E0F12",
-      "light": "#ECE8E0"
+      "light": "#EBEFF2"
     },
     "--bric-surface-raised": {
       "type": "color",
@@ -144,7 +144,7 @@
     "--bric-surface-scene": {
       "type": "color",
       "dark": "#070C0C",
-      "light": "#ECE8E0"
+      "light": "#E1E6EA"
     },
     "--bric-content-primary": {
       "type": "color",
