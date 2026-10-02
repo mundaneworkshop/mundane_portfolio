@@ -118,28 +118,33 @@
     },
     "--bric-float-easing": {
       "type": "cubicBezier",
-      "dark": "cubic-bezier(0.34, 1.56, 0.64, 1)",
-      "light": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+      "dark": "cubic-bezier(0.34, 1.06, 0.64, 1)",
+      "light": "cubic-bezier(0.34, 1.06, 0.64, 1)"
     },
     "--bric-surface-base": {
       "type": "color",
-      "dark": "#111110",
-      "light": "#F5F4F2"
+      "dark": "#0E0F12",
+      "light": "#ECE8E0"
     },
     "--bric-surface-raised": {
       "type": "color",
-      "dark": "#1A1917",
+      "dark": "#14151A",
       "light": "#FFFFFF"
     },
     "--bric-surface-overlay": {
       "type": "color",
-      "dark": "rgba(8, 8, 7, 0.72)",
+      "dark": "rgba(7, 12, 12, 0.72)",
       "light": "rgba(17, 17, 16, 0.48)"
     },
     "--bric-surface-inverted": {
       "type": "color",
       "dark": "#F5F4F2",
       "light": "#111110"
+    },
+    "--bric-surface-scene": {
+      "type": "color",
+      "dark": "#070C0C",
+      "light": "#ECE8E0"
     },
     "--bric-content-primary": {
       "type": "color",
@@ -153,12 +158,12 @@
     },
     "--bric-content-tertiary": {
       "type": "color",
-      "dark": "#6E6A64",
+      "dark": "#5A6F6B",
       "light": "#94908A"
     },
     "--bric-content-disabled": {
       "type": "color",
-      "dark": "#4A4742",
+      "dark": "#41524F",
       "light": "#BBB7AF"
     },
     "--bric-content-inverted": {
@@ -178,18 +183,18 @@
     },
     "--bric-border-subtle": {
       "type": "color",
-      "dark": "#2E2C29",
-      "light": "#EBE9E5"
+      "dark": "rgba(90, 191, 184, 0.14)",
+      "light": "rgba(31, 122, 114, 0.14)"
     },
     "--bric-border-default": {
       "type": "color",
-      "dark": "#4A4742",
-      "light": "#D8D5CF"
+      "dark": "rgba(90, 191, 184, 0.3)",
+      "light": "rgba(31, 122, 114, 0.32)"
     },
     "--bric-border-strong": {
       "type": "color",
-      "dark": "#6E6A64",
-      "light": "#BBB7AF"
+      "dark": "rgba(90, 191, 184, 0.5)",
+      "light": "rgba(31, 122, 114, 0.55)"
     },
     "--bric-border-brand": {
       "type": "color",
@@ -303,12 +308,12 @@
     },
     "--bric-feedback-error-fg": {
       "type": "color",
-      "dark": "#F08C7E",
+      "dark": "var(--bric-danger-text)",
       "light": "#8B1A0E"
     },
     "--bric-feedback-error-icon": {
       "type": "color",
-      "dark": "#F08C7E",
+      "dark": "var(--bric-danger-text)",
       "light": "#8B1A0E"
     },
     "--bric-feedback-info-bg": {
@@ -343,8 +348,8 @@
     },
     "--bric-register-amber-text-hot": {
       "type": "color",
-      "dark": "#FFE9B0",
-      "light": "#FFE9B0"
+      "dark": "#F0B848",
+      "light": "#F0B848"
     },
     "--bric-register-amber-scanline": {
       "type": "color",
@@ -396,25 +401,30 @@
       "dark": "#06201E",
       "light": "#06201E"
     },
+    "--bric-register-amber-planet-hot": {
+      "type": "color",
+      "dark": "#F0D080",
+      "light": "#F0D080"
+    },
     "--bric-schematic-line": {
       "type": "color",
-      "dark": "#8FE6DC",
-      "light": "#2A8079"
+      "dark": "#5ABFB8",
+      "light": "#1F7A72"
     },
     "--bric-schematic-line-dim": {
       "type": "color",
-      "dark": "rgba(143, 230, 220, 0.4)",
-      "light": "rgba(42, 128, 121, 0.4)"
+      "dark": "rgba(90, 191, 184, 0.5)",
+      "light": "rgba(31, 122, 114, 0.55)"
     },
     "--bric-schematic-fill": {
       "type": "color",
       "dark": "rgba(120, 224, 214, 0.26)",
-      "light": "rgba(42, 128, 121, 0.18)"
+      "light": "rgba(31, 122, 114, 0.18)"
     },
     "--bric-schematic-edge": {
       "type": "color",
       "dark": "rgba(170, 245, 238, 0.8)",
-      "light": "#2A8079"
+      "light": "#1F7A72"
     },
     "--bric-schematic-text-hot": {
       "type": "color",
@@ -424,12 +434,12 @@
     "--bric-schematic-scanline": {
       "type": "color",
       "dark": "rgba(150, 235, 226, 0.12)",
-      "light": "rgba(42, 128, 121, 0.09)"
+      "light": "rgba(31, 122, 114, 0.09)"
     },
     "--bric-schematic-solid": {
       "type": "color",
       "dark": "#78E0D6",
-      "light": "#2A8079"
+      "light": "#1F7A72"
     },
     "--bric-schematic-on-solid": {
       "type": "color",
@@ -440,6 +450,46 @@
       "type": "color",
       "dark": "rgba(6, 32, 30, 0.2)",
       "light": "rgba(6, 32, 30, 0.2)"
+    },
+    "--bric-schematic-logo": {
+      "type": "color",
+      "dark": "#71FDFF",
+      "light": "#71FDFF"
+    },
+    "--bric-holonet-text": {
+      "type": "color",
+      "dark": "#A06AF0",
+      "light": "#A06AF0"
+    },
+    "--bric-holonet-hot": {
+      "type": "color",
+      "dark": "#C8AAFF",
+      "light": "#C8AAFF"
+    },
+    "--bric-holonet-soft": {
+      "type": "color",
+      "dark": "#D8CDEC",
+      "light": "#D8CDEC"
+    },
+    "--bric-danger-text": {
+      "type": "color",
+      "dark": "#FF6B6B",
+      "light": "#FF6B6B"
+    },
+    "--bric-danger-edge": {
+      "type": "color",
+      "dark": "#E2716F",
+      "light": "#E2716F"
+    },
+    "--bric-danger-solid": {
+      "type": "color",
+      "dark": "#E24B4A",
+      "light": "#E24B4A"
+    },
+    "--bric-danger-deep": {
+      "type": "color",
+      "dark": "#8A1F1F",
+      "light": "#8A1F1F"
     },
     "--bric-display-text-brand": {
       "type": "color",

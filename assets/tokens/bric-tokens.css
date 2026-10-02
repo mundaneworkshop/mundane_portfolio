@@ -34,24 +34,25 @@
   --bric-float-duration-short: 300ms;
   --bric-float-duration-normal: 450ms;
   --bric-float-duration-long: 600ms;
-  --bric-float-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --bric-float-easing: cubic-bezier(0.34, 1.06, 0.64, 1);
   /* color · surface (dark) */
-  --bric-surface-base: #111110;
-  --bric-surface-raised: #1A1917;
-  --bric-surface-overlay: rgba(8, 8, 7, 0.72);
+  --bric-surface-base: #0E0F12;
+  --bric-surface-raised: #14151A;
+  --bric-surface-overlay: rgba(7, 12, 12, 0.72);
   --bric-surface-inverted: #F5F4F2;
+  --bric-surface-scene: #070C0C;
   /* color · content (dark) */
   --bric-content-primary: #F5F2EC;
   --bric-content-secondary: #94908A;
-  --bric-content-tertiary: #6E6A64;
-  --bric-content-disabled: #4A4742;
+  --bric-content-tertiary: #5A6F6B;
+  --bric-content-disabled: #41524F;
   --bric-content-inverted: #111110;
   --bric-content-brand: #E9A73E;
   --bric-content-on-brand: #1A0F02;
   /* color · border (dark) */
-  --bric-border-subtle: #2E2C29;
-  --bric-border-default: #4A4742;
-  --bric-border-strong: #6E6A64;
+  --bric-border-subtle: rgba(90, 191, 184, 0.14);
+  --bric-border-default: rgba(90, 191, 184, 0.3);
+  --bric-border-strong: rgba(90, 191, 184, 0.5);
   --bric-border-brand: #E9A73E;
   /* color · interactive (dark) */
   --bric-interactive-text-idle: var(--bric-content-primary);
@@ -77,8 +78,8 @@
   --bric-feedback-warning-fg: #F0892A;
   --bric-feedback-warning-icon: #F0892A;
   --bric-feedback-error-bg: #2A100C;
-  --bric-feedback-error-fg: #F08C7E;
-  --bric-feedback-error-icon: #F08C7E;
+  --bric-feedback-error-fg: var(--bric-danger-text);
+  --bric-feedback-error-icon: var(--bric-danger-text);
   --bric-feedback-info-bg: #0E1E28;
   --bric-feedback-info-fg: #3D9BD1;
   --bric-feedback-info-icon: #3D9BD1;
@@ -86,7 +87,7 @@
   --bric-register-amber-text: #E9A73E;
   --bric-register-amber-fill: rgba(233, 167, 62, 0.22);
   --bric-register-amber-edge: rgba(247, 206, 136, 0.851);
-  --bric-register-amber-text-hot: #FFE9B0;
+  --bric-register-amber-text-hot: #F0B848;
   --bric-register-amber-scanline: rgba(245, 210, 140, 0.122);
   --bric-register-amber-solid: #E9A73E;
   --bric-register-amber-on-solid: #1A0F02;
@@ -97,9 +98,10 @@
   --bric-register-teal-scanline: rgba(150, 235, 226, 0.122);
   --bric-register-teal-solid: #78E0D6;
   --bric-register-teal-on-solid: #06201E;
+  --bric-register-amber-planet-hot: #F0D080;
   /* color · schematic (dark) */
-  --bric-schematic-line: #8FE6DC;
-  --bric-schematic-line-dim: rgba(143, 230, 220, 0.4);
+  --bric-schematic-line: #5ABFB8;
+  --bric-schematic-line-dim: rgba(90, 191, 184, 0.5);
   --bric-schematic-fill: rgba(120, 224, 214, 0.26);
   --bric-schematic-edge: rgba(170, 245, 238, 0.8);
   --bric-schematic-text-hot: #EAFEFB;
@@ -107,6 +109,16 @@
   --bric-schematic-solid: #78E0D6;
   --bric-schematic-on-solid: #06201E;
   --bric-schematic-scanline-solid: rgba(6, 32, 30, 0.2);
+  --bric-schematic-logo: #71FDFF;
+  /* color · holonet (dark) */
+  --bric-holonet-text: #A06AF0;
+  --bric-holonet-hot: #C8AAFF;
+  --bric-holonet-soft: #D8CDEC;
+  /* color · danger (dark) */
+  --bric-danger-text: #FF6B6B;
+  --bric-danger-edge: #E2716F;
+  --bric-danger-solid: #E24B4A;
+  --bric-danger-deep: #8A1F1F;
   /* color · display (dark) */
   --bric-display-text-brand: #E9A73E;
   --bric-display-text-dim: #8A8480;
@@ -119,10 +131,11 @@
 }
 body.light{
   /* color · surface (light) */
-  --bric-surface-base: #F5F4F2;
+  --bric-surface-base: #ECE8E0;
   --bric-surface-raised: #FFFFFF;
   --bric-surface-overlay: rgba(17, 17, 16, 0.48);
   --bric-surface-inverted: #111110;
+  --bric-surface-scene: #ECE8E0;
   /* color · content (light) */
   --bric-content-primary: #111110;
   --bric-content-secondary: #525252;
@@ -131,9 +144,9 @@ body.light{
   --bric-content-inverted: #F5F2EC;
   --bric-content-brand: #7A5614;
   /* color · border (light) */
-  --bric-border-subtle: #EBE9E5;
-  --bric-border-default: #D8D5CF;
-  --bric-border-strong: #BBB7AF;
+  --bric-border-subtle: rgba(31, 122, 114, 0.14);
+  --bric-border-default: rgba(31, 122, 114, 0.32);
+  --bric-border-strong: rgba(31, 122, 114, 0.55);
   --bric-border-brand: #D4961E;
   /* color · interactive (light) */
   /* aliases are re-declared here: var() resolves where it is declared,
@@ -167,13 +180,13 @@ body.light{
   --bric-feedback-info-fg: #1F6F9E;
   --bric-feedback-info-icon: #1F6F9E;
   /* color · schematic (light) */
-  --bric-schematic-line: #2A8079;
-  --bric-schematic-line-dim: rgba(42, 128, 121, 0.4);
-  --bric-schematic-fill: rgba(42, 128, 121, 0.18);
-  --bric-schematic-edge: #2A8079;
+  --bric-schematic-line: #1F7A72;
+  --bric-schematic-line-dim: rgba(31, 122, 114, 0.55);
+  --bric-schematic-fill: rgba(31, 122, 114, 0.18);
+  --bric-schematic-edge: #1F7A72;
   --bric-schematic-text-hot: #1F615C;
-  --bric-schematic-scanline: rgba(42, 128, 121, 0.09);
-  --bric-schematic-solid: #2A8079;
+  --bric-schematic-scanline: rgba(31, 122, 114, 0.09);
+  --bric-schematic-solid: #1F7A72;
   --bric-schematic-on-solid: #F0FFFE;
   /* color · display (light) */
   --bric-display-text-brand: #7A5614;

@@ -26,7 +26,7 @@ const val = (v, m) => { const x = v.valuesByMode[m]; return x && x.type === 'VAR
 const same = (a, b) => a.alias ? a.alias === b.alias : a.lit === b.lit;
 const ref = r => r.alias ? `var(${cssName(r.alias)})` : r.lit;
 const isDep = v => /^DEPRECATED/.test(v.description || '');
-const order = ['surface', 'content', 'border', 'interactive', 'fx', 'feedback', 'register', 'schematic', 'display'];
+const order = ['surface', 'content', 'border', 'interactive', 'fx', 'feedback', 'register', 'schematic', 'holonet', 'danger', 'display'];
 const grp = v => v.name.split('/')[0];
 const live = color.variableIds.map(i => byId[i]).filter(v => !isDep(v)).sort((a, b) => order.indexOf(grp(a)) - order.indexOf(grp(b)));
 const pv = re => prim.variableIds.map(i => byId[i]).filter(v => re.test(v.name));

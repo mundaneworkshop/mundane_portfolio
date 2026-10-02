@@ -14,6 +14,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Verifying any HTML/JS change → [workflow-html-verification.md](workflow-html-verification.md)
 - Figma design system (tokens, components, color, spacing, type) → [foundation-docs.md](foundation-docs.md), [color-decisions.md](color-decisions.md), [spacing-decisions.md](spacing-decisions.md), [visual-language-direction.md](visual-language-direction.md), [star-wars-visual-dna.md](star-wars-visual-dna.md), [bric-build-progress.md](bric-build-progress.md), [bric-framer-translation.md](bric-framer-translation.md)
 - Button / tag / breadcrumb / interactive-text states, the `--bric-*` token file, or regenerating tokens from Figma → [interactive-states.md](interactive-states.md)
+- Foundations vs prod audit, the register narrative (teal = hologram, amber = the work, purple = HoloNet), HUD vs Document tiers, and the prod-migration list → [foundations-audit.md](foundations-audit.md)
 - Known open backlog items not yet built → [holotable-next-steps.md](holotable-next-steps.md), [text-style-tokens-todo.md](text-style-tokens-todo.md)
 
 **Full file list:**
@@ -28,6 +29,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [foundation-docs.md](foundation-docs.md) — design token architecture, Figma page structure
 - [galaxy-view-amend-jun23.md](galaxy-view-amend-jun23.md) — dynamic zone/planet model, per-zone FX, editable breadcrumb
 - [glb-texture-rendering.md](glb-texture-rendering.md) — INVARIANT rules for GLB decal/texture rendering, read before touching
+- [foundations-audit.md](foundations-audit.md) — Oct 2 2026: Figma Foundations audited against prod; decisions (prod neutrals, amber = the work, two tiers, retired 3px stair-step corner) and what was applied
 - [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
 - [holotable-backlog-jun20.md](holotable-backlog-jun20.md) — long log of feature rounds + bug fixes (marquee, box faces, SVG upload, etc.)
 - [holotable-editor-and-glb.md](holotable-editor-and-glb.md) — in-canvas Edit Mode architecture, persistence model, holo-FX pipeline

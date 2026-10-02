@@ -6,7 +6,7 @@ Figma file: **BRIC DS** (`O6bdoXtisdLxlsjhI41rqR`). Components page, sections `0
 
 ## The direction
 
-Refined, high-contrast, spacing-driven, type-first (the Andor CRT-terminal reference), keeping the in-universe UI DNA. **No new colors**: every interactive color is an existing token (see `color-decisions.md`); the only derived values are the ~10% primary hover fill and the alpha variants used for glow and bloom. The amber/teal *registers* still mean availability (available / coming-soon) on panels and status; they no longer color controls.
+Refined, high-contrast, spacing-driven, type-first (the Andor CRT-terminal reference), keeping the in-universe UI DNA. **No new colors**: every interactive color is an existing token (see `color-decisions.md`); the only derived values are the ~10% primary hover fill and the alpha variants used for glow and bloom. Hue meaning (revised 2026-10-02, see `foundations-audit.md`): off-white = what you can act on, teal = the hologram and its structure, amber = the work (planets, case files, kickers, key metrics), purple = HoloNet, red = destructive. No hue colors a control any more.
 
 ## Roles, sizes, states
 
@@ -44,7 +44,7 @@ The site already has the Aurebesh → Latin engine (`GFX` in `index.html`, defau
 
 ## Tokens
 
-- `assets/tokens/bric-tokens.css` — all live Figma tokens as `--bric-*` custom properties (96: spacing, corner, motion, color). Dark on `:root`, light under `body.light` (the site's own mechanism). Linked from `index.html`, declarations only.
+- `assets/tokens/bric-tokens.css` — all live Figma tokens as `--bric-*` custom properties (106: spacing, corner, motion, color). Values follow prod after the 2026-10-02 audit: teal-black neutrals (`surface/scene` `#070C0C`, `surface/base` `#0E0F12`, `surface/raised` `#14151A`), translucent teal borders, structural teal `schematic/line`, plus `holonet/*`, `danger/*`, `schematic/logo`, `register/amber/planet-hot`. Dark on `:root`, light under `body.light` (the site's own mechanism). Linked from `index.html`, declarations only.
 - `assets/tokens/bric-tokens.json` — flat list derived from the CSS.
 - New semantic tokens: `interactive/text/{idle,on-fill,disabled}`, `interactive/fill/{default,hover,disabled}`, `interactive/outline/{default,disabled,tag}` (aliases of existing surface/content/border tokens except `fill/hover`), and `fx/glow/{near,far,stroke-near,stroke-far}`, `fx/bloom/text`.
 - Deprecated and **omitted from code**: `interactive/primary|secondary|ghost/*` (still in Figma, marked DEPRECATED, no consumers).
