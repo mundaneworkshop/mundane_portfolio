@@ -1,0 +1,65 @@
+/* BRIC DS components — buttons, tags, breadcrumb. Source of truth: Figma "BRIC DS" › Components 09–11.
+ * Built only from the --bric-* tokens in assets/tokens/bric-tokens.css (dark default, light under body.light).
+ * Decision record and states table: docs/project-history/interactive-states.md
+ *
+ * Roles    default = tertiary (text) · --secondary (outline) · --primary (fill)
+ * Sizes    Large 40px (13/16) · --sm 24px (11/16)
+ * States   idle · hover · .is-active (fill + inset keyline; also the current menu item / breadcrumb page) · [aria-disabled="true"]
+ * Effects  hover glow + text bloom are emitted light: the tokens are transparent in light mode, so no mode check is needed.
+ *          Everything animates opacity on a pseudo-element only; prefers-reduced-motion removes it all.
+ * Decode   the Aurebesh → Latin hover decode lives in GFX (index.html); it targets .bric-btn.
+ */
+.bric-btn{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:var(--bric-space-stud);height:var(--bric-space-5-stud);padding:0 var(--bric-space-2-stud);margin:0;border:0;border-radius:var(--bric-corner-step);background:transparent;color:var(--bric-interactive-text-idle);cursor:pointer;white-space:nowrap;text-decoration:none;text-transform:uppercase;font:500 13px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;outline:none;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.bric-btn--sm{height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);font-size:11px;letter-spacing:.12em}
+.bric-btn--block{display:flex;width:100%}
+.bric-btn--secondary{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
+.bric-btn--primary{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill)}
+
+/* hover glow: opacity-only pseudo-element */
+.bric-btn::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity var(--bric-snap-duration-fast) linear;box-shadow:0 0 8px 0 var(--bric-fx-glow-stroke-near),0 0 24px 2px var(--bric-fx-glow-stroke-far)}
+.bric-btn--secondary::after,.bric-btn--primary::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-near),0 0 24px 2px var(--bric-fx-glow-far)}
+
+/* hover (pointer devices only, so touch screens don't keep a stuck hover) */
+@media (hover:hover){
+  .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled)::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
+  .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled):not(.bric-btn--secondary):not(.bric-btn--primary){box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
+  .bric-btn--secondary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none}
+  .bric-btn--primary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover)}
+}
+
+/* active / current: solid fill + inset keyline (3px gap Large, 2px Small) — one appearance for every role */
+.bric-btn.is-active{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none;box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-default),inset 0 0 0 4px var(--bric-interactive-text-on-fill)}
+.bric-btn--sm.is-active{box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-default),inset 0 0 0 3px var(--bric-interactive-text-on-fill)}
+
+/* disabled */
+.bric-btn[aria-disabled="true"],.bric-btn:disabled,.bric-btn.disabled{background:transparent;box-shadow:none;color:var(--bric-interactive-text-disabled);text-shadow:none;cursor:not-allowed;pointer-events:none}
+.bric-btn--secondary[aria-disabled="true"],.bric-btn--secondary:disabled,.bric-btn--secondary.disabled{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled)}
+.bric-btn--primary[aria-disabled="true"],.bric-btn--primary:disabled,.bric-btn--primary.disabled{background:var(--bric-interactive-fill-disabled)}
+
+/* text bloom on non-filled labels (transparent in light mode) */
+.bric-btn:not(.bric-btn--primary):not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){text-shadow:0 0 6px var(--bric-fx-bloom-text)}
+
+/* ignite flicker on click: stepped opacity pulse, added by a click listener in index.html */
+.bric-btn.is-ignite::after{animation:bric-ignite 220ms steps(1,end) both}
+@keyframes bric-ignite{0%{opacity:.15}25%{opacity:1}55%{opacity:.35}80%{opacity:1}100%{opacity:1}}
+
+/* focus: inset outline (keyboard only) */
+.bric-btn:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:-4px}
+
+/* touch: keep the 24px Small look but give it a 44px hit area (invisible, vertical only) */
+@media (pointer:coarse){
+  .bric-btn--sm::before{content:'';position:absolute;left:0;right:0;top:-10px;bottom:-10px}
+}
+
+/* glyph decode (GFX): scramble glyphs render at ~0.78em so the box never overflows (Aurebesh runs 25–40% wider than Latin) */
+.bric-btn .gfx-u{font-size:.78em}
+
+/* tag: static label, never interactive — outline is deliberately dimmer than the label */
+.bric-tag{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);border-radius:var(--bric-corner-step);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-tag);box-sizing:border-box;color:var(--bric-interactive-text-idle);cursor:default;user-select:none;white-space:nowrap;text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em}
+
+/* breadcrumb: small tertiary buttons; the last item is the current page (active), separators are static dim text */
+.bric-crumb{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-half-stud)}
+.bric-crumb__sep{color:var(--bric-content-secondary);font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;user-select:none}
+.bric-crumb__item{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);box-sizing:border-box;color:var(--bric-content-secondary);text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;white-space:nowrap}
+
+@media (prefers-reduced-motion:reduce){.bric-btn::after{transition:none}.bric-btn.is-ignite::after{animation:none}}
