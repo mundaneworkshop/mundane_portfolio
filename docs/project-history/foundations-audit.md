@@ -195,3 +195,16 @@ Prod padding/margin/gap values (269 refs): **8 ×39, 6 ×29, 12 ×25, 14 ×21, 1
 3. Is the Foundations page describing the shipped HUD, the planned Framer pages, or both (as two tiers)?
 4. Off-white ladder: alpha (prod) or solids (Figma)?
 5. OK to apply the unambiguous "Figma should match prod" corrections now (structural teal, float easing, corner 3px, missing purple/danger/cyan)?
+
+
+## Light surfaces (2026-10-02, follow-up)
+
+There is no site-wide light mode; light surfaces are only for case-study pages and modules. The earlier light neutrals (`#ECE8E0` / `#F5F4F2`) read as a warm cream and were not used anywhere on prod, so `surface/scene` and `surface/base` in Light are now cool greys, in the hue family of the dark neutrals:
+
+| Token | Light | Notes |
+|---|---|---|
+| `surface/scene` | `#E1E6EA` | page behind light modules |
+| `surface/base` | `#EBEFF2` | light module background |
+| `surface/raised` | `#FFFFFF` | unchanged |
+
+Contrast on `surface/base`: content/primary 16.3:1, content/secondary 6.8:1, content/brand 5.7:1, schematic/line 4.3:1 (large text / UI only). The site's `body.light` global palette aliases these tokens, so the old light theme toggle now renders on the cool grey as well.

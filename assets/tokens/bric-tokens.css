@@ -132,11 +132,11 @@
 }
 body.light{
   /* color · surface (light) */
-  --bric-surface-base: #ECE8E0;
+  --bric-surface-base: #EBEFF2;
   --bric-surface-raised: #FFFFFF;
   --bric-surface-overlay: rgba(17, 17, 16, 0.48);
   --bric-surface-inverted: #111110;
-  --bric-surface-scene: #ECE8E0;
+  --bric-surface-scene: #E1E6EA;
   /* color · content (light) */
   --bric-content-primary: #111110;
   --bric-content-secondary: #525252;
