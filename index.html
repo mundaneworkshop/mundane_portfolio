@@ -46,6 +46,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/aurebesh/aurebesh-bold.woff2" crossorigin />
+<!-- BRIC DS tokens (generated from Figma; namespaced --bric-*, dark default on :root, light under body.light). Declarations only — nothing consumes them yet. See docs/project-history/interactive-states.md -->
+<link rel="stylesheet" href="assets/tokens/bric-tokens.css" />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <!-- HoloNet backend: Supabase JS (UMD → window.supabase.createClient). Publishable key is safe to ship client-side by design; RLS on the messages table restricts it to read-only on approved rows. -->
 <!-- supabase-js — local copy first, CDN only if it is missing. Powers the HoloNet message
