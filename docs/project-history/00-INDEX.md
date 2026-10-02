@@ -13,6 +13,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Adding any new tunable/parameter → [maximize-customization.md](maximize-customization.md) (standing rule: expose it, don't bake it)
 - Verifying any HTML/JS change → [workflow-html-verification.md](workflow-html-verification.md)
 - Figma design system (tokens, components, color, spacing, type) → [foundation-docs.md](foundation-docs.md), [color-decisions.md](color-decisions.md), [spacing-decisions.md](spacing-decisions.md), [visual-language-direction.md](visual-language-direction.md), [star-wars-visual-dna.md](star-wars-visual-dna.md), [bric-build-progress.md](bric-build-progress.md), [bric-framer-translation.md](bric-framer-translation.md)
+- Button / tag / breadcrumb / interactive-text states, the `--bric-*` token file, or regenerating tokens from Figma → [interactive-states.md](interactive-states.md)
 - Known open backlog items not yet built → [holotable-next-steps.md](holotable-next-steps.md), [text-style-tokens-todo.md](text-style-tokens-todo.md)
 
 **Full file list:**
@@ -33,6 +34,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [holotable-next-steps.md](holotable-next-steps.md) — open backlog as of Jun 20
 - [homepage-holotable-prototype.md](homepage-holotable-prototype.md) — original homepage concept + architecture
 - [instagram-focus-view.md](instagram-focus-view.md) — Instagram planet focus view (polaroid grid)
+- [interactive-states.md](interactive-states.md) — Oct 2 2026: button/tag/breadcrumb roles × sizes × states, CRT hover glow/bloom/flicker, glyph-decode rules, the generated `--bric-*` token file and how to regenerate it, reference CSS
 - [manual-layouts.md](manual-layouts.md) — Sep 2026: responsive focus-view manual (dock/rail/drawer/auto) + camera stage-fit; monogram hidden in focus
 - [maximize-customization.md](maximize-customization.md) — standing rule: expose tunables as editable content
 - [projects-manager.md](projects-manager.md) — Projects Manager panel: live add/remove/rename/hide of zones + planets, `syncSceneToModel()`, bugs found on the way
