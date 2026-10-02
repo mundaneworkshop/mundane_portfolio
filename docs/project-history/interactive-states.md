@@ -74,6 +74,16 @@ Notes:
 - `.manual-cta-btn.disabled` and `[aria-disabled]` both map to the disabled look.
 - Not migrated: author-only tools (`.tbtn`, `.link-add`, `.tag-add`, debug and Projects Manager buttons), `.ct-upload`/`.glb-up` (author upload), `.mm-del` (destructive: no BRIC variant is designed), the `+`/`−` CV label controls, `#msgToggle`, `.cs-step`. `--clip-step` is still used by those and by panel chrome, so it stays until the panel-chrome PR.
 
+## Panel chrome (Oct 2 2026, branch `feat/bric-panel-chrome`, stacked on `feat/bric-buttons`)
+
+Figma: Components › 06 Panel Chrome (surface/raised fill, 1px border/subtle, header = eyebrow + title, sections split by hairlines, back button in the footer).
+
+- **`.bric-dark`** (new, in `bric-tokens.css`: `:root,.bric-dark{…}`) re-declares the dark token values on a subtree. Panels that stay dark in light mode — the manual (`#cs-root`) and the HoloNet console (`.ct-panel`) — carry it; the case panel stays theme-aware.
+- **One palette.** The global palette (`--bg --line --line-dim --text --muted --border --on-brand`) now aliases the tokens (computed values identical in both themes — verified). The manual's private palette is now tokens too: surface/base and raised, teal solid/edge/hot, structural teal for the corner brackets, border/subtle for borders and the dot grid, and the solid text ladder (`--c-primary/secondary/dim` = content primary/secondary/tertiary instead of 92/62/50% alphas).
+- **Case panel** (`#casepanel`): raised fill, hairline separators between header, body, moons and a new `.cp-actions` footer (primary CTA + back), amber eyebrow with a `▸`, Chakra title at 20px.
+- **Manual** (`#manual-book`): fill from `--bric-surface-base` at the tunable `--mb-alpha` (via `color-mix`). The brackets, tilt and dot grid stay — the manual's dock / rail / drawer layouts are grids, so it gets no horizontal separators.
+- **HoloNet console**: raised fill, border/default, 4px corner, token inputs with an inset focus ring, holonet purple and danger red from tokens (CSS only; the canvas strokes in JS still use the literals).
+- Not done: toast, `.plabel.amber/.locked`, `#debug`, `#uploadpanel` (still `--panel`), author panels, and the remaining `--clip-step` users (the author toolbar, debug, ml-switch, a few chips) — so `--clip-step` is not removed yet.
 ## Author UI (Oct 2 2026, branch `feat/bric-author-ui`)
 
 Debug, Edit Mode and the other author-only panels take the same language as the visitor UI. `assets/bric-author.css` (loaded after the page's inline `<style>`) holds the panel chrome, Range Slider and Checkbox; the buttons are `.bric-btn`.

@@ -7,7 +7,7 @@
  *
  * Rules baked in (do not change without reading docs/project-history/interactive-states.md):
  *  - names: `--bric-` + variable name with "/" → "-"
- *  - dark is the default on :root; light overrides go under body.light (the site's theming mechanism)
+ *  - dark is the default on :root (and on `.bric-dark`, for subtrees that stay dark in light mode); light overrides go under body.light (the site's theming mechanism)
  *  - alias tokens (value is another variable) are emitted in BOTH blocks — CSS resolves var() where it is
  *    declared, so an alias left only on :root never sees the body.light overrides
  *  - variables whose description starts with "DEPRECATED" are omitted
@@ -31,7 +31,7 @@ const grp = v => v.name.split('/')[0];
 const live = color.variableIds.map(i => byId[i]).filter(v => !isDep(v)).sort((a, b) => order.indexOf(grp(a)) - order.indexOf(grp(b)));
 const pv = re => prim.variableIds.map(i => byId[i]).filter(v => re.test(v.name));
 
-let css = `/* BRIC DS tokens — GENERATED from the Figma file "BRIC DS" (key ${figma.fileKey || 'O6bdoXtisdLxlsjhI41rqR'}).\n * Do not edit by hand: change the variable in Figma, then regenerate (see docs/project-history/interactive-states.md).\n *\n * Namespaced --bric-* so nothing collides with the site's own vars (--bg, --text, --amber, …).\n * Theming matches the site: dark is the default on :root, light overrides live under body.light\n * (toggled by applyTheme()). Mode-independent tokens (register/*) appear once, in :root.\n * Alias tokens (value is var(--bric-…)) appear in BOTH blocks — see the note in body.light.\n * Deprecated Figma tokens (interactive/primary|secondary|ghost/*) are intentionally omitted.\n */\n:root{\n  /* spacing — 8px stud scale (primitives) */\n`;
+let css = `/* BRIC DS tokens — GENERATED from the Figma file "BRIC DS" (key ${figma.fileKey || 'O6bdoXtisdLxlsjhI41rqR'}).\n * Do not edit by hand: change the variable in Figma, then regenerate (see docs/project-history/interactive-states.md).\n *\n * Namespaced --bric-* so nothing collides with the site's own vars (--bg, --text, --amber, …).\n * Theming matches the site: dark is the default on :root, light overrides live under body.light\n * (toggled by applyTheme()). Mode-independent tokens (register/*) appear once, in :root.\n * `.bric-dark` re-declares the dark values on a subtree, so a panel that stays dark in light mode (the manual, HoloNet) can use the tokens.\n * Alias tokens (value is var(--bric-…)) appear in BOTH blocks — see the note in body.light.\n * Deprecated Figma tokens (interactive/primary|secondary|ghost/*) are intentionally omitted.\n */\n:root,.bric-dark{\n  /* spacing — 8px stud scale (primitives) */\n`;
 pv(/^space\//).forEach(v => { css += `  ${cssName(v.name)}: ${Object.values(v.valuesByMode)[0]}px;\n`; });
 css += `  /* corner */\n`;
 pv(/^corner\//).forEach(v => { css += `  ${cssName(v.name)}: ${Object.values(v.valuesByMode)[0]}px;\n`; });

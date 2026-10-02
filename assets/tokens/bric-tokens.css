@@ -4,10 +4,11 @@
  * Namespaced --bric-* so nothing collides with the site's own vars (--bg, --text, --amber, …).
  * Theming matches the site: dark is the default on :root, light overrides live under body.light
  * (toggled by applyTheme()). Mode-independent tokens (register/*) appear once, in :root.
+ * `.bric-dark` re-declares the dark values on a subtree, so a panel that stays dark in light mode (the manual, HoloNet) can use the tokens.
  * Alias tokens (value is var(--bric-…)) appear in BOTH blocks — see the note in body.light.
  * Deprecated Figma tokens (interactive/primary|secondary|ghost/*) are intentionally omitted.
  */
-:root{
+:root,.bric-dark{
   /* spacing — 8px stud scale (primitives) */
   --bric-space-half-stud: 4px;
   --bric-space-stud: 8px;
