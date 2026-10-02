@@ -28,6 +28,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [galaxy-view-amend-jun23.md](galaxy-view-amend-jun23.md) — dynamic zone/planet model, per-zone FX, editable breadcrumb
 - [glb-texture-rendering.md](glb-texture-rendering.md) — INVARIANT rules for GLB decal/texture rendering, read before touching
 - [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
+- [hud-type-grotesk.md](hud-type-grotesk.md) — Oct 2 2026: HUD labels/body moved from Space Mono to Space Grotesk per the locked stack; what stays mono
 - [holotable-backlog-jun20.md](holotable-backlog-jun20.md) — long log of feature rounds + bug fixes (marquee, box faces, SVG upload, etc.)
 - [holotable-editor-and-glb.md](holotable-editor-and-glb.md) — in-canvas Edit Mode architecture, persistence model, holo-FX pipeline
 - [holotable-next-steps.md](holotable-next-steps.md) — open backlog as of Jun 20
