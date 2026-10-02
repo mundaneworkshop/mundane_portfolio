@@ -77,7 +77,7 @@ Consequences worth knowing:
 
 ### 1d · Figma color tokens that appear nowhere on prod (55 of 111)
 
-- **Placeholders:** `color/neutral/50–900`, `color/brand/primary|accent/*` (`#555` placeholders, noted as such already).
+- **Placeholders:** `color/neutral/50–900`, `color/brand/primary|accent/*` (`#555` placeholders; deleted from Figma 2026-10-02, nothing bound them).
 - **Feedback:** all of `color/feedback/*` and `feedback/*/{bg,fg,icon}` — prod has no success/warning/info UI at all.
 - **Ramps:** `color/teal/100|900`, `color/amber/100|700|900`.
 - **Semantic:** `content/disabled`, `border/default`, `border/strong`, `register/amber/text-hot`, `register/teal/scanline`, `register/teal/on-solid`, `schematic/on-solid`, `schematic/scanline-solid`.
