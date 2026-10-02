@@ -1,0 +1,186 @@
+/* BRIC DS tokens — GENERATED from the Figma file "BRIC DS" (key O6bdoXtisdLxlsjhI41rqR).
+ * Do not edit by hand: change the variable in Figma, then regenerate (see docs/project-history/interactive-states.md).
+ *
+ * Namespaced --bric-* so nothing collides with the site's own vars (--bg, --text, --amber, …).
+ * Theming matches the site: dark is the default on :root, light overrides live under body.light
+ * (toggled by applyTheme()). Mode-independent tokens (register/*) appear once, in :root.
+ * Alias tokens (value is var(--bric-…)) appear in BOTH blocks — see the note in body.light.
+ * Deprecated Figma tokens (interactive/primary|secondary|ghost/*) are intentionally omitted.
+ */
+:root{
+  /* spacing — 8px stud scale (primitives) */
+  --bric-space-half-stud: 4px;
+  --bric-space-stud: 8px;
+  --bric-space-1-5-stud: 12px;
+  --bric-space-2-stud: 16px;
+  --bric-space-3-stud: 24px;
+  --bric-space-4-stud: 32px;
+  --bric-space-6-stud: 48px;
+  --bric-space-8-stud: 64px;
+  --bric-space-12-stud: 96px;
+  --bric-space-16-stud: 128px;
+  --bric-space-2-5-stud: 20px;
+  --bric-space-5-stud: 40px;
+  /* corner */
+  --bric-corner-sharp: 0px;
+  --bric-corner-full: 9999px;
+  --bric-corner-step: 4px;
+  --bric-corner-step-hero: 8px;
+  /* motion — Snap (mechanical) and Float (springy) */
+  --bric-snap-duration-instant: 80ms;
+  --bric-snap-duration-fast: 150ms;
+  --bric-snap-duration-normal: 200ms;
+  --bric-snap-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --bric-float-duration-short: 300ms;
+  --bric-float-duration-normal: 450ms;
+  --bric-float-duration-long: 600ms;
+  --bric-float-easing: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* color · surface (dark) */
+  --bric-surface-base: #111110;
+  --bric-surface-raised: #1A1917;
+  --bric-surface-overlay: rgba(8, 8, 7, 0.72);
+  --bric-surface-inverted: #F5F4F2;
+  /* color · content (dark) */
+  --bric-content-primary: #F5F2EC;
+  --bric-content-secondary: #94908A;
+  --bric-content-tertiary: #6E6A64;
+  --bric-content-disabled: #4A4742;
+  --bric-content-inverted: #111110;
+  --bric-content-brand: #E9A73E;
+  --bric-content-on-brand: #1A0F02;
+  /* color · border (dark) */
+  --bric-border-subtle: #2E2C29;
+  --bric-border-default: #4A4742;
+  --bric-border-strong: #6E6A64;
+  --bric-border-brand: #E9A73E;
+  /* color · interactive (dark) */
+  --bric-interactive-text-idle: var(--bric-content-primary);
+  --bric-interactive-text-on-fill: var(--bric-content-inverted);
+  --bric-interactive-text-disabled: var(--bric-content-disabled);
+  --bric-interactive-fill-default: var(--bric-surface-inverted);
+  --bric-interactive-fill-disabled: var(--bric-border-subtle);
+  --bric-interactive-outline-default: var(--bric-content-primary);
+  --bric-interactive-outline-disabled: var(--bric-border-default);
+  --bric-interactive-outline-tag: var(--bric-border-strong);
+  --bric-interactive-fill-hover: #DEDDDB;
+  /* color · fx (dark) */
+  --bric-fx-glow-near: rgba(245, 244, 242, 0.3);
+  --bric-fx-glow-far: rgba(245, 244, 242, 0.14);
+  --bric-fx-bloom-text: rgba(245, 242, 236, 0.38);
+  --bric-fx-glow-stroke-near: rgba(245, 244, 242, 0.165);
+  --bric-fx-glow-stroke-far: rgba(245, 244, 242, 0.077);
+  /* color · feedback (dark) */
+  --bric-feedback-success-bg: #12251A;
+  --bric-feedback-success-fg: #6FD99A;
+  --bric-feedback-success-icon: #6FD99A;
+  --bric-feedback-warning-bg: #2A1E0C;
+  --bric-feedback-warning-fg: #F0892A;
+  --bric-feedback-warning-icon: #F0892A;
+  --bric-feedback-error-bg: #2A100C;
+  --bric-feedback-error-fg: #F08C7E;
+  --bric-feedback-error-icon: #F08C7E;
+  --bric-feedback-info-bg: #0E1E28;
+  --bric-feedback-info-fg: #3D9BD1;
+  --bric-feedback-info-icon: #3D9BD1;
+  /* color · register (dark) */
+  --bric-register-amber-text: #E9A73E;
+  --bric-register-amber-fill: rgba(233, 167, 62, 0.22);
+  --bric-register-amber-edge: rgba(247, 206, 136, 0.851);
+  --bric-register-amber-text-hot: #FFE9B0;
+  --bric-register-amber-scanline: rgba(245, 210, 140, 0.122);
+  --bric-register-amber-solid: #E9A73E;
+  --bric-register-amber-on-solid: #1A0F02;
+  --bric-register-teal-text: #8FE6DC;
+  --bric-register-teal-fill: rgba(120, 224, 214, 0.259);
+  --bric-register-teal-edge: rgba(170, 245, 238, 0.8);
+  --bric-register-teal-text-hot: #EAFEFB;
+  --bric-register-teal-scanline: rgba(150, 235, 226, 0.122);
+  --bric-register-teal-solid: #78E0D6;
+  --bric-register-teal-on-solid: #06201E;
+  /* color · schematic (dark) */
+  --bric-schematic-line: #8FE6DC;
+  --bric-schematic-line-dim: rgba(143, 230, 220, 0.4);
+  --bric-schematic-fill: rgba(120, 224, 214, 0.26);
+  --bric-schematic-edge: rgba(170, 245, 238, 0.8);
+  --bric-schematic-text-hot: #EAFEFB;
+  --bric-schematic-scanline: rgba(150, 235, 226, 0.12);
+  --bric-schematic-solid: #78E0D6;
+  --bric-schematic-on-solid: #06201E;
+  --bric-schematic-scanline-solid: rgba(6, 32, 30, 0.2);
+  /* color · display (dark) */
+  --bric-display-text-brand: #E9A73E;
+  --bric-display-text-dim: #8A8480;
+  --bric-display-fill-active: #E9A73E;
+  --bric-display-holo-fill: rgba(233, 167, 62, 0.22);
+  --bric-display-holo-edge: rgba(247, 206, 136, 0.85);
+  --bric-display-holo-text: #FFE9B0;
+  --bric-display-holo-scanline: rgba(245, 210, 140, 0.12);
+  --bric-display-holo-scanline-solid: rgba(26, 15, 2, 0.2);
+}
+body.light{
+  /* color · surface (light) */
+  --bric-surface-base: #F5F4F2;
+  --bric-surface-raised: #FFFFFF;
+  --bric-surface-overlay: rgba(17, 17, 16, 0.48);
+  --bric-surface-inverted: #111110;
+  /* color · content (light) */
+  --bric-content-primary: #111110;
+  --bric-content-secondary: #525252;
+  --bric-content-tertiary: #94908A;
+  --bric-content-disabled: #BBB7AF;
+  --bric-content-inverted: #F5F2EC;
+  --bric-content-brand: #7A5614;
+  /* color · border (light) */
+  --bric-border-subtle: #EBE9E5;
+  --bric-border-default: #D8D5CF;
+  --bric-border-strong: #BBB7AF;
+  --bric-border-brand: #D4961E;
+  /* color · interactive (light) */
+  /* aliases are re-declared here: var() resolves where it is declared,
+     so aliases left only on :root would never see the body.light overrides above */
+  --bric-interactive-text-idle: var(--bric-content-primary);
+  --bric-interactive-text-on-fill: var(--bric-content-inverted);
+  --bric-interactive-text-disabled: var(--bric-content-disabled);
+  --bric-interactive-fill-default: var(--bric-surface-inverted);
+  --bric-interactive-fill-disabled: var(--bric-border-subtle);
+  --bric-interactive-outline-default: var(--bric-content-primary);
+  --bric-interactive-outline-disabled: var(--bric-border-default);
+  --bric-interactive-outline-tag: var(--bric-border-strong);
+  --bric-interactive-fill-hover: #282827;
+  /* color · fx (light) */
+  --bric-fx-glow-near: rgba(17, 17, 16, 0);
+  --bric-fx-glow-far: rgba(17, 17, 16, 0);
+  --bric-fx-bloom-text: rgba(17, 17, 16, 0);
+  --bric-fx-glow-stroke-near: rgba(17, 17, 16, 0);
+  --bric-fx-glow-stroke-far: rgba(17, 17, 16, 0);
+  /* color · feedback (light) */
+  --bric-feedback-success-bg: #EAF6EE;
+  --bric-feedback-success-fg: #145E2F;
+  --bric-feedback-success-icon: #145E2F;
+  --bric-feedback-warning-bg: #FAF0E2;
+  --bric-feedback-warning-fg: #A05010;
+  --bric-feedback-warning-icon: #A05010;
+  --bric-feedback-error-bg: #FBEBE9;
+  --bric-feedback-error-fg: #8B1A0E;
+  --bric-feedback-error-icon: #8B1A0E;
+  --bric-feedback-info-bg: #E9F2F8;
+  --bric-feedback-info-fg: #1F6F9E;
+  --bric-feedback-info-icon: #1F6F9E;
+  /* color · schematic (light) */
+  --bric-schematic-line: #2A8079;
+  --bric-schematic-line-dim: rgba(42, 128, 121, 0.4);
+  --bric-schematic-fill: rgba(42, 128, 121, 0.18);
+  --bric-schematic-edge: #2A8079;
+  --bric-schematic-text-hot: #1F615C;
+  --bric-schematic-scanline: rgba(42, 128, 121, 0.09);
+  --bric-schematic-solid: #2A8079;
+  --bric-schematic-on-solid: #F0FFFE;
+  /* color · display (light) */
+  --bric-display-text-brand: #7A5614;
+  --bric-display-text-dim: #525252;
+  --bric-display-fill-active: #FDF0D8;
+  --bric-display-holo-fill: rgba(212, 150, 30, 0.18);
+  --bric-display-holo-edge: #A8761A;
+  --bric-display-holo-text: #7A5614;
+  --bric-display-holo-scanline: rgba(184, 90, 14, 0.09);
+}
