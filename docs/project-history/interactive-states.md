@@ -1,6 +1,6 @@
 # Interactive states, sizes and tokens (Oct 2 2026)
 
-> Decision record for the redesigned interactive text / button language, the tokens that back it, and how the Figma file maps to code. Figma is the source of truth; `assets/tokens/bric-tokens.css` is generated from it. **Nothing in `index.html` consumes these tokens yet** — this change only ships the token file (plus a reference stylesheet below) so the site can adopt them in a follow-up.
+> Decision record for the redesigned interactive text / button language, the tokens that back it, and how the Figma file maps to code. Figma is the source of truth; `assets/tokens/bric-tokens.css` is generated from it. The components are implemented in `assets/bric-components.css` (linked after the tokens) and adopted in `index.html` — see "Adoption" below. The reference CSS further down is the earlier prototype of the same rules.
 
 Figma file: **BRIC DS** (`O6bdoXtisdLxlsjhI41rqR`). Components page, sections `09 · Button` (node 306:789), `10 · Tag` (306:869), `11 · Breadcrumb` (306:896), plus restyled `01 · Checkbox`, `03 · Range Slider`, `06 · Panel Chrome`, `08 · Scrollbar`. Old register-based components live on the page `🧪 Sandbox & Deprecated`.
 
@@ -54,7 +54,27 @@ The site already has the Aurebesh → Latin engine (`GFX` in `index.html`, defau
 
 **Regenerating** (after changing variables in Figma): run `tools/figma-export-tokens.js` through the figma-console MCP (`figma_execute`) with the BRIC DS file open, write the returned `css` to `assets/tokens/bric-tokens.css`, then `python3 tools/derive-token-json.py`. The committed CSS is byte-identical to that script's output as of this change; the git diff of a regeneration should contain only intentional token changes.
 
-## Reference implementation (not yet in `index.html`)
+## Adoption (Oct 2 2026, branch `feat/bric-buttons`)
+
+`assets/bric-components.css` holds `.bric-btn` (+ `--primary`, `--secondary`, `--sm`, `--block`, `.is-active`), `.bric-tag` and the breadcrumb pieces. Migrated controls:
+
+| Control | Now |
+|---|---|
+| `#cpEnter` (case panel CTA) | primary, block |
+| `#cpBack`, `#homeBtn` (breadcrumb root) | tertiary, small |
+| `#csExit`, CV pills (`#csPrev/#csNext/#csRingBtn/#cvmOverview`), `.manual-link` | secondary, small |
+| `.manual-cta-btn`, `#ctSend` | primary |
+| `.manual-tag` (static + CMS-built) | `.bric-tag` |
+| Breadcrumb | root = small tertiary button; separators are `/`; the last segment is the current page (`.is-active`, `aria-current="page"`); middle segments are plain dim text because only the root navigates |
+
+Notes:
+- Decode (GFX): `.bric-btn` is left-anchored, unclipped, renders the scramble in one child span, and the Aurebesh glyphs are `.78em` (`.bric-btn .gfx-u`). Other buttons keep the old behaviour. `BTN_SEL` now includes `.bric-btn` and skips disabled buttons. Click adds `.is-ignite` for 220ms.
+- Hover rules sit in `@media (hover:hover)`; on `pointer:coarse` devices `.bric-btn--sm` gets an invisible 44px-tall hit area (`::before`), so the icon on `.manual-link` moved to `.ml-label::before`.
+- Focus is an inset outline (`:focus-visible`), the one state the design left open.
+- `.manual-cta-btn.disabled` and `[aria-disabled]` both map to the disabled look.
+- Not migrated: author-only tools (`.tbtn`, `.link-add`, `.tag-add`, debug and Projects Manager buttons), `.ct-upload`/`.glb-up` (author upload), `.mm-del` (destructive: no BRIC variant is designed), the `+`/`−` CV label controls, `#msgToggle`, `.cs-step`. `--clip-step` is still used by those and by panel chrome, so it stays until the panel-chrome PR.
+
+## Reference implementation (earlier prototype of `assets/bric-components.css`)
 
 Validated in a browser against the real token file in both themes. Roles: default = tertiary, `--secondary`, `--primary`; size `--sm`; `.is-active` for selected/current.
 
@@ -94,6 +114,6 @@ Validated in a browser against the real token file in both themes. Roles: defaul
 ## Open items
 
 - Fonts: the locked stack (`visual-language-direction.md`) applies — button/tag/breadcrumb labels are Space Grotesk. Prod currently sets Space Mono as the body font (`index.html:79`, `--mono`), with no recorded reason; migrate HUD body/labels to `--grotesk` and keep Space Mono for readouts. Until then `.bric-*` classes set their own font-family and don't inherit.
-- Adopt the `.bric-*` classes in `index.html` and port the three decode changes above into `GFX`.
+- Panel chrome (manual, case and HoloNet panels) is next; then the remaining non-visitor controls and a destructive variant.
 - Decide whether to delete the legacy Button (Deprecated page) and the Sandbox components (Segment Toggle, Status Chip, Toast, Divider — still old register style, not used in production).
 - Focus state is undesigned.

@@ -48,6 +48,7 @@
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/aurebesh/aurebesh-bold.woff2" crossorigin />
 <!-- BRIC DS tokens (generated from Figma; namespaced --bric-*, dark default on :root, light under body.light). Declarations only — nothing consumes them yet. See docs/project-history/interactive-states.md -->
 <link rel="stylesheet" href="assets/tokens/bric-tokens.css" />
+<link rel="stylesheet" href="assets/bric-components.css" />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <!-- HoloNet backend: Supabase JS (UMD → window.supabase.createClient). Publishable key is safe to ship client-side by design; RLS on the messages table restricts it to read-only on approved rows. -->
 <!-- supabase-js — local copy first, CDN only if it is missing. Powers the HoloNet message
@@ -82,10 +83,7 @@
 
   /* ── TOPBAR ── */
   #topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;pointer-events:none}
-  #breadcrumb{font-family:var(--grotesk);font-size:11px;letter-spacing:2px;color:var(--muted);pointer-events:auto;cursor:pointer;text-transform:uppercase;display:flex;align-items:center;gap:8px}
-  #breadcrumb b{color:var(--holo);font-weight:400}
-  #breadcrumb .home{border:1px solid var(--border);padding:5px 9px;border-radius:0;transition:.15s;clip-path:var(--clip-step)}
-  #breadcrumb .home:hover{border-color:var(--line);color:var(--line)}
+  #breadcrumb{pointer-events:auto}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   .tbtn{font-family:var(--display);font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--a3);background:transparent;border:1px solid var(--a2);border-radius:0;padding:6px 12px;cursor:pointer;transition:background .05s,color .05s,border-color .05s;clip-path:var(--clip-step)}
@@ -183,11 +181,8 @@
   #casepanel .moons{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--line);margin-bottom:18px;line-height:1.9}
   #casepanel .moons b{color:var(--holo);font-weight:400}
   /* Back button — amber register (real action), 0 radius */
-  #casepanel .back{font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--a3);background:transparent;border:1px solid var(--a2);border-radius:0;padding:8px 14px;cursor:pointer;transition:.15s;clip-path:var(--clip-step)}
-  #casepanel .back:hover{border-color:var(--a4);color:var(--a4);background:var(--a0)}
   /* MERGE: View-case-study CTA (temporary in casepanel; booklet replaces this in Stage 2) */
-  #cpEnter{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#0a1410;background:var(--amber);border:none;border-radius:0;padding:10px 14px;cursor:pointer;clip-path:var(--clip-step);width:100%;margin-bottom:10px}
-  #cpEnter:hover{background:var(--amber-hot,#F0B848)}
+  #cpEnter{margin-bottom:10px}
 
   /* ── MERGE: case-study DOM layer (Stage 1 = placeholder over frozen WebGL) ── */
   #cs-root{position:fixed;inset:0;z-index:60;background:transparent;opacity:0;pointer-events:none;transition:opacity .5s ease;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:22px}
@@ -203,7 +198,7 @@
   /* in focus, the static galaxy chrome (Case Files panel + dev controls) disappears */
   body.cs-focus #topright{opacity:0;pointer-events:none;transition:opacity .35s ease}
   .cs-placeholder{font-family:Space Grotesk,sans-serif;font-size:13px;letter-spacing:2px;color:#78E0D6;text-transform:uppercase;text-align:center;line-height:1.8}
-  #csExit{font-family:Space Grotesk,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#F0B848;background:transparent;border:1px solid rgba(240,184,72,.4);padding:8px 16px;cursor:pointer;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:9700}
+  #csExit{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:9700}
 
   /* ════════ MERGE Stage 2: kit box + instruction booklet (scoped to #cs-root) ════════ */
   /* SOURCE :root design tokens, scoped so they don't pollute the holotable globals */
@@ -603,14 +598,7 @@
     max-width: 88%;
   }
   .manual-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
-  .manual-tag {
-    font-family: var(--f-b); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.1em;
-    color: var(--c-primary);
-    background: transparent;
-    border: 1px solid rgba(240,237,232,0.2);
-    padding: 4px 8px;
-  }
+  .manual-tag { flex:0 0 auto; }   /* look comes from .bric-tag */
   .manual-body {
     font-family: var(--f-b);
     font-size: 13px; line-height: 1.6;
@@ -665,16 +653,9 @@
   /* ── ARTIFACT (moon) mode: link buttons take the snapshot grid's place entirely ── */
   .snap-grid.links-mode { display:block; }
   .manual-links { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
-  .manual-link {
-    display:inline-flex; align-items:center; gap:8px; flex:0 0 auto; width:fit-content;
-    font-family: var(--f-b); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
-    color:var(--teal-edge); background:var(--teal-ghost); border:1px solid var(--teal-dim);
-    padding:8px 14px; clip-path:var(--clip-step);
-    text-decoration:none; cursor:pointer; transition: background .15s, border-color .15s;
-  }
-  .manual-link:hover { background:rgba(120,224,214,.13); border-color:var(--teal); }
-  .manual-link::before {
-    content:'';
+  .manual-link { flex:0 0 auto; width:fit-content; height:auto; min-height:var(--bric-space-3-stud); flex-wrap:wrap; }   /* look comes from .bric-btn--secondary.bric-btn--sm; wraps in Edit Mode (URL field) */
+  .manual-link .ml-label::before {
+    content:''; display:inline-block; vertical-align:-2px; margin-right:8px;
     width:13px; height:13px; flex-shrink:0;
     background-color: currentColor;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain;
@@ -694,22 +675,13 @@
     flex-wrap: wrap; gap: 6px;
     margin-top: 16px;
   }
-  .manual-cta-btn {
-    font-family: var(--f-b); font-size: 13px;
-    text-transform: uppercase; letter-spacing: 0.12em;
-    color: #1A0F02; background: var(--amber);
-    border: none; padding: 10px 22px; cursor: pointer;
-    clip-path: var(--clip-step);   /* match the stepped-corner buttons used everywhere else */
-    transition: background 0.15s;
-  }
+  .manual-cta-btn { }   /* look comes from .bric-btn--primary */
   .manual-cta-btn:hover { background: var(--amber-hot); }
   /* .inline-edit-on:hover/:focus (generic affordance for editable text sitting directly on the page) strips
      the background down to a near-transparent tint — fine for plain text, but this is a solid button with
      dark text, so that would make it unreadable against the page. Keep it opaque while editing. */
-  .manual-cta-btn.inline-edit-on:hover, .manual-cta-btn.inline-edit-on:focus { background: var(--amber-hot); }
+  .manual-cta-btn.inline-edit-on:hover, .manual-cta-btn.inline-edit-on:focus { background: var(--bric-interactive-fill-default); }
   /* per-CTA active/disabled state (data.ctaActive) — 'work' cases default from window.CASE_STUDY_CTA_ENABLED but can be overridden per project; only applied outside Edit Mode so a disabled CTA stays editable */
-  .manual-cta-btn.disabled { background: rgba(240,237,232,0.12); color: rgba(240,237,232,0.35); cursor: not-allowed; pointer-events: none; }
-  .manual-cta-btn.disabled:hover { background: rgba(240,237,232,0.12); }
   .manual-cta-note {
     font-family: var(--f-b); font-size: 13px;
     color: var(--c-dim); letter-spacing: 0.08em;
@@ -948,8 +920,7 @@
   .ct-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
   .ct-upload{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:transparent;border:1px dashed rgba(90,191,184,.4);border-radius:2px;padding:8px 10px;cursor:pointer}
   .ct-upload:hover{border-color:#5ABFB8}
-  .ct-send{margin-left:auto;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#1a1206;background:#E9A73E;border:none;padding:11px 18px;cursor:pointer;clip-path:var(--clip-step)}
-  .ct-send:hover{background:#F0D080}
+  .ct-send{margin-left:auto}
   .ct-note{font-family:var(--grotesk);font-size:13px;color:#6b8a85;align-self:center}
   /* transmit (R2 trundle) + message modal */
   #r2Trundle{position:absolute;inset:0;z-index:19;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
@@ -1352,7 +1323,7 @@
   </div>
 
   <div id="topbar">
-    <div id="breadcrumb"><span class="home" id="homeBtn">⌂ Mundane Workshop</span> <span id="crumbpath"></span></div>
+    <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">⌂ Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
       <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
@@ -1609,8 +1580,8 @@
     <p id="cpBody">Placeholder.</p>
     <div class="moons" id="cpMoons"></div>
     <!-- MERGE Stage 2: per-project mesh + box-texture authoring relocated into #debug (booklet is now the focus panel) -->
-    <button id="cpEnter">View case study ▸</button>
-    <button class="back" id="cpBack">◄ back to galaxy</button>
+    <button id="cpEnter" class="bric-btn bric-btn--primary bric-btn--block">View case study ▸</button>
+    <button class="bric-btn bric-btn--sm" id="cpBack">◄ back to galaxy</button>
   </div>
 
   <!-- ░░ Instagram focus view — light polaroid grid (shown in place of the kit box when 'ig' is focused) ░░ -->
@@ -1696,15 +1667,15 @@
   <!-- ░░ CV — 3D hyperspace route: drag to orbit, click a node label. Details reuse the project manual (#manual-scene). ░░ -->
   <div id="csRouteLayer"></div>
   <div id="csRouteCtl">
-    <button class="cvr-pill" id="csPrev" title="Previous chapter (←)">◄</button>
+    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="csPrev" title="Previous chapter (←)">◄</button>
     <div id="csStepper"></div>
-    <button class="cvr-pill" id="csNext" title="Next chapter (→)">►</button>
-    <button class="cvr-pill" id="csRingBtn">⛶ Chapter ring</button>
+    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="csNext" title="Next chapter (→)">►</button>
+    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="csRingBtn">⛶ Chapter ring</button>
     <span class="cvr-pill cvr-hint">← → chapters · esc back · drag orbit · scroll zoom</span>
   </div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
-    <button class="cvr-pill" id="cvmOverview">⛶ Route overview</button>
+    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="cvmOverview">⛶ Route overview</button>
     <label class="cvr-pill glb-up" id="cvShipUp">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
     <span class="cvr-pill cvr-hint">drag orbit · shift-drag pan Y · scroll zoom</span>
   </div>
@@ -1720,7 +1691,7 @@
       <div class="ct-glbname glb-up" id="ctGlbName"></div>
       <div class="ct-actions">
         <span class="ct-note">Pins to the galaxy as a star</span>
-        <button class="ct-send" id="ctSend">Transmit ▸</button>
+        <button class="ct-send bric-btn bric-btn--primary" id="ctSend">Transmit ▸</button>
       </div>
     </div>
   </div>
@@ -1865,10 +1836,10 @@
           <div class="manual-slug"><!--CMS:slug (editable permalink)--><span class="manual-slug-prefix"></span><span class="manual-slug-val"></span></div>
           <div class="manual-framing"><!--CMS:framing-->Consolidating five product surfaces onto a single token architecture, shipped in 9 months without a feature freeze.</div>
           <div class="manual-tags"><!--CMS:tags[] -->
-            <div class="manual-tag">Product Design</div>
-            <div class="manual-tag">Design Systems</div>
-            <div class="manual-tag">Scale</div>
-            <div class="manual-tag">0→1</div>
+            <div class="manual-tag bric-tag">Product Design</div>
+            <div class="manual-tag bric-tag">Design Systems</div>
+            <div class="manual-tag bric-tag">Scale</div>
+            <div class="manual-tag bric-tag">0→1</div>
           </div>
           <div class="snap-grid"><!--CMS:snapshot[] (key/value pairs)-->
             <div class="snap-cell"><div class="snap-cell-k">Role</div><div class="snap-cell-v">Senior Designer<br>System Lead</div></div>
@@ -1879,7 +1850,7 @@
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
           <div class="manual-cta">
-            <button class="manual-cta-btn" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
+            <button class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -1903,7 +1874,7 @@
       </div>
     </div>
 
-    <button id="csExit">◄ back to galaxy</button>
+    <button id="csExit" class="bric-btn bric-btn--secondary bric-btn--sm">◄ back to galaxy</button>
   </div>
 
   <div id="toast"></div>
@@ -2118,29 +2089,35 @@
       // Freeze the box (width + height, no wrapping, overflow clipped) BEFORE the first scrambled frame, so Aurebesh glyph
       // metrics can never grow or shift the container. Anything wider/taller is cut off at the boundary. Ref-counted: a label's
       // title + sub share one lock on the label.
-      function lock(L,noClip){ var s=L.__gfxLock; if(s){ s.n++; return; }
+      function lock(L,noClip,leftAnchor){ var s=L.__gfxLock; if(s){ s.n++; return; }
         var w=L.offsetWidth, h=L.offsetHeight; if(!w||!h){ L.__gfxLock={n:1,none:true}; return; }
-        var st=L.style; L.__gfxLock={n:1,w:st.width,h:st.height,bs:st.boxSizing,ov:st.overflow,ws:st.whiteSpace,d:st.display};
+        var st=L.style; L.__gfxLock={n:1,w:st.width,h:st.height,bs:st.boxSizing,ov:st.overflow,ws:st.whiteSpace,d:st.display,jc:st.justifyContent,pl:st.paddingLeft};
+        if(leftAnchor){ var rg=document.createRange(); rg.selectNodeContents(L); var off=Math.max(0,rg.getBoundingClientRect().left-L.getBoundingClientRect().left); st.justifyContent='flex-start'; st.paddingLeft=off+'px'; }   // glyphs start at the label's left edge; any width variance plays out left → right
         if(getComputedStyle(L).display==='inline') st.display='inline-block';
         st.boxSizing='border-box'; st.width=w+'px'; st.height=h+'px'; st.whiteSpace='nowrap'; if(!noClip) st.overflow='hidden'; }
-      function unlock(L){ var s=L.__gfxLock; if(!s||--s.n>0) return; if(!s.none){ var st=L.style; st.width=s.w; st.height=s.h; st.boxSizing=s.bs; st.overflow=s.ov; st.whiteSpace=s.ws; st.display=s.d; } L.__gfxLock=null; }
+      function unlock(L){ var s=L.__gfxLock; if(!s||--s.n>0) return; if(!s.none){ var st=L.style; st.width=s.w; st.height=s.h; st.boxSizing=s.bs; st.overflow=s.ov; st.whiteSpace=s.ws; st.display=s.d; st.justifyContent=s.jc; st.paddingLeft=s.pl; } L.__gfxLock=null; }
       function decodeEl(el,K,lockEl,noClip){
         if(!params['gx'+K+'On']||reduced()||!el||el.isContentEditable||el.childElementCount>0) return;
         var target=el.textContent; if(!/[A-Za-z0-9]/.test(target)) return;
         if(!el.__gfxId) el.__gfxId='el'+(++uid);
         if(live[el.__gfxId]) return;   // already decoding: leave it alone (no restart, no second lock)
-        var L=lockEl||el, hadAria=el.hasAttribute('aria-label');
-        lock(L,noClip||el.hasAttribute('data-text'));   // glitch labels (data-text) keep their overhanging slices; everything else clips
+        var L=lockEl||el, hadAria=el.hasAttribute('aria-label'), bric=el.classList.contains('bric-btn');
+        lock(L,noClip||bric||el.hasAttribute('data-text'),bric);   // glitch labels (data-text) keep their overhanging slices; everything else clips
         if(!hadAria) el.setAttribute('aria-label',target);
         run({ key:el.__gfxId, target:target, opts:opts(K),
-          render:function(out){ var h='', plain=''; for(var i=0;i<out.length;i++){ plain+=out[i].c; h+=out[i].r?esc(out[i].c):'<span class="gfx-u">'+esc(out[i].c)+'</span>'; } el.innerHTML=h;
+          render:function(out){ var h='', plain=''; for(var i=0;i<out.length;i++){ plain+=out[i].c; h+=out[i].r?esc(out[i].c):'<span class="gfx-u">'+esc(out[i].c)+'</span>'; } el.innerHTML=bric?'<span>'+h+'</span>':h;   // one child span: if each glyph were its own flex item, the button's gap would be applied between glyphs
             if(el.hasAttribute('data-text')) el.setAttribute('data-text',plain); },   // glitch-label pseudo layers mirror the scramble
           done:function(){ el.textContent=target; if(el.hasAttribute('data-text')) el.setAttribute('data-text',target); unlock(L); if(!hadAria) el.removeAttribute('aria-label'); } }); }
       function label(lb){ if(!lb) return; var t=lb.querySelector('.pl-title'), s=lb.querySelector('.pl-sub');
         if(t) decodeEl(t,'Lbl',lb); if(s) decodeEl(s,'Lbl',lb); }
-      var BTN_SEL='button, [role="button"]';
+      var BTN_SEL='button, [role="button"], .bric-btn';
       document.addEventListener('mouseover',function(e){ var b=e.target&&e.target.closest?e.target.closest(BTN_SEL):null;
-        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')) return; decodeEl(b,'Btn'); });
+        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],:disabled,.disabled')) return; decodeEl(b,'Btn'); });
+      // BRIC buttons: click ignites the glow (220ms stepped pulse, see assets/bric-components.css); keyboard activation for role=button spans
+      document.addEventListener('click',function(e){ var b=e.target&&e.target.closest?e.target.closest('.bric-btn'):null; if(!b||reduced()) return;
+        b.classList.remove('is-ignite'); void b.offsetWidth; b.classList.add('is-ignite'); setTimeout(function(){ b.classList.remove('is-ignite'); },240); });
+      document.addEventListener('keydown',function(e){ var b=e.target&&e.target.matches&&e.target.matches('span.bric-btn[role="button"]')?e.target:null;
+        if(b&&!b.isContentEditable&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); b.click(); } });
       return { run:run, cancel:cancel, opts:opts, scrambled:scrambled, reduced:reduced, aur:aur, decodeEl:decodeEl, label:label,
               onFonts:onFonts, settled:function(){ return fontsSettled; }, isLive:function(k){ return !!live[k]; } };
     })();
@@ -13212,7 +13189,7 @@ f 2469//2469 2470//2470 2434//2434
       if(!tagWrap) return; tagWrap.innerHTML='';
       if(focusedMoon) return;   // artifacts carry no project tags
       TAGS.forEach(function(t,i){
-        var d=document.createElement('div'); d.className='manual-tag';
+        var d=document.createElement('div'); d.className='manual-tag bric-tag';
         var s=document.createElement('span'); s.className='tag-txt'; s.textContent=t; d.appendChild(s);
         if(editMode){
           s.contentEditable='true'; s.classList.add('inline-edit-on');
@@ -13324,9 +13301,10 @@ f 2469//2469 2470//2470 2434//2434
     crumbRootEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); crumbRootEl.blur(); } });
     function renderCrumb(){ crumbPathEl.innerHTML='';
       crumbSegs.forEach(function(seg,i){
-        var sep=document.createElement('span'); sep.textContent=' ▸ '; sep.style.opacity='.55'; crumbPathEl.appendChild(sep);
-        var s=document.createElement('span'); s.className='crumb-seg'; var ovr=copyOvr['crumb:'+crumbCtx+':'+i];
-        s.textContent=(ovr!=null)?ovr:seg.text; if(seg.bold) s.style.color='var(--holo)';
+        var sep=document.createElement('span'); sep.className='bric-crumb__sep'; sep.textContent='/'; sep.setAttribute('aria-hidden','true'); crumbPathEl.appendChild(sep);
+        var last=(i===crumbSegs.length-1);
+        var s=document.createElement('span'); s.className='crumb-seg '+(last?'bric-btn bric-btn--sm is-active':'bric-crumb__item'); if(last) s.setAttribute('aria-current','page'); var ovr=copyOvr['crumb:'+crumbCtx+':'+i];
+        s.textContent=(ovr!=null)?ovr:seg.text;
         s.setAttribute('data-ci',i); crumbPathEl.appendChild(s);
       });
       syncCrumbEdit();
@@ -14524,7 +14502,7 @@ f 2469//2469 2470//2470 2434//2434
       if(tagWrap){ tagWrap.innerHTML='';
         if(!data.artifact){   // per-project tags (editable in Edit Mode); artifacts carry none
           (Array.isArray(data.tags)?data.tags:[]).forEach(function(t,i){
-            var d=document.createElement('div'); d.className='manual-tag';
+            var d=document.createElement('div'); d.className='manual-tag bric-tag';
             var s=document.createElement('span'); s.className='tag-txt'; s.textContent=t; d.appendChild(s);
             if(data.edit){ s.contentEditable='true'; s.classList.add('inline-edit-on');
               s.addEventListener('blur',function(){ if(data.onEditTag) data.onEditTag(i,s.textContent.replace(/\s+$/,'')); });
@@ -14583,7 +14561,7 @@ f 2469//2469 2470//2470 2434//2434
         if(lgrid){ lgrid.className='snap-grid links-mode'; lgrid.innerHTML='';
           var ul=document.createElement('div'); ul.className='manual-links';
           data.links.forEach(function(l,i){
-            var row=document.createElement(data.edit?'div':'a'); row.className='manual-link';
+            var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
             if(!data.edit){ row.href=l.url||'#'; row.target='_blank'; row.rel='noopener'; }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
@@ -14614,7 +14592,7 @@ f 2469//2469 2470//2470 2434//2434
           var exH=document.createElement('div'); exH.className='ml-h'; exH.textContent='Links'; exWrap.appendChild(exH);
           var exUl=document.createElement('div'); exUl.className='manual-links';
           data.extraLinks.forEach(function(l,i){
-            var row=document.createElement(data.edit?'div':'a'); row.className='manual-link';
+            var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
             if(!data.edit){ row.href=l.url||'#'; row.target='_blank'; row.rel='noopener'; }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
