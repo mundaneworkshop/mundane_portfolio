@@ -93,6 +93,7 @@ Validated in a browser against the real token file in both themes. Roles: defaul
 
 ## Open items
 
+- Fonts: the locked stack (`visual-language-direction.md`) applies — button/tag/breadcrumb labels are Space Grotesk. Prod currently sets Space Mono as the body font (`index.html:79`, `--mono`), with no recorded reason; migrate HUD body/labels to `--grotesk` and keep Space Mono for readouts. Until then `.bric-*` classes set their own font-family and don't inherit.
 - Adopt the `.bric-*` classes in `index.html` and port the three decode changes above into `GFX`.
 - Decide whether to delete the legacy Button (Deprecated page) and the Sandbox components (Segment Toggle, Status Chip, Toast, Divider — still old register style, not used in production).
 - Focus state is undesigned.
