@@ -158,7 +158,7 @@
     },
     "--bric-content-tertiary": {
       "type": "color",
-      "dark": "#5A6F6B",
+      "dark": "#6B8A85",
       "light": "#94908A"
     },
     "--bric-content-disabled": {
