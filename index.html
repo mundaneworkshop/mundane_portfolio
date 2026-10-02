@@ -338,7 +338,7 @@
     content: '';
     position: absolute; inset: 0;
     background: radial-gradient(circle, rgba(233,167,62,0.06) 1px, transparent 1px);
-    background-size: 14px 14px; background-position: 7px 7px;
+    background-size: 16px 16px; background-position: 8px 8px;
   }
   .elf-left  { left: 0;  top: 0; width: 40px; height: 240px;
     transform-origin: left center;  transform: rotateY(0deg); z-index: 3; }
@@ -539,7 +539,7 @@
     background: rgba(14,15,18,var(--mb-alpha));   /* fallback for browsers without color-mix */
     background: color-mix(in srgb, var(--bric-surface-base) calc(var(--mb-alpha) * 100%), transparent);
     background-image: radial-gradient(circle, var(--border-dim) 1px, transparent 1px);
-    background-size: 15px 15px;
+    background-size: 16px 16px;   /* BRIC dot matrix, Balanced: 16px tile (was 15) */
     transform: rotateX(20deg);
     transform-origin: top center;
   }
