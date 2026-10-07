@@ -882,6 +882,7 @@
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
   #msgCanvas{position:absolute;inset:0;z-index:12;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
   #msgStars{position:absolute;inset:0;z-index:13;pointer-events:none}
+  html[data-bric-reticle] #box-hover-label{display:none!important}   /* the targeting reticle carries this label now */
   .msgbeacon{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:auto;cursor:pointer}
   .msgbeacon .mb-dot,.msgbeacon .mb-ring{display:none}
   #msgHover{position:absolute;display:none;box-sizing:border-box;overflow:hidden;transform:translateY(-100%);white-space:nowrap;font-family:var(--grotesk);font-size:13px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:var(--bric-holonet-hot);background:rgba(10,8,18,.9);border:1px solid rgba(160,106,240,.45);padding:5px 9px;border-radius:2px;pointer-events:none;z-index:14}
@@ -10317,7 +10318,8 @@ f 2469//2469 2470//2470 2434//2434
       var wsu=(fi<=1)?ws.z:(fi<=3)?ws.x:ws.x;
       var wsv=(fi<=1)?ws.y:(fi<=3)?ws.z:ws.y;
       _boxHoverPlane.scale.set(fc.s[0]*wsu, fc.s[1]*wsv, 1);
-      _boxHoverPlane.visible=true;
+      // legacy face dim + DOM label: only when the targeting reticle is not running (it frames this face now; the plane is still positioned so the reticle can read its bounds)
+      _boxHoverPlane.visible=!document.documentElement.hasAttribute('data-bric-reticle');
       document.body.classList.add('box-hovered');
       // project face center to screen for the DOM label
       var sc=lp.clone().project(camera);
@@ -10326,7 +10328,7 @@ f 2469//2469 2470//2470 2434//2434
       // label text — social planets name the network; others default
       var lbl='VIEW CASE STUDY';
       if(pud.kind==='social'){ var sid=pud.id; if(sid==='instagram') lbl='VIEW INSTAGRAM'; else if(sid==='linkedin') lbl='VIEW LINKEDIN'; else lbl='OPEN'; }
-      _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display='block';
+      _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display=document.documentElement.hasAttribute('data-bric-reticle')?'none':'block';   // reticle reads the text, shows it itself
     }
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
     var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1;
@@ -10356,6 +10358,39 @@ f 2469//2469 2470//2470 2434//2434
       if(renderer&&renderer.domElement) renderer.domElement.style.cursor=hovered?'pointer':'default';
       if(hovered) setZone(hovered.userData.zone);
     }
+    // Targeting reticle (assets/bric-reticle.js): frame the hovered planet, and the entry monogram, like a media component.
+    // The galaxy cursor affordance (inline cursor:pointer on the canvas, set by setHovered and the entry-gate handler) says WHEN;
+    // the geometry says WHERE. rect() is read every frame, so the brackets follow the planet as the galaxy turns and it scales up.
+    (function(){
+      var _p=new THREE.Vector3(), _b=new THREE.Box3();
+      function rectOf(obj){
+        _b.setFromObject(obj); if(_b.isEmpty()) return null;
+        var mn=_b.min, mx=_b.max, l=1e9, t=1e9, r=-1e9, b=-1e9, i;
+        for(i=0;i<8;i++){ _p.set(i&1?mx.x:mn.x, i&2?mx.y:mn.y, i&4?mx.z:mn.z).project(camera); if(_p.z>1) return null;
+          var x=(_p.x+1)/2*W, y=(1-_p.y)/2*H; if(x<l)l=x; if(x>r)r=x; if(y<t)t=y; if(y>b)b=y; }
+        return {left:l,top:t,right:r,bottom:b};
+      }
+      function targets(x,y,el){
+        var cv=renderer&&renderer.domElement; if(!cv||el!==cv) return null;   // pointer must be on the canvas itself, not a panel above it
+        if(mwPhase==='entry'){ if(cv.style.cursor!=='pointer'||!(mwQuad&&mwQuad.visible)) return null; return {key:mwQuad, label:'\u25B8 ENTER', rect:function(){ return rectOf(mwQuad); }}; }
+        if(mwPhase!=='docked'||editMode||document.body.classList.contains('mw-altfocus')) return null;
+        if(focused){
+          // kit box face that opens the case study (the site's own face highlight decides when), then the artifact moons
+          if(boxHoverFace>=0) return {key:'kitbox', label:'\u25B8 '+(_boxHoverLbl.textContent||'OPEN'), rect:function(){ return rectOf(_boxHoverPlane); }};
+          if(focused.userData.moonGrp.visible){
+            ray.setFromCamera(mouse,camera);
+            var mh=ray.intersectObjects(focused.userData.moons,false);
+            if(mh.length&&mh[0].object!==focusedMoon){ var mm=mh[0].object; return {key:mm, label:'\u25B8 OPEN', rect:function(){ return rectOf(mm.userData.glbGroup||mm); }}; }   // an uploaded model is smaller than the placeholder moon mesh, frame the model
+          }
+          return null;
+        }
+        if(!hovered||cv.style.cursor!=='pointer') return null;   // galaxy: the page says "clickable here"
+        var grp=hovered, hit=grp.userData.hitProxy;
+        return {key:grp, label:'\u25B8 OPEN', rect:function(){ return rectOf(hit||grp); }};
+      }
+      window.__bricReticleTargets=targets;
+      if(window.__bricReticle&&window.__bricReticle.setTargets) window.__bricReticle.setTargets(targets);
+    })();
     function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); var _on=(z.id===id), _was=z.label.classList.contains('on'); z.label.classList.toggle('on',_on); if(_on&&!_was) GFX.decodeEl(z.label,'Zone',null,true); }); }
     renderer.domElement.addEventListener('pointermove',function(){
       if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
@@ -11416,6 +11451,7 @@ f 2469//2469 2470//2470 2434//2434
     function msgInnerR(){ return Math.max(PLATE+1.5, 4.0*params.planetSpread+1.5); }   // ring sits BEYOND the baseplate AND the planet placement zone
     function msgScatterPos(){ var a=Math.random()*Math.PI*2, r=msgInnerR()+Math.random()*4.0, y=0.3+Math.random()*3.2; return {x:Math.cos(a)*r,y:y,z:Math.sin(a)*r}; }
     function makeBeacon(m){ var el=document.createElement('div'); el.className='msgbeacon'; el.innerHTML='<span class="mb-ring"></span><span class="mb-dot"></span>';
+      el.setAttribute('data-bric-target',''); el.setAttribute('data-bric-group','msg'); el.setAttribute('data-bric-label','\u25B8 READ'); el.setAttribute('data-bric-label-at','below');   // targeting reticle frames it like media
       el.addEventListener('click',function(ev){ ev.stopPropagation(); openMsgModal(m); });
       el.addEventListener('mouseenter',function(){ hoveredMsg=m; showMsgHover(m); });
       el.addEventListener('mouseleave',function(){ if(hoveredMsg===m){ hoveredMsg=null; hideMsgHover(); } });
@@ -15119,5 +15155,9 @@ f 2469//2469 2470//2470 2434//2434
     new MutationObserver(function(ms){ ms.forEach(function(m){ for(var i=0;i<m.addedNodes.length;i++){ scan(m.addedNodes[i]); fillAll(m.addedNodes[i]); } }); }).observe(document.body,{childList:true,subtree:true});
   })();
   </script>
+  <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
+       fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/bric-reticle.js"></script>
+  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000 }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
 </body>
 </html>
