@@ -32,6 +32,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [foundations-audit.md](foundations-audit.md) — Oct 2 2026: Figma Foundations audited against prod; decisions (prod neutrals, amber = the work, two tiers, retired 3px stair-step corner) and what was applied
 - [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
 - [hud-type-grotesk.md](hud-type-grotesk.md) — Oct 2 2026: HUD labels/body moved from Space Mono to Space Grotesk per the locked stack; what stays mono
+- [reticle-cursor.md](reticle-cursor.md) — Oct 7 2026: the targeting reticle cursor (one shared file with Framer), where it shows, how it hands the native cursor back
 - [type-floor.md](type-floor.md) — Oct 2 2026: mobile-legibility type floor (11 / 13 / 16 px), small-text contrast rule, what is exempt
 - [holotable-backlog-jun20.md](holotable-backlog-jun20.md) — long log of feature rounds + bug fixes (marquee, box faces, SVG upload, etc.)
 - [holotable-editor-and-glb.md](holotable-editor-and-glb.md) — in-canvas Edit Mode architecture, persistence model, holo-FX pipeline

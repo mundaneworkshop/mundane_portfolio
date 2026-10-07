@@ -15119,5 +15119,9 @@ f 2469//2469 2470//2470 2434//2434
     new MutationObserver(function(ms){ ms.forEach(function(m){ for(var i=0;i<m.addedNodes.length;i++){ scan(m.addedNodes[i]); fillAll(m.addedNodes[i]); } }); }).observe(document.body,{childList:true,subtree:true});
   })();
   </script>
+  <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
+       fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/bric-reticle.js"></script>
+  <script>try{ bricReticle({ scope:'page', zIndex:2147483000 }); }catch(err){ console.warn('[reticle] not started', err); }</script>
 </body>
 </html>
