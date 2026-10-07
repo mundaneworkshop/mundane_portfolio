@@ -9,27 +9,35 @@
  *          Everything animates opacity on a pseudo-element only; prefers-reduced-motion removes it all.
  * Decode   the Aurebesh → Latin hover decode lives in GFX (index.html); it targets .bric-btn.
  */
-.bric-btn{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:var(--bric-space-stud);height:var(--bric-space-5-stud);padding:0 var(--bric-space-2-stud);margin:0;border:0;border-radius:var(--bric-corner-step);background:transparent;color:var(--bric-interactive-text-idle);cursor:pointer;white-space:nowrap;text-decoration:none;text-transform:uppercase;font:500 13px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;outline:none;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.bric-btn{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:var(--bric-space-stud);height:var(--bric-space-5-stud);padding:0 var(--bric-space-2-stud);margin:0;border:0;border-radius:var(--bric-corner-step);background:transparent;color:var(--bric-interactive-text-idle);cursor:pointer;white-space:nowrap;text-decoration:none;text-transform:uppercase;font:500 13px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;outline:none;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 .bric-btn--sm{height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);font-size:11px;letter-spacing:.12em}
 .bric-btn--block{display:flex;width:100%}
 .bric-btn--secondary{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
 .bric-btn--primary{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill)}
 
-/* hover glow: opacity-only pseudo-element */
-.bric-btn::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity var(--bric-snap-duration-fast) linear;box-shadow:0 0 8px 0 var(--bric-fx-glow-stroke-near),0 0 24px 2px var(--bric-fx-glow-stroke-far)}
-.bric-btn--secondary::after,.bric-btn--primary::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-near),0 0 24px 2px var(--bric-fx-glow-far)}
+/* hover glow: opacity-only pseudo-element. Amber since Oct 7 2026: the targeting reticle (assets/bric-reticle.js) locks onto the button in the
+   same amber, so approach, lock and hover read as one event. Light mode keeps its previous look (the amber glow tokens are transparent there). */
+.bric-btn::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity var(--bric-snap-duration-fast) linear;box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-stroke-near),0 0 24px 2px var(--bric-fx-glow-amber-stroke-far)}
+.bric-btn--primary::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-near),0 0 24px 2px var(--bric-fx-glow-amber-far)}
 
 /* hover (pointer devices only, so touch screens don't keep a stuck hover) */
 @media (hover:hover){
   .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled)::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
-  .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled):not(.bric-btn--secondary):not(.bric-btn--primary){box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
-  .bric-btn--secondary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none}
-  .bric-btn--primary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover)}
+  .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled):not(.bric-btn--secondary):not(.bric-btn--primary){box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-hover)}
+  .bric-btn--secondary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover-tint);color:var(--bric-interactive-text-hover-accent);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-hover);text-shadow:none}
+  .bric-btn--primary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover);color:var(--bric-interactive-text-on-fill-hover)}
 }
 
 /* active / current: solid fill + inset keyline (3px gap Large, 2px Small) — one appearance for every role */
 .bric-btn.is-active{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none;box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-default),inset 0 0 0 4px var(--bric-interactive-text-on-fill)}
 .bric-btn--sm.is-active{box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-default),inset 0 0 0 3px var(--bric-interactive-text-on-fill)}
+/* active + hover (Oct 7 2026): the current item answers the reticle too. Same amber as primary hover, keyline kept (label colour). */
+.bric-btn.is-active::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-near),0 0 24px 2px var(--bric-fx-glow-amber-far)}
+@media (hover:hover){
+  .bric-btn.is-active:hover:not([aria-disabled="true"]):not(:disabled):not(.disabled)::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
+  .bric-btn.is-active:hover:not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover);color:var(--bric-interactive-text-on-fill-hover);box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-hover),inset 0 0 0 4px var(--bric-interactive-text-on-fill-hover)}
+  .bric-btn--sm.is-active:hover:not([aria-disabled="true"]):not(:disabled):not(.disabled){box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-hover),inset 0 0 0 3px var(--bric-interactive-text-on-fill-hover)}
+}
 
 /* disabled */
 .bric-btn[aria-disabled="true"],.bric-btn:disabled,.bric-btn.disabled{background:transparent;box-shadow:none;color:var(--bric-interactive-text-disabled);text-shadow:none;cursor:not-allowed;pointer-events:none}

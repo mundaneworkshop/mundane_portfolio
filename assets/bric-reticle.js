@@ -1,4 +1,4 @@
-/*! BRIC targeting reticle cursor, v1.3
+/*! BRIC targeting reticle cursor, v1.4
  *
  * ONE source file, used by both the Vercel site (<script src="assets/bric-reticle.js">) and Framer
  * (framer-code/sync-reticle.js in the bric-ds folder pastes this file verbatim into the ReticleCursor.tsx code component).
@@ -25,7 +25,7 @@
  *      data-bric-label-at="below" to put the label under the frame instead of above it. An empty data-bric-label
  *      shows no label. Per-element geometry comes from CSS custom properties on the element (plain numbers in px):
  *      --bric-ret-arm, --bric-ret-weight, --bric-ret-outset (negative = inside the element, e.g. onto a hero's corner
- *      marks), --bric-ret-glow (1 = amber glow). Missing ones fall back to the options below.
+ *      marks), --bric-ret-glow (1 = amber glow), --bric-ret-label: none (no label). Missing ones fall back to the options below.
  *   2. Virtual: things that are not DOM (a WebGL planet). Pass `targets: function (x, y, el) {}` returning
  *      { key, rect: function () { return { left, top, right, bottom }; }, label?, n?, N?, labelAt?, arm?, weight?, outset?, glow? } or null. `rect` is read every
  *      frame, so the brackets follow a moving object. api.setTargets(fn) swaps the resolver after start.
@@ -163,6 +163,7 @@ function bricReticle(options) {
   }
   function labelOf(c) {
     if (c.virt) return c.virt.label != null ? c.virt.label : o.label(c.virt.n || 1, c.virt.N || 1);
+    if (window.getComputedStyle(c.el).getPropertyValue('--bric-ret-label').trim() === 'none') return '';
     var tpl = c.el.getAttribute(o.labelAttr), n = count(c.el);
     return tpl !== null ? tpl.replace('{n}', n[0]).replace('{N}', n[1]) : o.label(n[0], n[1]);
   }

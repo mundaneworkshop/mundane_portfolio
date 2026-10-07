@@ -243,8 +243,28 @@
     },
     "--bric-interactive-fill-hover": {
       "type": "color",
-      "dark": "#DEDDDB",
+      "dark": "var(--bric-register-amber-solid)",
       "light": "#282827"
+    },
+    "--bric-interactive-text-on-fill-hover": {
+      "type": "color",
+      "dark": "var(--bric-register-amber-on-solid)",
+      "light": "var(--bric-interactive-text-on-fill)"
+    },
+    "--bric-interactive-fill-hover-tint": {
+      "type": "color",
+      "dark": "var(--bric-register-amber-fill)",
+      "light": "var(--bric-interactive-fill-default)"
+    },
+    "--bric-interactive-outline-hover": {
+      "type": "color",
+      "dark": "var(--bric-register-amber-solid)",
+      "light": "var(--bric-interactive-outline-default)"
+    },
+    "--bric-interactive-text-hover-accent": {
+      "type": "color",
+      "dark": "var(--bric-register-amber-text)",
+      "light": "var(--bric-interactive-text-on-fill)"
     },
     "--bric-fx-glow-near": {
       "type": "color",
@@ -269,6 +289,26 @@
     "--bric-fx-glow-stroke-far": {
       "type": "color",
       "dark": "rgba(245, 244, 242, 0.077)",
+      "light": "rgba(17, 17, 16, 0)"
+    },
+    "--bric-fx-glow-amber-near": {
+      "type": "color",
+      "dark": "rgba(233, 167, 62, 0.35)",
+      "light": "rgba(17, 17, 16, 0)"
+    },
+    "--bric-fx-glow-amber-far": {
+      "type": "color",
+      "dark": "rgba(233, 167, 62, 0.16)",
+      "light": "rgba(17, 17, 16, 0)"
+    },
+    "--bric-fx-glow-amber-stroke-near": {
+      "type": "color",
+      "dark": "rgba(233, 167, 62, 0.22)",
+      "light": "rgba(17, 17, 16, 0)"
+    },
+    "--bric-fx-glow-amber-stroke-far": {
+      "type": "color",
+      "dark": "rgba(233, 167, 62, 0.1)",
       "light": "rgba(17, 17, 16, 0)"
     },
     "--bric-feedback-success-bg": {
