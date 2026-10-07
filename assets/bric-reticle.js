@@ -1,4 +1,4 @@
-/*! BRIC targeting reticle cursor, v1.1
+/*! BRIC targeting reticle cursor, v1.2
  *
  * ONE source file, used by both the Vercel site (<script src="assets/bric-reticle.js">) and Framer
  * (framer-code/sync-reticle.js in the bric-ds folder pastes this file verbatim into the ReticleCursor.tsx code component).
@@ -19,13 +19,23 @@
  * switches to 'pointer' on hover). crosshair, default, auto and none count as "no cursor of its own".
  * scope 'media': only over elements matching `selector`.
  *
+ * Targets it locks onto, in order of precedence:
+ *   1. DOM: any element matching `selector` (default [data-bric-media], [data-bric-target]). Optional data-bric-group
+ *      ("n OF N" is counted within the group), data-bric-label (e.g. "▸ READ · {n} OF {N}") and
+ *      data-bric-label-at="below" to put the label under the frame instead of above it.
+ *   2. Virtual: things that are not DOM (a WebGL planet). Pass `targets: function (x, y, el) {}` returning
+ *      { key, rect: function () { return { left, top, right, bottom }; }, label?, n?, N?, labelAt? } or null. `rect` is read every
+ *      frame, so the brackets follow a moving object. api.setTargets(fn) swaps the resolver after start.
+ *
  * The page keeps its own click handling (open the lightbox, etc.). While the reticle is up the native cursor
  * is hidden and <html data-bric-ret="hot"> is set; <html data-bric-reticle> is set for as long as the module runs,
  * so a component can drop its own static hover reticle.
  */
 function bricReticle(options) {
   var o = {
-    selector: '[data-bric-media]', // elements the reticle locks onto
+    selector: '[data-bric-media],[data-bric-target]', // elements the reticle locks onto
+    labelAttr: 'data-bric-label', // per-element label template, {n} and {N} are replaced
+    targets: null, // virtual target resolver, see above
     groupAttr: 'data-bric-group', // media sharing this attribute value are counted as "n OF N", in document order
     scope: 'media', // 'media': only over matching elements. 'page': also rides the pointer everywhere (see above)
     ignore: 'a,button,input,textarea,select,summary,label,[role=button],[contenteditable=true]', // page scope: always native cursor
@@ -48,7 +58,7 @@ function bricReticle(options) {
   var k;
   for (k in options || {}) if (options[k] !== undefined) o[k] = options[k];
 
-  var noop = { destroy: function () {}, refresh: function () {} };
+  var noop = { destroy: function () {}, refresh: function () {}, setTargets: function () {} };
   if (typeof window === 'undefined' || typeof document === 'undefined' || !window.matchMedia) return noop;
   if (window.__bricReticle) window.__bricReticle.destroy();
 
@@ -82,19 +92,23 @@ function bricReticle(options) {
   function syncMotion() { root.classList.toggle('rm', rmq.matches); }
   syncMotion();
 
-  var cur = null, lx = -999, ly = -999, scrollTimer = 0, raf = 0;
+  var cur = null, lx = -999, ly = -999, scrollTimer = 0, raf = 0, syncRaf = 0, lastCheck = 0, lastFrame = '', below = false;
 
   function put(el, x, y) { el.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; }
   function place(b) {
+    var key = b.l + '|' + b.t + '|' + b.r + '|' + b.b + '|' + below;
+    if (key === lastFrame) return;
+    lastFrame = key;
     put(tl, b.l, b.t);
     put(tr, b.r - o.arm, b.t);
     put(bl, b.l, b.b - o.arm);
     put(br, b.r - o.arm, b.b - o.arm);
-    put(lab, b.l, b.t - o.labelOffset);
+    put(lab, b.l, below ? b.b + 4 : b.t - o.labelOffset);
   }
   function around(x, y) { var h = o.idle / 2; return { l: x - h, t: y - h, r: x + h, b: y + h }; }
-  function frameOf(el) {
-    var r = el.getBoundingClientRect();
+  function frameOf(c) {
+    var r = c.el ? c.el.getBoundingClientRect() : c.virt.rect();
+    if (!r) return null;
     return { l: r.left - o.outset, t: r.top - o.outset, r: r.right + o.outset, b: r.bottom + o.outset };
   }
   // jump without easing (first appearance at the pointer, scroll tracking)
@@ -111,27 +125,60 @@ function bricReticle(options) {
     }
     return [n || 1, N || 1];
   }
+  function labelOf(c) {
+    if (c.virt) return c.virt.label != null ? c.virt.label : o.label(c.virt.n || 1, c.virt.N || 1);
+    var tpl = c.el.getAttribute(o.labelAttr), n = count(c.el);
+    return tpl ? tpl.replace('{n}', n[0]).replace('{N}', n[1]) : o.label(n[0], n[1]);
+  }
+  // what is the pointer over that the reticle should lock onto?
+  function describe(t) {
+    var el = t && t.closest ? t.closest(o.selector) : null;
+    if (el) return { key: el, el: el };
+    var v = o.targets ? o.targets(lx, ly, t) : null;
+    return v ? { key: v.key, virt: v } : null;
+  }
 
   function show() {
     if (!root.classList.contains('on')) { jump(around(lx, ly)); root.classList.add('on'); }
   }
+  function stopTick() { if (raf) { window.cancelAnimationFrame(raf); raf = 0; } }
   function hide() {
+    stopTick();
     root.classList.remove('lock');
     root.classList.remove('on');
     html.removeAttribute('data-bric-ret');
     cur = null;
   }
-  function enter(el) {
-    var c = count(el);
-    lab.textContent = o.label(c[0], c[1]);
+  // follow the locked target every frame (it may move: scroll, a rotating planet, a projected beacon) and let go when the
+  // pointer is no longer over it
+  function tick(now) {
+    raf = 0;
+    if (!cur) return;
+    var b = frameOf(cur), t;
+    if (b) place(b);
+    if (!b || now - lastCheck > 90) {
+      lastCheck = now;
+      t = document.elementFromPoint(lx, ly);
+      var d = describe(t);
+      if (!b || !d || d.key !== cur.key) { update(t); if (!cur) return; }
+    }
+    if (!raf) raf = window.requestAnimationFrame(tick);
+  }
+  function enter(d) {
+    var b = frameOf(d);
+    if (!b) return;
+    cur = d;
+    below = d.virt ? d.virt.labelAt === 'below' : d.el.getAttribute('data-bric-label-at') === 'below';
+    lab.textContent = labelOf(d);
     show();
-    cur = el;
     root.classList.add('lock');
     html.setAttribute('data-bric-ret', 'hot');
-    place(frameOf(el)); // expands from the pointer box (or flies from the previous frame) to this frame
+    place(b); // expands from the pointer box (or flies from the previous frame) to this frame
+    if (!raf) raf = window.requestAnimationFrame(tick);
   }
   function leave() {
     var wasOn = root.classList.contains('on');
+    stopTick();
     cur = null;
     root.classList.remove('lock');
     if (o.scope === 'page' && wasOn) { place(around(lx, ly)); return; }
@@ -163,8 +210,8 @@ function bricReticle(options) {
   }
 
   function update(target) {
-    var el = target && target.closest ? target.closest(o.selector) : null;
-    if (el) { if (el !== cur) enter(el); }
+    var d = describe(target);
+    if (d) { if (!cur || d.key !== cur.key) enter(d); }
     else if (cur) leave();
     else if (o.scope === 'page') follow(target);
   }
@@ -173,18 +220,18 @@ function bricReticle(options) {
     if (e.pointerType && e.pointerType !== 'mouse') return;
     lx = e.clientX; ly = e.clientY;
     update(e.target);
+    // a virtual target's own hover state (a WebGL raycast) is usually updated by the page's listener after this one
+    if (o.targets && !syncRaf) syncRaf = window.requestAnimationFrame(function () { syncRaf = 0; update(document.elementFromPoint(lx, ly)); });
   }
   function onOut(e) { if (!e.relatedTarget) { if (cur || root.classList.contains('on')) { leave(); hide(); } } }
   function onScroll() {
     probeEl = null;
     if (!cur && o.scope !== 'page') return;
-    if (cur && !raf) raf = window.requestAnimationFrame(function () { raf = 0; if (cur) { root.classList.add('snap'); place(frameOf(cur)); } });
+    root.classList.add('snap');
     window.clearTimeout(scrollTimer);
     scrollTimer = window.setTimeout(function () {
       root.classList.remove('snap');
-      var t = document.elementFromPoint(lx, ly);
-      var el = t && t.closest ? t.closest(o.selector) : null;
-      if (el && el === cur) { jump(frameOf(cur)); } else update(t);
+      update(document.elementFromPoint(lx, ly));
     }, 120);
   }
   function drop() { if (root.classList.contains('on')) { leave(); hide(); } }
@@ -198,7 +245,8 @@ function bricReticle(options) {
   for (k = 0; k < o.hideOn.length; k++) window.addEventListener(o.hideOn[k], drop);
 
   var api = {
-    refresh: function () { if (cur) { jump(frameOf(cur)); } },
+    refresh: function () { if (cur) { var b = frameOf(cur); if (b) jump(b); } },
+    setTargets: function (fn) { o.targets = fn; },
     destroy: function () {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerout', onOut);
@@ -208,7 +256,8 @@ function bricReticle(options) {
       if (rmq.removeEventListener) rmq.removeEventListener('change', syncMotion);
       for (var j = 0; j < o.hideOn.length; j++) window.removeEventListener(o.hideOn[j], drop);
       window.clearTimeout(scrollTimer);
-      if (raf) window.cancelAnimationFrame(raf);
+      stopTick();
+      if (syncRaf) window.cancelAnimationFrame(syncRaf);
       if (root.parentNode) root.parentNode.removeChild(root);
       if (style.parentNode) style.parentNode.removeChild(style);
       html.removeAttribute('data-bric-ret');

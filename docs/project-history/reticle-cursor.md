@@ -10,6 +10,10 @@ One cursor for the whole site and for the Framer case-study pages: amber corner 
 
 **Not touched:** touch and pen input (pointerType must be `mouse`), keyboard focus (focus rings stay), click handling (the page opens its own lightbox). `prefers-reduced-motion` removes the easing; the reticle still shows.
 
-**Not done yet:** the site has no `[data-bric-media]` elements, so the lock-on-media behaviour and the n OF N label are dormant here; tag images (and their lightbox) when that exists.
+**What it frames on this site (v1.2):** planets, the entry-gate monogram and pinned messages are treated as media.
+- *Planets:* a virtual target. The resolver (`targets` option, registered near `setHovered` in `index.html`, exposed as `window.__bricReticleTargets`) answers "when" from the canvas's own inline `cursor:pointer` (set by `setHovered` and the entry-gate handler) and "where" from the planet's `hitProxy` bounds projected to the screen. `rect()` is read every frame, so the brackets follow the planet as the galaxy turns and it scales up on hover. Label `▸ OPEN · n OF N` among visible planets.
+- *Monogram (entry gate):* same resolver, frames `mwQuad`, label `▸ ENTER`. The frame is the billboard quad's bounds, a little looser than the mark itself.
+- *Pinned messages:* plain DOM. `makeBeacon` adds `data-bric-target`, `data-bric-group="msg"`, `data-bric-label="▸ READ · {n} OF {N}"` and `data-bric-label-at="below"` (the label sits under the frame so it does not collide with the "incoming transmission" hover text).
+- Anything else can opt in with `data-bric-target` (or `data-bric-media` for a lightbox image). Chapter-ring labels (`.cschlbl`) and the like still use the native pointer; add the attribute if they should be framed too.
 
 **Testing:** `window.__bricReticle` is the live instance; `<html data-bric-ret="hot">` is set while the native cursor is hidden; `<html data-bric-reticle>` is set while the module runs.
