@@ -10318,7 +10318,8 @@ f 2469//2469 2470//2470 2434//2434
       var wsu=(fi<=1)?ws.z:(fi<=3)?ws.x:ws.x;
       var wsv=(fi<=1)?ws.y:(fi<=3)?ws.z:ws.y;
       _boxHoverPlane.scale.set(fc.s[0]*wsu, fc.s[1]*wsv, 1);
-      _boxHoverPlane.visible=true;
+      // legacy face dim + DOM label: only when the targeting reticle is not running (it frames this face now; the plane is still positioned so the reticle can read its bounds)
+      _boxHoverPlane.visible=!document.documentElement.hasAttribute('data-bric-reticle');
       document.body.classList.add('box-hovered');
       // project face center to screen for the DOM label
       var sc=lp.clone().project(camera);
@@ -10327,7 +10328,7 @@ f 2469//2469 2470//2470 2434//2434
       // label text — social planets name the network; others default
       var lbl='VIEW CASE STUDY';
       if(pud.kind==='social'){ var sid=pud.id; if(sid==='instagram') lbl='VIEW INSTAGRAM'; else if(sid==='linkedin') lbl='VIEW LINKEDIN'; else lbl='OPEN'; }
-      _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display='block';
+      _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display=document.documentElement.hasAttribute('data-bric-reticle')?'none':'block';   // reticle reads the text, shows it itself
     }
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
     var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1;
@@ -10375,7 +10376,7 @@ f 2469//2469 2470//2470 2434//2434
         if(mwPhase!=='docked'||editMode||document.body.classList.contains('mw-altfocus')) return null;
         if(focused){
           // kit box face that opens the case study (the site's own face highlight decides when), then the artifact moons
-          if(boxHoverFace>=0&&_boxHoverPlane.visible) return {key:'kitbox', label:'\u25B8 '+(_boxHoverLbl.textContent||'OPEN'), rect:function(){ return rectOf(_boxHoverPlane); }};
+          if(boxHoverFace>=0) return {key:'kitbox', label:'\u25B8 '+(_boxHoverLbl.textContent||'OPEN'), rect:function(){ return rectOf(_boxHoverPlane); }};
           if(focused.userData.moonGrp.visible){
             ray.setFromCamera(mouse,camera);
             var mh=ray.intersectObjects(focused.userData.moons,false);
