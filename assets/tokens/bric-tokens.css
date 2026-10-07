@@ -64,13 +64,21 @@
   --bric-interactive-outline-default: var(--bric-content-primary);
   --bric-interactive-outline-disabled: var(--bric-border-default);
   --bric-interactive-outline-tag: var(--bric-border-strong);
-  --bric-interactive-fill-hover: #DEDDDB;
+  --bric-interactive-fill-hover: var(--bric-register-amber-solid);
+  --bric-interactive-text-on-fill-hover: var(--bric-register-amber-on-solid);
+  --bric-interactive-fill-hover-tint: var(--bric-register-amber-fill);
+  --bric-interactive-outline-hover: var(--bric-register-amber-solid);
+  --bric-interactive-text-hover-accent: var(--bric-register-amber-text);
   /* color · fx (dark) */
   --bric-fx-glow-near: rgba(245, 244, 242, 0.3);
   --bric-fx-glow-far: rgba(245, 244, 242, 0.14);
   --bric-fx-bloom-text: rgba(245, 242, 236, 0.38);
   --bric-fx-glow-stroke-near: rgba(245, 244, 242, 0.165);
   --bric-fx-glow-stroke-far: rgba(245, 244, 242, 0.077);
+  --bric-fx-glow-amber-near: rgba(233, 167, 62, 0.35);
+  --bric-fx-glow-amber-far: rgba(233, 167, 62, 0.16);
+  --bric-fx-glow-amber-stroke-near: rgba(233, 167, 62, 0.22);
+  --bric-fx-glow-amber-stroke-far: rgba(233, 167, 62, 0.1);
   /* color · feedback (dark) */
   --bric-feedback-success-bg: #12251A;
   --bric-feedback-success-fg: #6FD99A;
@@ -161,12 +169,20 @@ body.light{
   --bric-interactive-outline-disabled: var(--bric-border-default);
   --bric-interactive-outline-tag: var(--bric-border-strong);
   --bric-interactive-fill-hover: #282827;
+  --bric-interactive-text-on-fill-hover: var(--bric-interactive-text-on-fill);
+  --bric-interactive-fill-hover-tint: var(--bric-interactive-fill-default);
+  --bric-interactive-outline-hover: var(--bric-interactive-outline-default);
+  --bric-interactive-text-hover-accent: var(--bric-interactive-text-on-fill);
   /* color · fx (light) */
   --bric-fx-glow-near: rgba(17, 17, 16, 0);
   --bric-fx-glow-far: rgba(17, 17, 16, 0);
   --bric-fx-bloom-text: rgba(17, 17, 16, 0);
   --bric-fx-glow-stroke-near: rgba(17, 17, 16, 0);
   --bric-fx-glow-stroke-far: rgba(17, 17, 16, 0);
+  --bric-fx-glow-amber-near: rgba(17, 17, 16, 0);
+  --bric-fx-glow-amber-far: rgba(17, 17, 16, 0);
+  --bric-fx-glow-amber-stroke-near: rgba(17, 17, 16, 0);
+  --bric-fx-glow-amber-stroke-far: rgba(17, 17, 16, 0);
   /* color · feedback (light) */
   --bric-feedback-success-bg: #EAF6EE;
   --bric-feedback-success-fg: #145E2F;
