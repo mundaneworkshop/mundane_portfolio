@@ -33,7 +33,7 @@ Hover is amber so the targeting reticle (`assets/bric-reticle.js`, amber bracket
 | Secondary | fill `interactive/fill/hover-tint` (amber 22%), 1px `interactive/outline/hover`, label `interactive/text/hover-accent`, glow `fx/glow/amber-stroke-near/far` |
 | Tertiary | 1px `interactive/outline/hover` stroke, glow `fx/glow/amber-stroke-near/far` |
 
-Active (fill + inset keyline) and disabled are unchanged: amber means hover/lock, off-white means "you are here". The reticle locks onto every `.bric-btn` that is not active or disabled with arms 8px, outside gap 4px, no label (`--bric-ret-arm/outset/label` set on `.bric-btn`). The Aurebesh decode on hover is unchanged. The Framer `Button` code component mirrors all of this.
+Disabled is unchanged. Active (fill + inset keyline) keeps its off-white look at rest, and on hover turns amber like primary (fill `interactive/fill/hover`, label and keyline `interactive/text/on-fill-hover`, primary glow); added after sign-off. The reticle locks onto every `.bric-btn` that is not disabled with arms 8px, outside gap 4px, no label (`--bric-ret-arm/outset/label` set on `.bric-btn`). The Aurebesh decode on hover is unchanged. The Framer `Button` code component mirrors all of this.
 
 ## CRT effects (dark mode only)
 

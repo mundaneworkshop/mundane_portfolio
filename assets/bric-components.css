@@ -31,6 +31,13 @@
 /* active / current: solid fill + inset keyline (3px gap Large, 2px Small) — one appearance for every role */
 .bric-btn.is-active{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none;box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-default),inset 0 0 0 4px var(--bric-interactive-text-on-fill)}
 .bric-btn--sm.is-active{box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-default),inset 0 0 0 3px var(--bric-interactive-text-on-fill)}
+/* active + hover (Oct 7 2026): the current item answers the reticle too. Same amber as primary hover, keyline kept (label colour). */
+.bric-btn.is-active::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-near),0 0 24px 2px var(--bric-fx-glow-amber-far)}
+@media (hover:hover){
+  .bric-btn.is-active:hover:not([aria-disabled="true"]):not(:disabled):not(.disabled)::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
+  .bric-btn.is-active:hover:not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover);color:var(--bric-interactive-text-on-fill-hover);box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-hover),inset 0 0 0 4px var(--bric-interactive-text-on-fill-hover)}
+  .bric-btn--sm.is-active:hover:not([aria-disabled="true"]):not(:disabled):not(.disabled){box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-hover),inset 0 0 0 3px var(--bric-interactive-text-on-fill-hover)}
+}
 
 /* disabled */
 .bric-btn[aria-disabled="true"],.bric-btn:disabled,.bric-btn.disabled{background:transparent;box-shadow:none;color:var(--bric-interactive-text-disabled);text-shadow:none;cursor:not-allowed;pointer-events:none}
