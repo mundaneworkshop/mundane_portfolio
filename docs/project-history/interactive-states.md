@@ -23,6 +23,18 @@ Refined, high-contrast, spacing-driven, type-first (the Andor CRT-terminal refer
 - **Focus** is intentionally not designed yet. If added: an inset outline.
 - Default text is off-white (`content/primary`); on light it is near-black.
 
+## Amber hover (Oct 7 2026, approved in Figma "09 · Button · amber hover (PROPOSAL)", node 378:95)
+
+Hover is amber so the targeting reticle (`assets/bric-reticle.js`, amber brackets) and the button answer as one event. Dark only; light mode keeps its previous look (the new tokens alias the old ones there, the amber glows are transparent).
+
+| Role | Hover |
+|---|---|
+| Primary | fill `interactive/fill/hover` (= `register/amber/solid`), label `interactive/text/on-fill-hover` (= `register/amber/on-solid`), glow `fx/glow/amber-near/far` |
+| Secondary | fill `interactive/fill/hover-tint` (amber 22%), 1px `interactive/outline/hover`, label `interactive/text/hover-accent`, glow `fx/glow/amber-stroke-near/far` |
+| Tertiary | 1px `interactive/outline/hover` stroke, glow `fx/glow/amber-stroke-near/far` |
+
+Active (fill + inset keyline) and disabled are unchanged: amber means hover/lock, off-white means "you are here". The reticle locks onto every `.bric-btn` that is not active or disabled with arms 8px, outside gap 4px, no label (`--bric-ret-arm/outset/label` set on `.bric-btn`). The Aurebesh decode on hover is unchanged. The Framer `Button` code component mirrors all of this.
+
 ## CRT effects (dark mode only)
 
 Glow and bloom are *emitted light*, so they exist on the dark screen only — the tokens are transparent in light mode, so no mode check is needed in code.
