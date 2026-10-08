@@ -187,6 +187,9 @@
   #cs-root.cs-focus-panel #manual-scene{pointer-events:auto;display:block}
   #cs-root.cs-focus-panel #csExit{display:none}   /* focus uses the top-left breadcrumb to exit; no overlapping back button */
   #cs-root.cs-focus-panel #box-scene, #cs-root.cs-focus-panel #cascade, #cs-root.cs-focus-panel #page-takeover{display:none}
+  /* The DOM kit box is legacy: the box is a WebGL mesh now and nothing calls CS.openFocus. It must never paint — on exit,
+     goHome() drops .cs-focus-panel while #cs-root is still fading out (.5s), which un-hid this box for a split-second flash. */
+  #cs-root #box-scene{display:none !important}
   /* root stays click-through so clicking empty space returns to galaxy (canvas handler);
      only the interactive pieces capture clicks */
   #cs-root.active #box-scene, #cs-root.active #manual-scene, #cs-root.active #csExit{pointer-events:auto}
