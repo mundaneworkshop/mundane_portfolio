@@ -192,7 +192,6 @@
   #cs-root.active #manual-scene, #cs-root.active #csExit{pointer-events:auto}
   /* in focus, the static galaxy chrome (Case Files panel + dev controls) disappears */
   body.cs-focus #topright{opacity:0;pointer-events:none;transition:opacity .35s ease}
-  .cs-placeholder{font-family:Space Grotesk,sans-serif;font-size:13px;letter-spacing:2px;color:#78E0D6;text-transform:uppercase;text-align:center;line-height:1.8}
   #csExit{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:9700}
 
   /* ════════ MERGE Stage 2: kit box + instruction booklet (scoped to #cs-root) ════════ */
@@ -268,12 +267,6 @@
     min-height: 320px;
     position: relative;
   }
-  .manual-kicker {
-    font-family: var(--f-b); font-size: 11px;
-    text-transform: uppercase; letter-spacing: 0.16em;
-    color: var(--teal-dim);
-    margin-bottom: 10px;
-  }
   .manual-title {
     font-family: var(--f-d);
     font-size: 26px; font-weight: 700;
@@ -304,17 +297,6 @@
   }
   .manual-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
   .manual-tag { flex:0 0 auto; }   /* look comes from .bric-tag */
-  .manual-body {
-    font-family: var(--f-b);
-    font-size: 13px; line-height: 1.6;
-    color: var(--c-secondary);
-  }
-  .manual-meta {
-    font-family: var(--f-b);
-    font-size: 13px; line-height: 1.6;
-    color: var(--c-dim);
-    margin-bottom: 14px;
-  }
   /* meta rows — dashed underline between each, key left / value right (was a bordered 2-col grid) */
   .snap-grid {
     display: flex; flex-direction: column;
@@ -714,41 +696,13 @@
   #projMgr .pm-addp{width:100%;margin-top:6px;padding:7px;border-style:dashed;text-align:center}
   #projMgr .pm-foot{min-height:0;padding:0 12px;font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.7)}
   #projMgr .pm-foot:not(:empty){padding:8px 12px;border-top:1px solid rgba(233,167,62,.22);display:flex;align-items:center;justify-content:space-between;gap:8px}
-  #projMgr .pm-lock{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.4)}
   #debug input[type=color]{vertical-align:middle;width:26px;height:18px;padding:0;border:1px solid rgba(90,191,184,.25);background:transparent;cursor:pointer}
   /* Label: Chakra Petch · value: Space Mono with teal glow */
   #debug label{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
   #debug label b{font-family:var(--mono);font-size:9px;color:var(--line);font-weight:400;letter-spacing:.5px;text-shadow:0 0 5px rgba(90,191,184,.45)}
-  /* Range sliders — 2px track, 2×14px thumb, teal register, 0 radius */
-  /* Segment toggles — flush border container, 0 radius, teal holo fill on active */
   /* Custom checkboxes — 13×13 square, teal schematic register */
   #debug .chk{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
-  /* Reset button — amber register, 0 radius */
 
-  /* ── UPLOAD PANEL ── */
-  #uploadpanel{position:absolute;top:62px;right:22px;z-index:20;width:280px;background:var(--panel);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:0;padding:12px 14px;display:none}
-  #uploadpanel.open{display:block}
-  #uploadpanel h3{font-family:var(--display);font-weight:600;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin:-12px -14px 12px;padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-  #uploadpanel h3::after{content:'MESH';font-size:7px;letter-spacing:2px;color:rgba(90,191,184,.35);font-weight:400}
-  .upload-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .upload-lbl{font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);width:68px;flex-shrink:0}
-  /* Upload browse — amber register, 0 radius */
-  .upload-btn input[type=file]{display:none}
-  .upload-status{font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-  .upload-subctl{display:none;padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px}
-  .upload-subctl.active{display:block}
-  .subctl-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
-  .subctl-lbl{font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);width:52px;flex-shrink:0}
-  /* Sub-panel sliders — 2px track, 2×12px thumb */
-  .subctl-val{font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--line);width:28px;text-align:right;flex-shrink:0}
-  /* Axis seg — flush, 0 radius */
-  /* per-planet mesh upload in casepanel */
-  .cp-mesh{border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px}
-  .cp-mesh-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-  .cp-mesh-lbl{font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);flex:1}
-  .cp-mesh-status{font-family:var(--mono);font-size:9px;letter-spacing:.5px;color:var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px}
-  .cp-mesh-reset{padding:3px 8px;font-size:8px;border-radius:0}
-  .cp-mesh .upload-btn{display:inline-block;margin-bottom:8px}
   /* locked casepanel state */
   #casepanel.locked .thumb{background:repeating-linear-gradient(135deg,rgba(90,191,184,.04) 0 8px,transparent 8px 16px);color:var(--muted)}
   #casepanel.locked #cpKicker{color:var(--line);opacity:0.5}
@@ -14564,7 +14518,7 @@ f 2469//2469 2470//2470 2434//2434
   (function(){
     var MAP=[
       ['#saveBtn, #viewSetBtn, #projMgr .pm-newzone','bric-btn bric-btn--sm bric-btn--primary'],
-      ['.tbtn, #projMgr .pm-btn, #debug .resetbtn, .upload-btn, .tag-add, .manual-links .link-add','bric-btn bric-btn--sm bric-btn--secondary'],
+      ['.tbtn, #projMgr .pm-btn, #debug .resetbtn, .tag-add, .manual-links .link-add','bric-btn bric-btn--sm bric-btn--secondary'],
       ['#projMgr .pm-close, #debug .seg button, .axis-btn, #ml-switch .seg button, .epFace','bric-btn bric-btn--sm']
     ];
     var ALL=MAP.map(function(m){return m[0];}).join(',');
