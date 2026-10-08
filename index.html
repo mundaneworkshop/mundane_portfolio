@@ -9966,7 +9966,9 @@ f 2469//2469 2470//2470 2434//2434
     //   lookDrop  — camera looks this far BELOW the box → box rises in frame
     //   boxR      — camera distance; SMALLER = box fills MORE of the screen
     var FOCUSFRAME={ anchorY:1.95, lookDrop:0.35, boxR:1.9 };
-    function focusPlanet(grp,ud){ focused=grp; grp.userData.moonGrp.visible=true; galTargetPos.set(0,0,0); galTargetScale=1; document.body.classList.add('mw-planet');
+    function focusPlanet(grp,ud){ focused=grp; grp.userData.moonGrp.visible=true;
+      // Clicking a planet leaves setHovered()'s inline cursor:pointer on the canvas, and the focus-mode pointer handler never reaches setHovered to clear it. The reticle reads that as "the page declares its own pointer" and steps aside, so drop it: focus view's cursor comes from the stylesheet (crosshair, pointer only while box-hovered).
+      if(renderer&&renderer.domElement) renderer.domElement.style.cursor=''; galTargetPos.set(0,0,0); galTargetScale=1; document.body.classList.add('mw-planet');
       // Both modes now settle on the SAME stable upper-stage framing (kills the
       // old "zoom in then jump back out": the box no longer stays at its far home
       // spot while the sphere→box swap changes apparent size).
@@ -10095,7 +10097,7 @@ f 2469//2469 2470//2470 2434//2434
       fitHitProxy(focused);
       focused.userData.hit.layers.disable(1);
       focused.userData.moonGrp.visible=false; focused.userData.posTarget.copy(focused.userData.homePos); focused.userData.target=1; focused.userData.moons.forEach(function(m){m.userData.label.style.opacity=0;}); }
-      focused=null; focusedMoon=null; hovered=null; autoRotate=params.autoRotate; manualRot=galaxy.rotation.y; camLook.copy(HOME_LOOK); galTargetPos.set(0,0,0); galTargetScale=1; document.body.classList.remove('mw-planet');
+      focused=null; focusedMoon=null; hovered=null; if(renderer&&renderer.domElement) renderer.domElement.style.cursor='default'; autoRotate=params.autoRotate; manualRot=galaxy.rotation.y; camLook.copy(HOME_LOOK); galTargetPos.set(0,0,0); galTargetScale=1; document.body.classList.remove('mw-planet');
       planets.forEach(function(p){ p.userData.target=1; if(p.userData.label) p.userData.label.classList.remove('hot'); });   // clear any leftover highlight
       document.getElementById('casepanel').className=''; setCrumb('',[]);
       if(typeof altFocusCleanup==='function') altFocusCleanup();   // hide CV/Contact bespoke overlays
