@@ -643,7 +643,6 @@
   body:not(.mw-planet) #dbg-galaxy{display:block}
   body.mw-cvroute #dbg-cv{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-planet{display:block}
-  body.mw-planet:not(.mw-altfocus) #dbg-cascade{display:block}
   body.mw-planet:not(.mw-altfocus) #dbg-casestudy{display:block}
   body.mw-altfocus:not(.mw-cvroute) #dbg-holonet{display:block}
   #debug .hexin{width:70px;margin-left:6px;background:rgba(0,0,0,.3);border:1px solid rgba(90,191,184,.25);color:var(--line);font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:0;vertical-align:middle}
@@ -753,108 +752,12 @@
     opacity: 0; visibility: hidden;
   }
   #cascade.run  { opacity: 1; visibility: visible; }
-  #cascade.fade { opacity: 0; transition: opacity 0.7s ease 0.15s; }
   /* REDUCED MOTION: one opaque scrim instead of ~600 tumbling bricks. The design language
      names ambient holo motion as the top accessibility risk in the system and requires it be
      fully disabled rather than slowed, so this is a plain cross-fade — same timeline, same
      callbacks, no motion. The delayed visibility flip lets the fade-OUT actually play. */
   #cascade.reduced     { background: var(--bg); transition: opacity 0.42s ease, visibility 0s linear 0.42s; }
   #cascade.reduced.run { opacity: 1; visibility: visible; transition: opacity 0.42s ease; }
-
-  .block {
-    position: absolute;
-    width: 0; height: 0;
-    transform: translateY(-125vh) rotate(var(--spin0, 0deg));
-    /* The second control point is the landing BOUNCE — >1 overshoots and settles back.
-       Exposed as --casc-bounce so it can be tuned from the debug panel. */
-    transition: transform var(--fall, 0.62s) cubic-bezier(0.30, var(--casc-bounce, 1.30), 0.55, 1);
-    will-change: transform;
-  }
-  .block.landed { transform: translateY(0) rotate(var(--spin1, 0deg)); }
-  .block.out { transform: translateY(130vh) rotate(var(--spin0, 0deg)); }
-
-  .cube {
-    position: absolute; left: 0; top: 0;
-    transform-style: preserve-3d;
-    transform: rotateX(-20deg) rotateY(-26deg)
-               rotateX(var(--ox,0deg)) rotateY(var(--oy,0deg)) rotateZ(var(--oz,0deg));
-  }
-  .cube .fc { position: absolute; top: 0; left: 0; box-sizing: border-box; }
-
-  .fc.front, .fc.back  { width: var(--w); height: var(--h); margin-left: calc(var(--w)/-2); margin-top: calc(var(--h)/-2); }
-  .fc.left,  .fc.right { width: var(--d); height: var(--h); margin-left: calc(var(--d)/-2); margin-top: calc(var(--h)/-2); }
-  .fc.top,   .fc.bottom{ width: var(--w); height: var(--d); margin-left: calc(var(--w)/-2); margin-top: calc(var(--d)/-2); }
-  .fc.front { transform: translateZ(calc(var(--d)/2)); }
-  .fc.back  { transform: rotateY(180deg) translateZ(calc(var(--d)/2)); }
-  .fc.right { transform: rotateY(90deg)  translateZ(calc(var(--w)/2)); }
-  .fc.left  { transform: rotateY(-90deg) translateZ(calc(var(--w)/2)); }
-  .fc.top   { transform: rotateX(90deg)  translateZ(calc(var(--h)/2)); }
-  .fc.bottom{ transform: rotateX(-90deg) translateZ(calc(var(--h)/2)); }
-
-  .stud { position: absolute;
-    width: calc(var(--u)*0.52); height: calc(var(--u)*0.52);
-    margin: calc(var(--u)*-0.26) 0 0 calc(var(--u)*-0.26);
-    transform: translateZ(6px); }
-
-  /* SLOPE */
-  .cube.slope .fc.front { display: none; }
-  .cube.slope .fc.right { clip-path: polygon(0 100%, 100% 100%, 100% 0); }
-  .cube.slope .fc.left  { clip-path: polygon(0 100%, 100% 100%, 0 0); }
-  .cube.slope .fc.top {
-    height: calc(var(--h) * 1.4142);
-    margin-top: calc(var(--h) * -0.7071);
-    transform: rotateX(45deg);
-  }
-  .cube.slope .stud { display: none; }
-
-  /* INVERTED SLOPE */
-  .cube.islope .fc.front { display: none; }
-  .cube.islope .fc.right { clip-path: polygon(100% 0, 100% 100%, 0 0); }
-  .cube.islope .fc.left  { clip-path: polygon(0 0, 0 100%, 100% 0); }
-  .cube.islope .fc.bottom {
-    height: calc(var(--h) * 1.4142);
-    margin-top: calc(var(--h) * -0.7071);
-    transform: rotateX(-45deg);
-  }
-
-  /* CORNER */
-  .cpart { position: absolute; top: 0; left: 0; transform-style: preserve-3d; }
-
-  /* ARCH */
-  .cube.arch .fc.front, .cube.arch .fc.back {
-    clip-path: polygon(0 0,100% 0,100% 100%,78% 100%,78% 56%,73% 40%,64% 27%,50% 21%,36% 27%,27% 40%,22% 56%,22% 100%,0 100%);
-  }
-
-  /* Variant B — VOXEL */
-  #cascade.style-voxel .fc.front, #cascade.style-voxel .fc.back  { background: var(--bf,#E9A73E); }
-  #cascade.style-voxel .fc.left,  #cascade.style-voxel .fc.right { background: var(--br,#BE7E2A); }
-  #cascade.style-voxel .fc.top,   #cascade.style-voxel .fc.bottom{ background: var(--bt,#F4B852); }
-  #cascade.style-voxel .fc.front, #cascade.style-voxel .fc.back {
-    clip-path: polygon(0 5px,5px 5px,5px 0,calc(100% - 5px) 0,calc(100% - 5px) 5px,100% 5px,100% calc(100% - 5px),calc(100% - 5px) calc(100% - 5px),calc(100% - 5px) 100%,5px 100%,5px calc(100% - 5px),0 calc(100% - 5px));
-  }
-  #cascade.style-voxel .fc.top {
-    background-image:
-      linear-gradient(90deg, rgba(0,0,0,.16) 1px, transparent 1px),
-      linear-gradient(0deg,  rgba(0,0,0,.16) 1px, transparent 1px);
-    background-size: var(--u) var(--u);
-  }
-  #cascade.style-voxel .stud { display: none; }
-
-  /* Variant C — HOLO */
-  /* Holo faces derive every tint from one authored colour (--casc-holo, set by the debug
-     panel), so the whole cascade can be recoloured from a single swatch. --casc-edge is the
-     lighter rim, derived in JS. */
-  #cascade.style-holo .fc { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 16%, transparent); border: 1px solid color-mix(in srgb, var(--casc-edge,#AAF5EE) 42%, transparent); }
-  #cascade.style-holo .fc.top { background: color-mix(in srgb, var(--casc-holo,#78E0D6) 32%, transparent); border-color: color-mix(in srgb, var(--casc-edge,#AAF5EE) 70%, transparent); }
-  #cascade.style-holo .fc.front, #cascade.style-holo .fc.back { box-shadow: inset 0 0 12px color-mix(in srgb, var(--casc-holo,#78E0D6) 20%, transparent); }
-  #cascade.style-holo .fc.top::after {
-    content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(180deg, transparent 0, transparent 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 2px, color-mix(in srgb, var(--casc-edge,#AAF5EE) 16%, transparent) 3px);
-  }
-  #cascade.style-holo .stud {
-    background: color-mix(in srgb, var(--casc-holo,#78E0D6) 55%, transparent); border: 1px solid #EAFEFB; border-radius: 32%;
-    box-shadow: 0 0 8px color-mix(in srgb, var(--casc-holo,#78E0D6) 50%, transparent);
-  }
 </style>
 <link rel="stylesheet" href="assets/bric-author.css" />
 </head>
@@ -1135,35 +1038,6 @@
       <button class="resetbtn" id="cCsPreview">▶ Preview case study (with cascade)</button>
       <button class="resetbtn" id="cCsRing">⛶ Open chapter ring (skip cascade)</button>
     </div><!-- /#dbg-casestudy -->
-
-    <!-- ── Brick cascade (case-study transition) ──
-         Standing rule (docs/project-history/maximize-customization.md): no tunable stays
-         baked. These were previously constants in the CS module with a "no debug panel"
-         comment; they now round-trip through copyOvr['cascadeCfg'] like every other
-         authored value, so they sync server-side and survive a reload. -->
-    <div class="dbg-ctx" id="dbg-cascade">
-      <div class="menudiv"></div>
-      <div class="ctl sec"><label style="color:var(--holo)">Brick cascade</label></div>
-      <div class="ctl"><label>Brick unit <b id="vCasU">88</b></label><input type="range" id="cCasU" min="40" max="140" step="4" value="88"></div>
-      <div class="ctl"><label>Spacing <b id="vCasSpacing">2.6</b></label><input type="range" id="cCasSpacing" min="1.5" max="4" step="0.1" value="2.6"></div>
-      <div class="ctl"><label>Jitter <b id="vCasJitter">0.70</b></label><input type="range" id="cCasJitter" min="0" max="1.5" step="0.05" value="0.7"></div>
-      <div class="ctl"><label>Tumble <b id="vCasTumble">32</b></label><input type="range" id="cCasTumble" min="0" max="90" step="1" value="32"></div>
-      <div class="ctl"><label>Drop spin <b id="vCasSpin">40</b></label><input type="range" id="cCasSpin" min="0" max="90" step="1" value="40"></div>
-      <div class="ctl"><label>Fall time <b id="vCasFall">1.40</b></label><input type="range" id="cCasFall" min="0.6" max="3" step="0.05" value="1.4"></div>
-      <div class="ctl"><label>Row delay <b id="vCasRowDelay">120</b></label><input type="range" id="cCasRowDelay" min="0" max="400" step="10" value="120"></div>
-      <div class="ctl"><label>Random spread <b id="vCasRandDelay">460</b></label><input type="range" id="cCasRandDelay" min="0" max="1200" step="20" value="460"></div>
-      <div class="ctl"><label>Curved pieces <b id="vCasCurve">11</b></label><input type="range" id="cCasCurve" min="0" max="30" step="1" value="11"></div>
-      <div class="ctl"><label>Hang time <b id="vCasHold">600</b></label><input type="range" id="cCasHold" min="0" max="2000" step="50" value="600"></div>
-      <div class="ctl"><label>Start delay <b id="vCasStart">160</b></label><input type="range" id="cCasStart" min="0" max="900" step="20" value="160"></div>
-      <div class="ctl"><label>Landing bounce <b id="vCasBounce">1.30</b></label><input type="range" id="cCasBounce" min="1" max="2.2" step="0.05" value="1.3"></div>
-      <div class="ctl"><label>Exit spread <b id="vCasExitSpread">0.70</b></label><input type="range" id="cCasExitSpread" min="0" max="2" step="0.05" value="0.7"></div>
-      <div class="ctl"><label>Exit stagger <b id="vCasExitStagger">0.35</b></label><input type="range" id="cCasExitStagger" min="0" max="2" step="0.05" value="0.35"></div>
-      <div class="ctl"><label>Holo tint</label><input type="color" id="cCasHolo" value="#78E0D6"><input type="text" id="cCasHoloHex" value="#78E0D6" class="hexin"></div>
-      <div class="ctl"><label>Voxel tint</label><input type="color" id="cCasVox" value="#E9A73E"><input type="text" id="cCasVoxHex" value="#E9A73E" class="hexin"></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cCasVoxel"> Amber voxel bricks (default: teal holo)</label></div>
-      <button class="resetbtn" id="cCasPreview">▶ Preview cascade</button>
-      <button class="resetbtn" id="cCasReset">⟲ Reset cascade defaults</button>
-    </div><!-- /#dbg-cascade -->
 
     <div class="dbg-ctx" id="dbg-holonet">
       <div class="menudiv"></div>
@@ -11290,7 +11164,7 @@ f 2469//2469 2470//2470 2434//2434
     //                IS the destination — the cascade covers a scene SWAP, not a shutdown.
     //                (See docs/project-history/case-study-direction.md: the old "WebGL pauses
     //                on full takeover" rule was written before that was on the table.)
-    // opts.hooks   — passed straight through to runCascade(); see its comment for
+    // opts.hooks   — passed straight through to runScrim(); see its comment for
     //                onCurtainClosed / onDone.
     // opts.domTakeover — whether the static DOM case-study page is revealed and #cs-root
     //                    captures clicks. Default TRUE (today's behaviour). The chapter ring
@@ -13770,64 +13644,6 @@ f 2469//2469 2470//2470 2434//2434
         } else if(focusedMoon){ unfocusMoon(); }
       }catch(e){ console.warn('[route]',e); }
     }
-    // ── Brick cascade tunables → copyOvr['cascadeCfg'] ──────────────────────────
-    // The CS module re-reads this object at the start of every run, so a slider change
-    // takes effect on the next cascade with no reload. Writes go through persistCopy() so
-    // they land in the same server-synced store as all other authored content.
-    (function wireCascadePanel(){
-      var DEF={U:88,spacing:2.6,jitter:0.70,tumble:32,spin:40,fall:1.40,rowDelay:120,randDelay:460,curve:11,hold:600,
-               start:160,exitSpread:0.70,exitStagger:0.35,bounce:1.30,holo:'#78E0D6',voxel:'#E9A73E',style:'holo'};
-      var ROWS=[['U','cCasU','vCasU',0],['spacing','cCasSpacing','vCasSpacing',1],['jitter','cCasJitter','vCasJitter',2],
-                ['tumble','cCasTumble','vCasTumble',0],['spin','cCasSpin','vCasSpin',0],['fall','cCasFall','vCasFall',2],
-                ['rowDelay','cCasRowDelay','vCasRowDelay',0],['randDelay','cCasRandDelay','vCasRandDelay',0],
-                ['curve','cCasCurve','vCasCurve',0],['hold','cCasHold','vCasHold',0],
-                ['start','cCasStart','vCasStart',0],['bounce','cCasBounce','vCasBounce',2],
-                ['exitSpread','cCasExitSpread','vCasExitSpread',2],['exitStagger','cCasExitStagger','vCasExitStagger',2]];
-      var COLS=[['holo','cCasHolo','cCasHoloHex'],['voxel','cCasVox','cCasVoxHex']];
-      function cur(){ var o=copyOvr['cascadeCfg']; return (o&&typeof o==='object')?o:{}; }
-      function val(k){ var o=cur(); return o[k]!=null?o[k]:DEF[k]; }
-      function put(k,v){ var o=cur(); o[k]=v; copyOvr['cascadeCfg']=o; persistCopy(); }
-      function paint(){
-        ROWS.forEach(function(r){
-          var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
-          if(!el) return; var v=val(r[0]); el.value=v; if(out) out.textContent=Number(v).toFixed(r[3]);
-        });
-        COLS.forEach(function(c){
-          var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
-          var v=val(c[0]); if(sw) sw.value=v; if(tx) tx.value=v;
-        });
-        var vx=document.getElementById('cCasVoxel'); if(vx) vx.checked=(val('style')==='voxel');
-      }
-      ROWS.forEach(function(r){
-        var el=document.getElementById(r[1]), out=document.getElementById(r[2]);
-        if(!el) return;
-        el.addEventListener('input',function(){
-          var v=parseFloat(el.value); if(out) out.textContent=v.toFixed(r[3]); put(r[0],v);
-        });
-      });
-      COLS.forEach(function(c){
-        var sw=document.getElementById(c[1]), tx=document.getElementById(c[2]);
-        if(sw) sw.addEventListener('input',function(){ if(tx) tx.value=sw.value; put(c[0], sw.value); });
-        if(tx) tx.addEventListener('change',function(){
-          var v=tx.value.trim(); if(!/^#[0-9a-f]{6}$/i.test(v)){ tx.value=val(c[0]); return; }
-          if(sw) sw.value=v; put(c[0], v);
-        });
-      });
-      var vx=document.getElementById('cCasVoxel');
-      if(vx) vx.addEventListener('change',function(){ put('style', vx.checked?'voxel':'holo'); });
-      var pv=document.getElementById('cCasPreview');
-      // Preview the REAL destination. This used to call enterCaseStudy() bare, which defaults
-      // to the old DOM page takeover — so tuning the cascade showed you a cream placeholder
-      // that is no longer where the transition goes.
-      if(pv) pv.addEventListener('click',function(){
-        if(window.csOpenCaseStudy) window.csOpenCaseStudy();
-        else if(window.enterCaseStudy) window.enterCaseStudy();
-      });
-      var rs=document.getElementById('cCasReset');
-      if(rs) rs.addEventListener('click',function(){ delete copyOvr['cascadeCfg']; persistCopy(); paint(); if(typeof toast==='function') toast('cascade defaults restored'); });
-      paint();
-    })();
-
     applyRouteFromLocation();
     window.addEventListener('popstate',applyRouteFromLocation);
 
@@ -13929,7 +13745,6 @@ f 2469//2469 2470//2470 2434//2434
     var csRoot    = document.getElementById('cs-root');
     var cascadeEl  = document.getElementById('cascade');
     var pageTakeover = document.getElementById('page-takeover');
-    var cascadeStyle = 'holo';   // leaning Holo (C); 'voxel' for amber variant
     var cascadeTimers = [];
     function clearCascadeTimers(){ cascadeTimers.forEach(clearTimeout); cascadeTimers = []; }
     if(!manualScene) return;
@@ -14257,11 +14072,11 @@ f 2469//2469 2470//2470 2434//2434
     }
 
     // ── PUBLIC: cascade-only handoff (the 3D box-open already happened in the canvas) ──
-    // Hides the booklet and runs straight to: bricks cascade in → fill → reveal #page-takeover → bricks fall away.
+    // Hides the booklet and runs straight to: scrim fades in → reveal #page-takeover → scrim fades out.
     function showCascade(hooks){
       if(manualScene){ manualScene.classList.remove('visible'); manualScene.style.opacity='0'; }
       clearCascadeTimers();
-      runCascade(cascadeStyle, hooks);
+      runScrim(hooks);
     }
 
     // ── PUBLIC: reset everything back to focus defaults ──
@@ -14275,220 +14090,25 @@ f 2469//2469 2470//2470 2434//2434
       manualBook.style.transform='rotateX(20deg)';
       // MERGE Stage 3: tear down the cascade + page takeover so back-out fully resets
       clearCascadeTimers();
-      cascadeEl.className=''; cascadeEl.innerHTML='';   // clears both the brick pile and the reduced-motion scrim
+      cascadeEl.className=''; cascadeEl.innerHTML='';   // clears the scrim
       pageTakeover.classList.remove('visible');
     }
 
-    // ── CASCADE (3D LEGO block page-takeover) ──
-    // These are DEFAULTS, not constants. loadCfg() below merges any authored overrides from
-    // copyOvr['cascadeCfg'] (written by the #dbg-cascade panel) on every run, per the standing
-    // rule that no tunable stays hardcoded — see docs/project-history/maximize-customization.md.
-    // This block used to carry a "no debug panel" comment; that was the thing being fixed.
-    var CFG_DEFAULT = {
-      U: 88,          // brick stud unit (px)
-      spacing: 2.6,   // grid spacing × U
-      jitter: 0.70,   // position jitter × U
-      tumble: 32,     // X/Z orientation range (deg)
-      spin: 40,       // in-plane drop tumble range (deg)
-      fall: 1.40,     // base fall duration (s)
-      rowDelay: 120,  // ms added per row
-      randDelay: 460, // random delay spread (ms)
-      curve: 11,      // weight of curved (arch) pieces
-      hold: 600,      // how long the full pile hangs before it wipes away (ms)
-      start: 160,     // delay before the first brick starts falling (ms)
-      exitSpread: 0.70,  // exit randomness, as a fraction of randDelay
-      exitStagger: 0.35, // exit per-row stagger, as a fraction of rowDelay
-      bounce: 1.30,   // landing overshoot — the easing curve's second control point
-      holo: '#78E0D6',   // holo tint; the lighter rim is derived from it
-      voxel: '#E9A73E',  // voxel base; top/side shades are derived from it
-      style: 'holo'   // 'holo' = teal stepped stud-plate (default), 'voxel' = amber pixel brick
-    };
-    var CFG = {};
-    // Shift a hex colour toward white (p>0) or black (p<0), so one authored swatch can drive a
-    // whole set of face shades instead of asking for six colour pickers.
-    function shade(hex, p){
-      var m=/^#?([0-9a-f]{6})$/i.exec(String(hex||'')); if(!m) return hex;
-      var n=parseInt(m[1],16), t=p<0?0:255, a=Math.abs(p);
-      var r=(n>>16)&255, g=(n>>8)&255, b=n&255;
-      function mix(c){ return Math.round((t-c)*a+c); }
-      return '#'+((1<<24)+(mix(r)<<16)+(mix(g)<<8)+mix(b)).toString(16).slice(1);
-    }
-    // Re-read on EVERY run, so a slider change lands on the next cascade with no reload.
-    function loadCfg(){
-      var o=null;
-      try { o = (window.BRICStore && BRICStore.getCopy) ? BRICStore.getCopy()['cascadeCfg'] : null; } catch(e){}
-      CFG = {};
-      Object.keys(CFG_DEFAULT).forEach(function(k){ CFG[k] = (o && o[k] != null) ? o[k] : CFG_DEFAULT[k]; });
-      // Push the authored look onto the layer; the face rules read these.
-      if(cascadeEl){
-        cascadeEl.style.setProperty('--casc-holo', CFG.holo);
-        cascadeEl.style.setProperty('--casc-edge', shade(CFG.holo, 0.45));
-        cascadeEl.style.setProperty('--casc-bounce', String(CFG.bounce));
-      }
-      return CFG;
-    }
-    loadCfg();
-
-    var SHAPES = [
-      { sw:2, sd:2, hk:'b', t:'brick',  w:8 },
-      { sw:1, sd:2, hk:'b', t:'brick',  w:7 },
-      { sw:1, sd:4, hk:'b', t:'brick',  w:5 },
-      { sw:1, sd:1, hk:'b', t:'brick',  w:3 },
-      { sw:2, sd:2, hk:'p', t:'brick',  w:4 },
-      { sw:1, sd:2, hk:'b', t:'slope',  w:5 },
-      { sw:2, sd:2, hk:'b', t:'islope', w:3 },
-      { sw:2, sd:2, hk:'b', t:'corner', w:3 },
-      { sw:3, sd:1, hk:'a', t:'arch',   wCurve:true }
-    ];
-    var pick = function(a){ return a[(Math.random() * a.length) | 0]; };
-    var rnd = function(lo, hi){ return (lo + Math.random() * (hi - lo)); };
-    function studsStr(sw, sd) {
-      var s = '';
-      for (var i = 0; i < sw; i++)
-        for (var j = 0; j < sd; j++)
-          s += '<span class="stud" style="left:'+((i+0.5)/sw*100).toFixed(1)+'%;top:'+((j+0.5)/sd*100).toFixed(1)+'%"></span>';
-      return s;
-    }
-    function facesStr(studs) {
-      return '<div class="fc back"></div><div class="fc left"></div>'
-        + '<div class="fc right"></div><div class="fc front"></div>'
-        + '<div class="fc bottom"></div><div class="fc top">' + studs + '</div>';
-    }
-
-    function buildCascade(styleName) {
-      clearCascadeTimers();
-      cascadeEl.className = 'style-' + styleName;    // resets run/fade
-      cascadeEl.innerHTML = '';
-      var U = CFG.U, PLATE = U * 0.37, BRICK = U * 0.93;
-      var hOf = function(hk){ return hk === 'p' ? PLATE : hk === 'a' ? BRICK * 1.6 : BRICK; };
-      var bag = [];
-      SHAPES.forEach(function(s){ var n = s.wCurve ? CFG.curve : s.w; for (var i = 0; i < n; i++) bag.push(s); });
-      var cellW = U * CFG.spacing, cellH = U * CFG.spacing * 0.83;
-      var cols = Math.ceil(window.innerWidth  / cellW) + 1;
-      var rows = Math.ceil(window.innerHeight / cellH) + 2;
-      var frag = document.createDocumentFragment();
-      for (var r = 0; r < rows; r++) {
-        for (var c = 0; c < cols; c++) {
-          var sh = pick(bag);
-          var b = document.createElement('div');
-          b.className = 'block';
-          var hh = Math.round(hOf(sh.hk));
-          var dd = (sh.t === 'slope' || sh.t === 'islope') ? hh : sh.sd * U;
-          b.style.setProperty('--u', U + 'px');
-          b.style.setProperty('--w', (sh.sw * U) + 'px');
-          b.style.setProperty('--d', dd + 'px');
-          b.style.setProperty('--h', hh + 'px');
-          b.style.setProperty('--ox', rnd(-CFG.tumble, CFG.tumble).toFixed(1) + 'deg');
-          b.style.setProperty('--oy', rnd(0, 360).toFixed(1) + 'deg');
-          b.style.setProperty('--oz', rnd(-CFG.tumble, CFG.tumble).toFixed(1) + 'deg');
-          b.style.setProperty('--spin0', rnd(-CFG.spin, CFG.spin).toFixed(1) + 'deg');
-          b.style.setProperty('--spin1', rnd(-CFG.spin * 0.3, CFG.spin * 0.3).toFixed(1) + 'deg');
-          b.style.setProperty('--fall', (CFG.fall + rnd(-0.1, 0.18)).toFixed(2) + 's');
-          if (styleName === 'voxel') {
-            var deep = Math.random() > 0.78;   // a minority of bricks sit a shade darker, for depth
-            var base = deep ? shade(CFG.voxel, -0.12) : CFG.voxel;
-            b.style.setProperty('--bf', base);
-            b.style.setProperty('--bt', shade(base,  0.14));   // top face catches light
-            b.style.setProperty('--br', shade(base, -0.22));   // sides fall away
-          }
-          var j = CFG.jitter * U;
-          b.style.left = Math.round(c * cellW + rnd(-j, j)) + 'px';
-          b.style.top  = Math.round(r * cellH + rnd(-j, j)) + 'px';
-          b.dataset.row = r;
-
-          var showStuds = (sh.t === 'brick' || sh.t === 'arch');
-
-          if (sh.t === 'corner') {
-            var half = U / 2;
-            var armA = '<div class="cpart" style="--w:'+(2*U)+'px;--d:'+U+'px;--h:'+hh+'px;transform:translateZ('+(-half)+'px)">'
-                     + facesStr(studsStr(2,1)) + '</div>';
-            var armB = '<div class="cpart" style="--w:'+U+'px;--d:'+U+'px;--h:'+hh+'px;transform:translateX('+(-half)+'px) translateZ('+half+'px)">'
-                     + facesStr(studsStr(1,1)) + '</div>';
-            b.innerHTML = '<div class="cube corner">'+armA+armB+'</div>';
-          } else {
-            var cls = sh.t === 'brick' ? '' : sh.t;
-            b.innerHTML = '<div class="cube '+cls+'">' + facesStr(showStuds ? studsStr(sh.sw, sh.sd) : '') + '</div>';
-          }
-          frag.appendChild(b);
-        }
-      }
-      cascadeEl.appendChild(frag);
-      return rows;
-    }
-
-    // Does this visitor want motion suppressed? The design language treats ambient holo
-    // motion as the single largest accessibility risk in the system and requires it be
-    // FULLY DISABLED, not merely slowed — so reduced motion gets a plain cross-fade of the
-    // same total duration rather than a gentler cascade.
-    function prefersReducedMotion(){
-      try { return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-      catch(e){ return false; }
-    }
-
-    // The cascade is a CURTAIN, not just an animation: for one stretch in the middle the
-    // bricks cover the viewport completely, and whatever is behind them can be swapped
-    // without the visitor seeing it. `hooks` is how a caller uses that:
+    // ── PAGE-TRANSITION SCRIM ──
+    // An opaque cross-fade: the scrim fades in, onCurtainClosed fires behind it, the page is revealed,
+    // the scrim fades out, onDone fires. The 3D LEGO brick cascade that used to run here was shelved
+    // (Sep 2026) and removed (Oct 2026); it is preserved at git tag archive/case-study-deck —
+    // see docs/project-history/archive-case-study-deck.md.
     //
-    //   onCurtainClosed()  fired at maximum coverage, before the reveal. Rebuild the world
-    //                      here — this is the only moment nothing behind the curtain is
-    //                      visible. The caller gets CFG.hold ms of cover after it fires.
-    //   onDone()           fired once the last brick has left the screen.
-    //
-    // Both are optional and both fire on the reduced-motion path too, at the same times, so
-    // no caller ever has to branch on the visitor's motion preference.
-    // SHELVED (2026-09-28): the brick cascade is on hold pending further design passes — see
-    // docs/project-history/case-study-direction.md. Flip this back to true to restore it; nothing
-    // else needs to change, since runCascade() below falls back to the reduced-motion scrim
-    // transition (a plain opacity fade, no bricks) whenever it's false, on the same hook timeline.
-    var CASCADE_ENABLED = false;
-
-    function runCascade(styleName, hooks) {
+    // `hooks` is how a caller uses the cover:
+    //   onCurtainClosed()  fired at maximum coverage, before the reveal. Rebuild the world here —
+    //                      this is the only moment nothing behind the scrim is visible.
+    //   onDone()           fired once the scrim has gone.
+    //   showTakeover:false a caller that rebuilt the CANVAS (the chapter ring) has no DOM page to reveal.
+    function runScrim(hooks){
       hooks = hooks || {};
-      loadCfg();                       // pick up any authored tunables before timing anything
-      styleName = CFG.style || styleName;
-      if(!CASCADE_ENABLED || prefersReducedMotion()) return runCascadeReduced(hooks);
-      buildCascade(styleName);
-      void cascadeEl.offsetWidth;                    // flush layout before animating
-      cascadeEl.classList.add('run');
-      var blocks = cascadeEl.querySelectorAll('.block');
-      var maxDelay = 0;
-      blocks.forEach(function(b){
-        var r = +b.dataset.row;
-        var d = CFG.start + r * CFG.rowDelay + Math.random() * CFG.randDelay;
-        maxDelay = Math.max(maxDelay, d);
-        cascadeTimers.push(setTimeout(function(){ b.classList.add('landed'); }, d));
-      });
-      var fallMs   = CFG.fall * 1000;
-      var fillDone = maxDelay + fallMs;
-      var exitStart = fillDone + CFG.hold;
-      // CURTAIN CLOSED: every brick has landed, so the viewport is fully covered. Anything
-      // swapped from here until exitStart happens unseen.
-      if(hooks.onCurtainClosed) cascadeTimers.push(setTimeout(hooks.onCurtainClosed, fillDone));
-      cascadeTimers.push(setTimeout(function(){
-        // A caller that rebuilt the CANVAS behind the curtain (the chapter ring) passes
-        // showTakeover:false — there is no DOM page to reveal, the bricks just clear off it.
-        if(hooks.showTakeover !== false) pageTakeover.classList.add('visible');
-      }, exitStart));
-      var exitMax = 0;
-      blocks.forEach(function(b){
-        var ed = exitStart + Math.random() * (CFG.randDelay * CFG.exitSpread) + (+b.dataset.row) * (CFG.rowDelay * CFG.exitStagger);
-        exitMax = Math.max(exitMax, ed);
-        cascadeTimers.push(setTimeout(function(){ b.classList.add('out'); }, ed));
-      });
-      cascadeTimers.push(setTimeout(function(){
-        cascadeEl.classList.remove('run');
-        if(hooks.onDone) hooks.onDone();
-      }, exitMax + fallMs + 120));
-    }
-
-    // Reduced-motion equivalent: no bricks, no tumbling — an opaque scrim fades in, the
-    // swap happens behind it, the page is revealed, the scrim fades out. Deliberately kept
-    // on the SAME timeline as the full cascade so onCurtainClosed/onDone land at comparable
-    // moments and any caller-side sequencing still works.
-    function runCascadeReduced(hooks){
-      loadCfg();
-      var FADE = 420, COVER = Math.max(300, CFG.hold);
-      cascadeEl.className = 'style-' + cascadeStyle + ' reduced';
+      var FADE = 420, COVER = 600;
+      cascadeEl.className = 'reduced';
       cascadeEl.innerHTML = '';
       void cascadeEl.offsetWidth;
       cascadeEl.classList.add('run');
