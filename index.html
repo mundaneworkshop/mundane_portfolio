@@ -371,10 +371,9 @@
      The panel's DOM never changes; only #manual-scene[data-ml] does. JS (CS layoutManual) picks the mode,
      then publishes the panel-free part of the viewport as window.MWStage so the WebGL camera can centre +
      fit the kit box and its artifact moons inside it (see stageFit in the frame loop).
-       dock   — wide bar along the bottom, content flows in three columns; the stage is everything above it
-       rail   — vertical panel docked to the right edge; the stage is everything left of it
+       dock   — wide bar along the bottom, content flows in three columns; the stage is everything above it (default)
        drawer — compact bar (title / framing / tags / CTA) with a Details toggle that lifts the snapshot rows
-                and links up over the stage; also the phone layout
+                and links up over the stage; the fallback for narrow screens (phones)
      No data-ml (CV nodes, chapter ring) = the original centred bottom-third panel, untouched.
      Everything positional is !important on purpose: showBooklet()/reset() still write inline top/margin
      for that original layout, and those must not fight the modes below. */
@@ -387,22 +386,6 @@
   }
   #manual-scene[data-ml] #manual-book { min-width: 0; max-width: none; width: 100%; display: flex; flex-direction: column; }
   #manual-scene[data-ml] .manual-page { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--teal-dim) transparent; }
-  /* ── RAIL (right edge) ── */
-  #manual-scene[data-ml="rail"] {
-    top: 50% !important; right: var(--ml-gap, 24px) !important;
-    width: var(--ml-rail-w, 380px);
-    perspective-origin: 100% 50%;
-  }
-  #manual-scene[data-ml="rail"].visible { transform: translateY(-50%) !important; }
-  #manual-scene[data-ml="rail"]:not(.visible) { transform: translateY(-50%) translateX(28px) !important; }
-  #manual-scene[data-ml="rail"] #manual-book {
-    max-height: calc(100vh - 2 * var(--ml-gap, 24px));
-    transform-origin: 100% 50%; transform: rotateY(-7deg) !important;
-  }
-  #manual-scene[data-ml="rail"] .manual-page { padding: 26px 24px 24px; }
-  /* Edit Mode parks its 230px object-editor (#editPanel) on the right edge — the rail steps left of it */
-  body.edit-focus #manual-scene[data-ml="rail"] { right: calc(var(--ml-gap, 24px) + 254px) !important; }
-  #manual-scene[data-ml="rail"] .manual-framing { max-width: none; }
   /* ── DOCK (bottom, wide) ── */
   #manual-scene[data-ml="dock"] {
     left: 50% !important; bottom: var(--ml-gap, 24px) !important;
@@ -842,7 +825,7 @@
   </div>
 
   <div id="topbar">
-    <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">⌂ Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
+    <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
       <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
@@ -1021,7 +1004,7 @@
       <div class="menudiv"></div>
       <div class="ctl sec"><label>Instruction manual</label></div>
       <div class="ctl"><label>Panel opacity <b id="vMbAlpha">0.88</b></label><input type="range" id="cMbAlpha" min="0.4" max="1" step="0.02" value="0.88"></div>
-      <div class="ctl"><label>Manual layout</label><div class="seg"><button data-ml-pref="auto" class="on">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="rail">Rail</button><button data-ml-pref="drawer">Drawer</button></div></div>
+      <div class="ctl"><label>Manual layout</label><div class="seg"><button data-ml-pref="auto" class="on">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="drawer">Drawer</button></div></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cStageFit" checked> Fit kit box + moons to the free stage</label></div>
       <div class="ctl"><label>Stage fill <b id="vStageFill">0.74</b></label><input type="range" id="cStageFill" min="0.4" max="1" step="0.02" value="0.74"></div>
       <div class="ctl"><label>Stage max height <b id="vStageMaxH">0.58</b></label><input type="range" id="cStageMaxH" min="0.3" max="1" step="0.02" value="0.58"></div>
@@ -1205,7 +1188,7 @@
   </div></div>
 
   <!-- Author-only: flip the project manual between layouts while a project is focused (same setting as Debug → Instruction manual). -->
-  <div id="ml-switch"><span>Manual layout</span><div class="seg"><button data-ml-pref="auto">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="rail">Rail</button><button data-ml-pref="drawer">Drawer</button></div><span class="ml-now"></span></div>
+  <div id="ml-switch"><span>Manual layout</span><div class="seg"><button data-ml-pref="auto">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="drawer">Drawer</button></div><span class="ml-now"></span></div>
 
   <!-- MERGE Stage 2: case-study DOM layer — kit box + instruction booklet (focus panel) -->
   <div id="cs-root" class="bric-dark">
@@ -9798,7 +9781,50 @@ f 2469//2469 2470//2470 2434//2434
           var x=(_p.x+1)/2*W, y=(1-_p.y)/2*H; if(x<l)l=x; if(x>r)r=x; if(y<t)t=y; if(y>b)b=y; }
         return {left:l,top:t,right:r,bottom:b};
       }
+      // Keyboard targeting: arrow keys move a virtual target (galaxy: the planets; project focus: kit box, then its moons).
+      // While it is live it wins over the pointer; any real pointer movement hands control back.
+      var kb=null;   // {key, label, obj, open}
+      function kbList(){
+        if(mwPhase!=='docked'||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')) return null;
+        if(focused){
+          var l=[];
+          if(focused.userData.hit&&!focused.userData.hit.userData.boxReplaced) l.push({key:'kitbox', label:'\u25B8 VIEW CASE STUDY', obj:focused.userData.hit, open:function(){ clearBoxHover(); openCaseStudyRoute(); }});
+          if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){ if(m!==focusedMoon) l.push({key:m, label:'\u25B8 OPEN', obj:m.userData.glbGroup||m, open:function(){ focusMoon(m); }}); });
+          return l;
+        }
+        return planets.filter(function(p){ return p.visible&&!p.userData.hidden; }).map(function(p){ return {key:p, label:'\u25B8 OPEN', obj:p.userData.hitProxy||p, grp:p, open:function(){ activate(p.userData); }}; });
+      }
+      function kbRetarget(){ if(window.__bricReticle&&window.__bricReticle.retarget) window.__bricReticle.retarget(); }
+      function kbClear(){ if(!kb) return; kb=null; if(!focused) setHovered(null); kbRetarget(); }
+      // Order the targets by where they are on screen along the pressed axis ('x' = left/right, 'y' = up/down), so the arrow
+      // points the way the reticle travels; wraps at the ends.
+      function kbStep(axis,dir){
+        var l=kbList(); if(!l||!l.length) return false;
+        l=l.map(function(t){ var r=rectOf(t.obj); t.pos=r?(axis==='x'?(r.left+r.right)/2:(r.top+r.bottom)/2):null; return t; })
+           .filter(function(t){ return t.pos!==null||(kb&&t.key===kb.key); })
+           .sort(function(a,b){ return (a.pos||0)-(b.pos||0); });
+        if(!l.length) return false;
+        var i=-1; if(kb) l.some(function(t,j){ if(t.key===kb.key){ i=j; return true; } });
+        i = i<0 ? (dir>0?0:l.length-1) : (i+dir+l.length)%l.length;
+        kb=l[i];
+        if(kb.grp) setHovered(kb.grp);
+        kbRetarget(); return true;
+      }
+      window.addEventListener('pointermove',function(e){ if(kb&&(!e.pointerType||e.pointerType==='mouse')) kbClear(); },{passive:true});
+      window.addEventListener('keydown',function(e){
+        if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
+        var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
+        if(typeof csScene!=='undefined'&&csScene.active) return;   // case-study ring owns the arrows
+        var k=e.key;
+        if(k==='ArrowRight'){ if(kbStep('x',1)) e.preventDefault(); }
+        else if(k==='ArrowLeft'){ if(kbStep('x',-1)) e.preventDefault(); }
+        else if(k==='ArrowDown'){ if(kbStep('y',1)) e.preventDefault(); }
+        else if(k==='ArrowUp'){ if(kbStep('y',-1)) e.preventDefault(); }
+        else if((k==='Enter'||k===' ')&&kb){ var o=kb.open; kb=null; if(!focused) setHovered(null); kbRetarget(); e.preventDefault(); o(); }
+        else if(k==='Escape'&&kb){ kbClear(); }
+      });
       function targets(x,y,el){
+        if(kb){ var kl=kbList(); if(kl&&kl.some(function(t){ return t.key===kb.key; })){ var kt=kb; return {key:kt.key, label:kt.label, rect:function(){ return rectOf(kt.obj); }}; } kb=null; }
         var cv=renderer&&renderer.domElement; if(!cv||el!==cv) return null;   // pointer must be on the canvas itself, not a panel above it
         if(mwPhase==='entry'){ if(cv.style.cursor!=='pointer'||!(mwQuad&&mwQuad.visible)) return null; return {key:mwQuad, label:'\u25B8 ENTER', rect:function(){ return rectOf(mwQuad); }}; }
         if(mwPhase!=='docked'||editMode||document.body.classList.contains('mw-altfocus')) return null;
@@ -11383,10 +11409,10 @@ f 2469//2469 2470//2470 2434//2434
       cs.style.setProperty('--mb-alpha',params.mbAlpha); }
     bind('cMbAlpha','vMbAlpha',function(v){ params.mbAlpha=v; applyManualFx(); },2);
     applyManualFx();
-    // Manual layout (dock / rail / drawer / auto) — the setting lives here, the layout engine in the booklet module (CS.relayout).
+    // Manual layout (dock / drawer / auto) — the setting lives here, the layout engine in the booklet module (CS.relayout).
     // Both the Debug seg and the author-only #ml-switch carry data-ml-pref and stay in step.
     function setManualLayout(v){
-      if(v!=='dock'&&v!=='rail'&&v!=='drawer') v='auto';
+      if(v!=='dock'&&v!=='drawer') v='auto';
       params.manualLayout=v; window.__mwManualLayout=v;
       [].forEach.call(document.querySelectorAll('[data-ml-pref]'),function(b){ b.classList.toggle('on',b.getAttribute('data-ml-pref')===v); });
       if(window.CS && CS.relayout) CS.relayout();
@@ -12703,8 +12729,8 @@ f 2469//2469 2470//2470 2434//2434
     // ── BREADCRUMB: editable steps (Edit Mode, persisted) · 'galaxy' step removed · root renamed to "Mundane Workshop" ──
     var crumbRootEl=document.getElementById('homeBtn'), crumbPathEl=document.getElementById('crumbpath');
     var CRUMB_ROOT_DEFAULT='Mundane Workshop', crumbCtx='', crumbSegs=[];
-    (function(){ var r=copyOvr['crumb:root']; crumbRootEl.textContent='⌂ '+((r!=null&&r!=='')?r:CRUMB_ROOT_DEFAULT); })();
-    crumbRootEl.addEventListener('blur',function(){ var t=crumbRootEl.textContent.replace(/^[⌂\s▸]*/,'').replace(/\s+$/,''); copyOvr['crumb:root']=t; persistCopy(); crumbRootEl.textContent='⌂ '+(t||CRUMB_ROOT_DEFAULT); });
+    (function(){ var r=copyOvr['crumb:root']; if(r) r=String(r).replace(/^[⌂\s]+/,''); crumbRootEl.textContent=(r!=null&&r!=='')?r:CRUMB_ROOT_DEFAULT; })();
+    crumbRootEl.addEventListener('blur',function(){ var t=crumbRootEl.textContent.replace(/^[⌂\s▸]*/,'').replace(/\s+$/,''); copyOvr['crumb:root']=t; persistCopy(); crumbRootEl.textContent=t||CRUMB_ROOT_DEFAULT; });
     crumbRootEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); crumbRootEl.blur(); } });
     function renderCrumb(){ crumbPathEl.innerHTML='';
       crumbSegs.forEach(function(seg,i){
@@ -13920,7 +13946,7 @@ f 2469//2469 2470//2470 2434//2434
         if(locked){ ctaBtn.onclick=null; }
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
-            if(data.ctaUrl && data.ctaUrl!=='#') window.open(data.ctaUrl,'_blank','noopener');   // an explicit URL overrides the internal case-study takeover
+            if(data.ctaUrl && data.ctaUrl!=='#'){ if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.open(data.ctaUrl,'_blank','noopener'); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
             else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
@@ -13963,40 +13989,28 @@ f 2469//2469 2470//2470 2434//2434
     // decides how much of the screen the 3D content gets. Rather than one fixed bottom-third panel that
     // crowds (or covers) the scene on shorter windows, the panel picks a mode per viewport and publishes the
     // free rectangle as window.MWStage; the frame loop then centres + fits the kit box and moons inside it.
-    //   'auto' → phones get the drawer; otherwise whichever of dock/rail leaves the larger stage.
+    //   'auto' → dock, with the drawer as the fallback on narrow screens (phones).
     // The mode can be forced from the author-only switcher / Debug panel (window.__mwManualLayout).
     var ML_TOP=48;                 // px reserved along the top (breadcrumb row)
-    var ML_CONTENT_ASPECT=1.6;     // rough w:h of box + moons, used only to compare dock vs rail in auto
     var mlMode=null;
     function mlIsProject(){ return document.body.classList.contains('mw-planet'); }
-    function mlPref(){ var p=window.__mwManualLayout; return (p==='dock'||p==='rail'||p==='drawer')?p:'auto'; }
+    function mlPref(){ var p=window.__mwManualLayout; return (p==='dock'||p==='drawer')?p:'auto'; }
     function mlGap(){ return Math.round(Math.max(12,Math.min(28,window.innerWidth*0.016))); }
     function mlSetMode(m){
-      var W=window.innerWidth, g=mlGap();
+      var g=mlGap();
       manualScene.style.setProperty('--ml-gap',g+'px');
-      manualScene.style.setProperty('--ml-rail-w',Math.round(Math.max(300,Math.min(420,W*0.26)))+'px');
       manualScene.setAttribute('data-ml',m); mlMode=m;
     }
     // Apply `m`, force layout, and return the free stage rect it leaves (px, viewport coords).
     function mlMeasure(m){
       mlSetMode(m);
       var W=window.innerWidth, H=window.innerHeight, g=mlGap();
-      if(m==='rail'){
-        return { l:0, t:ML_TOP, r:W-(parseFloat(getComputedStyle(manualScene).right)||g)-manualScene.offsetWidth-g, b:H-g };
-      }
       // dock / drawer: everything above the bar
       return { l:0, t:ML_TOP, r:W, b:H-g-manualScene.offsetHeight-10 };
     }
     function mlPick(){
       var pref=mlPref(); if(pref!=='auto') return pref;
-      var W=window.innerWidth; if(W<720) return 'drawer';
-      var best='dock', bs=-1;
-      ['dock','rail'].forEach(function(m){
-        if(m==='rail' && W<900) return;
-        var st=mlMeasure(m), sc=Math.min((st.r-st.l)/ML_CONTENT_ASPECT, st.b-st.t);
-        if(sc>bs){ bs=sc; best=m; }
-      });
-      return best;
+      return window.innerWidth<720 ? 'drawer' : 'dock';
     }
     function mlPublish(st,mode){
       var root=document.documentElement;
@@ -14010,7 +14024,7 @@ f 2469//2469 2470//2470 2434//2434
       var page=manualBook.querySelector('.manual-page');
       if(!mlIsProject()){
         if(manualScene.hasAttribute('data-ml')){ manualScene.removeAttribute('data-ml'); mlMode=null;
-          ['--ml-gap','--ml-rail-w'].forEach(function(k){ manualScene.style.removeProperty(k); }); }
+          ['--ml-gap'].forEach(function(k){ manualScene.style.removeProperty(k); }); }
         mlPublish(null); return false;
       }
       if(page){ page.style.maxHeight=''; page.style.overflowY=''; }
@@ -14027,7 +14041,7 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('resize',mlRelayoutSoon);
     // content growing/shrinking (Edit Mode adding links/rows, a moon with fewer fields) re-measures the stage
     if(window.ResizeObserver) new ResizeObserver(function(){ if(mlMode) mlRelayoutSoon(); }).observe(manualBook);
-    var _mlEdit=false;   // body classes flip constantly (box-hovered…) — only Edit Mode toggling (edit-focus) moves the rail
+    var _mlEdit=false;   // body classes flip constantly (box-hovered…) — only Edit Mode toggling (edit-focus) re-measures the stage
     new MutationObserver(function(){ var e=document.body.classList.contains('edit-focus'); if(e!==_mlEdit){ _mlEdit=e; if(mlMode) mlRelayoutSoon(); } }).observe(document.body,{attributes:true,attributeFilter:['class']});
 
     // ── shared: measure + position the booklet so its visible content stays on-screen. Anchored
@@ -14161,6 +14175,8 @@ f 2469//2469 2470//2470 2434//2434
   <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
   <script src="assets/bric-reticle.js"></script>
+  <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
+  <script src="assets/bric-wipe.js"></script>
   <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, selector:'[data-bric-media],[data-bric-target],.bric-btn:not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
 </body>
 </html>
