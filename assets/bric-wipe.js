@@ -29,7 +29,7 @@
   'use strict';
   if (window.bricWipe) return;
 
-  var cfg = { color: null, feather: 0.28, outMs: 650, inMs: 750, easing: 'cubic-bezier(.45,0,.55,1)', param: 'wipe' };
+  var cfg = { color: null, feather: 0.28, outMs: 1100, inMs: 1200, easing: 'cubic-bezier(.45,0,.55,1)', param: 'wipe' };
   var LIN = { lr: 'to right', rl: 'to left', tb: 'to bottom', bt: 'to top',
               'diag-tl': 'to bottom right', 'diag-tr': 'to bottom left', 'diag-bl': 'to top right', 'diag-br': 'to top left' };
   var VARIANTS = Object.keys(LIN).concat(['clock', 'iris-in', 'iris-out', 'oval-in', 'oval-out']);
