@@ -10368,8 +10368,14 @@ f 2469//2469 2470//2470 2434//2434
       }
       function kbRetarget(){ if(window.__bricReticle&&window.__bricReticle.retarget) window.__bricReticle.retarget(); }
       function kbClear(){ if(!kb) return; kb=null; if(!focused) setHovered(null); kbRetarget(); }
-      function kbStep(dir){
+      // Order the targets by where they are on screen along the pressed axis ('x' = left/right, 'y' = up/down), so the arrow
+      // points the way the reticle travels; wraps at the ends.
+      function kbStep(axis,dir){
         var l=kbList(); if(!l||!l.length) return false;
+        l=l.map(function(t){ var r=rectOf(t.obj); t.pos=r?(axis==='x'?(r.left+r.right)/2:(r.top+r.bottom)/2):null; return t; })
+           .filter(function(t){ return t.pos!==null||(kb&&t.key===kb.key); })
+           .sort(function(a,b){ return (a.pos||0)-(b.pos||0); });
+        if(!l.length) return false;
         var i=-1; if(kb) l.some(function(t,j){ if(t.key===kb.key){ i=j; return true; } });
         i = i<0 ? (dir>0?0:l.length-1) : (i+dir+l.length)%l.length;
         kb=l[i];
@@ -10382,8 +10388,10 @@ f 2469//2469 2470//2470 2434//2434
         var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
         if(typeof csScene!=='undefined'&&csScene.active) return;   // case-study ring owns the arrows
         var k=e.key;
-        if(k==='ArrowRight'||k==='ArrowDown'){ if(kbStep(1)) e.preventDefault(); }
-        else if(k==='ArrowLeft'||k==='ArrowUp'){ if(kbStep(-1)) e.preventDefault(); }
+        if(k==='ArrowRight'){ if(kbStep('x',1)) e.preventDefault(); }
+        else if(k==='ArrowLeft'){ if(kbStep('x',-1)) e.preventDefault(); }
+        else if(k==='ArrowDown'){ if(kbStep('y',1)) e.preventDefault(); }
+        else if(k==='ArrowUp'){ if(kbStep('y',-1)) e.preventDefault(); }
         else if((k==='Enter'||k===' ')&&kb){ var o=kb.open; kb=null; if(!focused) setHovered(null); kbRetarget(); e.preventDefault(); o(); }
         else if(k==='Escape'&&kb){ kbClear(); }
       });
