@@ -7,6 +7,8 @@
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
      would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
 <base href="/" />
+<!-- Screen wipe entry hold: when arriving with ?wipe=, paint the panel colour before first paint (assets/bric-wipe.js takes over, removes it). Keep the colour in sync with the panel. -->
+<script>(function(){try{if(/[?&]wipe=/.test(location.search)){var s=document.createElement('style');s.id='bric-wipe-hold';s.textContent='html::before{content:"";position:fixed;inset:0;z-index:2147483646;background:#070C0C}';document.head.appendChild(s);setTimeout(function(){var e=document.getElementById('bric-wipe-hold');if(e)e.remove()},6000)}}catch(e){}})()</script>
 
 <!-- SITE METADATA — edit everything in this block to change how the site presents itself
      (browser tab, favicon, search/social previews). Not part of the in-page CMS — this is
