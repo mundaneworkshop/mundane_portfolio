@@ -30,3 +30,6 @@ The MW monogram (`mwQuad`, the docked base emitter) stayed visible during projec
 ## Testing notes
 - Headless/hidden browser panes throttle `requestAnimationFrame` — showBooklet's layout runs in a rAF, so nothing lays out until the pane is displayed. Camera lerps are per-frame, so settling takes a while on software GL.
 - Mobile emulation in the Claude browser pane reports a 1026px layout width; test phone layouts in an iframe of the target size instead.
+
+## Oct 9 2026 update
+Rail layout removed. `auto` = dock, falling back to drawer under 720px. Only dock/drawer remain.

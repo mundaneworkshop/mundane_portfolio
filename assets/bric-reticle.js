@@ -64,7 +64,7 @@ function bricReticle(options) {
   var k;
   for (k in options || {}) if (options[k] !== undefined) o[k] = options[k];
 
-  var noop = { destroy: function () {}, refresh: function () {}, setTargets: function () {} };
+  var noop = { destroy: function () {}, refresh: function () {}, setTargets: function () {}, retarget: function () {} };
   if (typeof window === 'undefined' || typeof document === 'undefined' || !window.matchMedia) return noop;
   if (window.__bricReticle) window.__bricReticle.destroy();
 
@@ -289,6 +289,8 @@ function bricReticle(options) {
   var api = {
     refresh: function () { if (cur) { cur.g = geoOf(cur); applyGeo(cur.g); var b = frameOf(cur); if (b) jump(b); } },
     setTargets: function (fn) { o.targets = fn; },
+    // re-resolve the target without a pointer event (keyboard navigation moved the virtual target)
+    retarget: function () { update(document.elementFromPoint(lx, ly)); },
     destroy: function () {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerout', onOut);
