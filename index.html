@@ -9790,7 +9790,7 @@ f 2469//2469 2470//2470 2434//2434
         if(mwPhase!=='docked'||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')) return null;
         if(focused){
           var l=[];
-          if(focused.userData.hit&&!focused.userData.hit.userData.boxReplaced) l.push({key:'kitbox', label:'\u25B8 VIEW CASE STUDY', obj:focused.userData.hit, open:function(){ clearBoxHover(); openCaseStudyRoute(); }});
+          if(focused.userData.hit&&!focused.userData.hit.userData.boxReplaced) l.push({key:'kitbox', label:'\u25B8 VIEW CASE STUDY', obj:focused.userData.hit, open:function(){ clearBoxHover(); openProjectCta(); }});
           if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){ if(m!==focusedMoon) l.push({key:m, label:'\u25B8 OPEN', obj:m.userData.glbGroup||m, open:function(){ focusMoon(m); }}); });
           return l;
         }
@@ -9894,7 +9894,7 @@ f 2469//2469 2470//2470 2434//2434
         if(focusedMoon){ unfocusMoon(); return; }   // click off the artifact → back to the project manual
         // click the kit box face (when hover affordance is active) → enter case study
         if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
-          clearBoxHover(); openCaseStudyRoute(); return; }
+          clearBoxHover(); openProjectCta(); return; }
         goHome(); return; }
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
@@ -11776,6 +11776,13 @@ f 2469//2469 2470//2470 2434//2434
     // Single entry point for every in-page trigger (kit-box click, manual CTA). Falls back to
     // the old DOM page takeover if the constellation is somehow unavailable, so nothing can
     // dead-end on a click.
+    // Kit box click / keyboard-open: same destination as the manual's CTA, the project's ctaUrl (the Framer case study),
+    // same tab, through the screen wipe. No box turn, no flaps, no ring view. No URL set = nothing happens.
+    function openProjectCta(){
+      var id=focused&&focused.userData.id, c=id&&CASES[id]; if(!c) return;
+      var u=c.ctaUrl; if(!u||u==='#') return;
+      if(window.bricWipe) window.bricWipe.go(u); else location.href=u;
+    }
     function openCaseStudyRoute(pid){
       if(typeof csOpenCaseStudy==='function') csOpenCaseStudy(pid);
       else enterCaseStudy();
