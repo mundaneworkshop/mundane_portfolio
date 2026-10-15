@@ -9790,6 +9790,7 @@ f 2469//2469 2470//2470 2434//2434
         if(mwPhase!=='docked'||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')) return null;
         if(focused){
           var l=[];
+          if(focused.userData.hit&&!focused.userData.hit.userData.boxReplaced) l.push({key:'kitbox', label:'\u25B8 VIEW CASE STUDY', obj:focused.userData.hit, open:function(){ clearBoxHover(); openCaseStudyRoute(); }});
           if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){ if(m!==focusedMoon) l.push({key:m, label:'\u25B8 OPEN', obj:m.userData.glbGroup||m, open:function(){ focusMoon(m); }}); });
           return l;
         }
@@ -9830,7 +9831,8 @@ f 2469//2469 2470//2470 2434//2434
         if(mwPhase==='entry'){ if(cv.style.cursor!=='pointer'||!(mwQuad&&mwQuad.visible)) return null; return {key:mwQuad, label:'\u25B8 ENTER', rect:function(){ return rectOf(mwQuad); }}; }
         if(mwPhase!=='docked'||editMode||document.body.classList.contains('mw-altfocus')) return null;
         if(focused){
-          // artifact moons (the kit box is no longer a click target)
+          // kit box face that opens the case study (the site's own face highlight decides when), then the artifact moons
+          if(boxHoverFace>=0) return {key:'kitbox', label:'\u25B8 '+(_boxHoverLbl.textContent||'OPEN'), rect:function(){ return rectOf(_boxHoverPlane); }};
           if(focused.userData.moonGrp.visible){
             ray.setFromCamera(mouse,camera);
             var mh=ray.intersectObjects(focused.userData.moons,false);
@@ -9855,8 +9857,14 @@ f 2469//2469 2470//2470 2434//2434
       }
       if(focused && !editMode && !document.body.classList.contains('mw-altfocus')){
         // kit box face hover: raycast against the hit mesh only
-        // the kit box is no longer clickable (case study opens from the manual CTA only), so no hover affordance
-        clearBoxHover();
+        var hit=focused.userData.hit;
+        if(hit && !hit.userData.boxReplaced){
+          ray.setFromCamera(mouse,camera);
+          var bh=ray.intersectObject(hit,false);
+          if(bh.length && bh[0].face!=null){
+            setBoxHoverFace(hit,bh[0].face.materialIndex,bh[0].point);
+          } else { clearBoxHover(); }
+        } else { clearBoxHover(); }
         return;
       }
       clearBoxHover();
@@ -9884,6 +9892,9 @@ f 2469//2469 2470//2470 2434//2434
         var mh=ray.intersectObjects(focused.userData.moons,false);   // click an artifact → focus it + show its manual
         if(mh.length){ if(mh[0].object!==focusedMoon) focusMoon(mh[0].object); return; }
         if(focusedMoon){ unfocusMoon(); return; }   // click off the artifact → back to the project manual
+        // click the kit box face (when hover affordance is active) → enter case study
+        if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
+          clearBoxHover(); openCaseStudyRoute(); return; }
         goHome(); return; }
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
