@@ -133,6 +133,9 @@
       try { var u = new URL(location.href); u.searchParams.delete(cfg.param); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch (e) {}
       if (reduced() || !supported()) { hide(); return; }
       build(v, true);   // p = 0 in uncover mode is fully covered, so this lands exactly where the exit half ended
+      // The head snippet's flat cover (html::before) only bridges first paint. Drop it as soon as the panel is up,
+      // otherwise it sits solid under the panel and the wipe uncovers nothing but the cover, then the page pops in at the end.
+      var hold = document.getElementById('bric-wipe-hold'); if (hold) hold.remove();
       var started = false;
       function start() { if (started) return; started = true; setTimeout(function () { run(cfg.inMs, hide); }, 120); }
       if (document.readyState === 'complete') start();
