@@ -15,7 +15,7 @@
  * entry half plays the matching shape and direction. The two sites never share memory, the URL is the handoff.
  *
  * How it draws: one fixed full-viewport panel in a flat colour, revealed through a CSS mask whose gradient is
- * driven by a single registered number --p (0 to 1) animated with the Web Animations API. The feathered edge is
+ * driven by a single registered number --bw-p (0 to 1) animated with the Web Animations API. The feathered edge is
  * the gradient's soft stop. Cover and uncover use the same gradient with the opaque/clear ends swapped, so the
  * edge never reverses.
  *
@@ -49,12 +49,12 @@
   }
   function register() {
     if (registered) return; registered = true;
-    try { CSS.registerProperty({ name: '--p', syntax: '<number>', inherits: false, initialValue: '0' }); } catch (e) { /* already registered */ }
+    try { CSS.registerProperty({ name: '--bw-p', syntax: '<number>', inherits: false, initialValue: '0' }); } catch (e) { /* already registered */ }
   }
 
   // mask for a variant. --a is the opaque end (panel visible), --b the clear end; swapped for uncover.
   function maskFor(v) {
-    var P = 'var(--p)', Q = '(1 - var(--p))', F = 'var(--f)';
+    var P = 'var(--bw-p)', Q = '(1 - var(--bw-p))', F = 'var(--f)';
     function edge(t) { return 'var(--a) calc(' + t + ' * (100% + ' + F + ') - ' + F + '), var(--b) calc(' + t + ' * (100% + ' + F + '))'; }
     if (LIN[v]) return 'linear-gradient(' + LIN[v] + ', ' + edge(P) + ')';
     if (v === 'clock') return 'conic-gradient(from 0deg at 50% 50%, var(--a) calc(' + P + ' * (360deg + var(--fd)) - var(--fd)), var(--b) calc(' + P + ' * (360deg + var(--fd))))';
@@ -81,15 +81,15 @@
     el.style.setProperty('--b', uncover ? '#000' : 'transparent');
     var m = maskFor(variant);
     el.style.webkitMaskImage = m; el.style.maskImage = m;
-    el.style.setProperty('--p', 0);
+    el.style.setProperty('--bw-p', 0);
     el.style.display = 'block';
   }
 
   function run(ms, done) {
     if (anim) { try { anim.cancel(); } catch (e) {} }
-    anim = el.animate([{ '--p': 0 }, { '--p': 1 }], { duration: ms, easing: cfg.easing, fill: 'forwards' });
+    anim = el.animate([{ '--bw-p': 0 }, { '--bw-p': 1 }], { duration: ms, easing: cfg.easing, fill: 'forwards' });
     var fin = false;
-    function end() { if (fin) return; fin = true; el.style.setProperty('--p', 1); done && done(); }
+    function end() { if (fin) return; fin = true; el.style.setProperty('--bw-p', 1); done && done(); }
     anim.onfinish = end;
     setTimeout(end, ms + 400);   // failsafe if the finish event never fires (background tab)
   }
@@ -123,7 +123,7 @@
       if (!supported()) return;
       var v = pick(variant);
       build(v, false);
-      run(cfg.outMs, function () { build(v, true); el.style.setProperty('--p', 0); run(cfg.inMs, hide); });
+      run(cfg.outMs, function () { build(v, true); el.style.setProperty('--bw-p', 0); run(cfg.inMs, hide); });
       return v;
     },
     enter: function () {
@@ -133,6 +133,9 @@
       try { var u = new URL(location.href); u.searchParams.delete(cfg.param); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } catch (e) {}
       if (reduced() || !supported()) { hide(); return; }
       build(v, true);   // p = 0 in uncover mode is fully covered, so this lands exactly where the exit half ended
+      // The head snippet's flat cover (html::before) only bridges first paint. Drop it as soon as the panel is up,
+      // otherwise it sits solid under the panel and the wipe uncovers nothing but the cover, then the page pops in at the end.
+      var hold = document.getElementById('bric-wipe-hold'); if (hold) hold.remove();
       var started = false;
       function start() { if (started) return; started = true; setTimeout(function () { run(cfg.inMs, hide); }, 120); }
       if (document.readyState === 'complete') start();
