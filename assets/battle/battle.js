@@ -128,7 +128,7 @@ function trackMaterials(obj,mdl){
     if(mdl.lift&&m.color&&(m.color.r*.3+m.color.g*.59+m.color.b*.11)<.1) m.userData.dark=true;   // TIE panels/frames: near-black plastic vanishes against the void
     matList.push(m); }); });
 }
-var fogBase=0, camFar=100;
+var fogBase=0, camFar=100, camNear=.1;
 var outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=30, timers=[];
 function quiet(){ return !!hyper||outroOn; }                       // nobody fires once the exit starts
 function here(s){ return !(s.arriveAt>clockT); }                   // false while a ship is still waiting to jump in
@@ -1097,7 +1097,7 @@ var MWBattle={
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
     kills=0; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
-    camFar=c.camera.far; c.camera.far=800; c.camera.updateProjectionMatrix();   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
+    camFar=c.camera.far; camNear=c.camera.near; c.camera.far=450; c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     window.MWBattle=MWBattle;
@@ -1112,7 +1112,7 @@ var MWBattle={
     if(G){ ctx.scene.remove(G); G.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){ if(m.map&&m.map!==glowTex) m.map.dispose(); m.dispose(); }); } }); }
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
-    if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.updateProjectionMatrix(); }
+    if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.near=camNear; ctx.camera.updateProjectionMatrix(); }
     [carUi,hintEl,hudEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
