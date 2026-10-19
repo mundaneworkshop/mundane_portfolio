@@ -129,6 +129,9 @@ function trackMaterials(obj,mdl){
     matList.push(m); }); });
 }
 var fogBase=0, camFar=100;
+var outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=30, timers=[];
+function quiet(){ return !!hyper||outroOn; }                       // nobody fires once the exit starts
+function here(s){ return !(s.arriveAt>clockT); }                   // false while a ship is still waiting to jump in
 var BTU={ exp:{value:1} };
 function patchMaterial(m){   // battle-only filmic curve: highlights roll off instead of clipping, and it does NOT touch the hologram's materials (a global renderer.toneMapping would)
   if(m.userData.btPatched||!m.isMeshStandardMaterial) return; m.userData.btPatched=true;
@@ -212,14 +215,18 @@ function pumpLoads(){
 function wantCount(m){
   if(m.cls==='base') return P.deathStar?1:0;
   if(m.cls==='hero'||m.cls==='minikit') return 0;
+  if(m.cls==='fighter'&&introWant&&!session.played) return introWant[m.id]||0;   // intro: just one small group per side until a hero is chosen
   return Math.round((P.counts[m.id]||0)*P.density);
+}
+function pickIntro(){
+  introWant={}; [IMP,REB].forEach(function(team){ var pool=MODELS.filter(function(m){ return m.cls==='fighter'&&m.team===team; }); for(var i=0;i<3;i++){ var m=pool[Math.floor(Math.random()*pool.length)]; introWant[m.id]=(introWant[m.id]||0)+1; } });
 }
 function makeShip(m){
   var c=cache[m.id]; var root=new T.Group(), bank=new T.Group(), fx=new T.Group();
   var model=c.proto.clone(true);
   fx.add(model); bank.add(fx); root.add(bank); G.add(root);
   var s={ m:m, id:m.id, team:m.team, cls:m.cls, root:root, bank:bank, fx:fx, c:c, pos:root.position, dir:new T.Vector3(m.team===IMP?1:-1,0,0),
-          spd:0, alive:true, hp:(CLS[m.cls]||{}).hp||1, target:null, tT:0, mode:'wander', mT:0, wp:new T.Vector3(), cd:rnd(0,1), ph:rnd(0,6.28), ph2:rnd(0,6.28),
+          arrived:false, arriveAt:0, spd:0, alive:true, hp:(CLS[m.cls]||{}).hp||1, target:null, tT:0, mode:'wander', mT:0, wp:new T.Vector3(), cd:rnd(0,1), ph:rnd(0,6.28), ph2:rnd(0,6.28),
           yawRate:0, bankV:0, respawn:0, jump:null, au:0, av:0, az:0, vel:new T.Vector3(), prev:new T.Vector3(), side:m.team===IMP?-1:1, spawnK:0 };
   s.k=(m.cls==='fighter'||m.cls==='hero')?1:0;
   if(m.cls==='base'){ s.pos.set(0,0,0); }
@@ -229,9 +236,9 @@ function spawnFighterPos(s,out){
   var ax=arenaAx(), ay=arenaAy(), az=arenaAz();
   return out.set(s.side*rnd(.2,.95)*ax, CY+rnd(-.8,.8)*ay, rnd(-.9,.9)*az);
 }
-function arenaAx(){ return halfW(0)*1.2*P.arena; }
-function arenaAy(){ return halfH(0)*1.2*P.arena; }
-function arenaAz(){ return 2.4*P.arena; }
+function arenaAx(){ return halfW(0)*1.8*P.arena; }
+function arenaAy(){ return halfH(0)*1.8*P.arena; }
+function arenaAz(){ return 3.6*P.arena; }
 
 function reconcile(){
   var order={fighter:0,support:1,capital:2,base:3};
@@ -239,16 +246,75 @@ function reconcile(){
     if(m.cls==='hero'||m.cls==='minikit') return;
     var want=wantCount(m); if(want>0&&!cache[m.id]){ requestModel(m.id); return; }
     var mine=ships.filter(function(s){ return s.id===m.id&&!s.leaving; });
-    if(mine.length<want&&cache[m.id]){ var s=makeShip(m); initShip(s); anchorsDirty=true; }
-    else if(mine.length>want){ var x=mine[mine.length-1]; x.leaving=true; anchorsDirty=true; }
+    while(mine.length<want&&cache[m.id]){ var s=makeShip(m); initShip(s); mine.push(s); anchorsDirty=true; }
+    for(var q=want;q<mine.length;q++){ mine[q].leaving=true; anchorsDirty=true; }
   });
   if(!cache.minikit) requestModel('minikit');
   pumpLoads();
 }
 function initShip(s){
-  if(s.cls==='fighter'){ spawnFighterPos(s,s.pos); s.dir.set(-s.side,rnd(-.3,.3),rnd(-.3,.3)).normalize(); s.spd=1.5; s.mT=rnd(.5,2); s.mode='wander'; pickWp(s); }
+  s.arrived=false; s.arriveAt=0; s.spawnK=1;                         // ships appear by jumping in (see the arrival effect in update), not by scaling up
+  if(s.cls==='fighter'){
+    if(introWant&&!session.played) setupFormation(s);
+    else { spawnFighterPos(s,s.pos); s.dir.set(-s.side,rnd(-.3,.3),rnd(-.3,.3)).normalize(); s.spd=1.5; s.mT=rnd(.5,2); s.mode='wander'; pickWp(s); s.arriveAt=clockT+(session.played?rnd(.2,2.4):.3); }
+  }
   else if(s.cls==='base'){ s.spin=.035; }
-  s.spawnK=0;
+  else if(s.cls==='support'||s.cls==='capital'){ s.arriveAt=introScheduled?clockT:1e9; }   // held back until the intro schedules the staggered hyperspace arrivals
+}
+// ── intro: one V-formation of 3 per side zig-zags around the hologram until the player picks a hero ──
+function setupFormation(s){
+  var g=introGroups[s.team===IMP?0:1], idx=g.length, side=s.side, ax=arenaAx(), ay=arenaAy(), az=arenaAz();
+  g.push(s);
+  if(idx===0) s.pos.set(side*ax*.85,CY+rnd(-.25,.25)*ay,rnd(-.3,.3)*az);
+  else s.pos.copy(g[0].pos).add(_v1.set(side*.8*idx,idx%2?.5:-.5,rnd(-.3,.3)));
+  s.dir.set(-side,0,0); s.spd=1; s.mode='wander'; s.form={idx:idx,leader:idx===0?null:g[0],flip:1,wp:null}; s.arriveAt=clockT+.5+idx*.15;
+}
+function updFormation(s,dt){
+  var F=s.form, m=s.m, lead=F.leader, steer=_steer, spd=1.15*(m.spd||1)*P.speed, turn=2.4*(m.turn||1);
+  if(lead&&(!lead.alive||!lead.form)){ F.leader=lead=null; }
+  s.tT-=dt; if(!s.target||!s.target.alive||s.tT<=0) pickTarget(s);
+  if(!lead){
+    if(!F.wp||s.pos.distanceTo(F.wp)<.9){ F.flip=-(F.flip||1); F.wp=F.wp||new T.Vector3(); F.wp.set(F.flip*rnd(.35,.8)*arenaAx(),CY+rnd(-.7,.7)*arenaAy(),rnd(-.6,.6)*arenaAz()); }
+    steer.copy(F.wp).sub(s.pos);
+  } else {
+    _v2.set(0,1,0).cross(lead.dir).normalize();
+    _v3.copy(lead.pos).addScaledVector(lead.dir,-.9).addScaledVector(_v2,(F.idx%2?1:-1)*.75);
+    steer.copy(_v3).sub(s.pos); spd=lead.spd+clamp((steer.length()-.15)*2,-.25,1.6); turn*=2.2;
+  }
+  steer.normalize();
+  var kn=keepNorm(s.pos); if(kn<1.25){ _sep.set(s.pos.x-CX,s.pos.y-CY,s.pos.z-CZ).normalize(); steer.addScaledVector(_sep,(1.25-kn)*6+.3).normalize(); }
+  s.prev.copy(s.dir); var ang=s.dir.angleTo(steer); if(ang>1e-4) s.dir.lerp(steer,Math.min(1,turn*dt/ang)).normalize();
+  s.spd=lerp(s.spd,spd,Math.min(1,dt*2.5)); s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
+  var yr=(s.prev.z*s.dir.x-s.prev.x*s.dir.z)/Math.max(dt,1e-3); s.yawRate=lerp(s.yawRate,yr,Math.min(1,dt*6));
+  aim(s.root,s.dir); s.bankV=lerp(s.bankV,clamp(s.yawRate*.55,-1.1,1.1),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
+  s.cd-=dt;
+  if(s.cd<=0&&s.target&&s.target.alive){ var to=_v2.copy(s.target.pos).sub(s.pos), dist=to.length();
+    if(dist<CLS.fighter.range*1.8&&s.dir.angleTo(to.normalize())<.6){ fireAt(s,s.target.pos,s.target.vel); s.cd=fireInterval(s); } }
+  else if(s.cd<=0) s.cd=.4;
+}
+function endIntro(){
+  introWant=null; ships.forEach(function(s){ if(s.form){ s.form=null; s.mode='wander'; s.mT=1; pickWp(s); } }); reconT=0;
+}
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+// intro: every support/capital ship jumps in from hyperspace one at a time, sides interleaved, spread across 3 seconds
+function tryScheduleIntro(){
+  var want=0, ready=true;
+  MODELS.forEach(function(m){ if(m.cls==='support'||m.cls==='capital'){ var w=wantCount(m); want+=w; if(w>0&&!cache[m.id]) ready=false; } });
+  var larges=ships.filter(function(s){ return (s.cls==='support'||s.cls==='capital')&&!s.leaving&&s.hasA; });
+  if((!ready||larges.length<want)&&clockT<10) return;
+  var a=shuffle(larges.filter(function(s){ return s.team===IMP; })), b=shuffle(larges.filter(function(s){ return s.team===REB; })), order=[];
+  while(a.length||b.length){ if(a.length) order.push(a.pop()); if(b.length) order.push(b.pop()); }
+  var n=order.length; order.forEach(function(s,i){ s.arriveAt=clockT+.4+(n>1?i/(n-1):0)*3+rnd(0,.06); });
+  introScheduled=true;
+}
+function startArrive(s){
+  s.arr=0; flash(s.pos,Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*(s.cls==='capital'?2.6:2)+.25,0xcff8ff);
+}
+function updArrive(s,dt){
+  s.arr=Math.min(1,s.arr+dt/.75); var e=1-s.arr, big=(s.cls==='capital'||s.cls==='base')?1:0;
+  s.fx.scale.set(Math.max(.4,1-e*.6),Math.max(.4,1-e*.6),1+e*(big?10:6));
+  s.fx.position.z=-(e*e)*(big?30:18)/Math.max(s.root.scale.x,.01);
+  if(s.arr>=1){ s.fx.scale.set(1,1,1); s.fx.position.set(0,0,0); }
 }
 var _ap=null, _bp=null, _cp=null;
 function depthCompPos(p){ _cp.set(0,0,L); return Math.pow(Math.max(1,p.distanceTo(_cp)/(L+6)),.8); }   // far ships get a size boost so they don't shrink to specks
@@ -309,7 +375,7 @@ function assignAnchors(){
   anchorsDirty=false;
 }
 
-function enemies(s){ return ships.filter(function(e){ return e.alive&&!e.leaving&&e.cls!=='base'&&e.team!==s.team&&e.team!==HERO&&!e.jump; }); }
+function enemies(s){ return ships.filter(function(e){ return e.alive&&!e.leaving&&e.cls!=='base'&&e.team!==s.team&&e.team!==HERO&&!e.jump&&here(e); }); }
 function pickTarget(s){
   var list=enemies(s); if(!list.length){ s.target=null; return; }
   var fighters=list.filter(function(e){ return e.cls==='fighter'; });
@@ -338,7 +404,7 @@ function spawnBolt(team,pos,dir,hero){
   b.mesh.scale.set(.02*P.boltSize,.02*P.boltSize,.2*P.boltSize); aim(b.mesh,dir); b.mesh.visible=true; bolts.push(b);
 }
 function fireAt(s,tpos,tvel){
-  if(hyper) return;
+  if(quiet()) return;
   var mp=muzzle(s,_v1.set(0,0,0)); var cl=CLS[s.cls];
   var d=_v2.copy(tpos); if(tvel){ var dist=d.distanceTo(mp); d.addScaledVector(tvel,dist/(7*P.laserSpeed)*.7); }
   d.sub(mp).normalize();
@@ -370,6 +436,7 @@ function updSparks(dt){
 }
 function killShip(s){
   burst(s.pos,0xffa040,26,1.7,.85); burst(s.pos,0xffffff,10,2.4,.45);
+  shatter(s,{small:true}); s.form=null;
   s.alive=false; s.root.visible=false; s.respawn=rnd(2.5,5.5); s.target=null;
 }
 // ── capital / support destruction: a long chain of explosions along the hull, then it breaks apart
@@ -395,26 +462,40 @@ function updDying(s,dt){
   }
   if(D.t>=D.dur) breakApart(s);
 }
-function breakApart(s){
-  var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital';
-  flash(s.pos,sz*3.2,0xfff0c0); burst(s.pos,0xffa040,90,3+sz,1.6); burst(s.pos,0xffffff,40,4+sz,.8);
+function addDebris(g,v,spin,life){
+  debris.push({g:g,v:v,spin:spin,t:0,life:life});
+  while(debris.length>320){ var o=debris.shift(); G.remove(o.g); }
+}
+// pieces fly off a destroyed ship: its hull layers (one mesh per material) plus shards. small:true = fighter-sized cloud.
+function shatter(s,o){
+  var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, small=!!o.small, big=s.cls==='capital';
   if(!shardGeo){ shardGeo=new T.BoxGeometry(1,1,1); shardMat=new T.MeshStandardMaterial({color:0x6a7077,roughness:.8,metalness:.2}); }
   s.root.updateMatrixWorld(true);
-  // 1) the hull's own layers (one mesh per material) peel apart…
-  s.root.traverse(function(o){
-    if(!o.isMesh) return;
+  s.root.traverse(function(m){
+    if(!m.isMesh) return;
     var pg=new T.Group(); pg.position.copy(s.pos); pg.quaternion.copy(s.root.quaternion); pg.scale.copy(s.root.scale);
-    var rel=new T.Matrix4().copy(s.root.matrixWorld).invert().multiply(o.matrixWorld), m2=o.clone(); rel.decompose(m2.position,m2.quaternion,m2.scale); pg.add(m2); G.add(pg);
-    var v=new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(sz*rnd(.08,.22)*(big?1:1.3));
-    debris.push({g:pg,v:v,spin:new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(.25),t:0,life:rnd(5.5,7)});
+    var rel=new T.Matrix4().copy(s.root.matrixWorld).invert().multiply(m.matrixWorld), m2=m.clone(); rel.decompose(m2.position,m2.quaternion,m2.scale); pg.add(m2); G.add(pg);
+    var sp=small?rnd(.5,1.5):sz*rnd(.08,.22)*(big?1:1.3);
+    addDebris(pg,new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(sp),new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(small?1.2:.25),small?rnd(1.6,2.8):rnd(5.5,7));
   });
-  // 2) …and shards fly out fast
-  for(var i=0;i<(big?22:12);i++){
+  var n=small?12:(big?24:13);
+  for(var i=0;i<n;i++){
     var m=new T.Mesh(shardGeo,shardMat); hullPoint(s,m.position); m.scale.set(rnd(.04,.14)*sz,rnd(.03,.1)*sz,rnd(.05,.18)*sz); m.quaternion.setFromEuler(new T.Euler(rnd(0,6),rnd(0,6),rnd(0,6)));
-    G.add(m); debris.push({g:m,v:_v3.copy(m.position).sub(s.pos).normalize().multiplyScalar(sz*rnd(.25,.7)),spin:new T.Vector3(rnd(-3,3),rnd(-3,3),rnd(-3,3)),t:0,life:rnd(3,5.5)});
+    G.add(m); addDebris(m,_v3.copy(m.position).sub(s.pos).normalize().multiplyScalar(small?rnd(.6,2.2):sz*rnd(.25,.7)),new T.Vector3(rnd(-3,3),rnd(-3,3),rnd(-3,3)),small?rnd(1.4,3):rnd(3,5.5));
   }
+}
+function later(delay,fn){ timers.push({t:delay,fn:fn}); }
+function breakApart(s){
+  var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', pos=s.pos.clone();
+  // THE big one: as the hull shatters — an enormous white flash, a ring of blasts across the hull, then two delayed aftershocks
+  flash(pos,sz*6,0xffffff); burst(pos,0xffffff,70,5+sz,.9); burst(pos,0xffa040,220,3.5+sz*1.2,1.9);
+  for(var i=0;i<(big?10:6);i++){ hullPoint(s,_v1); flash(_v1,sz*rnd(1.2,2.2),0xffb060); burst(_v1,0xffd070,50,2.8+sz*.7,1.2); }
+  later(.22,function(){ flash(pos,sz*4.5,0xffe2a0); burst(pos,0xffa040,150,3+sz,1.5); });
+  later(.5,function(){ flash(pos,sz*3,0xff9040); burst(pos,0xff7020,90,2.4+sz*.8,1.4); });
+  shatter(s,{});
   s.dying=null; s.root.visible=false; s.respawn=rnd(28,45);
 }
+function updTimers(dt){ for(var i=timers.length-1;i>=0;i--){ timers[i].t-=dt; if(timers[i].t<=0){ var f=timers[i].fn; timers.splice(i,1); f(); } } }
 function updDebris(dt){
   for(var i=debris.length-1;i>=0;i--){
     var d=debris[i]; d.t+=dt; d.g.position.addScaledVector(d.v,dt); d.v.multiplyScalar(1-.25*dt);
@@ -429,6 +510,7 @@ function explodeRandom(cls){
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
+  if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
   if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
     s.hp--; s.hpShow=3.2;
@@ -442,7 +524,7 @@ function updBars(dt){
   var r=ctx.dom.getBoundingClientRect();
   ships.forEach(function(s){
     if(!(s.cls==='support'||s.cls==='capital'||s.cls==='fighter')) return;
-    if(s.hpShow>0&&s.alive&&!hyper){
+    if(s.hpShow>0&&s.alive&&!quiet()){
       s.hpShow-=dt;
       if(!s.barEl){ s.barEl=document.createElement('div'); s.barEl.className='bt-bar'; s.barEl.innerHTML='<i></i>'; barsEl.appendChild(s.barEl); }
       _hF.copy(s.pos); _hF.y+=s.c.r*s.root.scale.x*1.1+.15; G.localToWorld(_hF); _hF.project(ctx.camera);
@@ -462,7 +544,7 @@ function updBolts(dt){
     var hit=null;
     if(b.life>0){
       for(var j=0;j<ships.length;j++){
-        var s=ships[j]; if(!s.alive||s.cls==='base'||s.jump||s.leaving) continue;
+        var s=ships[j]; if(!s.alive||s.cls==='base'||s.jump||s.leaving||!here(s)) continue;
         if(b.team===HERO){ if(s.team===HERO) continue; } else if(s.team===b.team||s.team===HERO) continue;
         var rad=s.c.r*s.root.scale.x*(s.cls==='fighter'?.9:.6);
         // segment (prev→cur) vs sphere
@@ -491,6 +573,8 @@ function nextMode(s){
 }
 var _steer=null, _sep=null;
 function updFighter(s,dt){
+  if(s.out){ updLeave(s,dt); return; }
+  if(s.form){ updFormation(s,dt); return; }
   var m=s.m, turn=3.2*(m.turn||1), base=1.9*(m.spd||1)*P.speed*P.speedFighter;
   s.tT-=dt; if(s.mode==='pursue'&&(!s.target||!s.target.alive||s.tT<=0)) pickTarget(s);
   s.mT-=dt; if(s.mT<=0||(s.mode==='pursue'&&!s.target)) nextMode(s);
@@ -567,15 +651,15 @@ function updBase(s,dt){
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
-function setStage(st){ if(stage===st) return; stage=st; if(ctx.onStage) ctx.onStage(st); syncUi(); }
+function setStage(st){ if(stage===st) return; stage=st; if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
   ejectHero(true);
   var m=BYID[id]; if(!m) return;
   if(!cache[id]){ requestModel(id); pumpLoads(); pendingHero=id; return; }
-  var s=makeShip(m); heroShip=s; s.hero=true; s.hp=1e9;
-  s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=0; s.cd=0; s.gun=0;
+  var s=makeShip(m); heroShip=s; s.hero=true; s.hp=heroMax;
+  s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=1; s.cd=0; s.gun=0; s.hp=heroMax; s.maxhp=heroMax; s.inv=0;
   burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false;
   if(!session.played){ session.played=true; session.t0=performance.now(); }
   session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label); if(session.heroIds.indexOf(m.id)<0) session.heroIds.push(m.id);
@@ -597,11 +681,30 @@ function localRay(nx,ny){
 function pickAt(nx,ny,out){
   localRay(nx,ny); var best=null, bt=1e9;
   function test(c,r,o){ _hF.copy(c).sub(_ro); var tca=_hF.dot(_rd); if(tca<0) return; var d2=_hF.lengthSq()-tca*tca; if(d2>r*r) return; var t=tca-Math.sqrt(r*r-d2); if(t<bt){ bt=t; best=o; } }
-  ships.forEach(function(sh){ if(!sh.alive||sh.hero||sh.jump||sh.leaving) return; test(sh.pos,Math.max(sh.c.r*sh.root.scale.x*1.25,.2),sh); });
+  ships.forEach(function(sh){ if(!sh.alive||sh.hero||sh.jump||sh.leaving||!here(sh)) return; test(sh.pos,Math.max(sh.c.r*sh.root.scale.x*1.25,.2),sh); });
   kits.forEach(function(k){ if(!k.opening) test(k.pos,.38*k.root.scale.x+.1,k); });
   if(best){ out.copy(best.pos); return best; }
   var z=heroShip?heroShip.pos.z:0, t=Math.abs(_rd.z)>1e-4?(z-_ro.z)/_rd.z:6; if(!(t>.2)) t=6;
   out.copy(_ro).addScaledVector(_rd,t); return null;
+}
+function heroCollide(s,dt){   // bumping other ships hurts (nothing actively targets the hero — yet)
+  s.inv-=dt; s.root.visible=s.inv<=0||Math.floor(clockT*16)%2===0;
+  var hr=Math.max(s.c.hx,s.c.hz)*s.root.scale.x*.8;
+  for(var i=0;i<ships.length;i++){ var o=ships[i];
+    if(o===s||!o.alive||o.dying||o.jump||o.leaving||!here(o)||o.cls==='base'||o.cls==='hero') continue;
+    var r=o.cls==='fighter'?Math.max(o.c.hx,o.c.hz)*o.root.scale.x*.8:lr(o)*.9;
+    _v1.copy(s.pos).sub(o.pos); var d=_v1.length(); if(d>=hr+r) continue;
+    var n=d>1e-4?_v1.multiplyScalar(1/d):_v1.set(0,1,0); s.pos.addScaledVector(n,hr+r-d+.02);
+    if(s.inv<=0){ s.inv=1; s.hp-=(o.cls==='fighter'?2:(o.cls==='support'?4:6)); s.spd*=.25; s.dir.lerp(n,.5).normalize();
+      burst(_v2.copy(s.pos).addScaledVector(n,-hr*.5),0xffc060,18,1.4,.6); flash(s.pos,hr*3,0xffd090); updHud(false); hudHurt();
+      if(s.hp<=0){ heroDeath(s); return; } }
+  }
+}
+function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(function(){ if(hudEl) hudEl.classList.remove('hurt'); },320); }
+function heroDeath(s){
+  burst(s.pos,0xffa040,80,3,1.5); burst(s.pos,0xffffff,30,4,.8); flash(s.pos,1.8,0xfff0c0);
+  ejectHero(true); fireHeld=false; session.died=true; updHud(false);
+  if(ctx.onGameOver) ctx.onGameOver();
 }
 function updHero(s,dt){
   var o=pickAt(ptr.nx,ptr.ny,_hT);
@@ -620,12 +723,13 @@ function updHero(s,dt){
   aim(s.root,s.dir);
   s.bankV=lerp(s.bankV,clamp(s.yawRate*.5,-1.2,1.2),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
   s.cd-=dt;
-  if(!hyper&&fireHeld&&s.cd<=0){   // fire toward wherever the pointer is on (an object's XYZ, or the depth-plane point)
+  if(!quiet()&&fireHeld&&s.cd<=0){   // fire toward wherever the pointer is on (an object's XYZ, or the depth-plane point)
     pickAt(ptr.nx,ptr.ny,_hT);
     var mp=muzzle(s,_v1.set(0,0,0)); var dd=_v2.copy(_hT).sub(mp); if(dd.lengthSq()<1e-4) dd.copy(s.dir); dd.normalize();
     dd.x+=rnd(-1,1)*CLS.hero.spread; dd.y+=rnd(-1,1)*CLS.hero.spread; dd.normalize();
     spawnBolt(HERO,mp,dd,true); s.cd=CLS.hero.int/Math.max(.2,P.laser);
   }
+  heroCollide(s,dt);
 }
 // ── carousel (the hologram's head is hidden by ctx.onStage while stage==='select')
 function ensureCarousel(){
@@ -634,7 +738,7 @@ function ensureCarousel(){
 }
 function updCarousel(dt){
   if(!carGroup) return;
-  var show=stage==='select'&&!hyper; carGroup.visible=show; if(!show) return;
+  var show=stage==='select'&&!quiet(); carGroup.visible=show; if(!show) return;
   var id=HEROES[carIdx];
   if(carModelId!==id&&cache[id]){
     if(carWrap) carGroup.remove(carWrap);
@@ -651,7 +755,7 @@ function updCarousel(dt){
   }
 }
 function syncUi(){
-  var sel=stage==='select'&&!hyper, pl=stage==='play'&&!hyper;
+  var sel=stage==='select'&&!quiet(), pl=stage==='play'&&!quiet();
   if(carUi) carUi.style.display=sel?'flex':'none';
   if(hintEl) hintEl.style.display=pl?'flex':'none';
   if(hudEl) hudEl.style.opacity=pl?1:0;
@@ -681,7 +785,7 @@ function openKit(k,via){
 }
 function updKits(dt){
   kitTimer-=dt;
-  if(kitTimer<=0&&!hyper){ var live=kits.filter(function(k){ return !k.opening; }).length; if(live<P.kitMax&&P.kitRate>0&&cache.minikit) spawnKit(); kitTimer=rnd(6,12)/Math.max(.05,P.kitRate); }
+  if(kitTimer<=0&&!quiet()){ var live=kits.filter(function(k){ return !k.opening; }).length; if(live<P.kitMax&&P.kitRate>0&&cache.minikit) spawnKit(); kitTimer=rnd(6,12)/Math.max(.05,P.kitRate); }
   var sc=P.scale*P.scaleKit;
   for(var i=kits.length-1;i>=0;i--){
     var k=kits[i]; k.age+=dt;
@@ -751,6 +855,18 @@ function updFlashes(dt){
     if(u>=1){ G.remove(f.sp); f.sp.material.dispose(); flashes.splice(i,1); } }
 }
 function ejectKeys(){ keys={}; fireHeld=false; }
+// OUTRO: no hyperspace jump. Everyone stops firing, fighters (and the hero) fly off screen, the support/capital ships stay put (still drifting).
+function outro(){
+  if(!active||outroOn) return; outroOn=true; fireHeld=false; ejectKeys();
+  kits.forEach(function(k){ if(!k.opening) openKitSilent(k); });
+  ships.forEach(function(s){ if(s.barEl) s.barEl.style.display='none'; });
+  syncUi();
+}
+function updLeave(s,dt){
+  if(!s.outDir){ s.outDir=new T.Vector3(s.pos.x-CX,(s.pos.y-CY)*.5,s.pos.z-CZ); if(s.outDir.lengthSq()<.01) s.outDir.set(rnd(-1,1),rnd(-.3,.3),rnd(-1,1)); s.outDir.normalize(); }
+  s.dir.lerp(s.outDir,Math.min(1,2.2*dt)).normalize(); s.spd=lerp(s.spd,34,Math.min(1,dt*1.3)); s.pos.addScaledVector(s.dir,s.spd*dt); aim(s.root,s.dir);
+  if(s.pos.length()>150){ s.alive=false; s.root.visible=false; s.respawn=1e9; }
+}
 
 /* ───────────────────────────── frame ───────────────────────────── */
 function update(t){
@@ -761,10 +877,11 @@ function update(t){
   G.visible=P.on;
   if(!P.on&&!hyper) return;
   if(!hyper){
-    reconT-=dt; if(reconT<=0){ reconcile(); reconT=.5; }
+    reconT-=dt; if(reconT<=0&&!outroOn){ reconcile(); reconT=.5; }
     if(pendingHero&&cache[pendingHero]){ var h=pendingHero; pendingHero=null; spawnHero(h); }
   } else pumpLoads();
   if(anchorsDirty) assignAnchors();
+  if(!introScheduled&&!hyper) tryScheduleIntro();
 
   var allGone=true;
   for(var i=ships.length-1;i>=0;i--){
@@ -775,13 +892,18 @@ function update(t){
     if(s.spawnK<1){ s.spawnK=Math.min(1,s.spawnK+dt*1.6); }
     if(s.leaving){ s.spawnK=Math.max(0,s.spawnK-dt*3); if(s.spawnK<=0){ G.remove(s.root); ships.splice(i,1); anchorsDirty=true; continue; } }
     s.root.scale.setScalar(sc*s.spawnK*(s.spawnK<1?1:1)+1e-4);
+    if(s.arriveAt>clockT){ s.root.visible=false; continue; }            // still waiting to jump in
+    if(!s.arrived){ s.arrived=true; if(s.alive){ s.root.visible=true; startArrive(s); } }
+    if(s.arr!==undefined&&s.arr<1) updArrive(s,dt);
     if(s.dying){ updDying(s,dt); continue; }
     if(!s.alive){
-      if(!hyper){ s.respawn-=dt; if(s.respawn<=0&&(s.cls==='support'||s.cls==='capital')){ s.hasA=false; placeLarge(s); s.alive=true; s.root.visible=true; s.spawnK=0; s.target=null; flash(s.pos,1.2); }
-        if(s.respawn<=0&&s.cls==='fighter'){ s.alive=true; s.hp=CLS.fighter.hp; s.root.visible=true; spawnFighterPos(s,s.pos); s.spawnK=0; s.target=null; s.mode='wander'; s.mT=1; pickWp(s); s.vel.set(0,0,0); burst(s.pos,0xaaf5ee,8,1,.4); } }
+      if(!hyper&&!outroOn){ s.respawn-=dt;
+        if(s.respawn<=0&&(s.cls==='support'||s.cls==='capital')){ s.hasA=false; placeLarge(s); s.alive=true; s.arrived=false; s.arriveAt=clockT; s.target=null; }
+        if(s.respawn<=0&&s.cls==='fighter'){ s.alive=true; s.hp=CLS.fighter.hp; spawnFighterPos(s,s.pos); s.arrived=false; s.arriveAt=clockT; s.target=null; s.mode='wander'; s.mT=1; pickWp(s); s.vel.set(0,0,0); } }
       continue;
     }
     allGone=false;
+    if(outroOn&&(s.cls==='fighter'||s.cls==='hero')){ updLeave(s,dt); continue; }   // outro: fighters + hero fly off screen
     if(!s.jump||s.jump.phase===0){
       if(s.cls==='fighter') updFighter(s,dt);
       else if(s.cls==='hero') updHero(s,dt);
@@ -791,7 +913,7 @@ function update(t){
     if(s.jump) updHyper(s,dt);
     continue;
   }
-  sepLarge(); updDebris(dt);
+  sepLarge(); updDebris(dt); updTimers(dt);
   updKits(dt); updCarousel(dt); updBars(dt);
   updBolts(dt); updSparks(dt); updFlashes(dt);
   if(hyper){
@@ -808,7 +930,7 @@ function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
     if(ptr.in&&!hyper){ if(kitAt(e.clientX,e.clientY)) ctx.dom.style.cursor='pointer'; else if(stage==='play') ctx.dom.style.cursor='crosshair'; } });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
-    if(stage==='play'&&heroShip&&!hyper&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; } });   // left button = fire (hold to keep firing)
+    if(stage==='play'&&heroShip&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; } });   // left button = fire (hold to keep firing)
   on(window,'pointerup',function(e){ if(e.button===0) fireHeld=false; });
   on(ctx.dom,'contextmenu',function(e){ e.preventDefault(); });          // right-drag pans the camera; no browser menu
   on(ctx.dom,'click',function(e){
@@ -830,7 +952,8 @@ function bindInput(){
 
 /* ───────────────────────────── UI: hero picker, HUD, debug panel ───────────────────────────── */
 function updHud(pulse){
-  if(!hudEl) return; hudEl.innerHTML='<span class="bt-hl">KILLS</span><span class="bt-hn">'+kills+'</span>';
+  if(!hudEl) return; var pct=heroShip?Math.max(0,heroShip.hp/heroMax)*100:100;
+  hudEl.innerHTML='<span class="bt-hl">KILLS</span><span class="bt-hn">'+kills+'</span><div class="bt-hull"><span class="bt-hl">HULL</span><div class="bt-hbar"><i style="width:'+pct+'%;background:hsl('+Math.round(pct*1.1)+',90%,55%)"></i></div></div>';
   if(pulse){ hudEl.classList.remove('pulse'); void hudEl.offsetWidth; hudEl.classList.add('pulse'); }
 }
 function injectCss(){
@@ -848,6 +971,11 @@ function injectCss(){
     '#bt-hud{position:absolute;right:24px;top:64px;z-index:16;display:flex;flex-direction:column;align-items:flex-end;line-height:1;pointer-events:none;opacity:0;transition:opacity .3s}',
     '#bt-hud .bt-hl{font-family:var(--display,sans-serif);font-size:11px;letter-spacing:4px;color:var(--muted,#6b8a85);margin-bottom:6px}',
     '#bt-hud .bt-hn{font-family:var(--mono,monospace);font-size:56px;letter-spacing:2px;color:var(--amber-hot,#F0D080);text-shadow:0 0 16px rgba(240,208,128,.45)}',
+    '#bt-hud .bt-hull{display:flex;align-items:center;gap:10px;margin-top:14px}',
+    '#bt-hud .bt-hull .bt-hl{margin:0;font-size:10px}',
+    '#bt-hud .bt-hbar{width:150px;height:9px;border:1px solid rgba(255,255,255,.6);background:rgba(0,0,0,.5)}',
+    '#bt-hud .bt-hbar i{display:block;height:100%}',
+    '#bt-hud.hurt .bt-hbar{border-color:#ff4d4d;box-shadow:0 0 12px rgba(255,77,77,.8)}',
     '#bt-hud.pulse .bt-hn{animation:btPulse .4s steps(4)}@keyframes btPulse{0%{transform:scale(1.35);transform-origin:right center}100%{transform:scale(1);transform-origin:right center}}',
     '#bt-bars{position:fixed;inset:0;z-index:15;pointer-events:none}',
     '#bt-bars .bt-bar{position:fixed;width:72px;height:7px;margin:-7px 0 0 -36px;border:1px solid rgba(255,255,255,.65);background:rgba(0,0,0,.55);transition:opacity .2s}',
@@ -953,7 +1081,7 @@ function makeBolts(){
 function resetState(){
   ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
-  debris=[]; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
+  debris=[]; timers=[]; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
 }
 var MWBattle={
   init:function(c){
@@ -970,14 +1098,14 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    kills=0; session={played:false,hero:null,heroes:[],heroIds:[],t0:0}; stage='select'; carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    kills=0; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
     camFar=c.camera.far; c.camera.far=800; c.camera.updateProjectionMatrix();   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     window.MWBattle=MWBattle;
   },
   update:update,
-  hyperspace:hyperspace,
+  hyperspace:hyperspace, outro:outro,
   dispose:function(){
     if(dead||!ctx) return; dead=true; active=false;
     listeners.forEach(function(l){ l[0].removeEventListener(l[1],l[2],l[3]); }); listeners.length=0;
@@ -992,7 +1120,7 @@ var MWBattle={
   },
   isActive:function(){ return active; },
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
-  summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
+  summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },
   spawnHero:spawnHero, openKit:function(){ if(kits[0]) openKit(kits[0],'api'); },

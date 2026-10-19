@@ -10227,7 +10227,7 @@ f 2469//2469 2470//2470 2434//2434
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true); buildArcadeStars();
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
-      MWBattle.init({ showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
+      MWBattle.init({ onGameOver:function(){ exitArcade(); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
@@ -10259,7 +10259,7 @@ f 2469//2469 2470//2470 2434//2434
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
     var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennium Falcon',n1:"Mandalorian's N-1",razorcrest:'Razor Crest','slave-1':'Slave I'};
-    function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; } }
+    function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(); } }   // closing the game-over modal is what actually ends the exit
     function arcFetchTop(cb){
       if(!_sb){ cb(null,'offline'); return; }
       _sb.from('leaderboard').select('id,name,kills,hero,created_at').order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
@@ -10309,9 +10309,13 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);   /* >350ms: the ESC that opened it must not also close it */
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
-      var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; if(_sum&&_sum.played) showArcadeResult(_sum); document.body.classList.add('mw-arcade-exiting'); setRoute('/');
-      if(window.MWBattle&&MWBattle.isActive()) MWBattle.hyperspace(true); else finishArcadeExit();
+      var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
+      // OUTRO (no hyperspace): everyone stops firing, fighters fly off screen, support/capital ships stay; the scoreboard modal comes up and
+      // closing it ends the exit. Leaving without having played just tears down at once.
+      if(_sum&&_sum.played){ MWBattle.outro(); showArcadeResult(_sum); }
+      else finishArcadeAfterOutro();
     }
+    function finishArcadeAfterOutro(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(); }
     function finishArcadeExit(){
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
       document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false); removeArcadeStars();
