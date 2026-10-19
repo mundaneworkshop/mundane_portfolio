@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Battle GLB orientation sheet</title>
+<style>html,body{margin:0;background:#0a0f0f;color:#8fe6df;font:11px monospace}canvas{display:block}</style>
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/GLTFLoader.js"></script>
+<body>
+<script>
+// Dev tool: contact sheet of every battle GLB from a 3/4 view with +X red / +Y green / +Z blue axes,
+// so each model's nose direction can be recorded in assets/battle/battle.js (MODELS[].fwd).
+var names=['minikit','nano-awing','nano-bwing','nano-xwing','nano-ywing','nano-uwing','nano-tie-interceptor','nano-tie-fighter','nano-tie-defender','nano-tie-dagger','nano-lambda-shuttle','nano-blockade-runner','nano-nebulon-b','nano-acclamator','nano-imperial-light-cruiser','nano-mc80','nano-mc80a','nano-mc85','nano-star-destroyer','nano-death-star','nano-mil-falcon','nano-n1','nano-razorcrest','nano-slave-1'];
+var cols=4, cw=200, ch=200, rows=Math.ceil(names.length/cols);
+var r=new THREE.WebGLRenderer({antialias:true}); r.setSize(cols*cw,rows*ch); document.body.appendChild(r.domElement); r.setScissorTest(true);
+var labels=document.createElement('div'); document.body.appendChild(labels);
+var cells=[];
+names.forEach(function(n,i){
+  var s=new THREE.Scene(); s.add(new THREE.AmbientLight(0xffffff,0.8)); var d=new THREE.DirectionalLight(0xffffff,0.8); d.position.set(3,5,4); s.add(d);
+  var cam=new THREE.PerspectiveCamera(40,1,0.1,50); cam.position.set(0.8,4.4,1.1); cam.up.set(0,0,-1); cam.lookAt(0,0,0);
+  var ax=new THREE.AxesHelper(1.3); s.add(ax);
+  cells.push({s:s,cam:cam,x:(i%cols)*cw,y:(rows-1-Math.floor(i/cols))*ch});
+  new THREE.GLTFLoader().load('../assets/battle/models/'+n+'.glb',function(g){ s.add(g.scene); var b=new THREE.Box3().setFromObject(g.scene), sz=b.getSize(new THREE.Vector3()); g.scene.userData.sz=sz; });
+  var l=document.createElement('div'); l.style.cssText='position:absolute;left:'+((i%cols)*cw+6)+'px;top:'+(Math.floor(i/cols)*ch+4)+'px'; l.textContent=n; labels.appendChild(l);
+});
+(function loop(){ cells.forEach(function(c){ r.setViewport(c.x,c.y,cw,ch); r.setScissor(c.x,c.y,cw,ch); r.setClearColor(0x101818); r.render(c.s,c.cam); }); requestAnimationFrame(loop); })();
+</script>

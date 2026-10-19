@@ -1528,7 +1528,7 @@
       fragmentShader:'varying vec2 vUv; uniform sampler2D tDiffuse; uniform float levels; void main(){ vec4 c=texture2D(tDiffuse,vUv); c.rgb=floor(c.rgb*levels+0.5)/levels; gl_FragColor=c; }'});
     postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),postMat));
 
-    scene.add(new THREE.AmbientLight(0x2a4a48,0.95));
+    var ambL=new THREE.AmbientLight(0x2a4a48,0.95); scene.add(ambL);
     var key=new THREE.DirectionalLight(0xbfeee8,0.7); key.position.set(4,9,6); scene.add(key);
     var warm=new THREE.PointLight(0xE9A73E,0.7,34); warm.position.set(-3,4,2); scene.add(warm);
 
@@ -9352,7 +9352,7 @@ f 2469//2469 2470//2470 2434//2434
       function fail(err){ mwState='failed'; console.error('[mw-monogram]',err);
         // Nothing will ever appear to click on the entry gate if the bundle can't load — skip straight
         // to the galaxy rather than stranding the visitor on a bare starfield.
-        if(mwPhase==='entry'){ mwPhase='docked'; document.body.classList.remove('mw-entrygate'); setSiteVisible(true); } }
+        if(mwPhase==='entry'){ mwPhase='docked'; document.body.classList.remove('mw-entrygate'); setSiteVisible(true); if(window.MWBattle) MWBattle.dispose(); } }
       var el=document.createElement('script'); el.src=MW_DIR+'mw-monogram.js';
       el.onerror=function(){ fail('bundle failed to load'); };
       el.onload=function(){
@@ -9373,6 +9373,7 @@ f 2469//2469 2470//2470 2434//2434
     // boot reveal cascades the rest of the galaxy in and hands the beam to the gatekeeper.
     function startDock(){
       if(mwPhase!=='entry') return;
+      if(window.MWBattle) MWBattle.hyperspace();   // battle ceases; every ship jumps to hyperspeed and leaves the page (assets/battle/battle.js)
       mwPhase='docking'; mwDockStart=clock.getElapsedTime();
       _mwDockStartQ.copy(logo.quaternion).multiply(mwTiltQ);   // freeze the current spin+tilt — slerp source down to flat/grid-aligned
       camElev=0; camZoom=1; manualRot=0;   // settle the camera pull-back onto a clean home framing
@@ -13607,6 +13608,7 @@ f 2469//2469 2470//2470 2434//2434
         z.label.style.opacity=(focused?0:(s.vis&&!zOcc?bootGridVal:0)); });   // cascade with the grid, not ahead of it
       var lw=new THREE.Vector3(); logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
 
+      if(window.MWBattle && MWBattle.isActive()) MWBattle.update(t);   // entry-gate space battle (also runs the hyperspace exit while docking)
       mwUpdate(1-focusAmount);   // eases out as a project focuses, back in as it exits (was a hard pop on exit)
       updateBootReveal();
       renderer.setRenderTarget(rt);
@@ -13688,6 +13690,15 @@ f 2469//2469 2470//2470 2434//2434
     // reveals the rest via setSiteVisible once docked). A deep link / ?edit=1 / reduced-motion already
     // forced mwPhase to 'docked' above, before routing ran, so this is a no-op in those cases.
     if(mwPhase==='entry'){ document.body.classList.add('mw-entrygate'); setSiteVisible(false); } else setSiteVisible(true);
+
+    // Entry-gate space battle (Imperials vs Rebels around the monogram). Only exists while the gate is up.
+    if(mwPhase==='entry' && window.MWBattle){
+      try{ MWBattle.init({ THREE:THREE, scene:scene, camera:camera, dom:renderer.domElement, debugEl:document.getElementById('debug'),
+        pose:{ pos:new THREE.Vector3(0,ENTRY_LOOK.y+(ENTRY_POS.y-ENTRY_LOOK.y)*camZoom+camElev,ENTRY_LOOK.z+(ENTRY_POS.z-ENTRY_LOOK.z)*camZoom) }, center:[0,MW_ENTRY_Y,0], getRot:function(){ return galaxy.rotation.y; }, sceneLights:[ambL,key,warm], createLoader:mwCreateGLTFLoader,
+        monoRadius:function(){ return 0.775*(params.mwScale!=null?params.mwScale:1.4)*(params.mwEntryMul!=null?params.mwEntryMul:0.95); },
+        isOverMonogram:function(){ if(!(mwQuad&&mwQuad.visible)) return false; ray.setFromCamera(mouse,camera); return ray.intersectObject(mwQuad,false).length>0; } }); }
+      catch(e){ console.error('[battle]',e); }
+    }
 
     animate();
   }
@@ -14183,6 +14194,7 @@ f 2469//2469 2470//2470 2434//2434
   </script>
   <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/battle/battle.js"></script>
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
   <script src="assets/bric-wipe.js"></script>
