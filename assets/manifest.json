@@ -9,6 +9,7 @@
     { "key": "mesh:w2", "path": "assets/models/josh-ai/josh-doghead.svg", "kind": "svg" },
     { "key": "mesh:moon:w2:0", "path": "assets/models/josh-ai/josh-micros.glb", "kind": "glb" },
     { "key": "mesh:cv", "path": "assets/models/cv/briefcase.glb", "kind": "glb" },
+    { "key": "mesh:arcade", "path": "assets/models/arcade/lego-minifig-gamepad.glb", "kind": "glb" },
     { "key": "cv:ship:glb", "path": "assets/models/cv/nano-venator-ship.glb", "kind": "glb" },
     { "key": "mesh:contact", "path": "assets/models/holonet/endor-shield.glb", "kind": "glb" },
     { "key": "mesh:moon:contact:0", "path": "assets/models/holonet/astromech.glb", "kind": "glb" },

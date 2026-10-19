@@ -88,6 +88,30 @@
   #topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;pointer-events:none}
   #breadcrumb{pointer-events:auto}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
+  /* ARCADE mode: the exit button takes the breadcrumb's place, with the ESC hint right beside it */
+  #arcadeExit{display:none;flex-direction:row;align-items:center;gap:8px;pointer-events:auto;transition:opacity .25s ease}
+  body.mw-arcade #arcadeExit{display:flex}
+  body.mw-arcade #breadcrumb{display:none}
+  body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
+  #arcadeResult{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(2,8,8,.62);backdrop-filter:blur(6px)}
+  #arcadeResult .ar-card{min-width:min(420px,88vw);padding:34px 40px 30px;background:var(--panel,#0a1212);border:1px solid var(--border,rgba(90,191,184,.35));clip-path:var(--clip-step,none);text-align:center;font-family:var(--display,sans-serif)}
+  #arcadeResult .ar-k{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--muted,#6b8a85)}
+  #arcadeResult .ar-n{font-family:var(--mono,monospace);font-size:96px;line-height:1.05;margin-top:10px;color:var(--amber-hot,#F0D080);text-shadow:0 0 22px rgba(240,208,128,.45)}
+  #arcadeResult .ar-l{font-size:13px;letter-spacing:6px;text-transform:uppercase;color:var(--holo,#AAF5EE);margin-bottom:22px}
+  #arcadeResult .ar-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;text-align:left;margin:0 auto 26px;max-width:340px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+  #arcadeResult .ar-meta span{color:var(--muted,#6b8a85)} #arcadeResult .ar-meta b{font-weight:400;color:var(--text,#E8F7F5)}
+  #arcadeResult .ar-form{display:flex;gap:10px;justify-content:center;margin:0 auto 8px;max-width:340px}
+  #arcadeResult .ar-in{flex:1;min-width:0;background:rgba(0,0,0,.35);border:1px solid var(--border,rgba(90,191,184,.4));color:var(--text,#E8F7F5);font-family:var(--mono,monospace);font-size:13px;letter-spacing:1px;padding:8px 10px}
+  #arcadeResult .ar-msg{min-height:18px;margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--holo,#AAF5EE)}
+  #arcadeResult .ar-list{margin:6px auto 22px;max-width:380px;text-align:left;font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+  #arcadeResult .ar-row{display:grid;grid-template-columns:26px 1fr auto 52px;gap:10px;align-items:baseline;padding:5px 8px;color:var(--text,#E8F7F5)}
+  #arcadeResult .ar-row.mine{outline:1px solid var(--amber-hot,#F0D080);color:var(--amber-hot,#F0D080)}
+  #arcadeResult .ar-r{color:var(--muted,#6b8a85)} #arcadeResult .ar-h{color:var(--muted,#6b8a85);font-size:10px} #arcadeResult .ar-s{text-align:right;font-family:var(--mono,monospace)}
+  #arcadeResult .ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #arcadeResult .ar-empty{padding:10px;text-align:center;color:var(--muted,#6b8a85)}
+  #arcadeResult .ar-btns{display:flex;gap:12px;justify-content:center}
+  #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
+  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   /* Save = primary action — lit amber fill */
   /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
@@ -135,10 +159,24 @@
      the plain brighten every other zone label gets — RGB-split copies (::before/::after, driven
      by data-text since pseudo-content can't read the div's own textContent) jitter and clip in
      short bursts against a mostly-still base line. */
-  .zlabel-uncharted.on{animation:zg-jitter 2.6s infinite steps(1)}
-  .zlabel-uncharted.on::before,.zlabel-uncharted.on::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%}
-  .zlabel-uncharted.on::before{color:var(--amber,#E9A73E);animation:zg-slice-r 2.6s infinite steps(1)}
-  .zlabel-uncharted.on::after{color:var(--holo,#5ABFB8);animation:zg-slice-b 2.6s infinite steps(1)}
+  /* HOVER GLITCH (global, debug toggle "Hover glitch" → body.hg-off): zone labels use the RGB-split pseudo layers; planet labels (title + sub)
+     use a text-shadow split + jitter, since they're two-part. Reduced-motion users get none. */
+  @media (prefers-reduced-motion:no-preference){
+    body:not(.hg-off) .zlabel.on{animation:zg-jitter 2.6s infinite steps(1)}
+    body:not(.hg-off) .zlabel.on::before,body:not(.hg-off) .zlabel.on::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%}
+    body:not(.hg-off) .zlabel.on::before{color:var(--amber,#E9A73E);animation:zg-slice-r 2.6s infinite steps(1)}
+    body:not(.hg-off) .zlabel.on::after{color:var(--holo,#5ABFB8);animation:zg-slice-b 2.6s infinite steps(1)}
+    body:not(.hg-off) .plabel.hot .pl-title,body:not(.hg-off) .plabel.hot .pl-sub{display:inline-block;animation:hg-label 2.6s infinite steps(1)}
+    body:not(.hg-off) .plabel.hot .pl-sub{display:block}
+  }
+  @keyframes hg-label{
+    0%,7%,9.5%,34%,37%,62%,64%,100%{transform:translate(0,0);text-shadow:none;opacity:1}
+    8%{transform:translate(-3px,0);text-shadow:3px 0 var(--amber,#E9A73E),-3px 0 var(--holo,#5ABFB8);opacity:.7}
+    9%{transform:translate(2px,0);text-shadow:-2px 0 var(--amber,#E9A73E),2px 0 var(--holo,#5ABFB8);opacity:1}
+    35%{transform:translate(-4px,0);text-shadow:4px 0 var(--amber,#E9A73E),-4px 0 var(--holo,#5ABFB8);opacity:.5}
+    36%{transform:translate(3px,0);text-shadow:-3px 0 var(--amber,#E9A73E),3px 0 var(--holo,#5ABFB8);opacity:1}
+    63%{transform:translate(-2px,0);text-shadow:2px 0 var(--amber,#E9A73E),-2px 0 var(--holo,#5ABFB8);opacity:.6}
+  }
   @keyframes zg-jitter{
     0%,7%,100%{transform:translate(-50%,-50%);opacity:1}
     8%{transform:translate(calc(-50% - 3px),-50%);opacity:.7}
@@ -827,6 +865,7 @@
   </div>
 
   <div id="topbar">
+    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
     <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
@@ -845,7 +884,7 @@
     <!-- ── Always visible: post-FX & scene ── -->
     <div class="ctl"><label>Pixel size <b id="vPixel">2</b></label><input type="range" id="cPixel" min="1" max="6" step="1" value="2"></div>
     <div class="ctl"><label>Posterize <b id="vLevels">24</b></label><input type="range" id="cLevels" min="4" max="24" step="1" value="24"></div>
-    <div class="ctl"><label>Star density <b id="vStars">600</b></label><input type="range" id="cStars" min="200" max="3000" step="100" value="600"></div>
+    <div class="ctl"><label>Star density <b id="vStars">600</b></label><input type="range" id="cStars" min="50" max="3000" step="50" value="600"></div>
     <div class="ctl"><label>Star size <b id="vStarSize">0.03</b></label><input type="range" id="cStarSize" min="0.02" max="0.16" step="0.01" value="0.03"></div>
     <div class="ctl"><label>Spin speed <b id="vSpin">0.4</b></label><input type="range" id="cSpin" min="0" max="3" step="0.1" value="0.4"></div>
     <div class="ctl"><label class="chk"><input type="checkbox" id="cCamRotDir"> Reverse camera rotation</label></div>
@@ -866,6 +905,9 @@
       <div class="ctl"><label>Glyph tick (ms) <b id="vGxLblTick">0</b></label><input type="range" id="cGxLblTick" min="16" max="200" step="2"></div>
       <div class="ctl"><label>Scatter <b id="vGxLblScatter">0</b></label><input type="range" id="cGxLblScatter" min="0" max="1" step="0.05"></div>
     <button class="resetbtn" id="gxLblPlay">▶ Replay labels</button>
+    <div class="menudiv"></div>
+      <div class="ctl sec"><label>Hover glitch · zone + planet labels</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cHoverGlitch" checked> Corrupted-signal glitch on hover</label></div>
     <div class="menudiv"></div>
       <div class="ctl sec"><label>Glyph decode · text buttons (hover)</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGxBtnOn"> Enabled</label></div>
@@ -1520,6 +1562,7 @@
       // topbar (and debug panel) now stay reachable through the entry gate (see the CSS rule) instead.
       if(_hasRoute||_reducedMotion) mwPhase='docked';
     }catch(e){ mwPhase='docked'; }
+    if(mwPhase==='docked') mwDockT=1;   // landed on a deep link (/arcade, /cv …) with no dock animation: the monogram must start at its docked resting place, not mid-air at the entry spot
 
     var rt=new THREE.WebGLRenderTarget(Math.floor(W/params.pixel),Math.floor(H/params.pixel),{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
     var postScene=new THREE.Scene(), postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
@@ -1528,9 +1571,10 @@
       fragmentShader:'varying vec2 vUv; uniform sampler2D tDiffuse; uniform float levels; void main(){ vec4 c=texture2D(tDiffuse,vUv); c.rgb=floor(c.rgb*levels+0.5)/levels; gl_FragColor=c; }'});
     postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),postMat));
 
-    scene.add(new THREE.AmbientLight(0x2a4a48,0.95));
+    var ambL=new THREE.AmbientLight(0x2a4a48,0.95); scene.add(ambL);
     var key=new THREE.DirectionalLight(0xbfeee8,0.7); key.position.set(4,9,6); scene.add(key);
     var warm=new THREE.PointLight(0xE9A73E,0.7,34); warm.position.set(-3,4,2); scene.add(warm);
+    var SCENE_LIGHTS=[ambL,key,warm];   // arcade mode dims these (debug slider) while the space battle runs
 
     var DARK={bg:0x070c0c,line:0x5ABFB8,star:0x8fe6df,amber:0xE9A73E,beam:0x5ABFB8};
     var LIGHT={bg:0xECE8E0,line:0x1F7A72,star:0x2A8079,amber:0xD4961E,beam:0x2F8F87};
@@ -1647,14 +1691,20 @@
     var galTargetPos=new THREE.Vector3(0,0,0), galTargetScale=1;
 
     // ---------- starfield (in galaxy so it drags with the map) ----------
-    var starPoints=null;
+    var starPoints=null, STAR_HOLE_ARC=[32,19,19], STAR_HOLE_GAL=[30,18,30];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
+    function starPx(){ return params.starSize*((typeof arcadeActive!=='undefined'&&arcadeActive)?40:75); }   // fixed pixel size: a bit larger in the (nearer) galaxy view
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
-      var N=params.starCount, pos=new Float32Array(N*3), r2=mulberry32(7);
-      for(var i=0;i<N;i++){ var r=3+r2()*12, t=r2()*Math.PI*2, p=Math.acos(2*r2()-1);
-        pos[i*3]=Math.sin(p)*Math.cos(t)*r; pos[i*3+1]=Math.cos(p)*r*0.6+1.6; pos[i*3+2]=Math.sin(p)*Math.sin(t)*r; }
-      var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-      var m=new THREE.PointsMaterial({size:params.starSize,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});
+      // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
+      // hologram), out to a far shell. Sky density matches what the arcade's far field already had (the old small shell + far field ≈ 14× the Star-density slider); the slider scales it.
+      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*(ARC?14:14)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
+      for(var i=0;i<N;i++){ var t=r2()*Math.PI*2, p=Math.acos(2*r2()-1), dx=Math.sin(p)*Math.cos(t), dy=Math.cos(p), dz=Math.sin(p)*Math.sin(t);
+        var rin=1/Math.sqrt(dx*dx/(HX*HX)+dy*dy/(HY*HY)+dz*dz/(HZ*HZ)), r=rin*1.04+r2()*(R1-rin*1.04);
+        pos[i*3]=dx*r; pos[i*3+1]=dy*r+1.9; pos[i*3+2]=dz*r;
+        // brightness varies per star: a random base (most dim, a few bright) times an atmospheric falloff — the further out, the dimmer
+        var b=(0.22+0.78*Math.pow(r2(),1.7))*(1-0.55*(r-rin)/Math.max(1e-3,R1-rin)); col[i*3]=col[i*3+1]=col[i*3+2]=b; }
+      var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); g.setAttribute('color',new THREE.BufferAttribute(col,3));
+      var m=new THREE.PointsMaterial({vertexColors:true,size:starPx(),sizeAttenuation:false,fog:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});   // distant stars: fixed pixel size (attenuated, they'd vanish)
       starPoints=new THREE.Points(g,m); var f={mat:m,base:0.8,owner:null}; fadables.push(f); starPoints.userData.fad=f;
       galaxy.add(starPoints);
     }
@@ -1713,15 +1763,20 @@
         {id:'contact',title:'Contact',sub:'profile',locked:false,hidden:false}]},
       {id:'social',name:'Socials',kind:'social',hidden:false,planets:[
         {id:'li',title:'LinkedIn',sub:'social',locked:false,hidden:false},
-        {id:'ig',title:'Instagram',sub:'social',locked:false,hidden:false}]}
+        {id:'ig',title:'Instagram',sub:'social',locked:false,hidden:false}]},
+      {id:'fun',name:'Fun',kind:'play',hidden:false,planets:[
+        {id:'arcade',title:'Space Arcade',sub:'browser game',locked:false,hidden:false}]}
     ];
     var galaxyModel=(_bootCopy['galaxyModel']&&Array.isArray(_bootCopy['galaxyModel'])&&_bootCopy['galaxyModel'].length)?_bootCopy['galaxyModel']:GALAXY_DEFAULT;
+    // A saved/synced galaxyModel predates the Fun zone — add it (once) so existing browsers and the content-sync table pick it up.
+    if(!galaxyModel.some(function(z){ return z.id==='fun'; })) galaxyModel.push({id:'fun',name:'Fun',kind:'play',hidden:false,planets:[{id:'arcade',title:'Space Arcade',sub:'browser game',locked:false,hidden:false}]});
     // Carry over any zone names the designer set earlier via the 3D zone label (legacy 'zone:<id>:name' overrides);
     // the merged Profile zone inherits an old cv/contact zone name if one was set.
     galaxyModel.forEach(function(z){ var ov=_bootCopy['zone:'+z.id+':name']; if(ov==null&&z.id==='profile') ov=_bootCopy['zone:cv:name']||_bootCopy['zone:contact:name']; if(ov!=null&&ov!=='') z.name=ov;
       z.hidden=!!z.hidden; (z.planets||[]).forEach(function(p){ p.hidden=!!p.hidden; }); });
     // Single-slug routes for the two bespoke views (CV route, HoloNet comm console) — editable in their Edit Mode panels.
     var cvSlug=(_bootCopy['cvSlug']!=null&&_bootCopy['cvSlug']!=='')?_bootCopy['cvSlug']:'cv';
+    var arcadeSlug='arcade';
     var holonetSlug=(_bootCopy['holonetSlug']!=null&&_bootCopy['holonetSlug']!=='')?_bootCopy['holonetSlug']:'holonet';
     // Only NON-hidden zones get a radial wedge; wedge weight = its non-hidden planet count (min 1).
     function modelVisibleZones(){ return galaxyModel.filter(function(z){ return !z.hidden; }); }
@@ -9555,6 +9610,7 @@ f 2469//2469 2470//2470 2434//2434
       w1:{kind:'work',kicker:'Case file 02',title:'Slate Auto',body:'Placeholder case study. Swap in the real narrative, process shots, and results.'},
       w2:{kind:'work',kicker:'Case file 03',title:'Josh.ai',body:'Placeholder case study. The third charted world tells its story here.',ctaActive:true,cta:'VIEW CASE STUDY →',ctaUrl:'https://case.mundanework.shop/josh-ai'},
       cv:{kind:'util',kicker:'Profile',title:'Curriculum Vitae',body:'Placeholder. Roles, timeline, and a download link to the full CV live here.'},
+      arcade:{kind:'util',kicker:'Fun',title:'Space Arcade',body:'A browser game: a space battle fought around the hologram. Click or blast minikits to unlock new outfits for Jason.'},
       contact:{kind:'util',kicker:'Profile',title:'Contact',body:'Placeholder. Email and a short note about availability live here.'},
       li:{kind:'social',kicker:'Social',title:'LinkedIn',body:'Placeholder. This planet deep-links to the LinkedIn profile.'},
       ig:{kind:'social',kicker:'Social',title:'Instagram',body:'Placeholder. This planet deep-links to the Instagram profile.'}
@@ -9644,7 +9700,7 @@ f 2469//2469 2470//2470 2434//2434
     var logoLabel=mkLabelEl('','');
 
     // zone labels
-    function makeZoneLabel(z){ var d=document.createElement('div'); d.className='zlabel'+(z.kind==='play'?' zlabel-uncharted':''); d.textContent=z.name; if(z.kind==='play') d.setAttribute('data-text',z.name); document.getElementById('labels').appendChild(d); z.label=d; return d; }
+    function makeZoneLabel(z){ var d=document.createElement('div'); d.className='zlabel'; d.textContent=z.name; d.setAttribute('data-text',z.name); /* data-text feeds the hover-glitch pseudo layers */ document.getElementById('labels').appendChild(d); z.label=d; return d; }
     ZONES.forEach(makeZoneLabel);   // (anchors already set by layoutZones)
 
     // ---------- projection ----------
@@ -9748,7 +9804,8 @@ f 2469//2469 2470//2470 2434//2434
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
-    renderer.domElement.addEventListener('pointerdown',function(e){ dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });
+    renderer.domElement.addEventListener('pointerdown',function(e){ if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
+      dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
@@ -9758,7 +9815,7 @@ f 2469//2469 2470//2470 2434//2434
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
           else { focusYaw-=dx*0.006; focusPitch=clamp(focusPitch+syF*dy*0.006,-0.25,1.45); }
         }
-        else { manualRot+=dx*0.004; camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });
+        else { manualRot+=dx*0.004; camElev=arcadeActive?clamp(camElev-sy*dy*0.02,-14,16):clamp(camElev-sy*dy*0.02,-3,7); } } });   // arcade allows a much wider up/down range
     renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
       if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
@@ -9817,6 +9874,7 @@ f 2469//2469 2470//2470 2434//2434
         if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
         var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
         if(typeof csScene!=='undefined'&&csScene.active) return;   // case-study ring owns the arrows
+        if(window.__mwArcade) return;                                // arcade: arrows/WASD fly the hero ship
         var k=e.key;
         if(k==='ArrowRight'){ if(kbStep('x',1)) e.preventDefault(); }
         else if(k==='ArrowLeft'){ if(kbStep('x',-1)) e.preventDefault(); }
@@ -9828,6 +9886,7 @@ f 2469//2469 2470//2470 2434//2434
       function targets(x,y,el){
         if(kb){ var kl=kbList(); if(kl&&kl.some(function(t){ return t.key===kb.key; })){ var kt=kb; return {key:kt.key, label:kt.label, rect:function(){ return rectOf(kt.obj); }}; } kb=null; }
         var cv=renderer&&renderer.domElement; if(!cv||el!==cv) return null;   // pointer must be on the canvas itself, not a panel above it
+        if(arcadeActive) return null;
         if(mwPhase==='entry'){ if(cv.style.cursor!=='pointer'||!(mwQuad&&mwQuad.visible)) return null; return {key:mwQuad, label:'\u25B8 ENTER', rect:function(){ return rectOf(mwQuad); }}; }
         if(mwPhase!=='docked'||editMode||document.body.classList.contains('mw-altfocus')) return null;
         if(focused){
@@ -9849,6 +9908,7 @@ f 2469//2469 2470//2470 2434//2434
     })();
     function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); var _on=(z.id===id), _was=z.label.classList.contains('on'); z.label.classList.toggle('on',_on); if(_on&&!_was) GFX.decodeEl(z.label,'Zone',null,true); }); }
     renderer.domElement.addEventListener('pointermove',function(){
+      if(arcadeActive){ renderer.domElement.style.cursor='default'; return; }   // arcade: no planet/zone hover
       if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
         var overMono=false;
         if(mwPhase==='entry' && mwQuad && mwQuad.visible){ ray.setFromCamera(mouse,camera); overMono=ray.intersectObject(mwQuad,false).length>0; }
@@ -9876,6 +9936,7 @@ f 2469//2469 2470//2470 2434//2434
       setHovered(grp);
       if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
     renderer.domElement.addEventListener('click',function(){ if(dragMoved)return;
+      if(arcadeActive) return;   // arcade: the battle's own capture-phase handler owns clicks (minikits, hero fire)
       if(mwPhase!=='docked'){   // entry gate / mid-dock: the only click target is the monogram itself
         if(mwPhase==='entry' && mwQuad && mwQuad.visible){ ray.setFromCamera(mouse,camera); if(ray.intersectObject(mwQuad,false).length) startDock(); }
         return;
@@ -9905,6 +9966,7 @@ f 2469//2469 2470//2470 2434//2434
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
       if(ud.id==='cv'){ openCV(ud.id); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ openContact(ud.id); return; }
+      if(ud.id==='arcade'){ openArcade(ud.id); return; }
       if(ud.locked){ openLockedPanel(ud.id); return; }
       openCase(ud.id); }
     function planetById(id){ return planets.find(function(p){return p.userData.id===id;}); }
@@ -10153,6 +10215,109 @@ f 2469//2469 2470//2470 2434//2434
     }
     function crumbTitle(grp,fb){ return (grp.userData.labelTitle&&grp.userData.labelTitle.textContent)||fb; }
     function openCV(id){ var grp=planetById(id); if(!grp) return; enterCVRoute(grp); setCrumb('case:'+id,[{text:crumbTitle(grp,'CV'),bold:true}]); setRoute('/'+cvSlug); }
+    // ══════ ARCADE: the space battle (assets/battle/battle.js) played inside the galaxy view ══════
+    // Keeps the hologram (head, cone, ring), the monogram emitter and the base grid; hides every zone + planet; swaps the ring text.
+    // Exit = the top-left button (where the breadcrumb normally sits) or ESC → ships jump to hyperspace, then the galaxy comes back.
+    var arcadeActive=false, arcadeExiting=false, _ringBak=null;
+    var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 MOUSE TO MOVE \u2022 CLICK TO FIRE \u2022 ';
+    var arcadeStage='select';   // 'select' (hero carousel replaces the head) | 'play' (every hologram artifact hidden, the hero flies)
+    function arcadeRingText(on){
+      if(on){ if(!_ringBak) _ringBak={en:BIO_EN,aur:BIO_AUR}; BIO_EN=ARCADE_RING; BIO_AUR=ARCADE_RING; }
+      else if(_ringBak){ BIO_EN=_ringBak.en; BIO_AUR=_ringBak.aur; _ringBak=null; }
+      redrawRings(); if(ringEn.userData.decode) ringEn.userData.decode();   // replays the Aurebesh → Latin decode on the new text
+    }
+    function openArcade(id){
+      if(arcadeActive||!window.MWBattle) return;
+      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; buildStars();   // big star-free play area while in the arcade
+      setHovered(null); if(typeof setZone==='function') setZone(null);
+      document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
+      arcadeRingText(true);
+      var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
+      MWBattle.init({ onGameOver:function(){ exitArcade(); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
+        pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
+        monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
+        isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
+    }
+    // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
+    // or orbiting never finds the edge of the sky.
+    function arcadeRestoreHolo(){   // undo the 'play' stage's blanket hide
+      setSiteVisible(true); mwMount.visible=true;
+      ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];
+    }
+    function arcadeSetStage(st){
+      var was=arcadeStage; arcadeStage=st;
+      if(was==='play'&&st==='select') arcadeRestoreHolo();
+    }
+    // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
+    // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
+    var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennium Falcon',n1:"Mandalorian's N-1",razorcrest:'Razor Crest','slave-1':'Slave I'};
+    function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(); } }   // closing the game-over modal is what actually ends the exit
+    function arcFetchTop(cb){
+      if(!_sb){ cb(null,'offline'); return; }
+      _sb.from('leaderboard').select('id,name,kills,hero,created_at').order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
+        .then(function(r){ if(r.error) cb(null,r.error.message||'error'); else cb(r.data||[]); },function(e){ cb(null,'offline'); });
+    }
+    function arcRenderTop(listEl,rows,err,mineId){
+      listEl.textContent='';
+      if(!rows){ var m=document.createElement('div'); m.className='ar-empty'; m.textContent='Leaderboard unavailable right now'; listEl.appendChild(m); return; }
+      if(!rows.length){ var e2=document.createElement('div'); e2.className='ar-empty'; e2.textContent='No scores yet — be the first'; listEl.appendChild(e2); return; }
+      rows.forEach(function(r,i){ var row=document.createElement('div'); row.className='ar-row'+(r.id===mineId?' mine':'');
+        [['ar-r',String(i+1)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['ar-s',String(r.kills)]].forEach(function(c){ var s=document.createElement('span'); s.className=c[0]; s.textContent=c[1]; row.appendChild(s); });
+        listEl.appendChild(row); });
+    }
+    // sum: {kills, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
+    function showArcadeResult(sum){
+      closeArcadeResult();
+      var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label',sum?'Game over':'Leaderboard');
+      var scored=!!(sum&&sum.kills>0), html='<div class="ar-card">';
+      if(sum){ var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2);
+        html+='<div class="ar-k">Game over</div><div class="ar-n">'+sum.kills+'</div><div class="ar-l">'+(sum.kills===1?'kill':'kills')+'</div>'+
+          '<div class="ar-meta"><span>Flown</span><b>'+(sum.heroes.length?sum.heroes.join(' · '):'—')+'</b><span>Time</span><b>'+mins+':'+secs+'</b></div>';
+        if(scored) html+='<form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div>';
+      } else html+='<div class="ar-k">Leaderboard</div>';
+      html+='<div class="ar-list" aria-label="Top scores"></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
+      el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
+      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err); });
+      el.addEventListener('click',function(e){ if(e.target===el) closeArcadeResult(); });
+      el.querySelector('#arClose').addEventListener('click',closeArcadeResult);
+      var again=el.querySelector('#arAgain'); if(again) again.addEventListener('click',function(){ closeArcadeResult(); var go=function(){ if(!arcadeActive) openArcade('arcade'); else setTimeout(go,150); }; go(); });
+      var form=el.querySelector('.ar-form');
+      if(form){
+        var inp=form.querySelector('.ar-in'), btn=form.querySelector('.ar-sub'), msg=el.querySelector('.ar-msg');
+        try{ inp.value=localStorage.getItem('mw_lb_name')||''; }catch(e){}
+        inp.focus();
+        form.addEventListener('submit',function(e){ e.preventDefault(); var name=inp.value.trim(); if(!name){ msg.textContent='Enter a name to submit'; inp.focus(); return; }
+          btn.disabled=true; msg.textContent='Submitting…'; try{ localStorage.setItem('mw_lb_name',name); }catch(e2){}
+          fetch('/api/leaderboard-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,kills:sum.kills,hero:(sum.hero&&sum.hero.id)||'',seconds:sum.seconds})})
+            .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+            .then(function(o){
+              if(!o.ok||!o.j.ok){ msg.textContent=(o.j&&o.j.error)||'Could not save your score'; btn.disabled=false; return; }
+              msg.textContent=o.j.duplicate?'Already on the board':'Saved — rank #'+o.j.rank; form.style.display='none';
+              arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
+            },function(){ msg.textContent='Could not reach the leaderboard'; btn.disabled=false; });
+        });
+      } else { var af=el.querySelector('#arAgain')||el.querySelector('#arClose'); if(af) af.focus(); }
+    }
+    window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);   /* >350ms: the ESC that opened it must not also close it */
+    function exitArcade(){
+      if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
+      var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
+      // OUTRO (no hyperspace): everyone stops firing, fighters fly off screen, support/capital ships stay; the scoreboard modal comes up and
+      // closing it ends the exit. Leaving without having played just tears down at once.
+      if(_sum&&_sum.played){ MWBattle.outro(); showArcadeResult(_sum); }
+      else finishArcadeAfterOutro();
+    }
+    function finishArcadeAfterOutro(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(); }
+    function finishArcadeExit(){
+      arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
+      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
+      buildStars();                                                   // back to the galaxy's tight star field
+      var _gc=copyOvr['galcam']; camZoom=(_gc&&_gc.zoom!=null)?_gc.zoom:1; camElev=(_gc&&_gc.elev!=null)?_gc.elev:0;   // reset the zoom/height you changed in the arcade to the galaxy's normal view
+    }
+    window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
+    var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
+    var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
+    window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
     function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
 
 
@@ -11327,7 +11492,7 @@ f 2469//2469 2470//2470 2434//2434
     var isAuthor = document.body.classList.contains('author-mode');
     function bind(id,vid,fn,fix){ var el=document.getElementById(id); el.addEventListener('input',function(){ var v=parseFloat(el.value); document.getElementById(vid).textContent=(fix!==undefined?v.toFixed(fix):v); fn(v); }); }
     document.getElementById('debugBtn').addEventListener('click',function(){ document.getElementById('debug').classList.toggle('open'); });
-    window.addEventListener('keydown',function(e){ if(isAuthor && (e.key==='d'||e.key==='D') && !e.target.matches('input,textarea,select,[contenteditable="true"]')){ document.getElementById('debug').classList.toggle('open'); } });   // (input guard: typing a "d" into any text field used to toggle this panel)
+    window.addEventListener('keydown',function(e){ if(isAuthor && !window.__mwArcade && (e.key==='d'||e.key==='D') && !e.target.matches('input,textarea,select,[contenteditable="true"]')){ document.getElementById('debug').classList.toggle('open'); } });   // (input guard: typing a "d" into any text field used to toggle this panel)
 
     // ---------- hide UI (H key + button) ----------
     // Visitor default omits the edit/debug affordances (those buttons don't exist for them);
@@ -11350,14 +11515,14 @@ f 2469//2469 2470//2470 2434//2434
     }
     document.getElementById('hideUIBtn').addEventListener('click', toggleHideUI);
     window.addEventListener('keydown', function(e){
-      if(isAuthor && (e.key==='h'||e.key==='H') && !e.target.matches('input,textarea,[contenteditable="true"]')){
+      if(isAuthor && !window.__mwArcade && (e.key==='h'||e.key==='H') && !e.target.matches('input,textarea,[contenteditable="true"]')){
         toggleHideUI();
       }
     });
     bind('cPixel','vPixel',function(v){ params.pixel=v; rt.setSize(Math.floor(W/v),Math.floor(H/v)); if(typeof igFeedReprocess==='function') igFeedReprocess(); if(typeof refreshViewerPixel==='function') refreshViewerPixel(); });
     bind('cLevels','vLevels',function(v){ params.levels=v; postMat.uniforms.levels.value=v; if(typeof igSetPosterizeLevels==='function') igSetPosterizeLevels(v); });
     bind('cStars','vStars',function(v){ params.starCount=v; buildStars(); });
-    bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=v; },2);
+    bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=starPx(); },2);
     bind('cSpin','vSpin',function(v){ params.spin=v; },1);
     bind('cStud','vStud',function(v){ params.studSize=v; drawStuds(); },2);
     bind('cGap','vGap',function(v){ params.studGap=v; drawStuds(); },2);
@@ -11440,6 +11605,8 @@ f 2469//2469 2470//2470 2434//2434
     ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K;
       var on=document.getElementById('cGx'+K+'On'); if(on) on.addEventListener('change',function(){ params[pre+'On']=this.checked; if(K==='Ring') ringEn.userData.decode(); });
       [['Dur',0],['Delay',0],['Tick',0],['Scatter',2]].forEach(function(sp){ var id='cGx'+K+sp[0]; if(document.getElementById(id)) bind(id,'vGx'+K+sp[0],function(v){ params[pre+sp[0]]=v; },sp[1]); }); });
+    function applyHoverGlitch(){ document.body.classList.toggle('hg-off',params.hoverGlitch===false); var c=document.getElementById('cHoverGlitch'); if(c) c.checked=params.hoverGlitch!==false; }
+    var _hgc=document.getElementById('cHoverGlitch'); if(_hgc) _hgc.addEventListener('change',function(){ params.hoverGlitch=this.checked; applyHoverGlitch(); });
     var _gxh=document.getElementById('cGxRingHover'); if(_gxh) _gxh.addEventListener('change',function(){ params.gxRingHover=this.checked; });
     document.getElementById('gxRingPlay').addEventListener('click',function(){ ringEn.userData.decode(); });
     document.getElementById('gxLblPlay').addEventListener('click',function(){ planets.forEach(function(p){ var l=p.userData.label; if(l&&l.offsetWidth) GFX.label(l); }); });
@@ -12762,6 +12929,16 @@ f 2469//2469 2470//2470 2434//2434
         }
       });
     }
+    // One-time layout for the Fun zone's arrival: saved spots for the Socials planets were laid out for the old 4-zone wedges and now
+    // land on top of the new Arcade planet. Until a spot for 'arcade' has been saved, spread li / ig / arcade deliberately across the
+    // social + fun wedges (alternating inner/outer rings and heights). In-memory only — it persists with the next normal save.
+    if(!copyOvr['spot:arcade'] && zoneById['social'] && zoneById['fun']){
+      var _zs=zoneById['social'], _zf=zoneById['fun'];
+      function _sp(z,f,rad,y,jx,jz){ return {ang:z.a0+f*(z.a1-z.a0),rad:rad,y:y,jx:jx,jz:jz}; }
+      copyOvr['spot:li']=_sp(_zs,.22,2.0,1.1,0.05,-0.05);
+      copyOvr['spot:ig']=_sp(_zs,.80,3.6,2.7,-0.05,0.05);
+      copyOvr['spot:arcade']=_sp(_zf,.5,2.8,1.8,0,0);
+    }
     // restore persisted randomized planet positions (saved by "Randomize planet positions")
     planets.forEach(function(grp){ var sp=copyOvr['spot:'+grp.userData.id]; if(sp){ grp.userData.spot={ang:sp.ang,rad:sp.rad,y:sp.y,jx:sp.jx,jz:sp.jz};
       var hp=spotPos(grp.userData.spot); grp.userData.homePos.copy(hp); grp.userData.posTarget.copy(hp); } });
@@ -12968,6 +13145,7 @@ f 2469//2469 2470//2470 2434//2434
     // (or the hardcoded HoloNet purple for 'contact'), same shape as zoneFx but keyed by planet id.
     var planetFx=(function(){ var saved=(copyOvr&&copyOvr['planetfx'])||{}, m={};
       Object.keys(saved).forEach(function(id){ if(saved[id]) m[id]={hot:saved[id].hot,tint:saved[id].tint}; });
+      if(!m.arcade) m.arcade={hot:'#9fff75',tint:'#4dff00'};   // Space Arcade's default phosphor green (a saved override still wins; the debug "reset" button falls back to the zone colours instead)
       return m; })();
     function persistPlanetFx(){ copyOvr['planetfx']=planetFx; persistCopy(); }
     function planetFxResolved(id,zoneId){   // what a planet's hot/tint currently resolve to, override or not
@@ -13330,7 +13508,7 @@ f 2469//2469 2470//2470 2434//2434
         ['Dur','Delay','Tick','Scatter'].forEach(function(sp){ var el=document.getElementById('cGx'+K+sp); if(!el) return; var v=params[pre+sp]; el.value=v; document.getElementById('vGx'+K+sp).textContent=(sp==='Scatter'?(+v).toFixed(2):v); }); });
       var h=document.getElementById('cGxRingHover'); if(h) h.checked=params.gxRingHover!==false; }
     function applyParams(){
-      applyGxCtls();
+      applyGxCtls(); applyHoverGlitch();
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
       setCtl('cMwEntryMul','vMwEntryMul',(params.mwEntryMul!=null?params.mwEntryMul:0.95).toFixed(2));
       setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.40).toFixed(2));
@@ -13562,7 +13740,7 @@ f 2469//2469 2470//2470 2434//2434
           m.position.set(Math.cos(u.ang)*rr + bob*Math.sin(t*0.5+u.ang)*0.05, bob*Math.sin(t*0.6+u.ang*2.0)*0.14, Math.sin(u.ang)*rr + bob*Math.cos(t*0.45+u.ang)*0.05);
           if(u.flatImage){ m.lookAt(camera.position); }   // bitmap artifacts are flat cards → always face the camera
         }); } });
-      ZONES.forEach(function(z){ var u=z.mesh.userData; u.cur+=(u.target-u.cur)*0.15; u.mat.opacity=u.cur*fade; });
+      ZONES.forEach(function(z){ var u=z.mesh.userData; u.cur+=(u.target-u.cur)*0.15; u.mat.opacity=u.cur*fade*(arcadeActive?0:1); });
 
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
@@ -13571,7 +13749,7 @@ f 2469//2469 2470//2470 2434//2434
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
         planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } if(!planetShown(p)){ p.visible=false; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
-      else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=(bootPlanetGate?bootPlanetGate[pv]:true) && planetShown(planets[pv]); }   // entry gate/docking: hidden (setSiteVisible/updateBootReveal own them until the site boots)
+      else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=(bootPlanetGate?bootPlanetGate[pv]:true) && planetShown(planets[pv]) && !arcadeActive; }   // entry gate/docking: hidden (setSiteVisible/updateBootReveal own them until the site boots)
 
       // LOGO bottom clip (stud): position a world-space plane at a fraction up the logo's bounds.
       if(logo.userData.glbGroup && params.logoClip>0.0001){
@@ -13607,8 +13785,15 @@ f 2469//2469 2470//2470 2434//2434
         z.label.style.opacity=(focused?0:(s.vis&&!zOcc?bootGridVal:0)); });   // cascade with the grid, not ahead of it
       var lw=new THREE.Vector3(); logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
 
+      if(window.MWBattle && MWBattle.isActive()) MWBattle.update(t);   // arcade space battle (assets/battle/battle.js) — also runs its hyperspace exit
       mwUpdate(1-focusAmount);   // eases out as a project focuses, back in as it exits (was a hard pop on exit)
       updateBootReveal();
+      if(arcadeActive){
+        ZONES.forEach(function(z){ z.mesh.visible=false; });   // arcade: no zone wedges
+        ringAur.visible=false;   // arcade: the secondary Aurebesh ring is hidden
+        if(arcadeStage==='select'){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; }   // the hero carousel replaces the head
+        else { galaxy.children.forEach(function(c){ if(c!==starPoints) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
+      }
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
         // (1) depth-only pre-pass of the logo alone → buffer holds the front-most logo surface
@@ -13649,9 +13834,10 @@ f 2469//2469 2470//2470 2434//2434
     function applyRouteFromLocation(){
       try{
         var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
-        if(!parts.length){ if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
+        if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
+        if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData); return; }
         if(seg0===holonetSlug){ var gho=planetById('contact'); if(gho) activate(gho.userData); return; }
         if(seg0!=='work' || !parts[1]) return;   // only /work/<slug>[/<moon-slug>] resolves beyond this point
         var projSeg=parts[1], moonSeg=parts[2];
@@ -14183,6 +14369,7 @@ f 2469//2469 2470//2470 2434//2434
   </script>
   <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/battle/battle.js"></script>
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
   <script src="assets/bric-wipe.js"></script>

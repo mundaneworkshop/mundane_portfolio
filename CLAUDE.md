@@ -47,6 +47,10 @@ The two `api/holonet-*.js` serverless functions need these set in the Vercel pro
 
 The Supabase project URL is hardcoded in both function files (not a secret — it's also embedded client-side).
 
+## Arcade leaderboard backend
+
+`api/leaderboard-submit.js` + `leaderboard-schema.sql` back the Space Arcade leaderboard (see `docs/project-history/arcade-space-battle.md`). Same env vars as HoloNet (`SUPABASE_SECRET_KEY`); optional `LEADERBOARD_SALT` salts the IP hash used for rate limiting. Run the schema once in the Supabase SQL editor before the first deploy.
+
 ## Content sync backend (adopted Aug 2026)
 
 Before this, every in-page CMS edit (title/description/tags/snapshot rows/links/CTA/camera views/marquee text/galaxy layout — anything that used to only live in `copyOvr`/`bric_copy`) persisted to `localStorage` in whichever browser made the edit, full stop. No other visitor, device, or environment ever saw it. `content_overrides` (schema in `content-schema.sql`) is a flat `key -> value` mirror of `copyOvr`'s own shape — one row per top-level `copyOvr` key, no per-feature schema, so any new key the client ever starts writing round-trips through this table with zero migration.
