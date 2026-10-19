@@ -9792,6 +9792,7 @@ f 2469//2469 2470//2470 2434//2434
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
           else { focusYaw-=dx*0.006; focusPitch=clamp(focusPitch+syF*dy*0.006,-0.25,1.45); }
         }
+        else if(arcadeActive){ arcDrag(dx,dy,e.shiftKey); }
         else { manualRot+=dx*0.004; camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });
     renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
       if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
@@ -10209,14 +10210,24 @@ f 2469//2469 2470//2470 2434//2434
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true); buildArcadeStars();
+      var _off=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev-ARC_PIVOT.y,(HOME_POS.z-HOME_LOOK.z)*camZoom+HOME_LOOK.z);   // where the camera is relative to the battle centre right now
+      arcDist=_off.length()/Math.max(camZoom,0.01); arcQ.setFromRotationMatrix(new THREE.Matrix4().lookAt(_off,new THREE.Vector3(),new THREE.Vector3(0,1,0)));
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
       MWBattle.init({ THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
-        pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
+        pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return 0; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
+    // free orbit camera for arcade mode (quaternion trackball: drag turns the view about the camera's own up/right axes; SHIFT-drag rolls)
+    var arcQ=new THREE.Quaternion(), _arcQ2=new THREE.Quaternion(), _arcTmp=new THREE.Vector3(), arcDist=10, ARC_PIVOT=new THREE.Vector3(0,1.9,0);
+    function arcDrag(dx,dy,roll){
+      if(roll){ _arcTmp.set(0,0,1).applyQuaternion(arcQ); _arcQ2.setFromAxisAngle(_arcTmp,dx*0.006); }
+      else { _arcTmp.set(0,1,0).applyQuaternion(arcQ); _arcQ2.setFromAxisAngle(_arcTmp,-dx*0.005); arcQ.premultiply(_arcQ2);
+        _arcTmp.set(1,0,0).applyQuaternion(arcQ); _arcQ2.setFromAxisAngle(_arcTmp,-dy*0.005); }
+      arcQ.premultiply(_arcQ2);
+    }
     var arcadeStars=null;
     function buildArcadeStars(){
       removeArcadeStars();
@@ -10245,7 +10256,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function finishArcadeExit(){
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
-      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false); removeArcadeStars();
+      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false); removeArcadeStars(); camera.up.set(0,1,0);
     }
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
@@ -13629,9 +13640,14 @@ f 2469//2469 2470//2470 2434//2434
         var _rib=focused.userData.hit.userData.marqRibbon, _mqc=curMarquee();
         if(_rib.material && _rib.material.map){ var _sgn=_mqc.reverse?-1:1; _rib.material.map.offset.x=((_rib.material.map.offset.x + _sgn*(_mqc.speed||0)*0.01)%1 + 1)%1; }
       }
-      if(autoRotate) manualRot+=0.0011*params.spin*params.camRotDir; galaxy.rotation.y=manualRot;
+      if(autoRotate&&!arcadeActive) manualRot+=0.0011*params.spin*params.camRotDir; galaxy.rotation.y=manualRot;
       if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it
       else if(msgFocusActive){ msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
+      else if(arcadeActive){   // ARCADE: free trackball orbit around the battle's centre — full 360° on every axis (no pole stops, no elevation clamp)
+        if(autoRotate&&!dragging&&!arcadeExiting){ _arcTmp.set(0,1,0); _arcQ2.setFromAxisAngle(_arcTmp,-0.0011*params.spin*params.camRotDir); arcQ.premultiply(_arcQ2); }   // the same slow natural drift the galaxy has
+        arcQ.normalize(); var _ad=arcDist*camZoom;
+        camPos.set(0,0,_ad).applyQuaternion(arcQ).add(ARC_PIVOT); camLook.copy(ARC_PIVOT); camera.up.set(0,1,0).applyQuaternion(arcQ);
+      }
       else if(!focused){ var _bp=(mwPhase==='entry')?ENTRY_POS:HOME_POS, _bl=(mwPhase==='entry')?ENTRY_LOOK:HOME_LOOK;
         var oy=(_bp.y-_bl.y)*camZoom, oz=(_bp.z-_bl.z)*camZoom; camPos.set(0,_bl.y+oy+camElev,_bl.z+oz); camLook.copy(_bl); }
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
