@@ -13051,6 +13051,7 @@ f 2469//2469 2470//2470 2434//2434
     // (or the hardcoded HoloNet purple for 'contact'), same shape as zoneFx but keyed by planet id.
     var planetFx=(function(){ var saved=(copyOvr&&copyOvr['planetfx'])||{}, m={};
       Object.keys(saved).forEach(function(id){ if(saved[id]) m[id]={hot:saved[id].hot,tint:saved[id].tint}; });
+      if(!m.arcade) m.arcade={hot:'#9fff75',tint:'#4dff00'};   // Space Arcade's default phosphor green (a saved override still wins; the debug "reset" button falls back to the zone colours instead)
       return m; })();
     function persistPlanetFx(){ copyOvr['planetfx']=planetFx; persistCopy(); }
     function planetFxResolved(id,zoneId){   // what a planet's hot/tint currently resolve to, override or not
