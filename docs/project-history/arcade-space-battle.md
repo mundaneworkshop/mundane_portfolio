@@ -17,7 +17,7 @@ Code: `assets/battle/battle.js` (one IIFE, `window.MWBattle`), models `assets/ba
 - Zones: fighters roam a big ellipsoid with an oval clearance around the hologram; support + capital ships are scattered through a deep 3D volume (best-candidate sampling, random every entry); one Death Star (dish always aimed at the hologram, never rolls).
 - Lasers: rebel RED, imperial GREEN, hero YELLOW; each ship targets its nearest opponent. Fighters (3 HP) die and respawn; larger ships and the Death Star never die.
 - Two stages. **select**: the minifig head is replaced by a carousel of the four hero ships (◄ PLAY ► under the cone; arrow keys / Enter work too); ring text reads "SELECT YOUR HERO SHIP • MOUSE TO MOVE • CLICK TO FIRE". **play** (PLAY or Enter): every hologram artifact hides (all galaxy children, the monogram, rings, grid) and the hero spawns mid-screen. The ship flies toward the mouse and fires where you click (hold to keep firing). 2D→3D: `pickAt()` ray-tests ships/minikits (a hit gives a real XYZ); empty space is approximated by the plane at the hero's depth (the ship also drifts back toward mid-depth). Right-drag pans the camera (left button is fire); spacebar returns to the carousel; ESC exits the mode. Kill counter (top right) counts fighters destroyed by the hero.
-- Minikits: spawn anywhere, click or hero-blast to open. Reward is TBD: hook `MWBattle.onUnlock(fn)` / `mw:minikit` window event (`detail:{total,via,reward:null}`).
+- Minikits: spawn anywhere; only the hero ship's lasers open them (mouse clicks no longer do). Reward is TBD: hook `MWBattle.onUnlock(fn)` / `mw:minikit` window event (`detail:{total,via,reward:null}`).
 
 ## Lighting (all battle-only; debug panel → Space battle → Lighting)
 - Filmic (ACES) curve patched into the battle's `MeshStandardMaterial`s via `onBeforeCompile` — NOT `renderer.toneMapping`, which would also change the hologram's materials.
@@ -65,3 +65,7 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 ## Starfield / speeds (latest)
 - The single star field (`buildStars`) now has an empty centre: stars exist only beyond an ellipsoid `STAR_HOLE=[32,19,19]` (world units ≈ the arcade play volume) out to radius 130, in both the arcade and the main galaxy view; the separate arcade-only far field was removed. N = Star-density slider × 14 (matches the sky density the arcade had before), fixed 1.2 px points (`starSize*40`, no attenuation). The galaxy camera's far plane (100) clips the outer part there; the arcade raises it to 800.
 - Capital/support hyperspace arrival resolves in .375 s (was .75). Hero speed ×0.5 (`HSPD` in `updHero`).
+
+## TODO
+- **Loading screen** for the arcade (parked): full-screen overlay with a progress bar over the 24 GLBs (~3.7 MB) — load the 4 heroes + first fighters first, hold until hologram/carousel/first ships are ready, then fade into the staggered arrivals (which currently wait on model loads, so the intro stutters on slow connections). Optionally prefetch the models when the Arcade planet is hovered.
+- Minikit reward moment (hook: `MWBattle.onUnlock` / `mw:minikit`).

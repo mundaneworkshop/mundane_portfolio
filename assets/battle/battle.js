@@ -929,16 +929,12 @@ function update(t){
 function isTyping(e){ var t=e.target; if(!t) return false; if(t.isContentEditable||t.tagName==='TEXTAREA') return true; return t.tagName==='INPUT'&&/^(text|search|url|email|password|number|tel)$/i.test(t.type||'text'); }
 function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
-    if(ptr.in&&!hyper){ if(kitAt(e.clientX,e.clientY)) ctx.dom.style.cursor='pointer'; else if(stage==='play') ctx.dom.style.cursor='crosshair'; } });
+    if(ptr.in&&!hyper&&stage==='play') ctx.dom.style.cursor='crosshair'; });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
     if(stage==='play'&&heroShip&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; } });   // left button = fire (hold to keep firing)
   on(window,'pointerup',function(e){ if(e.button===0) fireHeld=false; });
   on(ctx.dom,'contextmenu',function(e){ e.preventDefault(); });          // right-drag pans the camera; no browser menu
-  on(ctx.dom,'click',function(e){
-    if(hyper||!active) return;
-    if(Math.hypot(e.clientX-ptr.downX,e.clientY-ptr.downY)>6) return;   // a drag, not a click
-    var k=kitAt(e.clientX,e.clientY); if(k){ openKit(k,'click'); e.stopImmediatePropagation(); }
-  },true);
+  // (minikits no longer respond to mouse clicks — only to the hero ship's lasers)
   on(window,'keydown',function(e){
     if(isTyping(e)||hyper) return;
     if(/^(ArrowLeft|ArrowRight|Enter|Space)$/.test(e.code)&&e.target&&e.target!==document.body&&e.target.blur&&e.target.tagName!=='A'){ e.target.blur(); }   // take focus off a slider/button so it doesn't also act on the key
@@ -962,8 +958,9 @@ function injectCss(){
     'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints, body:not(.mw-arcade) #bt-bars{display:none!important}',
     'body.mw-arcade #dbg-battle{display:block}',
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
-    '#bt-car .bt-name{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
+    '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
+    '#bt-car .bt-lb{margin-top:26px}',
     '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
     '#bt-car .bt-sub b{font-weight:400;color:var(--holo,#AAF5EE)}',
     '#bt-hints{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;display:flex;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap}',
@@ -989,7 +986,7 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--sm bt-lb">Leaderboard</button>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary bt-lb">Leaderboard</button>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
