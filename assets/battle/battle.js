@@ -283,9 +283,19 @@ function chooseHeading(s,out){
   }
   return out.set(sx,rnd(-.2,.2),rnd(-.5,.5)).normalize();
 }
+// Fresh ships all point at the enemy fleet: a tight cone around the +/-x axis, nudged just enough to keep clear of the hologram.
+// (Later turn-arounds use chooseHeading's wider random aim, so the formations loosen into a melee as the battle drags on.)
+function initialHeading(s,out){
+  var sx=s.pos.x>=0?-1:1;
+  out.set(sx,rnd(-.07,.07),rnd(-.1,.1)).normalize();
+  var t=-s.pos.dot(out);
+  if(t>0){ _v4.copy(s.pos).addScaledVector(out,t); var m=_v4.length();
+    if(m<16){ if(m<1e-3) _v4.set(0,rnd(-1,1),rnd(-1,1)); _v4.x=0; _v4.normalize(); out.addScaledVector(_v4,.3*(1-m/16)+.05).normalize(); } }
+  return out;
+}
 function placeLarge(s){
   shellPos(s,s.pos); s.hasA=true;
-  s.hd=chooseHeading(s,new T.Vector3()); s.dir.copy(s.hd); s.turn=null; s.R=rnd(36,42);
+  s.hd=initialHeading(s,new T.Vector3()); s.dir.copy(s.hd); s.turn=null; s.R=rnd(36,42);
   s.hp=CLS[s.cls].hp; s.maxhp=s.hp; s.dying=null;
 }
 function assignAnchors(){
