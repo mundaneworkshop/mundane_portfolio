@@ -311,7 +311,7 @@ function startArrive(s){
   s.arr=0; flash(s.pos,Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*(s.cls==='capital'?2.6:2)+.25,0xcff8ff);
 }
 function updArrive(s,dt){
-  s.arr=Math.min(1,s.arr+dt/.75); var e=1-s.arr, big=(s.cls==='capital'||s.cls==='base')?1:0;
+  s.arr=Math.min(1,s.arr+dt/.375); /* 2x faster than the first version */ var e=1-s.arr, big=(s.cls==='capital'||s.cls==='base')?1:0;
   s.fx.scale.set(Math.max(.4,1-e*.6),Math.max(.4,1-e*.6),1+e*(big?10:6));
   s.fx.position.z=-(e*e)*(big?30:18)/Math.max(s.root.scale.x,.01);
   if(s.arr>=1){ s.fx.scale.set(1,1,1); s.fx.position.set(0,0,0); }
@@ -713,7 +713,8 @@ function updHero(s,dt){
   if(!o) to.z-=s.pos.z*.5;                                              // the cursor can't say how deep: drift back toward mid-depth unless pointing at something
   s.prev.copy(s.dir);
   if(d>.15){ to.normalize(); var ang=s.dir.angleTo(to); if(ang>1e-4){ s.dir.lerp(to,Math.min(1,3.6*dt/ang)).normalize(); } }
-  var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed; if(o&&d<.9) want=Math.min(want,.4);   // hovering an object: ease in, don't ram it
+  var HSPD=.5;   // hero speed: half of the original, easier to control
+  var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed*HSPD; if(o&&d<.9) want=Math.min(want,.4*HSPD);   // hovering an object: ease in, don't ram it
   s.spd=lerp(s.spd,want,Math.min(1,dt*3));
   s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
   var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();   // same volume the fighters fly in (fighters' soft bound sits just inside)

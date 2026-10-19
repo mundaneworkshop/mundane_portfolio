@@ -61,3 +61,7 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 - **Destruction**: fighters now leave a debris cloud (`shatter(s,{small:true})`); capital/support ships end with a much bigger final blast (white flash, ring of blasts, two delayed aftershocks via `later()`) as they break apart.
 - **Outro** (no hyperspace): `MWBattle.outro()` — everyone stops firing (`quiet()`), fighters + hero fly off screen, support/capital ships stay; the game-over modal opens over the battle and closing it ends the exit (`finishArcadeAfterOutro`). Leaving without having played tears down immediately. `hyperspace()` still exists but is unused.
 - **Hero**: 30 HP, takes damage from bumping other ships (fighter 2 / support 4 / capital 6, 1 s invulnerability + knock-back); nothing targets the hero. At 0 HP the hero explodes and the game ends (`onGameOver` → exit → modal). HULL bar in the top-right HUD under the kill counter.
+
+## Starfield / speeds (latest)
+- The single star field (`buildStars`) now has an empty centre: stars exist only beyond an ellipsoid `STAR_HOLE=[32,19,19]` (world units ≈ the arcade play volume) out to radius 130, in both the arcade and the main galaxy view; the separate arcade-only far field was removed. N = Star-density slider × 14 (matches the sky density the arcade had before), fixed 1.2 px points (`starSize*40`, no attenuation). The galaxy camera's far plane (100) clips the outer part there; the arcade raises it to 800.
+- Capital/support hyperspace arrival resolves in .375 s (was .75). Hero speed ×0.5 (`HSPD` in `updHero`).

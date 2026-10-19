@@ -1691,14 +1691,17 @@
     var galTargetPos=new THREE.Vector3(0,0,0), galTargetScale=1;
 
     // ---------- starfield (in galaxy so it drags with the map) ----------
-    var starPoints=null;
+    var starPoints=null, STAR_HOLE=[32,19,19];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
-      var N=params.starCount, pos=new Float32Array(N*3), r2=mulberry32(7);
-      for(var i=0;i<N;i++){ var r=3+r2()*12, t=r2()*Math.PI*2, p=Math.acos(2*r2()-1);
-        pos[i*3]=Math.sin(p)*Math.cos(t)*r; pos[i*3+1]=Math.cos(p)*r*0.6+1.6; pos[i*3+2]=Math.sin(p)*Math.sin(t)*r; }
+      // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
+      // hologram), out to a far shell. Sky density matches what the arcade's far field already had (the old small shell + far field ≈ 14× the Star-density slider); the slider scales it.
+      var N=Math.round(params.starCount*14), pos=new Float32Array(N*3), r2=mulberry32(7), HX=STAR_HOLE[0], HY=STAR_HOLE[1], HZ=STAR_HOLE[2], R1=130;
+      for(var i=0;i<N;i++){ var t=r2()*Math.PI*2, p=Math.acos(2*r2()-1), dx=Math.sin(p)*Math.cos(t), dy=Math.cos(p), dz=Math.sin(p)*Math.sin(t);
+        var rin=1/Math.sqrt(dx*dx/(HX*HX)+dy*dy/(HY*HY)+dz*dz/(HZ*HZ)), r=rin*1.04+r2()*(R1-rin*1.04);
+        pos[i*3]=dx*r; pos[i*3+1]=dy*r+1.9; pos[i*3+2]=dz*r; }
       var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-      var m=new THREE.PointsMaterial({size:params.starSize,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});
+      var m=new THREE.PointsMaterial({size:params.starSize*40,sizeAttenuation:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});   // distant stars: fixed pixel size (attenuated, they'd vanish)
       starPoints=new THREE.Points(g,m); var f={mat:m,base:0.8,owner:null}; fadables.push(f); starPoints.userData.fad=f;
       galaxy.add(starPoints);
     }
@@ -10225,7 +10228,7 @@ f 2469//2469 2470//2470 2434//2434
       arcadeActive=true; arcadeExiting=false; window.__mwArcade=true;
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
-      arcadeRingText(true); buildArcadeStars();
+      arcadeRingText(true);
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
       MWBattle.init({ onGameOver:function(){ exitArcade(); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
@@ -10234,20 +10237,6 @@ f 2469//2469 2470//2470 2434//2434
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
-    var arcadeStars=null;
-    function buildArcadeStars(){
-      removeArcadeStars();
-      // density falls off as 1/r² past the base shell, so the number of stars per patch of SKY stays what it is today (a uniform volume
-      // density would pack the far field far more densely on screen).
-      var R0=15, R1=110, vBase=(4/3)*Math.PI*(R0*R0*R0-27)*0.6, density=params.starCount/vBase*0.5;   // half the base density — the far sky reads busier than the small shell does
-      var N=Math.round(density*4*Math.PI*R0*R0*(R1-R0)*0.85), pos=new Float32Array(N*3), r2=mulberry32(4242);
-      for(var i=0;i<N;i++){ var r=R0+r2()*(R1-R0), t=r2()*Math.PI*2, p=Math.acos(2*r2()-1);
-        pos[i*3]=Math.sin(p)*Math.cos(t)*r; pos[i*3+1]=Math.cos(p)*r*0.85+1.6; pos[i*3+2]=Math.sin(p)*Math.sin(t)*r; }
-      var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-      arcadeStars=new THREE.Points(g,new THREE.PointsMaterial({size:1.1,sizeAttenuation:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false}));
-      arcadeStars.frustumCulled=false; galaxy.add(arcadeStars);
-    }
-    function removeArcadeStars(){ if(arcadeStars){ galaxy.remove(arcadeStars); arcadeStars.geometry.dispose(); arcadeStars.material.dispose(); arcadeStars=null; } }
     function arcadeRestoreHolo(){   // undo the 'play' stage's blanket hide
       setSiteVisible(true); mwMount.visible=true;
       ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];
@@ -10318,7 +10307,7 @@ f 2469//2469 2470//2470 2434//2434
     function finishArcadeAfterOutro(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(); }
     function finishArcadeExit(){
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
-      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false); removeArcadeStars();
+      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
     }
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
@@ -11528,7 +11517,7 @@ f 2469//2469 2470//2470 2434//2434
     bind('cPixel','vPixel',function(v){ params.pixel=v; rt.setSize(Math.floor(W/v),Math.floor(H/v)); if(typeof igFeedReprocess==='function') igFeedReprocess(); if(typeof refreshViewerPixel==='function') refreshViewerPixel(); });
     bind('cLevels','vLevels',function(v){ params.levels=v; postMat.uniforms.levels.value=v; if(typeof igSetPosterizeLevels==='function') igSetPosterizeLevels(v); });
     bind('cStars','vStars',function(v){ params.starCount=v; buildStars(); });
-    bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=v; },2);
+    bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=v*40; },2);
     bind('cSpin','vSpin',function(v){ params.spin=v; },1);
     bind('cStud','vStud',function(v){ params.studSize=v; drawStuds(); },2);
     bind('cGap','vGap',function(v){ params.studGap=v; drawStuds(); },2);
@@ -13798,7 +13787,7 @@ f 2469//2469 2470//2470 2434//2434
         ZONES.forEach(function(z){ z.mesh.visible=false; });   // arcade: no zone wedges
         ringAur.visible=false;   // arcade: the secondary Aurebesh ring is hidden
         if(arcadeStage==='select'){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; }   // the hero carousel replaces the head
-        else { galaxy.children.forEach(function(c){ if(c!==starPoints&&c!==arcadeStars) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
+        else { galaxy.children.forEach(function(c){ if(c!==starPoints) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
       }
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
