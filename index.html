@@ -12816,6 +12816,16 @@ f 2469//2469 2470//2470 2434//2434
         }
       });
     }
+    // One-time layout for the Fun zone's arrival: saved spots for the Socials planets were laid out for the old 4-zone wedges and now
+    // land on top of the new Arcade planet. Until a spot for 'arcade' has been saved, spread li / ig / arcade deliberately across the
+    // social + fun wedges (alternating inner/outer rings and heights). In-memory only — it persists with the next normal save.
+    if(!copyOvr['spot:arcade'] && zoneById['social'] && zoneById['fun']){
+      var _zs=zoneById['social'], _zf=zoneById['fun'];
+      function _sp(z,f,rad,y,jx,jz){ return {ang:z.a0+f*(z.a1-z.a0),rad:rad,y:y,jx:jx,jz:jz}; }
+      copyOvr['spot:li']=_sp(_zs,.22,2.0,1.1,0.05,-0.05);
+      copyOvr['spot:ig']=_sp(_zs,.80,3.6,2.7,-0.05,0.05);
+      copyOvr['spot:arcade']=_sp(_zf,.5,2.8,1.8,0,0);
+    }
     // restore persisted randomized planet positions (saved by "Randomize planet positions")
     planets.forEach(function(grp){ var sp=copyOvr['spot:'+grp.userData.id]; if(sp){ grp.userData.spot={ang:sp.ang,rad:sp.rad,y:sp.y,jx:sp.jx,jz:sp.jz};
       var hp=spotPos(grp.userData.spot); grp.userData.homePos.copy(hp); grp.userData.posTarget.copy(hp); } });
