@@ -565,7 +565,7 @@ function updBase(s,dt){
 // stage 'select': the hologram's head is replaced by a carousel of the playable hero ships (◄ PLAY ► under the cone).
 // stage 'play'  : every hologram artifact hides (ctx.onStage) and the chosen hero flies — it travels toward the mouse, fires where you click.
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
-var session={played:false,hero:null,heroes:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
+var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
 function setStage(st){ if(stage===st) return; stage=st; if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
@@ -578,7 +578,7 @@ function spawnHero(id){
   s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=0; s.cd=0; s.gun=0;
   burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false;
   if(!session.played){ session.played=true; session.t0=performance.now(); }
-  session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label);
+  session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label); if(session.heroIds.indexOf(m.id)<0) session.heroIds.push(m.id);
   setStage('play');
 }
 function changeHero(){ ejectHero(false); fireHeld=false; setStage('select'); }
@@ -860,8 +860,9 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--sm bt-lb">Leaderboard</button>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
+  carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
   document.body.appendChild(carUi);
   hintEl=document.createElement('div'); hintEl.id='bt-hints'; hintEl.style.display='none';
@@ -969,7 +970,7 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    kills=0; session={played:false,hero:null,heroes:[],t0:0}; stage='select'; carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    kills=0; session={played:false,hero:null,heroes:[],heroIds:[],t0:0}; stage='select'; carIdx=0; carGroup=carWrap=carModel=carModelId=null;
     camFar=c.camera.far; c.camera.far=800; c.camera.updateProjectionMatrix();   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
@@ -991,7 +992,7 @@ var MWBattle={
   },
   isActive:function(){ return active; },
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
-  summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
+  summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },
   spawnHero:spawnHero, openKit:function(){ if(kits[0]) openKit(kits[0],'api'); },

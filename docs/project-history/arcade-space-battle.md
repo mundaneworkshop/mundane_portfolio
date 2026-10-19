@@ -48,3 +48,10 @@ The page's scene fog (`FogExp2`, density 0.03) is what faded far capital ships t
 
 ## Camera (current)
 The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down via `camElev`); arcade widens the `camElev` clamp to -14..16 (normal galaxy view stays -3..7). A free-trackball version was tried and reverted.
+
+## Game-over modal + global leaderboard
+- Leaving a game you played (or opening the carousel's **Leaderboard** button) shows `#arcadeResult`: kills, hero ships flown, time; if you scored, a name field + Submit; then the top 10 (your row highlighted). Source of the numbers: `MWBattle.summary()` → `{played, kills, hero, heroes, heroIds, seconds}`.
+- Backend (HoloNet pattern): table `leaderboard` (`leaderboard-schema.sql`, run once in the Supabase SQL editor), submit endpoint `api/leaderboard-submit.js` (secret key; reuses `SUPABASE_SECRET_KEY`; optional `LEADERBOARD_SALT` for the IP hash). Reads go straight from the browser with the publishable key — column-level grants expose only `id,name,kills,hero,seconds,created_at,approved` (never `ip_hash`); the client must select columns explicitly.
+- **Light protection only**: field validation, plausibility cap (kills ≤ seconds×1.2+4, ≥5 s played), 5 submissions / 10 min per salted-IP-hash, duplicate suppression, no links in names. A determined person can still post a plausible fake score; if that matters, send a kill-event log and validate it server-side.
+- Until the table exists the list shows "Leaderboard unavailable right now" and submit errors out gracefully (the local dev server has no `/api`).
+- Moderation: set `approved=false` on a row to hide it.

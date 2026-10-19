@@ -100,6 +100,15 @@
   #arcadeResult .ar-l{font-size:13px;letter-spacing:6px;text-transform:uppercase;color:var(--holo,#AAF5EE);margin-bottom:22px}
   #arcadeResult .ar-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;text-align:left;margin:0 auto 26px;max-width:340px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
   #arcadeResult .ar-meta span{color:var(--muted,#6b8a85)} #arcadeResult .ar-meta b{font-weight:400;color:var(--text,#E8F7F5)}
+  #arcadeResult .ar-form{display:flex;gap:10px;justify-content:center;margin:0 auto 8px;max-width:340px}
+  #arcadeResult .ar-in{flex:1;min-width:0;background:rgba(0,0,0,.35);border:1px solid var(--border,rgba(90,191,184,.4));color:var(--text,#E8F7F5);font-family:var(--mono,monospace);font-size:13px;letter-spacing:1px;padding:8px 10px}
+  #arcadeResult .ar-msg{min-height:18px;margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--holo,#AAF5EE)}
+  #arcadeResult .ar-list{margin:6px auto 22px;max-width:380px;text-align:left;font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
+  #arcadeResult .ar-row{display:grid;grid-template-columns:26px 1fr auto 52px;gap:10px;align-items:baseline;padding:5px 8px;color:var(--text,#E8F7F5)}
+  #arcadeResult .ar-row.mine{outline:1px solid var(--amber-hot,#F0D080);color:var(--amber-hot,#F0D080)}
+  #arcadeResult .ar-r{color:var(--muted,#6b8a85)} #arcadeResult .ar-h{color:var(--muted,#6b8a85);font-size:10px} #arcadeResult .ar-s{text-align:right;font-family:var(--mono,monospace)}
+  #arcadeResult .ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #arcadeResult .ar-empty{padding:10px;text-align:center;color:var(--muted,#6b8a85)}
   #arcadeResult .ar-btns{display:flex;gap:12px;justify-content:center}
   #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
   body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
@@ -10218,7 +10227,7 @@ f 2469//2469 2470//2470 2434//2434
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true); buildArcadeStars();
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
-      MWBattle.init({ THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
+      MWBattle.init({ showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
@@ -10247,23 +10256,57 @@ f 2469//2469 2470//2470 2434//2434
       var was=arcadeStage; arcadeStage=st;
       if(was==='play'&&st==='select') arcadeRestoreHolo();
     }
-    // ── results modal shown when you leave a game you actually played (hook point for the global leaderboard: `sum` = {kills, hero, heroes, seconds})
-    var arcadeResultEl=null, arcadeResultT=0;
+    // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
+    // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
+    var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennium Falcon',n1:"Mandalorian's N-1",razorcrest:'Razor Crest','slave-1':'Slave I'};
     function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; } }
+    function arcFetchTop(cb){
+      if(!_sb){ cb(null,'offline'); return; }
+      _sb.from('leaderboard').select('id,name,kills,hero,created_at').order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
+        .then(function(r){ if(r.error) cb(null,r.error.message||'error'); else cb(r.data||[]); },function(e){ cb(null,'offline'); });
+    }
+    function arcRenderTop(listEl,rows,err,mineId){
+      listEl.textContent='';
+      if(!rows){ var m=document.createElement('div'); m.className='ar-empty'; m.textContent='Leaderboard unavailable right now'; listEl.appendChild(m); return; }
+      if(!rows.length){ var e2=document.createElement('div'); e2.className='ar-empty'; e2.textContent='No scores yet — be the first'; listEl.appendChild(e2); return; }
+      rows.forEach(function(r,i){ var row=document.createElement('div'); row.className='ar-row'+(r.id===mineId?' mine':'');
+        [['ar-r',String(i+1)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['ar-s',String(r.kills)]].forEach(function(c){ var s=document.createElement('span'); s.className=c[0]; s.textContent=c[1]; row.appendChild(s); });
+        listEl.appendChild(row); });
+    }
+    // sum: {kills, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
     function showArcadeResult(sum){
       closeArcadeResult();
-      var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label','Game over');
-      var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2);
-      el.innerHTML='<div class="ar-card"><div class="ar-k">Game over</div><div class="ar-n">'+sum.kills+'</div><div class="ar-l">'+(sum.kills===1?'kill':'kills')+'</div>'+
-        '<div class="ar-meta"><span>Flown</span><b>'+(sum.heroes.length?sum.heroes.join(' \u00b7 '):'\u2014')+'</b><span>Time</span><b>'+mins+':'+secs+'</b></div>'+
-        '<div class="ar-btns"><button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button><button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
-      document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
+      var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label',sum?'Game over':'Leaderboard');
+      var scored=!!(sum&&sum.kills>0), html='<div class="ar-card">';
+      if(sum){ var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2);
+        html+='<div class="ar-k">Game over</div><div class="ar-n">'+sum.kills+'</div><div class="ar-l">'+(sum.kills===1?'kill':'kills')+'</div>'+
+          '<div class="ar-meta"><span>Flown</span><b>'+(sum.heroes.length?sum.heroes.join(' · '):'—')+'</b><span>Time</span><b>'+mins+':'+secs+'</b></div>';
+        if(scored) html+='<form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div>';
+      } else html+='<div class="ar-k">Leaderboard</div>';
+      html+='<div class="ar-list" aria-label="Top scores"></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
+      el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
+      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err); });
       el.addEventListener('click',function(e){ if(e.target===el) closeArcadeResult(); });
       el.querySelector('#arClose').addEventListener('click',closeArcadeResult);
-      el.querySelector('#arAgain').addEventListener('click',function(){ closeArcadeResult(); var g=planetById('arcade'); var go=function(){ if(!arcadeActive) openArcade('arcade'); else setTimeout(go,150); }; go(); });
-      el.querySelector('#arAgain').focus();
+      var again=el.querySelector('#arAgain'); if(again) again.addEventListener('click',function(){ closeArcadeResult(); var go=function(){ if(!arcadeActive) openArcade('arcade'); else setTimeout(go,150); }; go(); });
+      var form=el.querySelector('.ar-form');
+      if(form){
+        var inp=form.querySelector('.ar-in'), btn=form.querySelector('.ar-sub'), msg=el.querySelector('.ar-msg');
+        try{ inp.value=localStorage.getItem('mw_lb_name')||''; }catch(e){}
+        inp.focus();
+        form.addEventListener('submit',function(e){ e.preventDefault(); var name=inp.value.trim(); if(!name){ msg.textContent='Enter a name to submit'; inp.focus(); return; }
+          btn.disabled=true; msg.textContent='Submitting…'; try{ localStorage.setItem('mw_lb_name',name); }catch(e2){}
+          fetch('/api/leaderboard-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,kills:sum.kills,hero:(sum.hero&&sum.hero.id)||'',seconds:sum.seconds})})
+            .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
+            .then(function(o){
+              if(!o.ok||!o.j.ok){ msg.textContent=(o.j&&o.j.error)||'Could not save your score'; btn.disabled=false; return; }
+              msg.textContent=o.j.duplicate?'Already on the board':'Saved — rank #'+o.j.rank; form.style.display='none';
+              arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
+            },function(){ msg.textContent='Could not reach the leaderboard'; btn.disabled=false; });
+        });
+      } else { var af=el.querySelector('#arAgain')||el.querySelector('#arClose'); if(af) af.focus(); }
     }
-    window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&(e.key==='Escape'||e.key==='Enter')){ /* >350ms: the ESC that opened it must not also close it */ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);
+    window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);   /* >350ms: the ESC that opened it must not also close it */
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
       var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; if(_sum&&_sum.played) showArcadeResult(_sum); document.body.classList.add('mw-arcade-exiting'); setRoute('/');
