@@ -30,3 +30,11 @@ Models are authored nose-+Z except Slave I (landed pose, pre-rotated +90° about
 
 ## Visibility of distant ships
 The page's scene fog (`FogExp2`, density 0.03) is what faded far capital ships to black. The battle scales it with the "Distance fog" slider (Lighting group, default 0.25 of the page value; restored on exit). Far support/capital ships also get a depth-compensated size boost (`depthComp`).
+
+## Fleet layout + damage (latest)
+- Support/capital ships live in a full SHELL around the hologram (radius 10–36 local units, every direction; imperials in the -x half-space, rebels +x), picked by best-candidate sampling, random on every entry. They drift very slowly along their heading (support .16, capital .08 units/s), curve back in (around, not through, the hologram) past radius 34 and bear away inside 12.
+- Support (12 HP) and capital (30 HP) ships take damage only from the HERO (AI-vs-AI hits just spark); a health bar (DOM, `#bt-bars`) shows for ~3 s after each hero hit; kills respawn 28–45 s later at a new spot. The Death Star takes no damage. Kills (any ship) feed the top-right counter.
+- Pinned visitor messages are `display:none` in arcade (their beacons set their own pointer-events, so hiding the container's pointer-events wasn't enough). The Aurebesh ring is hidden.
+- Far stars: `buildArcadeStars()` adds stars to radius 110 with density falling off as 1/r² (constant stars per patch of sky — a uniform volume density packs the far field much denser on screen).
+- Minikit spawn rate default 0.3 (debug → Minikits · hero → Minikit spawn rate; max at once is the next slider).
+- Dev server tip: a caching static server serves a stale `battle.js` (partial updates look like broken code) — serve with `Cache-Control: no-store`.

@@ -94,7 +94,7 @@
   body.mw-arcade #breadcrumb{display:none}
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
   #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
-  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas{opacity:0!important;pointer-events:none!important}
+  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   /* Save = primary action — lit amber fill */
   /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
@@ -848,7 +848,7 @@
   </div>
 
   <div id="topbar">
-    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
+    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
     <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
@@ -10208,13 +10208,29 @@ f 2469//2469 2470//2470 2434//2434
       arcadeActive=true; arcadeExiting=false; window.__mwArcade=true;
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
-      arcadeRingText(true);
+      arcadeRingText(true); buildArcadeStars();
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
       MWBattle.init({ THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
     }
+    // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
+    // or orbiting never finds the edge of the sky.
+    var arcadeStars=null;
+    function buildArcadeStars(){
+      removeArcadeStars();
+      // density falls off as 1/r² past the base shell, so the number of stars per patch of SKY stays what it is today (a uniform volume
+      // density would pack the far field far more densely on screen).
+      var R0=15, R1=110, vBase=(4/3)*Math.PI*(R0*R0*R0-27)*0.6, density=params.starCount/vBase;
+      var N=Math.round(density*4*Math.PI*R0*R0*(R1-R0)*0.85), pos=new Float32Array(N*3), r2=mulberry32(4242);
+      for(var i=0;i<N;i++){ var r=R0+r2()*(R1-R0), t=r2()*Math.PI*2, p=Math.acos(2*r2()-1);
+        pos[i*3]=Math.sin(p)*Math.cos(t)*r; pos[i*3+1]=Math.cos(p)*r*0.85+1.6; pos[i*3+2]=Math.sin(p)*Math.sin(t)*r; }
+      var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      arcadeStars=new THREE.Points(g,new THREE.PointsMaterial({size:1.1,sizeAttenuation:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false}));
+      arcadeStars.frustumCulled=false; galaxy.add(arcadeStars);
+    }
+    function removeArcadeStars(){ if(arcadeStars){ galaxy.remove(arcadeStars); arcadeStars.geometry.dispose(); arcadeStars.material.dispose(); arcadeStars=null; } }
     function arcadeRestoreHolo(){   // undo the 'play' stage's blanket hide
       setSiteVisible(true); mwMount.visible=true;
       ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];
@@ -10229,7 +10245,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function finishArcadeExit(){
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
-      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
+      document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false); removeArcadeStars();
     }
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
@@ -13707,8 +13723,9 @@ f 2469//2469 2470//2470 2434//2434
       updateBootReveal();
       if(arcadeActive){
         ZONES.forEach(function(z){ z.mesh.visible=false; });   // arcade: no zone wedges
+        ringAur.visible=false;   // arcade: the secondary Aurebesh ring is hidden
         if(arcadeStage==='select'){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; }   // the hero carousel replaces the head
-        else { galaxy.children.forEach(function(c){ if(c!==starPoints) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
+        else { galaxy.children.forEach(function(c){ if(c!==starPoints&&c!==arcadeStars) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
       }
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
