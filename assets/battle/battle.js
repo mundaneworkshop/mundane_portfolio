@@ -74,9 +74,9 @@ var DEFAULTS={
   scaleFighter:.5, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1.6, scaleKit:1,
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
-  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, clear:1, darkLift:.6,
+  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, dsDim:.45, clear:1, darkLift:.6,
   kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045,
-  counts:{}, ver:8
+  counts:{}, ver:9
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
 
@@ -105,7 +105,7 @@ function capName(c){ return c.charAt(0).toUpperCase()+c.slice(1); }
 function loadCfg(){
   var o=JSON.parse(JSON.stringify(DEFAULTS));
   try{ var s=JSON.parse(localStorage.getItem(LS_KEY)||'null');
-    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale','scaleFighter','speedFighter','fogK','scaleHero','kitRate'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
+    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale','scaleFighter','speedFighter','fogK','scaleHero','kitRate','dsDim'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
     if(s){ Object.keys(s).forEach(function(k){ if(k==='counts'){ Object.keys(s.counts||{}).forEach(function(i){ o.counts[i]=s.counts[i]; }); } else if(k in o&&k!=='ver') o[k]=s[k]; }); }
   }catch(e){}
   return o;
@@ -119,12 +119,12 @@ function halfH(z){ return Math.tan(ctx.camera.fov*Math.PI/360)*(L-z); }
 function halfW(z){ return halfH(z)*Math.max(1.15,ctx.camera.aspect); }
 function anchorWorld(u,v,z,out){ return out.set(u*halfW(z), CY+v*halfH(z), z); }
 
-var matList=[], sceneBase=[], DARKLIFT=null, DARKGLOW=null;
+var matList=[], sceneBase=[], DARKLIFT=null, DARKGLOW=null, HAZE=null;
 function trackMaterials(obj,mdl){
   obj.traverse(function(o){ if(!o.isMesh) return; (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){
     if(m.userData.b0) return; m.userData.b0=m.color?m.color.clone():null; m.userData.e0=m.emissiveIntensity!=null?m.emissiveIntensity:1;
     m.userData.r0=m.roughness!=null?m.roughness:1; patchMaterial(m); if(envTex) m.envMap=envTex;
-    m.userData.k=mdl.bright||1; m.userData.fighter=mdl.cls==='fighter'; m.userData.dark=false;
+    m.userData.k=mdl.bright||1; m.userData.far=mdl.cls==='base'; m.userData.fighter=mdl.cls==='fighter'; m.userData.dark=false;
     if(mdl.lift&&m.color&&(m.color.r*.3+m.color.g*.59+m.color.b*.11)<.1) m.userData.dark=true;   // TIE panels/frames: near-black plastic vanishes against the void
     matList.push(m); }); });
 }
@@ -164,8 +164,9 @@ function applyLook(){
   matList.forEach(function(m){ m.envMapIntensity=P.envInt; if(m.roughness!=null) m.roughness=Math.min(1,m.userData.r0*P.rough); });
   matList.forEach(function(m){ var u=m.userData;
     if(u.b0){ if(u.dark) m.color.copy(u.b0).lerp(DARKLIFT,P.darkLift); else m.color.copy(u.b0);
-      m.color.multiplyScalar(P.matBright*u.k*(u.fighter?P.matFighter:1)); }
-    if(u.dark&&m.emissive){ m.emissive.copy(DARKGLOW).multiplyScalar(P.darkLift); } if(m.emissiveIntensity!=null) m.emissiveIntensity=m.userData.e0*P.matEmissive; });
+      m.color.multiplyScalar(P.matBright*u.k*(u.fighter?P.matFighter:1));
+      if(u.far){ m.color.lerp(HAZE,.28*(1-P.dsDim)).multiplyScalar(P.dsDim); } }   // atmospheric perspective: the Death Star is the farthest thing, so it's dimmed and cooled toward the haze
+    if(u.dark&&m.emissive){ m.emissive.copy(DARKGLOW).multiplyScalar(P.darkLift); } if(m.emissiveIntensity!=null) m.emissiveIntensity=m.userData.e0*P.matEmissive*(u.far?P.dsDim:1); });
   if(lights[0]){ lights[0].intensity=P.lightFill; lights[1].intensity=P.lightKey; lights[2].intensity=P.lightRim; }
   sceneBase.forEach(function(b){ b.l.intensity=b.i*P.lightScene; });
 }
@@ -899,7 +900,7 @@ function buildPanel(){
   var envT=null; function envSoon(){ clearTimeout(envT); envT=setTimeout(buildEnv,120); }
   [['fogK','Distance fog (0 = none, 1 = page default)',0,1.5,.05,0],['exposure','Exposure (filmic)',.3,2.5,.05,0],['lightKey','Sun intensity',0,4,.05,0],['sunAz','Sun azimuth \u00b0',-180,180,5,1],['sunEl','Sun elevation \u00b0',-60,85,5,1],['lightFill','Ambient',0,1.5,.02,0],['lightRim','Cool back fill',0,2,.05,0],
    ['envInt','Reflections (env map)',0,3,.05,0],['rough','Roughness (gloss \u2194 matte)',.15,1,.05,0],['lightScene','Scene lights \u00d7 (ambient/key/warm)',0,1.5,.05,0],
-   ['matBright','Hull brightness',.2,1.5,.05,0],['matEmissive','Glow / emissive',0,2,.05,0],['matFighter','Fighter brightness',.2,1.5,.05,0],['darkLift','Dark plastic lift (TIEs)',0,1,.05,0]].forEach(function(r){
+   ['matBright','Hull brightness',.2,1.5,.05,0],['matEmissive','Glow / emissive',0,2,.05,0],['matFighter','Fighter brightness',.2,1.5,.05,0],['dsDim','Death Star dimming (atmospheric perspective)',.1,1,.05,0],['darkLift','Dark plastic lift (TIEs)',0,1,.05,0]].forEach(function(r){
     slider(ld,r[1],function(){ return P[r[0]]; },function(x){ P[r[0]]=x; applyLook(); if(r[0]==='sunAz'||r[0]==='sunEl') envSoon(); },r[2],r[3],r[4],2);
   });
   check(panelEl,'Death Star (only ever one)',function(){ return P.deathStar; },function(x){ P.deathStar=x; reconT=0; });
@@ -941,7 +942,7 @@ function resetState(){
 var MWBattle={
   init:function(c){
     if(active) return; dead=false; resetState(); ctx=c; T=c.THREE; P=loadCfg();
-    _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); _steer=new T.Vector3(); _sep=new T.Vector3();
+    _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
     // whatever that elevation is. G is scaled so a camera at ANY distance sees the battle as if it were 4.3 units away.
