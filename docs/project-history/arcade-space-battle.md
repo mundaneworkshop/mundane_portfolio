@@ -71,3 +71,5 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 - Minikit reward moment (hook: `MWBattle.onUnlock` / `mw:minikit`).
 
 - Star field has two modes (`buildStars` reads `arcadeActive`; rebuilt on arcade enter/exit): arcade = hole `STAR_HOLE_ARC` (≈ play area) out to 130; galaxy view = tight hole `STAR_HOLE_GAL` [6,5,6] around the hologram, shell to 48, ×14 the Star-density slider, 75× star-size px. On leaving the arcade the camera zoom/height reset to the saved galaxy view (`galcam`).
+
+- Galaxy star hole is now `STAR_HOLE_GAL=[30,18,30]` (covers the interactive area incl. the camera at max zoom-out; shell to 95 = the galaxy camera's far plane). Star material has `fog:false` — scene fog was erasing every distant star. Star-density slider range is 50–3000 (step 50).
