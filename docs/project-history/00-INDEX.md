@@ -15,7 +15,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Figma design system (tokens, components, color, spacing, type) → [foundation-docs.md](foundation-docs.md), [color-decisions.md](color-decisions.md), [spacing-decisions.md](spacing-decisions.md), [visual-language-direction.md](visual-language-direction.md), [star-wars-visual-dna.md](star-wars-visual-dna.md), [bric-build-progress.md](bric-build-progress.md), [bric-framer-translation.md](bric-framer-translation.md)
 - Button / tag / breadcrumb / interactive-text states, the `--bric-*` token file, or regenerating tokens from Figma → [interactive-states.md](interactive-states.md)
 - Foundations vs prod audit, the register narrative (teal = hologram, amber = the work, purple = HoloNet), HUD vs Document tiers, and the prod-migration list → [foundations-audit.md](foundations-audit.md)
-- Touching the entry-gate space battle (fleets, lasers, hero ships, minikits, hyperspace exit) → [entry-gate-battle.md](entry-gate-battle.md)
+- Touching the Arcade space battle (Fun zone planet, fleets, lasers, hero ships, minikits, lighting, exit) → [arcade-space-battle.md](arcade-space-battle.md)
 - Known open backlog items not yet built → [holotable-next-steps.md](holotable-next-steps.md), [text-style-tokens-todo.md](text-style-tokens-todo.md)
 
 **Full file list:**
