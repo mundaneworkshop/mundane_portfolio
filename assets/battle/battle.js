@@ -800,7 +800,8 @@ function update(t){
 }
 
 /* ───────────────────────────── input ───────────────────────────── */
-function isTyping(e){ var t=e.target; return t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable); }
+// Only real text entry blocks the game keys. A focused debug slider / checkbox / button must NOT (that's what made ← → ignore the carousel until a button was clicked).
+function isTyping(e){ var t=e.target; if(!t) return false; if(t.isContentEditable||t.tagName==='TEXTAREA') return true; return t.tagName==='INPUT'&&/^(text|search|url|email|password|number|tel)$/i.test(t.type||'text'); }
 function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
     if(ptr.in&&!hyper){ if(kitAt(e.clientX,e.clientY)) ctx.dom.style.cursor='pointer'; else if(stage==='play') ctx.dom.style.cursor='crosshair'; } });
@@ -815,6 +816,7 @@ function bindInput(){
   },true);
   on(window,'keydown',function(e){
     if(isTyping(e)||hyper) return;
+    if(/^(ArrowLeft|ArrowRight|Enter|Space)$/.test(e.code)&&e.target&&e.target!==document.body&&e.target.blur&&e.target.tagName!=='A'){ e.target.blur(); }   // take focus off a slider/button so it doesn't also act on the key
     if(stage==='select'){
       if(e.code==='ArrowLeft'){ stepCar(-1); e.preventDefault(); }
       else if(e.code==='ArrowRight'){ stepCar(1); e.preventDefault(); }
