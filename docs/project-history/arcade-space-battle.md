@@ -45,3 +45,6 @@ The page's scene fog (`FogExp2`, density 0.03) is what faded far capital ships t
 - Death Star: placed at distance 80 on its old sight-line (beyond the capital shell, radius ≤ ~42, so nothing passes behind it), scaled by the distance ratio (`dsK`), fog off.
 - Ships vanishing when zooming = the camera's far plane (100). The battle raises `camera.far` to 800 while active and restores it on exit.
 - Far star field density is half the base density, constant per patch of sky.
+
+## Camera (current)
+The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down via `camElev`); arcade widens the `camElev` clamp to -14..16 (normal galaxy view stays -3..7). A free-trackball version was tried and reverted.

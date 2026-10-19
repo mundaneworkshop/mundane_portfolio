@@ -9792,7 +9792,7 @@ f 2469//2469 2470//2470 2434//2434
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
           else { focusYaw-=dx*0.006; focusPitch=clamp(focusPitch+syF*dy*0.006,-0.25,1.45); }
         }
-        else { manualRot+=dx*0.004; camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });
+        else { manualRot+=dx*0.004; camElev=arcadeActive?clamp(camElev-sy*dy*0.02,-14,16):clamp(camElev-sy*dy*0.02,-3,7); } } });   // arcade allows a much wider up/down range
     renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
       if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
