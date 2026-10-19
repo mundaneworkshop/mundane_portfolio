@@ -89,12 +89,11 @@
   #breadcrumb{pointer-events:auto}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
   /* ARCADE mode: the exit button takes the breadcrumb's place, with the ESC hint right beside it */
-  #arcadeExit{display:none;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:auto;transition:opacity .25s ease}
+  #arcadeExit{display:none;flex-direction:row;align-items:center;gap:8px;pointer-events:auto;transition:opacity .25s ease}
   body.mw-arcade #arcadeExit{display:flex}
   body.mw-arcade #breadcrumb{display:none}
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
-  #arcadeExit .ax-hint{white-space:nowrap;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted,#6b8a85)}
-  #arcadeExit kbd{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1px;color:var(--line,#5ABFB8);border:1px solid var(--line,#5ABFB8);padding:2px 6px;margin:0 3px}
+  #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
   body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas{opacity:0!important;pointer-events:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   /* Save = primary action — lit amber fill */
@@ -849,7 +848,7 @@
   </div>
 
   <div id="topbar">
-    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><span class="ax-hint">or press <kbd>ESC</kbd> at any time to exit the arcade</span></div>
+    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
     <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
@@ -1546,6 +1545,7 @@
       // topbar (and debug panel) now stay reachable through the entry gate (see the CSS rule) instead.
       if(_hasRoute||_reducedMotion) mwPhase='docked';
     }catch(e){ mwPhase='docked'; }
+    if(mwPhase==='docked') mwDockT=1;   // landed on a deep link (/arcade, /cv …) with no dock animation: the monogram must start at its docked resting place, not mid-air at the entry spot
 
     var rt=new THREE.WebGLRenderTarget(Math.floor(W/params.pixel),Math.floor(H/params.pixel),{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
     var postScene=new THREE.Scene(), postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
@@ -9781,7 +9781,8 @@ f 2469//2469 2470//2470 2434//2434
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
-    renderer.domElement.addEventListener('pointerdown',function(e){ dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });
+    renderer.domElement.addEventListener('pointerdown',function(e){ if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
+      dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
@@ -10195,7 +10196,8 @@ f 2469//2469 2470//2470 2434//2434
     // Keeps the hologram (head, cone, ring), the monogram emitter and the base grid; hides every zone + planet; swaps the ring text.
     // Exit = the top-left button (where the breadcrumb normally sits) or ESC → ships jump to hyperspace, then the galaxy comes back.
     var arcadeActive=false, arcadeExiting=false, _ringBak=null;
-    var ARCADE_RING='click on or blast minikits to unlock new outfits for Jason \u00b7 ';
+    var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 MOUSE TO MOVE \u2022 CLICK TO FIRE \u2022 ';
+    var arcadeStage='select';   // 'select' (hero carousel replaces the head) | 'play' (every hologram artifact hidden, the hero flies)
     function arcadeRingText(on){
       if(on){ if(!_ringBak) _ringBak={en:BIO_EN,aur:BIO_AUR}; BIO_EN=ARCADE_RING; BIO_AUR=ARCADE_RING; }
       else if(_ringBak){ BIO_EN=_ringBak.en; BIO_AUR=_ringBak.aur; _ringBak=null; }
@@ -10209,20 +10211,29 @@ f 2469//2469 2470//2470 2434//2434
       arcadeRingText(true);
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
       MWBattle.init({ THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
-        pose:{pos:camPose}, center:[0,2.0,0], getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
+        pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
+    }
+    function arcadeRestoreHolo(){   // undo the 'play' stage's blanket hide
+      setSiteVisible(true); mwMount.visible=true;
+      ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];
+    }
+    function arcadeSetStage(st){
+      var was=arcadeStage; arcadeStage=st;
+      if(was==='play'&&st==='select') arcadeRestoreHolo();
     }
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
       if(window.MWBattle&&MWBattle.isActive()) MWBattle.hyperspace(true); else finishArcadeExit();
     }
     function finishArcadeExit(){
-      arcadeActive=false; arcadeExiting=false; window.__mwArcade=false;
+      arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
       document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
     }
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
+    var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
     function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
 
@@ -13694,7 +13705,11 @@ f 2469//2469 2470//2470 2434//2434
       if(window.MWBattle && MWBattle.isActive()) MWBattle.update(t);   // arcade space battle (assets/battle/battle.js) — also runs its hyperspace exit
       mwUpdate(1-focusAmount);   // eases out as a project focuses, back in as it exits (was a hard pop on exit)
       updateBootReveal();
-      if(arcadeActive) ZONES.forEach(function(z){ z.mesh.visible=false; });   // arcade: no zone wedges
+      if(arcadeActive){
+        ZONES.forEach(function(z){ z.mesh.visible=false; });   // arcade: no zone wedges
+        if(arcadeStage==='select'){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; }   // the hero carousel replaces the head
+        else { galaxy.children.forEach(function(c){ if(c!==starPoints) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
+      }
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
         // (1) depth-only pre-pass of the logo alone → buffer holds the front-most logo surface

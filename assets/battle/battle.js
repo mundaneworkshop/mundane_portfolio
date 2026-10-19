@@ -42,15 +42,15 @@ var MODELS=[
   {id:'tie-dagger',        file:'nano-tie-dagger',             team:IMP, cls:'fighter', size:.28, n:3, lift:1},
   {id:'lambda-shuttle',    file:'nano-lambda-shuttle',         team:IMP, cls:'fighter', size:.40, n:1, bright:.75, turn:.45, spd:.6,  fire:.5},
   // zone 2 — support
-  {id:'blockade-runner',   file:'nano-blockade-runner',        team:REB, cls:'support', size:1.25, n:3},
-  {id:'nebulon-b',         file:'nano-nebulon-b',              team:REB, cls:'support', size:1.4, n:3},
-  {id:'acclamator',        file:'nano-acclamator',             team:IMP, cls:'support', size:1.5, n:3},
-  {id:'imperial-light-cruiser', file:'nano-imperial-light-cruiser', team:IMP, cls:'support', size:1.25, n:3},
+  {id:'blockade-runner',   file:'nano-blockade-runner',        team:REB, cls:'support', size:1.25, n:6},
+  {id:'nebulon-b',         file:'nano-nebulon-b',              team:REB, cls:'support', size:1.4, n:6},
+  {id:'acclamator',        file:'nano-acclamator',             team:IMP, cls:'support', size:1.5, n:6},
+  {id:'imperial-light-cruiser', file:'nano-imperial-light-cruiser', team:IMP, cls:'support', size:1.25, n:6},
   // zone 3 — capital + base
-  {id:'mc80',              file:'nano-mc80',                   team:REB, cls:'capital', size:2.7, n:2},
-  {id:'mc80a',             file:'nano-mc80a',                  team:REB, cls:'capital', size:2.7, n:1},
-  {id:'mc85',              file:'nano-mc85',                   team:REB, cls:'capital', size:3.0, n:1},
-  {id:'star-destroyer',    file:'nano-star-destroyer',         team:IMP, cls:'capital', size:2.9, n:5},
+  {id:'mc80',              file:'nano-mc80',                   team:REB, cls:'capital', size:2.7, n:4},
+  {id:'mc80a',             file:'nano-mc80a',                  team:REB, cls:'capital', size:2.7, n:2},
+  {id:'mc85',              file:'nano-mc85',                   team:REB, cls:'capital', size:3.0, n:2},
+  {id:'star-destroyer',    file:'nano-star-destroyer',         team:IMP, cls:'capital', size:2.9, n:10},
   {id:'death-star',        file:'nano-death-star',             team:IMP, cls:'base',    size:2.8, n:1, max:1},
   // heroes (user-spawned)
   {id:'mil-falcon',        file:'nano-mil-falcon',             team:HERO, cls:'hero',   size:.30, n:0, label:'Millennium Falcon'},
@@ -71,12 +71,12 @@ var CLS={   // per-class feel: base fire interval (s), weapon range, bolt aim sp
 
 var DEFAULTS={
   on:true, density:1, speed:1, scale:1.5, laser:1, laserSpeed:1, boltSize:1, arena:1,
-  scaleFighter:1, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1, scaleKit:1,
-  speedFighter:1, speedSupport:1, speedCapital:1,
+  scaleFighter:.5, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1.6, scaleKit:1,
+  speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
-  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, clear:1, darkLift:.6,
+  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, clear:1, darkLift:.6,
   kitRate:1, kitMax:2, deathStar:true, jumpStep:.045,
-  counts:{}, ver:5
+  counts:{}, ver:7
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
 
@@ -105,7 +105,7 @@ function capName(c){ return c.charAt(0).toUpperCase()+c.slice(1); }
 function loadCfg(){
   var o=JSON.parse(JSON.stringify(DEFAULTS));
   try{ var s=JSON.parse(localStorage.getItem(LS_KEY)||'null');
-    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
+    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale','scaleFighter','speedFighter','fogK','scaleHero'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
     if(s){ Object.keys(s).forEach(function(k){ if(k==='counts'){ Object.keys(s.counts||{}).forEach(function(i){ o.counts[i]=s.counts[i]; }); } else if(k in o&&k!=='ver') o[k]=s[k]; }); }
   }catch(e){}
   return o;
@@ -128,6 +128,7 @@ function trackMaterials(obj,mdl){
     if(mdl.lift&&m.color&&(m.color.r*.3+m.color.g*.59+m.color.b*.11)<.1) m.userData.dark=true;   // TIE panels/frames: near-black plastic vanishes against the void
     matList.push(m); }); });
 }
+var fogBase=0;
 var BTU={ exp:{value:1} };
 function patchMaterial(m){   // battle-only filmic curve: highlights roll off instead of clipping, and it does NOT touch the hologram's materials (a global renderer.toneMapping would)
   if(m.userData.btPatched||!m.isMeshStandardMaterial) return; m.userData.btPatched=true;
@@ -158,7 +159,7 @@ function buildEnv(){   // tiny dark-space environment: one hard sun, faint teal 
   if(old) old.dispose();
 }
 function applyLook(){
-  BTU.exp.value=P.exposure;
+  BTU.exp.value=P.exposure; if(ctx.fog&&fogBase) ctx.fog.density=fogBase*P.fogK;   // scene fog is what made far capital ships fade to black
   if(lights[1]){ sunDir(_v1); lights[1].position.copy(_v1).multiplyScalar(30); lights[2].position.copy(_v1).multiplyScalar(-30); }
   matList.forEach(function(m){ m.envMapIntensity=P.envInt; if(m.roughness!=null) m.roughness=Math.min(1,m.userData.r0*P.rough); });
   matList.forEach(function(m){ var u=m.userData;
@@ -249,9 +250,11 @@ function initShip(s){
   s.spawnK=0;
 }
 var _ap=null, _bp=null;
+function depthComp(z){ return Math.pow(Math.max(1,(L-z)/(L+6)),.8); }   // far ships get a size boost so they don't shrink to specks
+function effR(s,z){ return s.c.r*P.scale*P['scale'+capName(s.cls)]*depthComp(z); }
 function assignAnchors(){
-  // Best-candidate scatter: each new support/capital ship tries many random spots across a deep, wide volume on its side of the field and
-  // keeps the one furthest from every ship already placed — so the fleets read as a 3D cloud, not a plane. Anchors are stable once chosen.
+  // Best-candidate scatter through a deep, wide 3D volume on each side: a new support/capital ship tries many random spots and keeps the one
+  // furthest (in ship-radii) from every ship already placed. Anchors are stable once chosen; random again on every arcade entry.
   if(!_ap){ _ap=new T.Vector3(); _bp=new T.Vector3(); }
   [IMP,REB].forEach(function(team){
     var side=team===IMP?-1:1;
@@ -259,14 +262,15 @@ function assignAnchors(){
       ships.forEach(function(s){
         if(s.team!==team||s.cls!==cls||s.leaving||s.hasA) return;
         var best=null, bd=-1;
-        for(var k=0;k<60;k++){
-          var cu=side*(cls==='support'?rnd(.4,1.45):rnd(.6,1.7)), cv=rnd(-1,1)*(cls==='support'?.95:1.05), cz=cls==='support'?rnd(-2.5,-8):rnd(-5,-13);
+        for(var k=0;k<140;k++){
+          var cu=side*(cls==='support'?rnd(.35,1.7):rnd(.5,2.0)), cv=rnd(-1,1)*(cls==='support'?1.1:1.25), cz=cls==='support'?rnd(-2,-15):rnd(-4,-26);
           anchorWorld(cu,cv,cz,_ap);
-          var md=1e9;   // distance is x-weighted (×1.7) so horizontal gaps are favoured — they were stacking in columns
-          ships.forEach(function(o){ if(o===s||!o.hasA) return; anchorWorld(o.au,o.av,o.az,_bp); md=Math.min(md,Math.hypot((_ap.x-_bp.x)*1.7,_ap.y-_bp.y,(_ap.z-_bp.z)*.8)/((o.c.r+s.c.r)*.5+.4)); });
+          var md=1e9, er=effR(s,cz);
+          ships.forEach(function(o){ if(o===s||!o.hasA) return; anchorWorld(o.au,o.av,o.az,_bp);
+            md=Math.min(md,Math.hypot((_ap.x-_bp.x)*1.7,(_ap.y-_bp.y)*1.2,(_ap.z-_bp.z)*.8)/((effR(o,o.az)+er)*.5+.4)); });   // x weighted extra: they used to stack in columns
           if(md>bd){ bd=md; best=[cu,cv,cz]; }
         }
-        if(!best) best=[side*.9,rnd(-.8,.8),cls==='support'?-4:-8];   // (only if every candidate scored NaN)
+        if(!best) best=[side*.9,rnd(-.8,.8),cls==='support'?-4:-8];
         s.au=best[0]; s.av=best[1]; s.az=best[2]; s.hasA=true;
       });
     });
@@ -340,7 +344,7 @@ function killShip(s){
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
-  if(s.cls==='fighter'){ s.hp--; if(s.hp<=0) killShip(s); }
+  if(s.cls==='fighter'){ s.hp--; if(s.hp<=0){ killShip(s); if(b.team===HERO){ kills++; updHud(true); } } }
 }
 function updBolts(dt){
   var D=dt*P.laserSpeed;
@@ -441,57 +445,98 @@ function updBase(s,dt){
   s.bank.rotation.z=0;                                                    // no roll: keeps the dish on the upper hemisphere
 }
 
-/* ───────────────────────────── hero ───────────────────────────── */
+/* ───────────────────────────── hero + stages ───────────────────────────── */
+// stage 'select': the hologram's head is replaced by a carousel of the playable hero ships (◄ PLAY ► under the cone).
+// stage 'play'  : every hologram artifact hides (ctx.onStage) and the chosen hero flies — it travels toward the mouse, fires where you click.
+var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
+var stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
+var _ro=null, _rd=null, _hT=null, _hF=null;
+function setStage(st){ if(stage===st) return; stage=st; if(ctx.onStage) ctx.onStage(st); syncUi(); }
+function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
+function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
   ejectHero(true);
   var m=BYID[id]; if(!m) return;
   if(!cache[id]){ requestModel(id); pumpLoads(); pendingHero=id; return; }
   var s=makeShip(m); heroShip=s; s.hero=true; s.hp=1e9;
-  s.pos.set(0,CY-.9,.4); s.dir.set(0,1,0); s.spd=0; s.spawnK=0; s.cd=0; s.gun=0; s.throttle=.35;
-  burst(s.pos,0xaaf5ee,18,1.4,.6);
-  setPilotBtns();
+  s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=0; s.cd=0; s.gun=0;
+  burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false;
+  setStage('play');
 }
-var pendingHero=null;
+function changeHero(){ ejectHero(false); fireHeld=false; setStage('select'); }
 function ejectHero(silent){
   if(!heroShip) return; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
-  G.remove(heroShip.root); ships.splice(ships.indexOf(heroShip),1); heroShip=null; if(!silent) setPilotBtns();
+  G.remove(heroShip.root); ships.splice(ships.indexOf(heroShip),1); heroShip=null;
 }
-function ptrWorld(z,out){   // pointer ray → the local z=const plane, returned in G-local coords
-  _ray.setFromCamera(_v4.set(ptr.nx,ptr.ny,.5),ctx.camera);
-  _v3.set(0,0,z); G.localToWorld(_v3); _q.copy(G.quaternion); var nrm=_v2.set(0,0,1).applyQuaternion(_q);
-  _plane.setFromNormalAndCoplanarPoint(nrm,_v3);
-  var hit=_ray.ray.intersectPlane(_plane,out); if(!hit) return out.set(0,CY,z);
-  return G.worldToLocal(out);
+// pointer → ray in G-local space
+function localRay(nx,ny){
+  _ray.setFromCamera(_v4.set(nx,ny,.5),ctx.camera);
+  _ro.copy(_ray.ray.origin); G.worldToLocal(_ro);
+  _rd.copy(_ray.ray.direction).applyQuaternion(_q.copy(G.quaternion).invert()).normalize();
+}
+// What is the pointer on? An object (ship / minikit) gives a real XYZ; empty space is approximated by the plane at the hero's depth.
+// Writes the target into `out` (G-local) and returns the object hit, or null.
+function pickAt(nx,ny,out){
+  localRay(nx,ny); var best=null, bt=1e9;
+  function test(c,r,o){ _hF.copy(c).sub(_ro); var tca=_hF.dot(_rd); if(tca<0) return; var d2=_hF.lengthSq()-tca*tca; if(d2>r*r) return; var t=tca-Math.sqrt(r*r-d2); if(t<bt){ bt=t; best=o; } }
+  ships.forEach(function(sh){ if(!sh.alive||sh.hero||sh.jump||sh.leaving) return; test(sh.pos,Math.max(sh.c.r*sh.root.scale.x*1.25,.2),sh); });
+  kits.forEach(function(k){ if(!k.opening) test(k.pos,.38*k.root.scale.x+.1,k); });
+  if(best){ out.copy(best.pos); return best; }
+  var z=heroShip?heroShip.pos.z:0, t=Math.abs(_rd.z)>1e-4?(z-_ro.z)/_rd.z:6; if(!(t>.2)) t=6;
+  out.copy(_ro).addScaledVector(_rd,t); return null;
 }
 function updHero(s,dt){
-  var m=s.m, ctl=keys;
-  var want=ptrWorld(s.pos.z,_v1);
-  var to=_v2.copy(want).sub(s.pos); var d=to.length();
+  var o=pickAt(ptr.nx,ptr.ny,_hT);
+  if(!ptr.in) _hT.copy(s.pos).addScaledVector(s.dir,1);               // pointer off the canvas: coast on
+  var to=_v2.copy(_hT).sub(s.pos), d=to.length();
+  if(!o) to.z-=s.pos.z*.5;                                              // the cursor can't say how deep: drift back toward mid-depth unless pointing at something
   s.prev.copy(s.dir);
-  if(ptr.in&&d>.25){ to.normalize(); var ang=s.dir.angleTo(to); if(ang>1e-4){ s.dir.lerp(to,Math.min(1,4.2*dt/ang)).normalize(); } }
-  var thr=s.throttle; if(ctl.KeyW||ctl.ArrowUp) thr=1; else if(ctl.KeyS||ctl.ArrowDown) thr=.08; else thr=.35;
-  var boost=(ctl.ShiftLeft||ctl.ShiftRight)?1.7:1;
-  var target=2.8*thr*boost*P.speed; s.spd=lerp(s.spd,target,Math.min(1,dt*3.2));
-  s.vel.copy(s.dir).multiplyScalar(s.spd);
-  // strafe
-  var sx=(ctl.KeyD||ctl.ArrowRight?1:0)-(ctl.KeyA||ctl.ArrowLeft?1:0);
-  if(sx){ _v3.set(0,1,0).cross(s.dir).normalize().multiplyScalar(-sx*1.7*P.speed); s.vel.add(_v3); }
-  s.pos.addScaledVector(s.vel,dt);
-  // keep on screen-ish
+  if(d>.15){ to.normalize(); var ang=s.dir.angleTo(to); if(ang>1e-4){ s.dir.lerp(to,Math.min(1,3.6*dt/ang)).normalize(); } }
+  var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed; if(o&&d<.9) want=Math.min(want,.4);   // hovering an object: ease in, don't ram it
+  s.spd=lerp(s.spd,want,Math.min(1,dt*3));
+  s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
   var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
   s.pos.x=clamp(s.pos.x,-ax,ax); s.pos.y=clamp(s.pos.y,CY-ay,CY+ay); s.pos.z=clamp(s.pos.z,-az,az*.9);
-  // mono keep-out (gentle slide)
-  _v3.set(s.pos.x-CX,s.pos.y-CY,s.pos.z-CZ); var dm=_v3.length(), rm=monoR()*.9;
-  if(dm<rm){ s.pos.addScaledVector(_v3.normalize(),rm-dm); }
   var yr=(s.prev.z*s.dir.x-s.prev.x*s.dir.z)/Math.max(dt,1e-3);
   s.yawRate=lerp(s.yawRate,yr,Math.min(1,dt*6));
   aim(s.root,s.dir);
-  s.bankV=lerp(s.bankV,clamp(s.yawRate*.5-sx*.5,-1.2,1.2),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
+  s.bankV=lerp(s.bankV,clamp(s.yawRate*.5,-1.2,1.2),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
   s.cd-=dt;
-  if(!hyper&&(fireHeld||ctl.Space)&&s.cd<=0){
-    var mp=muzzle(s,_v1.set(0,0,0)); var dd=_v2.copy(s.dir); dd.x+=rnd(-1,1)*CLS.hero.spread; dd.y+=rnd(-1,1)*CLS.hero.spread; dd.normalize();
+  if(!hyper&&fireHeld&&s.cd<=0){   // fire toward wherever the pointer is on (an object's XYZ, or the depth-plane point)
+    pickAt(ptr.nx,ptr.ny,_hT);
+    var mp=muzzle(s,_v1.set(0,0,0)); var dd=_v2.copy(_hT).sub(mp); if(dd.lengthSq()<1e-4) dd.copy(s.dir); dd.normalize();
+    dd.x+=rnd(-1,1)*CLS.hero.spread; dd.y+=rnd(-1,1)*CLS.hero.spread; dd.normalize();
     spawnBolt(HERO,mp,dd,true); s.cd=CLS.hero.int/Math.max(.2,P.laser);
   }
+}
+// ── carousel (the hologram's head is hidden by ctx.onStage while stage==='select')
+function ensureCarousel(){
+  if(!carGroup){ carGroup=new T.Group(); G.add(carGroup); }
+  HEROES.forEach(requestModel); pumpLoads();
+}
+function updCarousel(dt){
+  if(!carGroup) return;
+  var show=stage==='select'&&!hyper; carGroup.visible=show; if(!show) return;
+  var id=HEROES[carIdx];
+  if(carModelId!==id&&cache[id]){
+    if(carWrap) carGroup.remove(carWrap);
+    carWrap=new T.Group(); carModel=cache[id].proto.clone(true); carWrap.add(carModel); carGroup.add(carWrap); carModelId=id; carK=0;
+    if(carUi){ var nm=carUi.querySelector('.bt-name'); if(nm) nm.textContent=BYID[id].label; }
+  }
+  if(!carWrap) return;
+  carK=Math.min(1,carK+dt*3.2); var pop=1-Math.pow(1-carK,3);
+  carWrap.scale.setScalar((1.45/S)/BYID[id].size*(.2+.8*pop)*(P.scaleHero>0?1:1));
+  carWrap.rotation.y+=dt*.9; carWrap.rotation.x=.22; carGroup.position.y=Math.sin(clockT*1.3)*.05/S;
+  if(carUi){   // sit the ◄ PLAY ► row just under the hologram's emitter
+    _hF.set(0,(.25-ctx.center[1])/S,0); G.localToWorld(_hF); _hF.project(ctx.camera);
+    var r=ctx.dom.getBoundingClientRect(); carUi.style.left=((_hF.x+1)/2*r.width+r.left)+'px'; carUi.style.top=((1-_hF.y)/2*r.height+r.top+22)+'px';
+  }
+}
+function syncUi(){
+  var sel=stage==='select'&&!hyper, pl=stage==='play'&&!hyper;
+  if(carUi) carUi.style.display=sel?'flex':'none';
+  if(hintEl) hintEl.style.display=pl?'block':'none';
+  if(hudEl) hudEl.style.opacity=pl?1:0;
 }
 
 /* ───────────────────────────── minikits ───────────────────────────── */
@@ -608,7 +653,7 @@ function update(t){
     var s=ships[i];
     // global/class scale
     var base=s.cls==='hero'?P.scaleHero:s.cls==='base'?P.scaleBase:P['scale'+capName(s.cls)];
-    var sc=P.scale*base;
+    var sc=P.scale*base*((s.cls==='support'||s.cls==='capital')&&s.hasA?depthComp(s.az):1);
     if(s.spawnK<1){ s.spawnK=Math.min(1,s.spawnK+dt*1.6); }
     if(s.leaving){ s.spawnK=Math.max(0,s.spawnK-dt*3); if(s.spawnK<=0){ G.remove(s.root); ships.splice(i,1); anchorsDirty=true; continue; } }
     s.root.scale.setScalar(sc*s.spawnK*(s.spawnK<1?1:1)+1e-4);
@@ -626,9 +671,10 @@ function update(t){
     if(s.jump) updHyper(s,dt);
     continue;
   }
-  updKits(dt);
+  updKits(dt); updCarousel(dt);
   updBolts(dt); updSparks(dt); updFlashes(dt);
   if(hyper){
+    if(hyper.t===0) syncUi();
     hyper.t+=dt; var any=ships.some(function(s){ return s.alive; });
     if(!any&&hyper.t>.4){ var done=ctx.onDone; MWBattle.dispose(); if(done) done(); }
   }
@@ -638,59 +684,59 @@ function update(t){
 function isTyping(e){ var t=e.target; return t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable); }
 function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
-    if(ptr.in&&!hyper&&kitAt(e.clientX,e.clientY)) ctx.dom.style.cursor='pointer'; });
-  on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now(); });
+    if(ptr.in&&!hyper){ if(kitAt(e.clientX,e.clientY)) ctx.dom.style.cursor='pointer'; else if(stage==='play') ctx.dom.style.cursor='crosshair'; } });
+  on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
+    if(stage==='play'&&heroShip&&!hyper&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; } });   // left button = fire (hold to keep firing)
+  on(window,'pointerup',function(e){ if(e.button===0) fireHeld=false; });
+  on(ctx.dom,'contextmenu',function(e){ e.preventDefault(); });          // right-drag pans the camera; no browser menu
   on(ctx.dom,'click',function(e){
     if(hyper||!active) return;
-    if(Math.hypot(e.clientX-ptr.downX,e.clientY-ptr.downY)>6) return;   // a drag-orbit, not a click
-    var k=kitAt(e.clientX,e.clientY); if(k){ openKit(k,'click'); e.stopImmediatePropagation(); return; }
-    if(heroShip&&!ctx.isOverMonogram()){ heroShip.cd=0; var mp=muzzle(heroShip,_v1.set(0,0,0)); spawnBolt(HERO,mp,heroShip.dir,true); }
+    if(Math.hypot(e.clientX-ptr.downX,e.clientY-ptr.downY)>6) return;   // a drag, not a click
+    var k=kitAt(e.clientX,e.clientY); if(k){ openKit(k,'click'); e.stopImmediatePropagation(); }
   },true);
   on(window,'keydown',function(e){
-    if(isTyping(e)) return;
-    if(heroShip&&/^(KeyW|KeyA|KeyS|KeyD|Arrow(Up|Down|Left|Right)|Space|Shift(Left|Right))$/.test(e.code)){ keys[e.code]=true; if(e.code==='Space'||e.code.indexOf('Arrow')===0) e.preventDefault(); }
+    if(isTyping(e)||hyper) return;
+    if(stage==='select'){
+      if(e.code==='ArrowLeft'){ stepCar(-1); e.preventDefault(); }
+      else if(e.code==='ArrowRight'){ stepCar(1); e.preventDefault(); }
+      else if(e.code==='Enter'||e.code==='Space'){ playHero(); e.preventDefault(); }
+    } else if(e.code==='Space'){ changeHero(); e.preventDefault(); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
   });
-  on(window,'keyup',function(e){ keys[e.code]=false; });
   on(window,'blur',ejectKeys);
 }
 
 /* ───────────────────────────── UI: hero picker, HUD, debug panel ───────────────────────────── */
-function setPilotBtns(){
-  if(!uiEl) return;
-  [].forEach.call(uiEl.querySelectorAll('button[data-hero]'),function(b){ b.classList.toggle('on',!!heroShip&&heroShip.id===b.dataset.hero||pendingHero===b.dataset.hero); });
-  var h=uiEl.querySelector('.bt-help'); if(h) h.style.opacity=heroShip?1:0;
-}
 function updHud(pulse){
-  if(!hudEl) return; hudEl.textContent='◆ MINIKIT '+kitCount; hudEl.style.opacity=kitCount?1:0;
+  if(!hudEl) return; hudEl.innerHTML='<span class="bt-hl">KILLS</span><span class="bt-hn">'+kills+'</span>';
   if(pulse){ hudEl.classList.remove('pulse'); void hudEl.offsetWidth; hudEl.classList.add('pulse'); }
 }
 function injectCss(){
   styleEl=document.createElement('style'); styleEl.textContent=[
-    'body:not(.mw-arcade) #bt-pilot, body:not(.mw-arcade) #bt-hud{display:none}',
+    'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints{display:none!important}',
     'body.mw-arcade #dbg-battle{display:block}',
-    '#bt-pilot{position:absolute;right:22px;bottom:50px;z-index:16;display:flex;flex-direction:column;gap:6px;align-items:flex-end;font-family:var(--display,sans-serif)}',
-    '#bt-pilot .bt-k{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted,#6b8a85);margin-bottom:2px}',
-    '#bt-pilot .bt-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:420px}',
-    '#bt-pilot button.on{outline:1px solid var(--line,#5ABFB8);outline-offset:0}',
-    '#bt-pilot .bt-help{font-family:var(--mono,monospace);font-size:9px;letter-spacing:1px;color:var(--muted,#6b8a85);text-transform:uppercase;transition:opacity .3s;opacity:0;text-align:right}',
-    '#bt-hud{position:absolute;right:22px;top:70px;z-index:16;font-family:var(--mono,monospace);font-size:11px;letter-spacing:2px;color:#F0D080;opacity:0;transition:opacity .3s;pointer-events:none}',
-    '#bt-hud.pulse{animation:btPulse .5s steps(4)}@keyframes btPulse{0%{transform:scale(1.5)}100%{transform:scale(1)}}',
+    '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
+    '#bt-car .bt-name{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
+    '#bt-car .bt-row{display:flex;gap:8px;align-items:center}',
+    '#bt-hints{position:absolute;right:24px;bottom:34px;z-index:16;text-align:right;pointer-events:none;font-family:var(--mono,monospace);font-size:11px;letter-spacing:2px;line-height:1.9;text-transform:uppercase;color:var(--muted,#6b8a85)}',
+    '#bt-hints b{font-weight:400;color:var(--holo,#AAF5EE)}',
+    '#bt-hud{position:absolute;right:24px;top:64px;z-index:16;display:flex;flex-direction:column;align-items:flex-end;line-height:1;pointer-events:none;opacity:0;transition:opacity .3s}',
+    '#bt-hud .bt-hl{font-family:var(--display,sans-serif);font-size:11px;letter-spacing:4px;color:var(--muted,#6b8a85);margin-bottom:6px}',
+    '#bt-hud .bt-hn{font-family:var(--mono,monospace);font-size:56px;letter-spacing:2px;color:var(--amber-hot,#F0D080);text-shadow:0 0 16px rgba(240,208,128,.45)}',
+    '#bt-hud.pulse .bt-hn{animation:btPulse .4s steps(4)}@keyframes btPulse{0%{transform:scale(1.35);transform-origin:right center}100%{transform:scale(1);transform-origin:right center}}',
     '#dbg-battle details{margin:0 0 10px}#dbg-battle summary{cursor:pointer;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}',
     '#dbg-battle .ctl.tight{margin-bottom:8px}'
   ].join('\n'); document.head.appendChild(styleEl);
 }
 function buildUi(){
   injectCss();
-  // hero picker
-  uiEl=document.createElement('div'); uiEl.id='bt-pilot';
-  uiEl.innerHTML='<div class="bt-k">Take the controls</div><div class="bt-row"></div><div class="bt-help">WASD fly · mouse aim · space fire · shift boost</div>';
-  var row=uiEl.querySelector('.bt-row');
-  MODELS.filter(function(m){ return m.cls==='hero'; }).forEach(function(m){
-    var b=document.createElement('button'); b.className='bric-btn bric-btn--sm'; b.dataset.hero=m.id; b.textContent=m.label; b.setAttribute('aria-label','Pilot the '+m.label);
-    b.addEventListener('click',function(e){ e.stopPropagation(); if(heroShip&&heroShip.id===m.id) ejectHero(); else { spawnHero(m.id); } setPilotBtns(); b.blur(); });
-    row.appendChild(b);
-  });
-  document.body.appendChild(uiEl);
+  carUi=document.createElement('div'); carUi.id='bt-car';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn" data-d="-1" aria-label="Previous hero ship">◄</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn" data-d="1" aria-label="Next hero ship">►</button></div>';
+  [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
+  carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
+  document.body.appendChild(carUi);
+  hintEl=document.createElement('div'); hintEl.id='bt-hints'; hintEl.style.display='none';
+  hintEl.innerHTML='<b>mouse</b> · move and aim<br><b>click</b> · fire<br><b>right click + drag</b> · pan camera<br><b>spacebar</b> · change hero ship';
+  document.body.appendChild(hintEl);
   hudEl=document.createElement('div'); hudEl.id='bt-hud'; document.body.appendChild(hudEl); updHud();
   buildPanel();
 }
@@ -731,12 +777,12 @@ function buildPanel(){
   [['Zone 1 · rebel fighters','fighter',REB],['Zone 1 · imperial fighters','fighter',IMP],['Zone 2 · rebel support','support',REB],['Zone 2 · imperial support','support',IMP],['Zone 3 · rebel capital','capital',REB],['Zone 3 · imperial capital','capital',IMP]].forEach(function(g){
     var d=document.createElement('details'); d.innerHTML='<summary>'+g[0]+'</summary>'; panelEl.appendChild(d);
     MODELS.filter(function(m){ return m.cls===g[1]&&m.team===g[2]; }).forEach(function(m){
-      slider(d,m.id,function(){ return P.counts[m.id]||0; },function(x){ P.counts[m.id]=x; reconT=0; },0,m.cls==='fighter'?10:(m.id==='star-destroyer'?8:6),1,0);
+      slider(d,m.id,function(){ return P.counts[m.id]||0; },function(x){ P.counts[m.id]=x; reconT=0; },0,m.cls==='fighter'?10:(m.cls==='capital'||m.cls==='support'?14:6),1,0);
     });
   });
   var ld=document.createElement('details'); ld.innerHTML='<summary>Lighting</summary>'; panelEl.appendChild(ld);
   var envT=null; function envSoon(){ clearTimeout(envT); envT=setTimeout(buildEnv,120); }
-  [['exposure','Exposure (filmic)',.3,2.5,.05,0],['lightKey','Sun intensity',0,4,.05,0],['sunAz','Sun azimuth \u00b0',-180,180,5,1],['sunEl','Sun elevation \u00b0',-60,85,5,1],['lightFill','Ambient',0,1.5,.02,0],['lightRim','Cool back fill',0,2,.05,0],
+  [['fogK','Distance fog (0 = none, 1 = page default)',0,1.5,.05,0],['exposure','Exposure (filmic)',.3,2.5,.05,0],['lightKey','Sun intensity',0,4,.05,0],['sunAz','Sun azimuth \u00b0',-180,180,5,1],['sunEl','Sun elevation \u00b0',-60,85,5,1],['lightFill','Ambient',0,1.5,.02,0],['lightRim','Cool back fill',0,2,.05,0],
    ['envInt','Reflections (env map)',0,3,.05,0],['rough','Roughness (gloss \u2194 matte)',.15,1,.05,0],['lightScene','Scene lights \u00d7 (ambient/key/warm)',0,1.5,.05,0],
    ['matBright','Hull brightness',.2,1.5,.05,0],['matEmissive','Glow / emissive',0,2,.05,0],['matFighter','Fighter brightness',.2,1.5,.05,0],['darkLift','Dark plastic lift (TIEs)',0,1,.05,0]].forEach(function(r){
     slider(ld,r[1],function(){ return P[r[0]]; },function(x){ P[r[0]]=x; applyLook(); if(r[0]==='sunAz'||r[0]==='sunEl') envSoon(); },r[2],r[3],r[4],2);
@@ -778,7 +824,7 @@ function resetState(){
 var MWBattle={
   init:function(c){
     if(active) return; dead=false; resetState(); ctx=c; T=c.THREE; P=loadCfg();
-    _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); _steer=new T.Vector3(); _sep=new T.Vector3();
+    _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
     // whatever that elevation is. G is scaled so a camera at ANY distance sees the battle as if it were 4.3 units away.
@@ -790,8 +836,9 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    makeBolts(); makeSparks(); bindInput(); buildUi(); updHud();
-    active=true; kitTimer=5;
+    kills=0; stage='select'; carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
+    active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     window.MWBattle=MWBattle;
   },
   update:update,
@@ -803,7 +850,8 @@ var MWBattle={
     lights.forEach(function(l){ ctx.scene.remove(l); }); lights.length=0;
     if(G){ ctx.scene.remove(G); G.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){ if(m.map&&m.map!==glowTex) m.map.dispose(); m.dispose(); }); } }); }
     if(envTex){ envTex.dispose(); envTex=null; }
-    [uiEl,hudEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
+    if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
+    [carUi,hintEl,hudEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
