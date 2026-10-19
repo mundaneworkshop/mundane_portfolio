@@ -10222,7 +10222,7 @@ f 2469//2469 2470//2470 2434//2434
       removeArcadeStars();
       // density falls off as 1/r² past the base shell, so the number of stars per patch of SKY stays what it is today (a uniform volume
       // density would pack the far field far more densely on screen).
-      var R0=15, R1=110, vBase=(4/3)*Math.PI*(R0*R0*R0-27)*0.6, density=params.starCount/vBase;
+      var R0=15, R1=110, vBase=(4/3)*Math.PI*(R0*R0*R0-27)*0.6, density=params.starCount/vBase*0.5;   // half the base density — the far sky reads busier than the small shell does
       var N=Math.round(density*4*Math.PI*R0*R0*(R1-R0)*0.85), pos=new Float32Array(N*3), r2=mulberry32(4242);
       for(var i=0;i<N;i++){ var r=R0+r2()*(R1-R0), t=r2()*Math.PI*2, p=Math.acos(2*r2()-1);
         pos[i*3]=Math.sin(p)*Math.cos(t)*r; pos[i*3+1]=Math.cos(p)*r*0.85+1.6; pos[i*3+2]=Math.sin(p)*Math.sin(t)*r; }

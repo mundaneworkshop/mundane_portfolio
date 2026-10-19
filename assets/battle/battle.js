@@ -64,8 +64,8 @@ var BYID={}; MODELS.forEach(function(m){ BYID[m.id]=m; });
 
 var CLS={   // per-class feel: base fire interval (s), weapon range, bolt aim spread (rad), hp (fighters die + respawn)
   fighter:{ int:.65, range:3.6, spread:.05, hp:3 },
-  support:{ int:.55, range:16, spread:.10, hp:12 },    // support + capital ships are destructible by the HERO only (AI-vs-AI hits just spark) — Death Star never is
-  capital:{ int:.22, range:24, spread:.12, hp:30 },
+  support:{ int:.55, range:16, spread:.10, hp:30 },    // support + capital ships are destructible by the HERO only (AI-vs-AI hits just spark) — Death Star never is
+  capital:{ int:.22, range:24, spread:.12, hp:100 },
   hero:   { int:.13, range:99,  spread:.015 }
 };
 
@@ -128,7 +128,7 @@ function trackMaterials(obj,mdl){
     if(mdl.lift&&m.color&&(m.color.r*.3+m.color.g*.59+m.color.b*.11)<.1) m.userData.dark=true;   // TIE panels/frames: near-black plastic vanishes against the void
     matList.push(m); }); });
 }
-var fogBase=0;
+var fogBase=0, camFar=100;
 var BTU={ exp:{value:1} };
 function patchMaterial(m){   // battle-only filmic curve: highlights roll off instead of clipping, and it does NOT touch the hologram's materials (a global renderer.toneMapping would)
   if(m.userData.btPatched||!m.isMeshStandardMaterial) return; m.userData.btPatched=true;
@@ -200,7 +200,7 @@ function pumpLoads(){
         obj.position.sub(ctr.clone().applyQuaternion(pre.quaternion.clone().invert()));   // centre the bbox on the pivot (in pre-rotated space)
         var inner=new T.Group(); inner.add(pre); inner.scale.setScalar(s);
         cache[m.id]={ proto:inner, hx:sz.x*s/2, hy:sz.y*s/2, hz:sz.z*s/2, r:Math.max(sz.x,sz.y,sz.z)*s/2 };
-        trackMaterials(inner,m); applyLook();
+        trackMaterials(inner,m); if(m.cls==='base') inner.traverse(function(o){ if(o.isMesh) [].concat(o.material).forEach(function(mt){ mt.fog=false; }); }); applyLook();
         anchorsDirty=true; reconT=0;
       },undefined,function(e){ if(mySess!==sess) return; inflight--; delete loading[m.id]; console.warn('[battle] failed to load',m.file,e); });
     })(m);
@@ -272,14 +272,29 @@ function shellPos(s,out){
   return out.copy(best||_ap.set(side*r_fallback(),0,-12));
 }
 function r_fallback(){ return 14; }
+// A heading toward the far side of the field whose straight line misses the hologram by a comfortable margin.
+function chooseHeading(s,out){
+  var sx=s.pos.x>=0?-1:1;
+  for(var k=0;k<16;k++){
+    _v3.set(sx*rnd(4,34),rnd(-20,20),rnd(-32,32)).sub(s.pos); var len=_v3.length(); if(len<10) continue; _v3.multiplyScalar(1/len);
+    var t=-s.pos.dot(_v3); if(t>0){ _v4.copy(s.pos).addScaledVector(_v3,t); if(_v4.length()<16) continue; }
+    return out.copy(_v3);
+  }
+  return out.set(sx,rnd(-.2,.2),rnd(-.5,.5)).normalize();
+}
 function placeLarge(s){
   shellPos(s,s.pos); s.hasA=true;
-  var side=s.side; s.hd=new T.Vector3(-side,rnd(-.25,.25),rnd(-.6,.6)).normalize(); s.dir.copy(s.hd);   // nose toward the other side
-  s.hp=CLS[s.cls].hp; s.maxhp=s.hp;
+  s.hd=chooseHeading(s,new T.Vector3()); s.dir.copy(s.hd); s.turn=null; s.R=rnd(36,42);
+  s.hp=CLS[s.cls].hp; s.maxhp=s.hp; s.dying=null;
 }
 function assignAnchors(){
   ships.forEach(function(s){ if((s.cls==='support'||s.cls==='capital')&&!s.leaving&&!s.hasA) placeLarge(s); });
-  ships.forEach(function(s){ if(s.cls==='base'){ s.au=-.42; s.av=.36; s.az=-11; } });
+  // Death Star: the FARTHEST object in the battle (beyond the outer edge of the capital ships' shell, so nothing can pass behind it), kept on the
+  // same sight-line it used to sit on and scaled up by the distance ratio so it still reads at the same size.
+  ships.forEach(function(s){ if(s.cls==='base'&&!s.hasA){
+    if(!_ap){ _ap=new T.Vector3(); _bp=new T.Vector3(); _cp=new T.Vector3(); }
+    anchorWorld(-.42,.36,-11,_v1); _cp.set(0,0,L); _v2.copy(_v1).sub(_cp); var d0=_v2.length(); _v2.normalize();
+    var Dn=80; s.pos.copy(_cp).addScaledVector(_v2,Dn); s.dsK=Dn/d0; s.hasA=true; } });
   anchorsDirty=false;
 }
 
@@ -346,19 +361,67 @@ function killShip(s){
   burst(s.pos,0xffa040,26,1.7,.85); burst(s.pos,0xffffff,10,2.4,.45);
   s.alive=false; s.root.visible=false; s.respawn=rnd(2.5,5.5); s.target=null;
 }
-function killLarge(s){   // chain of explosions along the hull; respawns far away after a while
-  var c=s.c, big=s.cls==='capital';
-  for(var i=0;i<(big?7:4);i++){ _v1.set(rnd(-1,1)*c.hx,rnd(-1,1)*c.hy,rnd(-1,1)*c.hz).multiplyScalar(s.root.scale.x).applyQuaternion(s.root.quaternion).add(s.pos);
-    burst(_v1,0xffa040,big?38:26,2.2,1.1); burst(_v1,0xffffff,12,3,.55); }
-  flash(s.pos,big?2.4:1.4);
-  s.alive=false; s.root.visible=false; s.respawn=rnd(28,45); s.target=null; s.hpShow=0; if(s.barEl) s.barEl.style.display='none';
+// ── capital / support destruction: a long chain of explosions along the hull, then it breaks apart
+var debris=[], shardGeo=null, shardMat=null;
+function startDying(s){
+  if(s.dying||!s.hasA) return;
+  s.alive=false; s.target=null; s.hpShow=0; if(s.barEl) s.barEl.style.display='none';
+  s.dying={t:0,dur:s.cls==='capital'?8:4.5,nx:0,base:s.pos.clone()};
+}
+function hullPoint(s,out){
+  var c=s.c; out.set(rnd(-1,1)*c.hx,rnd(-.6,1)*c.hy,rnd(-1,1)*c.hz); s.root.updateMatrix(); return out.applyMatrix4(s.root.matrix);
+}
+function updDying(s,dt){
+  var D=s.dying; D.t+=dt; var k=Math.min(1,D.t/D.dur), sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital';
+  var amp=(.004+.03*k)*sz; s.pos.set(D.base.x+rnd(-1,1)*amp,D.base.y+rnd(-1,1)*amp,D.base.z+rnd(-1,1)*amp);   // the hull shudders harder as it goes
+  D.nx-=dt;
+  while(D.nx<=0){
+    D.nx+=(.55-.4*k)*rnd(.6,1.4)/(big?1:.8);
+    hullPoint(s,_v1);
+    burst(_v1,0xff9a3a,14+Math.round(26*k),1.2+sz*.5,.9); burst(_v1,0xffffff,5,2+sz*.4,.4);
+    flash(_v1,sz*(.35+.5*k)*rnd(.7,1.3),0xffa850);
+    if(k>.6&&Math.random()<.35){ hullPoint(s,_v2); flash(_v2,sz*.9,0xffe2a0); burst(_v2,0xffd070,40,2.4+sz*.6,1.1); }   // secondary blasts late in the sequence
+  }
+  if(D.t>=D.dur) breakApart(s);
+}
+function breakApart(s){
+  var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital';
+  flash(s.pos,sz*3.2,0xfff0c0); burst(s.pos,0xffa040,90,3+sz,1.6); burst(s.pos,0xffffff,40,4+sz,.8);
+  if(!shardGeo){ shardGeo=new T.BoxGeometry(1,1,1); shardMat=new T.MeshStandardMaterial({color:0x6a7077,roughness:.8,metalness:.2}); }
+  s.root.updateMatrixWorld(true);
+  // 1) the hull's own layers (one mesh per material) peel apart…
+  s.root.traverse(function(o){
+    if(!o.isMesh) return;
+    var pg=new T.Group(); pg.position.copy(s.pos); pg.quaternion.copy(s.root.quaternion); pg.scale.copy(s.root.scale);
+    var rel=new T.Matrix4().copy(s.root.matrixWorld).invert().multiply(o.matrixWorld), m2=o.clone(); rel.decompose(m2.position,m2.quaternion,m2.scale); pg.add(m2); G.add(pg);
+    var v=new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(sz*rnd(.08,.22)*(big?1:1.3));
+    debris.push({g:pg,v:v,spin:new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(.25),t:0,life:rnd(5.5,7)});
+  });
+  // 2) …and shards fly out fast
+  for(var i=0;i<(big?22:12);i++){
+    var m=new T.Mesh(shardGeo,shardMat); hullPoint(s,m.position); m.scale.set(rnd(.04,.14)*sz,rnd(.03,.1)*sz,rnd(.05,.18)*sz); m.quaternion.setFromEuler(new T.Euler(rnd(0,6),rnd(0,6),rnd(0,6)));
+    G.add(m); debris.push({g:m,v:_v3.copy(m.position).sub(s.pos).normalize().multiplyScalar(sz*rnd(.25,.7)),spin:new T.Vector3(rnd(-3,3),rnd(-3,3),rnd(-3,3)),t:0,life:rnd(3,5.5)});
+  }
+  s.dying=null; s.root.visible=false; s.respawn=rnd(28,45);
+}
+function updDebris(dt){
+  for(var i=debris.length-1;i>=0;i--){
+    var d=debris[i]; d.t+=dt; d.g.position.addScaledVector(d.v,dt); d.v.multiplyScalar(1-.25*dt);
+    d.g.rotation.x+=d.spin.x*dt; d.g.rotation.y+=d.spin.y*dt; d.g.rotation.z+=d.spin.z*dt;
+    var fade=Math.max(0,Math.min(1,(d.life-d.t)/(d.life*.3))); if(fade<1){ d.g.visible=fade>.02; if(d.g.userData.base===undefined) d.g.userData.base=d.g.scale.clone(); d.g.scale.copy(d.g.userData.base).multiplyScalar(fade); }
+    if(d.t>=d.life){ G.remove(d.g); debris.splice(i,1); }
+  }
+}
+function explodeRandom(cls){
+  var list=ships.filter(function(s){ return s.cls===cls&&s.alive&&!s.dying&&s.hasA; }); if(!list.length) return;
+  var s=list[Math.floor(Math.random()*list.length)]; startDying(s); kills=kills; if(hudEl) updHud(false);
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
   if(s.cls==='fighter'){ s.hp--; if(s.hp<=0){ killShip(s); if(b.team===HERO){ kills++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
     s.hp--; s.hpShow=3.2;
-    if(s.hp<=0){ killLarge(s); kills++; updHud(true); }
+    if(s.hp<=0){ startDying(s); kills++; updHud(true); }
   }
 }
 // ── floating health bars (DOM) over large ships that have just been hit by the hero
@@ -454,17 +517,18 @@ function updFighter(s,dt){
     if(dist<CLS.fighter.range && s.dir.angleTo(to.normalize())<.28){ fireAt(s,s.target.pos,s.target.vel); s.cd=fireInterval(s); }
   } else if(s.cd<=0&&!s.target){ s.cd=.4; }
 }
-function updShipLarge(s,dt){   // support + capital: a very slow drift toward the far side, turning back well before they leave the field
+function updShipLarge(s,dt){   // support + capital: dead-straight, very slow passage across the field; a slow wide turn once past the far edge
   var sp=(s.cls==='support'?.16:.08)*P.speed*(s.cls==='support'?P.speedSupport:P.speedCapital);
-  var d=s.pos.length(), want=_v2.copy(s.hd);
-  if(d>34){ _v3.copy(s.pos).normalize().negate(); _v1.set(0,1,0).cross(_v3).normalize(); want.copy(_v3).multiplyScalar(.5).addScaledVector(_v1,(s.ph>3?1:-1)*.8).normalize(); }   // too far out: curve back in, around (not through) the hologram
-  else if(d<12){ want.copy(s.pos).normalize(); }                                                                                                                  // too close to the hologram: bear away
-  if(want.dot(s.hd)<.999){ var ang=s.hd.angleTo(want); s.hd.lerp(want,Math.min(1,.12*dt/Math.max(ang,1e-3))).normalize(); }                                       // slow wide turns
+  var d=s.pos.length();
+  if(!s.turn&&d>s.R&&s.pos.dot(s.hd)>0){ s.turn=chooseHeading(s,new T.Vector3()); }
+  if(s.turn){
+    var ang=s.hd.angleTo(s.turn); s.hd.lerp(s.turn,Math.min(1,(s.cls==='support'?.07:.05)*dt/Math.max(ang,1e-3))).normalize();
+    if(ang<.03) s.turn=null;
+  }
+  if(d<12){ s.hd.lerp(_v2.copy(s.pos).normalize(),Math.min(1,.5*dt)).normalize(); }   // safety: never drift through the hologram
   s.prev.copy(s.pos); s.pos.addScaledVector(s.hd,sp*dt);
-  s.pos.y+=Math.sin(clockT*.35+s.ph)*.01*dt*60;
   s.vel.copy(s.hd).multiplyScalar(sp); s.dir.copy(s.hd);
-  aim(s.root,s.hd);
-  s.bank.rotation.z=Math.sin(clockT*.3+s.ph2)*.05;
+  aim(s.root,s.hd); s.bank.rotation.z=0;
   s.tT-=dt; if(!s.target||!s.target.alive||s.tT<=0) pickTarget(s);
   s.cd-=dt;
   if(s.cd<=0){
@@ -472,9 +536,17 @@ function updShipLarge(s,dt){   // support + capital: a very slow drift toward th
     s.cd=fireInterval(s);
   }
 }
+// large ships never overlap: soft positional separation on bounding spheres (they move so slowly that this resolves gradually)
+function lr(s){ return Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*.85; }
+function sepLarge(){
+  var L=[]; for(var i=0;i<ships.length;i++){ var s=ships[i]; if((s.cls==='support'||s.cls==='capital')&&s.hasA&&(s.alive||s.dying)&&!s.leaving) L.push(s); }
+  for(var a=0;a<L.length;a++) for(var b=a+1;b<L.length;b++){
+    var A=L[a], B=L[b]; _v1.copy(A.pos).sub(B.pos); var d=_v1.length(), r=lr(A)+lr(B);
+    if(d<r&&d>1e-4){ var push=(r-d)*.25/d; _v1.multiplyScalar(push); A.pos.add(_v1); B.pos.sub(_v1); }
+  }
+}
 function updBase(s,dt){
-  anchorWorld(s.au,s.av,s.az,s.pos);
-  aim(s.root,_v1.set(CX-s.pos.x,CY-s.pos.y,CZ-s.pos.z).normalize());   // superlaser dish is the model's +Z — always trained on the monogram
+  aim(s.root,_v1.set(CX-s.pos.x,CY-s.pos.y,CZ-s.pos.z).normalize());   // superlaser dish is the model's +Z — always trained on the hologram
   s.bank.rotation.z=0;                                                    // no roll: keeps the dish on the upper hemisphere
 }
 
@@ -656,8 +728,8 @@ function updHyper(s,dt){
   if(Math.abs(s.pos.x)>halfW(s.pos.z)*2.2||s.pos.z<-45||j.t>5){ s.root.visible=false; s.alive=false; return true; }
   return false;
 }
-function flash(p,size){
-  var sp=new T.Sprite(new T.SpriteMaterial({map:glowTexture(),blending:T.AdditiveBlending,depthWrite:false,fog:false,transparent:true,opacity:1,color:0xcff8ff}));
+function flash(p,size,col){
+  var sp=new T.Sprite(new T.SpriteMaterial({map:glowTexture(),blending:T.AdditiveBlending,depthWrite:false,fog:false,transparent:true,opacity:1,color:col||0xcff8ff}));
   sp.position.copy(p); sp.scale.setScalar(.1); G.add(sp); flashes.push({sp:sp,t:0,size:size});
 }
 function updFlashes(dt){
@@ -686,10 +758,11 @@ function update(t){
     var s=ships[i];
     // global/class scale
     var base=s.cls==='hero'?P.scaleHero:s.cls==='base'?P.scaleBase:P['scale'+capName(s.cls)];
-    var sc=P.scale*base*((s.cls==='support'||s.cls==='capital')&&s.hasA?depthCompPos(s.pos):1);
+    var sc=P.scale*base*((s.cls==='support'||s.cls==='capital')&&s.hasA?depthCompPos(s.pos):1)*(s.cls==='base'?(s.dsK||1):1);
     if(s.spawnK<1){ s.spawnK=Math.min(1,s.spawnK+dt*1.6); }
     if(s.leaving){ s.spawnK=Math.max(0,s.spawnK-dt*3); if(s.spawnK<=0){ G.remove(s.root); ships.splice(i,1); anchorsDirty=true; continue; } }
     s.root.scale.setScalar(sc*s.spawnK*(s.spawnK<1?1:1)+1e-4);
+    if(s.dying){ updDying(s,dt); continue; }
     if(!s.alive){
       if(!hyper){ s.respawn-=dt; if(s.respawn<=0&&(s.cls==='support'||s.cls==='capital')){ s.hasA=false; placeLarge(s); s.alive=true; s.root.visible=true; s.spawnK=0; s.target=null; flash(s.pos,1.2); }
         if(s.respawn<=0&&s.cls==='fighter'){ s.alive=true; s.hp=CLS.fighter.hp; s.root.visible=true; spawnFighterPos(s,s.pos); s.spawnK=0; s.target=null; s.mode='wander'; s.mT=1; pickWp(s); s.vel.set(0,0,0); burst(s.pos,0xaaf5ee,8,1,.4); } }
@@ -705,6 +778,7 @@ function update(t){
     if(s.jump) updHyper(s,dt);
     continue;
   }
+  sepLarge(); updDebris(dt);
   updKits(dt); updCarousel(dt); updBars(dt);
   updBolts(dt); updSparks(dt); updFlashes(dt);
   if(hyper){
@@ -770,7 +844,7 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub">or press <b>ENTER</b> to select this ship and start</div>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
   document.body.appendChild(carUi);
@@ -836,6 +910,8 @@ function buildPanel(){
   var b=document.createElement('button'); b.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; b.textContent='↺ Reset battle sliders';
   b.addEventListener('click',function(){ P=JSON.parse(JSON.stringify(DEFAULTS)); saveCfg(); panelEl.remove(); buildPanel(); reconT=0; });
   panelEl.appendChild(b);
+  var xb=document.createElement('button'); xb.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; xb.textContent='\u2739 Explode a random capital ship'; xb.addEventListener('click',function(){ explodeRandom('capital'); }); panelEl.appendChild(xb);
+  var xs=document.createElement('button'); xs.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; xs.style.marginTop='6px'; xs.textContent='\u2739 Explode a random support ship'; xs.addEventListener('click',function(){ explodeRandom('support'); }); panelEl.appendChild(xs);
   var mdiv=document.createElement('div'); mdiv.className='menudiv'; panelEl.appendChild(mdiv);
   var h3=host.querySelector('h3'); host.insertBefore(panelEl,h3?h3.nextSibling:host.firstChild);
 }
@@ -860,7 +936,7 @@ function makeBolts(){
 function resetState(){
   ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
-  anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
+  debris=[]; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
 }
 var MWBattle={
   init:function(c){
@@ -878,6 +954,7 @@ var MWBattle={
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
     kills=0; stage='select'; carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    camFar=c.camera.far; c.camera.far=800; c.camera.updateProjectionMatrix();   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     window.MWBattle=MWBattle;
@@ -892,6 +969,7 @@ var MWBattle={
     if(G){ ctx.scene.remove(G); G.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){ if(m.map&&m.map!==glowTex) m.map.dispose(); m.dispose(); }); } }); }
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
+    if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.updateProjectionMatrix(); }
     [carUi,hintEl,hudEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },

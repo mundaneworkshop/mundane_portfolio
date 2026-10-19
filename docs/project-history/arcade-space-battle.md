@@ -38,3 +38,10 @@ The page's scene fog (`FogExp2`, density 0.03) is what faded far capital ships t
 - Far stars: `buildArcadeStars()` adds stars to radius 110 with density falling off as 1/r² (constant stars per patch of sky — a uniform volume density packs the far field much denser on screen).
 - Minikit spawn rate default 0.3 (debug → Minikits · hero → Minikit spawn rate; max at once is the next slider).
 - Dev server tip: a caching static server serves a stale `battle.js` (partial updates look like broken code) — serve with `Cache-Control: no-store`.
+
+## Update: drift, destruction, draw distance
+- Support/capital ships travel in dead-straight lines (no bobbing/banking): `chooseHeading()` aims at the far side with a closest-approach margin from the hologram; past `s.R` (36–42) heading outward they make a slow wide turn (`.05`/`.07` rad/s) onto a new far-side heading. They never overlap (`sepLarge()` — soft bounding-sphere separation).
+- Destruction: HP capital 100 / support 30 (hero hits only). `startDying()` → 8 s (capital) / 4.5 s (support) of escalating explosions along the hull, shuddering, then `breakApart()` (hull layers peel off + shards, fade out) and a 28–45 s respawn. Debug panel → "Explode a random capital / support ship" triggers it.
+- Death Star: placed at distance 80 on its old sight-line (beyond the capital shell, radius ≤ ~42, so nothing passes behind it), scaled by the distance ratio (`dsK`), fog off.
+- Ships vanishing when zooming = the camera's far plane (100). The battle raises `camera.far` to 800 while active and restores it on exit.
+- Far star field density is half the base density, constant per patch of sky.
