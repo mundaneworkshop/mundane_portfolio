@@ -556,7 +556,7 @@ function updBase(s,dt){
 // stage 'play'  : every hologram artifact hides (ctx.onStage) and the chosen hero flies — it travels toward the mouse, fires where you click.
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
-var _ro=null, _rd=null, _hT=null, _hF=null, _fw=null;
+var _ro=null, _rd=null, _hT=null, _hF=null;
 function setStage(st){ if(stage===st) return; stage=st; if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
@@ -579,7 +579,6 @@ function localRay(nx,ny){
   _ray.setFromCamera(_v4.set(nx,ny,.5),ctx.camera);
   _ro.copy(_ray.ray.origin); G.worldToLocal(_ro);
   _rd.copy(_ray.ray.direction).applyQuaternion(_q.copy(G.quaternion).invert()).normalize();
-  ctx.camera.getWorldDirection(_fw); _fw.applyQuaternion(_q).normalize();   // camera forward in G-local space (the camera can sit anywhere now)
 }
 // What is the pointer on? An object (ship / minikit) gives a real XYZ; empty space is approximated by the plane at the hero's depth.
 // Writes the target into `out` (G-local) and returns the object hit, or null.
@@ -589,16 +588,14 @@ function pickAt(nx,ny,out){
   ships.forEach(function(sh){ if(!sh.alive||sh.hero||sh.jump||sh.leaving) return; test(sh.pos,Math.max(sh.c.r*sh.root.scale.x*1.25,.2),sh); });
   kits.forEach(function(k){ if(!k.opening) test(k.pos,.38*k.root.scale.x+.1,k); });
   if(best){ out.copy(best.pos); return best; }
-  var den=_rd.dot(_fw), t=6;
-  if(heroShip&&Math.abs(den)>1e-4){ _hF.copy(heroShip.pos).sub(_ro); t=_hF.dot(_fw)/den; }
-  if(!(t>.2)) t=6;
+  var z=heroShip?heroShip.pos.z:0, t=Math.abs(_rd.z)>1e-4?(z-_ro.z)/_rd.z:6; if(!(t>.2)) t=6;
   out.copy(_ro).addScaledVector(_rd,t); return null;
 }
 function updHero(s,dt){
   var o=pickAt(ptr.nx,ptr.ny,_hT);
   if(!ptr.in) _hT.copy(s.pos).addScaledVector(s.dir,1);               // pointer off the canvas: coast on
   var to=_v2.copy(_hT).sub(s.pos), d=to.length();
-  if(!o) to.addScaledVector(_fw,-s.pos.dot(_fw)*.5);                    // the cursor can't say how deep: drift back toward mid-depth (along the view axis) unless pointing at something
+  if(!o) to.z-=s.pos.z*.5;                                              // the cursor can't say how deep: drift back toward mid-depth unless pointing at something
   s.prev.copy(s.dir);
   if(d>.15){ to.normalize(); var ang=s.dir.angleTo(to); if(ang>1e-4){ s.dir.lerp(to,Math.min(1,3.6*dt/ang)).normalize(); } }
   var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed; if(o&&d<.9) want=Math.min(want,.4);   // hovering an object: ease in, don't ram it
@@ -945,7 +942,7 @@ function resetState(){
 var MWBattle={
   init:function(c){
     if(active) return; dead=false; resetState(); ctx=c; T=c.THREE; P=loadCfg();
-    _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _fw=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
+    _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
     // whatever that elevation is. G is scaled so a camera at ANY distance sees the battle as if it were 4.3 units away.
