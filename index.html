@@ -93,6 +93,14 @@
   body.mw-arcade #arcadeExit{display:flex}
   body.mw-arcade #breadcrumb{display:none}
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
+  #arcadeResult{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(2,8,8,.62);backdrop-filter:blur(6px)}
+  #arcadeResult .ar-card{min-width:min(420px,88vw);padding:34px 40px 30px;background:var(--panel,#0a1212);border:1px solid var(--border,rgba(90,191,184,.35));clip-path:var(--clip-step,none);text-align:center;font-family:var(--display,sans-serif)}
+  #arcadeResult .ar-k{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--muted,#6b8a85)}
+  #arcadeResult .ar-n{font-family:var(--mono,monospace);font-size:96px;line-height:1.05;margin-top:10px;color:var(--amber-hot,#F0D080);text-shadow:0 0 22px rgba(240,208,128,.45)}
+  #arcadeResult .ar-l{font-size:13px;letter-spacing:6px;text-transform:uppercase;color:var(--holo,#AAF5EE);margin-bottom:22px}
+  #arcadeResult .ar-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;text-align:left;margin:0 auto 26px;max-width:340px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+  #arcadeResult .ar-meta span{color:var(--muted,#6b8a85)} #arcadeResult .ar-meta b{font-weight:400;color:var(--text,#E8F7F5)}
+  #arcadeResult .ar-btns{display:flex;gap:12px;justify-content:center}
   #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
   body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
@@ -10239,8 +10247,26 @@ f 2469//2469 2470//2470 2434//2434
       var was=arcadeStage; arcadeStage=st;
       if(was==='play'&&st==='select') arcadeRestoreHolo();
     }
+    // ── results modal shown when you leave a game you actually played (hook point for the global leaderboard: `sum` = {kills, hero, heroes, seconds})
+    var arcadeResultEl=null, arcadeResultT=0;
+    function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; } }
+    function showArcadeResult(sum){
+      closeArcadeResult();
+      var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label','Game over');
+      var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2);
+      el.innerHTML='<div class="ar-card"><div class="ar-k">Game over</div><div class="ar-n">'+sum.kills+'</div><div class="ar-l">'+(sum.kills===1?'kill':'kills')+'</div>'+
+        '<div class="ar-meta"><span>Flown</span><b>'+(sum.heroes.length?sum.heroes.join(' \u00b7 '):'\u2014')+'</b><span>Time</span><b>'+mins+':'+secs+'</b></div>'+
+        '<div class="ar-btns"><button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button><button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
+      document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
+      el.addEventListener('click',function(e){ if(e.target===el) closeArcadeResult(); });
+      el.querySelector('#arClose').addEventListener('click',closeArcadeResult);
+      el.querySelector('#arAgain').addEventListener('click',function(){ closeArcadeResult(); var g=planetById('arcade'); var go=function(){ if(!arcadeActive) openArcade('arcade'); else setTimeout(go,150); }; go(); });
+      el.querySelector('#arAgain').focus();
+    }
+    window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&(e.key==='Escape'||e.key==='Enter')){ /* >350ms: the ESC that opened it must not also close it */ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);
     function exitArcade(){
-      if(!arcadeActive||arcadeExiting) return; arcadeExiting=true; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
+      if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
+      var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; if(_sum&&_sum.played) showArcadeResult(_sum); document.body.classList.add('mw-arcade-exiting'); setRoute('/');
       if(window.MWBattle&&MWBattle.isActive()) MWBattle.hyperspace(true); else finishArcadeExit();
     }
     function finishArcadeExit(){
