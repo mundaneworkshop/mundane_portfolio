@@ -143,10 +143,24 @@
      the plain brighten every other zone label gets — RGB-split copies (::before/::after, driven
      by data-text since pseudo-content can't read the div's own textContent) jitter and clip in
      short bursts against a mostly-still base line. */
-  .zlabel-uncharted.on{animation:zg-jitter 2.6s infinite steps(1)}
-  .zlabel-uncharted.on::before,.zlabel-uncharted.on::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%}
-  .zlabel-uncharted.on::before{color:var(--amber,#E9A73E);animation:zg-slice-r 2.6s infinite steps(1)}
-  .zlabel-uncharted.on::after{color:var(--holo,#5ABFB8);animation:zg-slice-b 2.6s infinite steps(1)}
+  /* HOVER GLITCH (global, debug toggle "Hover glitch" → body.hg-off): zone labels use the RGB-split pseudo layers; planet labels (title + sub)
+     use a text-shadow split + jitter, since they're two-part. Reduced-motion users get none. */
+  @media (prefers-reduced-motion:no-preference){
+    body:not(.hg-off) .zlabel.on{animation:zg-jitter 2.6s infinite steps(1)}
+    body:not(.hg-off) .zlabel.on::before,body:not(.hg-off) .zlabel.on::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%}
+    body:not(.hg-off) .zlabel.on::before{color:var(--amber,#E9A73E);animation:zg-slice-r 2.6s infinite steps(1)}
+    body:not(.hg-off) .zlabel.on::after{color:var(--holo,#5ABFB8);animation:zg-slice-b 2.6s infinite steps(1)}
+    body:not(.hg-off) .plabel.hot .pl-title,body:not(.hg-off) .plabel.hot .pl-sub{display:inline-block;animation:hg-label 2.6s infinite steps(1)}
+    body:not(.hg-off) .plabel.hot .pl-sub{display:block}
+  }
+  @keyframes hg-label{
+    0%,7%,9.5%,34%,37%,62%,64%,100%{transform:translate(0,0);text-shadow:none;opacity:1}
+    8%{transform:translate(-3px,0);text-shadow:3px 0 var(--amber,#E9A73E),-3px 0 var(--holo,#5ABFB8);opacity:.7}
+    9%{transform:translate(2px,0);text-shadow:-2px 0 var(--amber,#E9A73E),2px 0 var(--holo,#5ABFB8);opacity:1}
+    35%{transform:translate(-4px,0);text-shadow:4px 0 var(--amber,#E9A73E),-4px 0 var(--holo,#5ABFB8);opacity:.5}
+    36%{transform:translate(3px,0);text-shadow:-3px 0 var(--amber,#E9A73E),3px 0 var(--holo,#5ABFB8);opacity:1}
+    63%{transform:translate(-2px,0);text-shadow:2px 0 var(--amber,#E9A73E),-2px 0 var(--holo,#5ABFB8);opacity:.6}
+  }
   @keyframes zg-jitter{
     0%,7%,100%{transform:translate(-50%,-50%);opacity:1}
     8%{transform:translate(calc(-50% - 3px),-50%);opacity:.7}
@@ -875,6 +889,9 @@
       <div class="ctl"><label>Glyph tick (ms) <b id="vGxLblTick">0</b></label><input type="range" id="cGxLblTick" min="16" max="200" step="2"></div>
       <div class="ctl"><label>Scatter <b id="vGxLblScatter">0</b></label><input type="range" id="cGxLblScatter" min="0" max="1" step="0.05"></div>
     <button class="resetbtn" id="gxLblPlay">▶ Replay labels</button>
+    <div class="menudiv"></div>
+      <div class="ctl sec"><label>Hover glitch · zone + planet labels</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cHoverGlitch" checked> Corrupted-signal glitch on hover</label></div>
     <div class="menudiv"></div>
       <div class="ctl sec"><label>Glyph decode · text buttons (hover)</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGxBtnOn"> Enabled</label></div>
@@ -1725,11 +1742,11 @@
         {id:'li',title:'LinkedIn',sub:'social',locked:false,hidden:false},
         {id:'ig',title:'Instagram',sub:'social',locked:false,hidden:false}]},
       {id:'fun',name:'Fun',kind:'play',hidden:false,planets:[
-        {id:'arcade',title:'Arcade',sub:'space battle',locked:false,hidden:false}]}
+        {id:'arcade',title:'Space Arcade',sub:'browser game',locked:false,hidden:false}]}
     ];
     var galaxyModel=(_bootCopy['galaxyModel']&&Array.isArray(_bootCopy['galaxyModel'])&&_bootCopy['galaxyModel'].length)?_bootCopy['galaxyModel']:GALAXY_DEFAULT;
     // A saved/synced galaxyModel predates the Fun zone — add it (once) so existing browsers and the content-sync table pick it up.
-    if(!galaxyModel.some(function(z){ return z.id==='fun'; })) galaxyModel.push({id:'fun',name:'Fun',kind:'play',hidden:false,planets:[{id:'arcade',title:'Arcade',sub:'space battle',locked:false,hidden:false}]});
+    if(!galaxyModel.some(function(z){ return z.id==='fun'; })) galaxyModel.push({id:'fun',name:'Fun',kind:'play',hidden:false,planets:[{id:'arcade',title:'Space Arcade',sub:'browser game',locked:false,hidden:false}]});
     // Carry over any zone names the designer set earlier via the 3D zone label (legacy 'zone:<id>:name' overrides);
     // the merged Profile zone inherits an old cv/contact zone name if one was set.
     galaxyModel.forEach(function(z){ var ov=_bootCopy['zone:'+z.id+':name']; if(ov==null&&z.id==='profile') ov=_bootCopy['zone:cv:name']||_bootCopy['zone:contact:name']; if(ov!=null&&ov!=='') z.name=ov;
@@ -9570,7 +9587,7 @@ f 2469//2469 2470//2470 2434//2434
       w1:{kind:'work',kicker:'Case file 02',title:'Slate Auto',body:'Placeholder case study. Swap in the real narrative, process shots, and results.'},
       w2:{kind:'work',kicker:'Case file 03',title:'Josh.ai',body:'Placeholder case study. The third charted world tells its story here.',ctaActive:true,cta:'VIEW CASE STUDY →',ctaUrl:'https://case.mundanework.shop/josh-ai'},
       cv:{kind:'util',kicker:'Profile',title:'Curriculum Vitae',body:'Placeholder. Roles, timeline, and a download link to the full CV live here.'},
-      arcade:{kind:'util',kicker:'Fun',title:'Arcade',body:'A space battle fought around the hologram. Click or blast minikits to unlock new outfits for Jason.'},
+      arcade:{kind:'util',kicker:'Fun',title:'Space Arcade',body:'A browser game: a space battle fought around the hologram. Click or blast minikits to unlock new outfits for Jason.'},
       contact:{kind:'util',kicker:'Profile',title:'Contact',body:'Placeholder. Email and a short note about availability live here.'},
       li:{kind:'social',kicker:'Social',title:'LinkedIn',body:'Placeholder. This planet deep-links to the LinkedIn profile.'},
       ig:{kind:'social',kicker:'Social',title:'Instagram',body:'Placeholder. This planet deep-links to the Instagram profile.'}
@@ -9660,7 +9677,7 @@ f 2469//2469 2470//2470 2434//2434
     var logoLabel=mkLabelEl('','');
 
     // zone labels
-    function makeZoneLabel(z){ var d=document.createElement('div'); d.className='zlabel'+(z.kind==='play'?' zlabel-uncharted':''); d.textContent=z.name; if(z.kind==='play') d.setAttribute('data-text',z.name); document.getElementById('labels').appendChild(d); z.label=d; return d; }
+    function makeZoneLabel(z){ var d=document.createElement('div'); d.className='zlabel'; d.textContent=z.name; d.setAttribute('data-text',z.name); /* data-text feeds the hover-glitch pseudo layers */ document.getElementById('labels').appendChild(d); z.label=d; return d; }
     ZONES.forEach(makeZoneLabel);   // (anchors already set by layoutZones)
 
     // ---------- projection ----------
@@ -11494,6 +11511,8 @@ f 2469//2469 2470//2470 2434//2434
     ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K;
       var on=document.getElementById('cGx'+K+'On'); if(on) on.addEventListener('change',function(){ params[pre+'On']=this.checked; if(K==='Ring') ringEn.userData.decode(); });
       [['Dur',0],['Delay',0],['Tick',0],['Scatter',2]].forEach(function(sp){ var id='cGx'+K+sp[0]; if(document.getElementById(id)) bind(id,'vGx'+K+sp[0],function(v){ params[pre+sp[0]]=v; },sp[1]); }); });
+    function applyHoverGlitch(){ document.body.classList.toggle('hg-off',params.hoverGlitch===false); var c=document.getElementById('cHoverGlitch'); if(c) c.checked=params.hoverGlitch!==false; }
+    var _hgc=document.getElementById('cHoverGlitch'); if(_hgc) _hgc.addEventListener('change',function(){ params.hoverGlitch=this.checked; applyHoverGlitch(); });
     var _gxh=document.getElementById('cGxRingHover'); if(_gxh) _gxh.addEventListener('change',function(){ params.gxRingHover=this.checked; });
     document.getElementById('gxRingPlay').addEventListener('click',function(){ ringEn.userData.decode(); });
     document.getElementById('gxLblPlay').addEventListener('click',function(){ planets.forEach(function(p){ var l=p.userData.label; if(l&&l.offsetWidth) GFX.label(l); }); });
@@ -13394,7 +13413,7 @@ f 2469//2469 2470//2470 2434//2434
         ['Dur','Delay','Tick','Scatter'].forEach(function(sp){ var el=document.getElementById('cGx'+K+sp); if(!el) return; var v=params[pre+sp]; el.value=v; document.getElementById('vGx'+K+sp).textContent=(sp==='Scatter'?(+v).toFixed(2):v); }); });
       var h=document.getElementById('cGxRingHover'); if(h) h.checked=params.gxRingHover!==false; }
     function applyParams(){
-      applyGxCtls();
+      applyGxCtls(); applyHoverGlitch();
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
       setCtl('cMwEntryMul','vMwEntryMul',(params.mwEntryMul!=null?params.mwEntryMul:0.95).toFixed(2));
       setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.40).toFixed(2));
