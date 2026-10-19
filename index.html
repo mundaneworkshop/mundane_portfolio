@@ -1691,17 +1691,18 @@
     var galTargetPos=new THREE.Vector3(0,0,0), galTargetScale=1;
 
     // ---------- starfield (in galaxy so it drags with the map) ----------
-    var starPoints=null, STAR_HOLE=[32,19,19];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
+    var starPoints=null, STAR_HOLE_ARC=[32,19,19], STAR_HOLE_GAL=[6,5,6];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
+    function starPx(){ return params.starSize*((typeof arcadeActive!=='undefined'&&arcadeActive)?40:75); }   // fixed pixel size: a bit larger in the (nearer) galaxy view
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
       // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
       // hologram), out to a far shell. Sky density matches what the arcade's far field already had (the old small shell + far field ≈ 14× the Star-density slider); the slider scales it.
-      var N=Math.round(params.starCount*14), pos=new Float32Array(N*3), r2=mulberry32(7), HX=STAR_HOLE[0], HY=STAR_HOLE[1], HZ=STAR_HOLE[2], R1=130;
+      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*(ARC?14:14)), pos=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:48;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
       for(var i=0;i<N;i++){ var t=r2()*Math.PI*2, p=Math.acos(2*r2()-1), dx=Math.sin(p)*Math.cos(t), dy=Math.cos(p), dz=Math.sin(p)*Math.sin(t);
         var rin=1/Math.sqrt(dx*dx/(HX*HX)+dy*dy/(HY*HY)+dz*dz/(HZ*HZ)), r=rin*1.04+r2()*(R1-rin*1.04);
         pos[i*3]=dx*r; pos[i*3+1]=dy*r+1.9; pos[i*3+2]=dz*r; }
       var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-      var m=new THREE.PointsMaterial({size:params.starSize*40,sizeAttenuation:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});   // distant stars: fixed pixel size (attenuated, they'd vanish)
+      var m=new THREE.PointsMaterial({size:starPx(),sizeAttenuation:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});   // distant stars: fixed pixel size (attenuated, they'd vanish)
       starPoints=new THREE.Points(g,m); var f={mat:m,base:0.8,owner:null}; fadables.push(f); starPoints.userData.fad=f;
       galaxy.add(starPoints);
     }
@@ -10225,7 +10226,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function openArcade(id){
       if(arcadeActive||!window.MWBattle) return;
-      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true;
+      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true);
@@ -10308,6 +10309,8 @@ f 2469//2469 2470//2470 2434//2434
     function finishArcadeExit(){
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
       document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
+      buildStars();                                                   // back to the galaxy's tight star field
+      var _gc=copyOvr['galcam']; camZoom=(_gc&&_gc.zoom!=null)?_gc.zoom:1; camElev=(_gc&&_gc.elev!=null)?_gc.elev:0;   // reset the zoom/height you changed in the arcade to the galaxy's normal view
     }
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
@@ -11517,7 +11520,7 @@ f 2469//2469 2470//2470 2434//2434
     bind('cPixel','vPixel',function(v){ params.pixel=v; rt.setSize(Math.floor(W/v),Math.floor(H/v)); if(typeof igFeedReprocess==='function') igFeedReprocess(); if(typeof refreshViewerPixel==='function') refreshViewerPixel(); });
     bind('cLevels','vLevels',function(v){ params.levels=v; postMat.uniforms.levels.value=v; if(typeof igSetPosterizeLevels==='function') igSetPosterizeLevels(v); });
     bind('cStars','vStars',function(v){ params.starCount=v; buildStars(); });
-    bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=v*40; },2);
+    bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=starPx(); },2);
     bind('cSpin','vSpin',function(v){ params.spin=v; },1);
     bind('cStud','vStud',function(v){ params.studSize=v; drawStuds(); },2);
     bind('cGap','vGap',function(v){ params.studGap=v; drawStuds(); },2);

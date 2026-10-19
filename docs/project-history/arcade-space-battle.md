@@ -69,3 +69,5 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 ## TODO
 - **Loading screen** for the arcade (parked): full-screen overlay with a progress bar over the 24 GLBs (~3.7 MB) — load the 4 heroes + first fighters first, hold until hologram/carousel/first ships are ready, then fade into the staggered arrivals (which currently wait on model loads, so the intro stutters on slow connections). Optionally prefetch the models when the Arcade planet is hovered.
 - Minikit reward moment (hook: `MWBattle.onUnlock` / `mw:minikit`).
+
+- Star field has two modes (`buildStars` reads `arcadeActive`; rebuilt on arcade enter/exit): arcade = hole `STAR_HOLE_ARC` (≈ play area) out to 130; galaxy view = tight hole `STAR_HOLE_GAL` [6,5,6] around the hologram, shell to 48, ×14 the Star-density slider, 75× star-size px. On leaving the arcade the camera zoom/height reset to the saved galaxy view (`galcam`).
