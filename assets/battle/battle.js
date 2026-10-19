@@ -429,7 +429,7 @@ function explodeRandom(cls){
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
-  if(s.cls==='fighter'){ s.hp--; if(s.hp<=0){ killShip(s); if(b.team===HERO){ kills++; updHud(true); } } }
+  if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
     s.hp--; s.hpShow=3.2;
     if(s.hp<=0){ startDying(s); kills++; updHud(true); }
@@ -441,13 +441,13 @@ function updBars(dt){
   if(!barsEl) return;
   var r=ctx.dom.getBoundingClientRect();
   ships.forEach(function(s){
-    if(!(s.cls==='support'||s.cls==='capital')) return;
+    if(!(s.cls==='support'||s.cls==='capital'||s.cls==='fighter')) return;
     if(s.hpShow>0&&s.alive&&!hyper){
       s.hpShow-=dt;
       if(!s.barEl){ s.barEl=document.createElement('div'); s.barEl.className='bt-bar'; s.barEl.innerHTML='<i></i>'; barsEl.appendChild(s.barEl); }
       _hF.copy(s.pos); _hF.y+=s.c.r*s.root.scale.x*1.1+.15; G.localToWorld(_hF); _hF.project(ctx.camera);
       if(_hF.z>1){ s.barEl.style.display='none'; return; }
-      var pct=Math.max(0,s.hp/s.maxhp);
+      var pct=Math.max(0,s.hp/(s.maxhp||CLS.fighter.hp)); if(s.cls==='fighter') s.barEl.classList.add('sm');
       s.barEl.style.display='block'; s.barEl.style.left=((_hF.x+1)/2*r.width+r.left)+'px'; s.barEl.style.top=((1-_hF.y)/2*r.height+r.top)+'px';
       s.barEl.style.opacity=Math.min(1,s.hpShow*1.2);
       var f=s.barEl.firstChild; f.style.width=(pct*100)+'%'; f.style.background='hsl('+Math.round(pct*110)+',90%,55%)';
@@ -849,6 +849,7 @@ function injectCss(){
     '#bt-hud.pulse .bt-hn{animation:btPulse .4s steps(4)}@keyframes btPulse{0%{transform:scale(1.35);transform-origin:right center}100%{transform:scale(1);transform-origin:right center}}',
     '#bt-bars{position:fixed;inset:0;z-index:15;pointer-events:none}',
     '#bt-bars .bt-bar{position:fixed;width:72px;height:7px;margin:-7px 0 0 -36px;border:1px solid rgba(255,255,255,.65);background:rgba(0,0,0,.55);transition:opacity .2s}',
+    '#bt-bars .bt-bar.sm{width:40px;height:5px;margin:-5px 0 0 -20px}',
     '#bt-bars .bt-bar i{display:block;height:100%;width:100%}',
     '#dbg-battle details{margin:0 0 10px}#dbg-battle summary{cursor:pointer;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}',
     '#dbg-battle .ctl.tight{margin-bottom:8px}'
