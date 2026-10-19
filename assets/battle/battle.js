@@ -716,7 +716,7 @@ function updHero(s,dt){
   var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed; if(o&&d<.9) want=Math.min(want,.4);   // hovering an object: ease in, don't ram it
   s.spd=lerp(s.spd,want,Math.min(1,dt*3));
   s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
-  var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
+  var HS=2, ax=arenaAx()*1.12*HS, ay=arenaAy()*1.1*HS, az=arenaAz()*HS;   // the hero's flight volume is twice the fighters' arena
   s.pos.x=clamp(s.pos.x,-ax,ax); s.pos.y=clamp(s.pos.y,CY-ay,CY+ay); s.pos.z=clamp(s.pos.z,-az,az*.9);
   var yr=(s.prev.z*s.dir.x-s.prev.x*s.dir.z)/Math.max(dt,1e-3);
   s.yawRate=lerp(s.yawRate,yr,Math.min(1,dt*6));
