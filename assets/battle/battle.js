@@ -62,6 +62,9 @@ var MODELS=[
 ];
 var BYID={}; MODELS.forEach(function(m){ BYID[m.id]=m; });
 
+// fighters hunting the hero: chance each (re)target picks the hero, max simultaneous hunters, aim spread multiplier, fire-interval multiplier
+var HUNT={ chance:.15, max:2, spread:2.4, slow:2.8, lock:[22,34], cool:[5,9], stand:3.8, min:2.8, range:5.2 };   // lock = seconds a hunter stays on the hero, cool = pause before it may hunt again, stand/min = preferred / minimum distance from the hero, range = how far a hunter can shoot at it
+var _hs1=null, _hs2=null;
 var CLS={   // per-class feel: base fire interval (s), weapon range, bolt aim spread (rad), hp (fighters die + respawn)
   fighter:{ int:.65, range:3.6, spread:.05, hp:3 },
   support:{ int:.55, range:16, spread:.10, hp:30 },    // support + capital ships are destructible by the HERO only (AI-vs-AI hits just spark) — Death Star never is
@@ -70,13 +73,13 @@ var CLS={   // per-class feel: base fire interval (s), weapon range, bolt aim sp
 };
 
 var DEFAULTS={
-  on:true, density:1, speed:1, scale:1.5, laser:1, laserSpeed:1, boltSize:1, arena:1,
+  on:true, density:1, speed:1, scale:1.5, laser:1, laserSpeed:1, boltSize:1, arena:1.7,
   scaleFighter:.5, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1.6, scaleKit:1,
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, dsDim:.45, clear:1, darkLift:.6,
   kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045,
-  counts:{}, ver:9
+  counts:{}, ver:10
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
 
@@ -85,11 +88,11 @@ var G=null, lights=[], clockT=0, lastT=null, hyper=null, glowTex=null, sess=0, S
 var LREF=4.3;   // the battle is authored for a camera 4.3 units from its centre; G is scaled by (real distance / 4.3) so it reads the same from any camera
 var cache={}, loading={}, loadQ=[], inflight=0, failed={};
 var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
-var bolts=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
+var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0};
 var keys={}, fireHeld=false;
-var uiEl=null, hudEl=null, panelEl=null, styleEl=null, listeners=[];
+var uiEl=null, hudEl=null, vigEl=null, panelEl=null, styleEl=null, listeners=[];
 var BOLT_COL=[0x39ff5a /*imp green*/, 0xff2a2a /*reb red*/, 0xffe14a /*hero yellow*/];
 var CX=0, CY=0, CZ=0;   // battle centre in G's local frame = the monogram's entry spot (G sits there, oriented to the entry camera: +x right, +y up, +z toward the viewer)
 var baseQ=null, _ryQ=null;
@@ -105,7 +108,7 @@ function capName(c){ return c.charAt(0).toUpperCase()+c.slice(1); }
 function loadCfg(){
   var o=JSON.parse(JSON.stringify(DEFAULTS));
   try{ var s=JSON.parse(localStorage.getItem(LS_KEY)||'null');
-    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale','scaleFighter','speedFighter','fogK','scaleHero','kitRate','dsDim'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
+    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale','scaleFighter','speedFighter','fogK','scaleHero','kitRate','dsDim','arena'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
     if(s){ Object.keys(s).forEach(function(k){ if(k==='counts'){ Object.keys(s.counts||{}).forEach(function(i){ o.counts[i]=s.counts[i]; }); } else if(k in o&&k!=='ver') o[k]=s[k]; }); }
   }catch(e){}
   return o;
@@ -129,10 +132,10 @@ function trackMaterials(obj,mdl){
     matList.push(m); }); });
 }
 var fogBase=0, camFar=100, camNear=.1;
-var introHold=true, introT0=0, outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=30, timers=[];
+var introHold=true, introT0=0, outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=3, LASER_DMG=.2,   /* hero hull: 3 = three collisions (any ship, 1 each); an enemy laser hit chips LASER_DMG */  timers=[];
 function quiet(){ return !!hyper||outroOn; }                       // nobody fires once the exit starts
 function here(s){ return !(s.arriveAt>clockT); }                   // false while a ship is still waiting to jump in
-var BTU={ exp:{value:1} };
+var BTU={ exp:{value:1} }, SELDIM=.3;
 function patchMaterial(m){   // battle-only filmic curve: highlights roll off instead of clipping, and it does NOT touch the hologram's materials (a global renderer.toneMapping would)
   if(m.userData.btPatched||!m.isMeshStandardMaterial) return; m.userData.btPatched=true;
   m.onBeforeCompile=function(sh){
@@ -164,12 +167,15 @@ function buildEnv(){   // tiny dark-space environment: one hard sun, faint teal 
 function applyLook(){
   BTU.exp.value=P.exposure; if(ctx.fog&&fogBase) ctx.fog.density=fogBase*P.fogK;   // scene fog is what made far capital ships fade to black
   if(lights[1]){ sunDir(_v1); lights[1].position.copy(_v1).multiplyScalar(30); lights[2].position.copy(_v1).multiplyScalar(-30); }
-  matList.forEach(function(m){ m.envMapIntensity=P.envInt; if(m.roughness!=null) m.roughness=Math.min(1,m.userData.r0*P.rough); });
+  var SD=stage==='select'?SELDIM:1;   // hero-select page: the whole background fleet is dimmed (the carousel ship has its own un-dimmed materials)
+  boltMats.forEach(function(m,i){ m.color.setHex(BOLT_COL[i]).multiplyScalar(SD); });   // lasers dim with the fleet on the select page
+  matList.forEach(function(m){ m.envMapIntensity=P.envInt*SD; if(m.roughness!=null) m.roughness=Math.min(1,m.userData.r0*P.rough); });
   matList.forEach(function(m){ var u=m.userData;
     if(u.b0){ if(u.dark) m.color.copy(u.b0).lerp(DARKLIFT,P.darkLift); else m.color.copy(u.b0);
       m.color.multiplyScalar(P.matBright*u.k*(u.fighter?P.matFighter:1));
-      if(u.far){ m.color.lerp(HAZE,.28*(1-P.dsDim)).multiplyScalar(P.dsDim); } }   // atmospheric perspective: the Death Star is the farthest thing, so it's dimmed and cooled toward the haze
-    if(u.dark&&m.emissive){ m.emissive.copy(DARKGLOW).multiplyScalar(P.darkLift); } if(m.emissiveIntensity!=null) m.emissiveIntensity=m.userData.e0*P.matEmissive*(u.far?P.dsDim:1); });
+      if(u.far){ m.color.lerp(HAZE,.28*(1-P.dsDim)).multiplyScalar(P.dsDim); }
+      m.color.multiplyScalar(SD); }   // atmospheric perspective: the Death Star is the farthest thing, so it's dimmed and cooled toward the haze
+    if(u.dark&&m.emissive){ m.emissive.copy(DARKGLOW).multiplyScalar(P.darkLift); } if(m.emissiveIntensity!=null) m.emissiveIntensity=m.userData.e0*P.matEmissive*(u.far?P.dsDim:1)*SD; });
   if(lights[0]){ lights[0].intensity=P.lightFill; lights[1].intensity=P.lightKey; lights[2].intensity=P.lightRim; }
   sceneBase.forEach(function(b){ b.l.intensity=b.i*P.lightScene; });
 }
@@ -377,6 +383,10 @@ function assignAnchors(){
 
 function enemies(s){ return ships.filter(function(e){ return e.alive&&!e.leaving&&e.cls!=='base'&&e.team!==s.team&&e.team!==HERO&&!e.jump&&here(e); }); }
 function pickTarget(s){
+  if(s.cls==='fighter'&&heroShip&&heroShip.alive&&!quiet()&&!s.form&&!(s.huntCool>0)&&Math.random()<HUNT.chance){
+    var hn=0; for(var hi=0;hi<ships.length;hi++){ if(ships[hi]!==s&&ships[hi].alive&&ships[hi].target===heroShip) hn++; }
+    if(hn<HUNT.max){ s.target=heroShip; s.tT=99; s.huntT=rnd(HUNT.lock[0],HUNT.lock[1]); s.orbit=Math.random()<.5?1:-1; s.mode='pursue'; s.mT=1; return; }   // a few fighters at a time break off to hunt the hero
+  }
   var list=enemies(s); if(!list.length){ s.target=null; return; }
   var fighters=list.filter(function(e){ return e.cls==='fighter'; });
   var pool=(s.cls==='fighter'&&fighters.length)?fighters:list;
@@ -408,7 +418,7 @@ function fireAt(s,tpos,tvel){
   var mp=muzzle(s,_v1.set(0,0,0)); var cl=CLS[s.cls];
   var d=_v2.copy(tpos); if(tvel){ var dist=d.distanceTo(mp); d.addScaledVector(tvel,dist/(7*P.laserSpeed)*.7); }
   d.sub(mp).normalize();
-  d.x+=rnd(-1,1)*cl.spread; d.y+=rnd(-1,1)*cl.spread; d.z+=rnd(-1,1)*cl.spread; d.normalize();
+  var sp=cl.spread*((s.target&&s.target.hero)?HUNT.spread:1); d.x+=rnd(-1,1)*sp; d.y+=rnd(-1,1)*sp; d.z+=rnd(-1,1)*sp; d.normalize();
   spawnBolt(s.team,mp,d,false);
 }
 function burst(p,col,n,spd,life){
@@ -451,7 +461,8 @@ function hullPoint(s,out){
 }
 function updDying(s,dt){
   var D=s.dying; D.t+=dt; var k=Math.min(1,D.t/D.dur), sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital';
-  var amp=(.004+.03*k)*sz; s.pos.set(D.base.x+rnd(-1,1)*amp,D.base.y+rnd(-1,1)*amp,D.base.z+rnd(-1,1)*amp);   // the hull shudders harder as it goes
+  var amp=(.003+.02*k)*sz; if(!D.ph) D.ph=[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)];
+  s.pos.set(D.base.x+amp*(Math.sin(D.t*5.3+D.ph[0])+.5*Math.sin(D.t*11.7+D.ph[3])), D.base.y+amp*(Math.sin(D.t*6.1+D.ph[1])+.5*Math.sin(D.t*9.4+D.ph[0])), D.base.z+amp*(Math.sin(D.t*4.7+D.ph[2])+.5*Math.sin(D.t*12.9+D.ph[1])));   // the hull shudders harder as it goes — smooth low-frequency wobble, not per-frame noise
   D.nx-=dt;
   while(D.nx<=0){
     D.nx+=(.55-.4*k)*rnd(.6,1.4)/(big?1:.8);
@@ -462,9 +473,9 @@ function updDying(s,dt){
   }
   if(D.t>=D.dur) breakApart(s);
 }
-function addDebris(g,v,spin,life){
-  debris.push({g:g,v:v,spin:spin,t:0,life:life});
-  while(debris.length>320){ var o=debris.shift(); G.remove(o.g); }
+function addDebris(g,v,spin,life,drag){
+  debris.push({g:g,v:v,spin:spin,t:0,life:life,drag:drag==null?.25:drag});
+  while(debris.length>700){ var o=debris.shift(); G.remove(o.g); }
 }
 // pieces fly off a destroyed ship: its hull layers (one mesh per material) plus shards. small:true = fighter-sized cloud.
 function shatter(s,o){
@@ -484,6 +495,90 @@ function shatter(s,o){
     G.add(m); addDebris(m,_v3.copy(m.position).sub(s.pos).normalize().multiplyScalar(small?rnd(.6,2.2):sz*rnd(.25,.7)),new T.Vector3(rnd(-3,3),rnd(-3,3),rnd(-3,3)),small?rnd(1.4,3):rnd(3,5.5));
   }
 }
+
+// ── real fragmentation for capital/support ships. The model's triangles are split into "atoms" (connected islands — bricks, studs,
+//    turrets; oversized islands are cut on a fine grid), cached per model. At break-up a random handful of atoms fly free as individual
+//    pieces, and the rest are grouped on a randomly offset coarse grid into a few large sub-constructions. Every piece gets its own
+//    velocity (away from a random blast point + noise), spin, drag and lifetime, so nothing moves as one group.
+function buildAtoms(s){
+  var c=cache[s.id]; if(c.atoms) return c.atoms;
+  s.root.updateMatrixWorld(true);
+  var inv=new T.Matrix4().copy(s.root.matrixWorld).invert(), meshes=[], mn=new T.Vector3(1e9,1e9,1e9), mx=new T.Vector3(-1e9,-1e9,-1e9), v=new T.Vector3();
+  s.root.traverse(function(m){
+    if(!m.isMesh||!m.geometry||!m.geometry.attributes.position||Array.isArray(m.material)) return;
+    var g=m.geometry, pa=g.attributes.position, mat=new T.Matrix4().multiplyMatrices(inv,m.matrixWorld), lp=new Float32Array(pa.count*3);
+    for(var i=0;i<pa.count;i++){ v.fromBufferAttribute(pa,i).applyMatrix4(mat); lp[3*i]=v.x; lp[3*i+1]=v.y; lp[3*i+2]=v.z; mn.min(v); mx.max(v); }
+    var ix=g.index?g.index.array:null;
+    meshes.push({m:m,g:g,lp:lp,ix:ix,nt:Math.floor((ix?ix.length:pa.count)/3),nm:new T.Matrix3().getNormalMatrix(mat)});
+  });
+  var ext=Math.max(mx.x-mn.x,mx.y-mn.y,mx.z-mn.z)||1, q=20000/ext, total=0; meshes.forEach(function(M){ total+=M.nt; });
+  var bigT=Math.max(400,total*.05), fine=ext/9, atoms=[];
+  meshes.forEach(function(M,mi){
+    var lp=M.lp, ix=M.ix, nv=lp.length/3, wid=new Int32Array(nv), W=new Map(), nw=0;
+    for(var i=0;i<nv;i++){ var key=(Math.round((lp[3*i]-mn.x)*q)*20011+Math.round((lp[3*i+1]-mn.y)*q))*20011+Math.round((lp[3*i+2]-mn.z)*q); var w=W.get(key); if(w===undefined){ w=nw++; W.set(key,w); } wid[i]=w; }
+    var par=new Int32Array(nw); for(i=0;i<nw;i++) par[i]=i;
+    function find(a){ while(par[a]!==a){ par[a]=par[par[a]]; a=par[a]; } return a; }
+    function tv(t,k){ return ix?ix[3*t+k]:3*t+k; }
+    for(var t=0;t<M.nt;t++){ var a=find(wid[tv(t,0)]), b=find(wid[tv(t,1)]), cc=find(wid[tv(t,2)]); if(a!==b) par[b]=a; b=find(b); if(a!==cc) par[find(cc)]=find(a); }
+    var isl=new Map();
+    for(t=0;t<M.nt;t++){ var r=find(wid[tv(t,0)]), L=isl.get(r); if(!L){ L=[]; isl.set(r,L); } L.push(t); }
+    function mk(tris){   // atom = triangle list + centroid
+      var sx=0,sy=0,sz=0; for(var j=0;j<tris.length;j++){ var a0=tv(tris[j],0); sx+=lp[3*a0]; sy+=lp[3*a0+1]; sz+=lp[3*a0+2]; }
+      atoms.push({mi:mi,tris:tris,x:sx/tris.length,y:sy/tris.length,z:sz/tris.length});
+    }
+    isl.forEach(function(L){
+      if(L.length<=bigT){ mk(L); return; }
+      var cells=new Map();   // oversized island (a welded hull): cut it into fine-grid cells so it can still break into bits
+      for(var j=0;j<L.length;j++){ var a0=tv(L[j],0), k=(Math.floor((lp[3*a0]-mn.x)/fine)*64+Math.floor((lp[3*a0+1]-mn.y)/fine))*64+Math.floor((lp[3*a0+2]-mn.z)/fine), C=cells.get(k); if(!C){ C=[]; cells.set(k,C); } C.push(L[j]); }
+      cells.forEach(mk);
+    });
+  });
+  return (c.atoms={meshes:meshes,list:atoms,ext:ext,cx:(mn.x+mx.x)/2,cy:(mn.y+mx.y)/2,cz:(mn.z+mx.z)/2,mn:mn.clone()});
+}
+function pieceGeo(M,tris,cx,cy,cz){   // non-indexed geometry of the given triangles, in ship-local space, recentred on (cx,cy,cz)
+  var g=M.g, lp=M.lp, ix=M.ix, nA=g.attributes.normal, cA=g.attributes.color, uA=g.attributes.uv, n=tris.length*3;
+  var pos=new Float32Array(n*3), nor=nA?new Float32Array(n*3):null, col=cA?new Float32Array(n*3):null, uv=uA?new Float32Array(n*2):null, o=0, _n=new T.Vector3();
+  for(var i=0;i<tris.length;i++) for(var k=0;k<3;k++,o++){
+    var vi=ix?ix[3*tris[i]+k]:3*tris[i]+k;
+    pos[3*o]=lp[3*vi]-cx; pos[3*o+1]=lp[3*vi+1]-cy; pos[3*o+2]=lp[3*vi+2]-cz;
+    if(nor){ _n.set(nA.getX(vi),nA.getY(vi),nA.getZ(vi)).applyMatrix3(M.nm).normalize(); nor[3*o]=_n.x; nor[3*o+1]=_n.y; nor[3*o+2]=_n.z; }
+    if(col){ col[3*o]=cA.getX(vi); col[3*o+1]=cA.getY(vi); col[3*o+2]=cA.getZ(vi); }
+    if(uv){ uv[2*o]=uA.getX(vi); uv[2*o+1]=uA.getY(vi); }
+  }
+  var geo=new T.BufferGeometry(); geo.setAttribute('position',new T.BufferAttribute(pos,3));
+  if(nor) geo.setAttribute('normal',new T.BufferAttribute(nor,3)); else geo.computeVertexNormals();
+  if(col) geo.setAttribute('color',new T.BufferAttribute(col,3)); if(uv) geo.setAttribute('uv',new T.BufferAttribute(uv,2));
+  return geo;
+}
+function fragment(s){
+  var A=buildAtoms(s); if(!A.list.length) return false;
+  var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', q=s.root.quaternion, sc=s.root.scale;
+  var list=A.list.slice(), nFree=Math.min(list.length>>1,big?160:80), free=[];
+  for(var i=0;i<nFree;i++){ var j=i+Math.floor(Math.random()*(list.length-i)), t=list[i]; list[i]=list[j]; list[j]=t; free.push(list[i]); }
+  var rest=list.slice(nFree);
+  // a couple of blast points inside the hull: pieces are thrown away from the nearest one
+  var blasts=[]; for(i=0;i<3;i++) blasts.push(new T.Vector3(A.cx+rnd(-.4,.4)*A.ext,A.cy+rnd(-.2,.2)*A.ext*.5,A.cz+rnd(-.4,.4)*A.ext));
+  function launch(parts,cx,cy,cz,smallPiece){
+    var g=new T.Group(); parts.forEach(function(P){ g.add(new T.Mesh(pieceGeo(A.meshes[P.mi],P.tris,cx,cy,cz),A.meshes[P.mi].m.material)); });
+    g.position.set(cx*sc.x,cy*sc.y,cz*sc.z).applyQuaternion(q).add(s.pos); g.quaternion.copy(q); g.scale.copy(sc); G.add(g);
+    var b=blasts[0], bd=1e9; blasts.forEach(function(B){ var d=(B.x-cx)*(B.x-cx)+(B.y-cy)*(B.y-cy)+(B.z-cz)*(B.z-cz); if(d<bd){ bd=d; b=B; } });
+    var dir=new T.Vector3(cx-b.x,cy-b.y,cz-b.z); if(dir.lengthSq()<1e-8) dir.set(rnd(-1,1),rnd(-1,1),rnd(-1,1));
+    dir.normalize().multiplyScalar(rnd(.4,1)).add(new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(smallPiece?.9:.5)).normalize().applyQuaternion(q);
+    var sp=smallPiece?sz*rnd(.1,.8):sz*rnd(.04,.22), spin=smallPiece?rnd(1.2,4.5):rnd(.15,.7);
+    addDebris(g,dir.multiplyScalar(sp),new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(spin),smallPiece?rnd(2.2,7):rnd(5.5,9.5),smallPiece?rnd(.05,.35):rnd(.1,.3));
+  }
+  free.forEach(function(a){ launch([{mi:a.mi,tris:a.tris}],a.x,a.y,a.z,true); });
+  // the rest: grouped on a randomly offset coarse grid into a handful of large sub-constructions
+  var cell=A.ext/rnd(2.2,3.4), ox=rnd(0,cell), oy=rnd(0,cell), oz=rnd(0,cell), cells=new Map();
+  rest.forEach(function(a){
+    var k=(Math.floor((a.x-A.mn.x+ox)/cell)*64+Math.floor((a.y-A.mn.y+oy)/cell))*64+Math.floor((a.z-A.mn.z+oz)/cell), C=cells.get(k);
+    if(!C){ C={parts:{},sx:0,sy:0,sz:0,n:0}; cells.set(k,C); }
+    var P=C.parts[a.mi]; if(!P) P=C.parts[a.mi]={mi:a.mi,tris:[]}; for(var i=0;i<a.tris.length;i++) P.tris.push(a.tris[i]);
+    C.sx+=a.x; C.sy+=a.y; C.sz+=a.z; C.n++;
+  });
+  cells.forEach(function(C){ launch(Object.keys(C.parts).map(function(k){ return C.parts[k]; }),C.sx/C.n,C.sy/C.n,C.sz/C.n,false); });
+  return true;
+}
 function later(delay,fn){ timers.push({t:delay,fn:fn}); }
 function breakApart(s){
   var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', pos=s.pos.clone();
@@ -492,13 +587,14 @@ function breakApart(s){
   for(var i=0;i<(big?10:6);i++){ hullPoint(s,_v1); flash(_v1,sz*rnd(1.2,2.2),0xffb060); burst(_v1,0xffd070,50,2.8+sz*.7,1.2); }
   later(.22,function(){ flash(pos,sz*4.5,0xffe2a0); burst(pos,0xffa040,150,3+sz,1.5); });
   later(.5,function(){ flash(pos,sz*3,0xff9040); burst(pos,0xff7020,90,2.4+sz*.8,1.4); });
-  shatter(s,{});
+  var okF=false; try{ okF=fragment(s); }catch(e){ if(window.console) console.warn('fragment failed',e); }
+  if(!okF) shatter(s,{});
   s.dying=null; s.root.visible=false; s.respawn=rnd(28,45);
 }
 function updTimers(dt){ for(var i=timers.length-1;i>=0;i--){ timers[i].t-=dt; if(timers[i].t<=0){ var f=timers[i].fn; timers.splice(i,1); f(); } } }
 function updDebris(dt){
   for(var i=debris.length-1;i>=0;i--){
-    var d=debris[i]; d.t+=dt; d.g.position.addScaledVector(d.v,dt); d.v.multiplyScalar(1-.25*dt);
+    var d=debris[i]; d.t+=dt; d.g.position.addScaledVector(d.v,dt); d.v.multiplyScalar(Math.max(0,1-d.drag*dt));
     d.g.rotation.x+=d.spin.x*dt; d.g.rotation.y+=d.spin.y*dt; d.g.rotation.z+=d.spin.z*dt;
     var fade=Math.max(0,Math.min(1,(d.life-d.t)/(d.life*.3))); if(fade<1){ d.g.visible=fade>.02; if(d.g.userData.base===undefined) d.g.userData.base=d.g.scale.clone(); d.g.scale.copy(d.g.userData.base).multiplyScalar(fade); }
     if(d.t>=d.life){ G.remove(d.g); debris.splice(i,1); }
@@ -510,6 +606,7 @@ function explodeRandom(cls){
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
+  if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
   if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
@@ -534,6 +631,14 @@ function updBars(dt){
       s.barEl.style.opacity=Math.min(1,s.hpShow*1.2);
       var f=s.barEl.firstChild; f.style.width=(pct*100)+'%'; f.style.background='hsl('+Math.round(pct*110)+',90%,55%)';
     } else if(s.barEl&&s.barEl.style.display!=='none') s.barEl.style.display='none';
+    // red flashing crosshair above any fighter that is hunting the hero
+    var hunting=s.cls==='fighter'&&s.alive&&!s.dying&&heroShip&&heroShip.alive&&s.target===heroShip&&!quiet()&&stage==='play'&&here(s);
+    if(hunting){
+      if(!s.xhEl){ s.xhEl=document.createElement('div'); s.xhEl.className='bt-xh'; s.xhEl.innerHTML='<svg viewBox="0 0 28 28" width="28" height="28" aria-hidden="true"><circle cx="14" cy="14" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 1v8M14 19v8M1 14h8M19 14h8" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>'; barsEl.appendChild(s.xhEl); }
+      _hF.copy(s.pos); _hF.y+=s.c.r*s.root.scale.x*1.1+.42; G.localToWorld(_hF); _hF.project(ctx.camera);
+      if(_hF.z>1){ s.xhEl.style.display='none'; }
+      else{ s.xhEl.style.display='block'; s.xhEl.style.left=((_hF.x+1)/2*r.width+r.left)+'px'; s.xhEl.style.top=((1-_hF.y)/2*r.height+r.top)+'px'; }
+    } else if(s.xhEl&&s.xhEl.style.display!=='none') s.xhEl.style.display='none';
   });
 }
 function updBolts(dt){
@@ -545,7 +650,7 @@ function updBolts(dt){
     if(b.life>0){
       for(var j=0;j<ships.length;j++){
         var s=ships[j]; if(!s.alive||s.cls==='base'||s.jump||s.leaving||!here(s)) continue;
-        if(b.team===HERO){ if(s.team===HERO) continue; } else if(s.team===b.team||s.team===HERO) continue;
+        if(b.team===HERO){ if(s.team===HERO) continue; } else if(s.team===b.team) continue;   // enemy lasers can now hit the hero too
         var rad=s.c.r*s.root.scale.x*(s.cls==='fighter'?.9:.6);
         // segment (prev→cur) vs sphere
         _v1.copy(b.mesh.position).sub(b.prev); var l2=_v1.lengthSq()||1e-6;
@@ -576,16 +681,27 @@ function updFighter(s,dt){
   if(s.out){ updLeave(s,dt); return; }
   if(s.form){ updFormation(s,dt); return; }
   var m=s.m, turn=3.2*(m.turn||1), base=1.9*(m.spd||1)*P.speed*P.speedFighter;
+  if(s.target&&s.target.hero&&s.target.alive){   // hunting the hero: hold the lock for the whole hunt, then back off for a while
+    s.huntT-=dt; s.mode='pursue'; s.mT=1;
+    if(s.huntT<=0){ s.target=null; s.huntCool=rnd(HUNT.cool[0],HUNT.cool[1]); s.mode='wander'; s.mT=rnd(1,2); pickWp(s); }
+  } else if(s.huntCool>0) s.huntCool-=dt;
   s.tT-=dt; if(s.mode==='pursue'&&(!s.target||!s.target.alive||s.tT<=0)) pickTarget(s);
   s.mT-=dt; if(s.mT<=0||(s.mode==='pursue'&&!s.target)) nextMode(s);
   var steer=_steer.set(0,0,0), spd=base;
-  if(s.mode==='pursue'&&s.target){ steer.copy(s.target.pos).addScaledVector(s.target.vel,.3).sub(s.pos); spd=base*1.18; }
+  if(s.mode==='pursue'&&s.target&&s.target.hero){   // keep a standoff distance: close in to ~stand, then circle; back right off if the hero gets inside min
+    if(!_hs1){ _hs1=new T.Vector3(); _hs2=new T.Vector3(); }
+    _hs1.copy(s.target.pos).sub(s.pos); var hd=_hs1.length()||1e-3; _hs1.multiplyScalar(1/hd);
+    _hs2.crossVectors(_hs1,_hs2.set(0,1,0)); if(_hs2.lengthSq()<1e-4) _hs2.set(1,0,0); _hs2.normalize().multiplyScalar((s.orbit||1)*.7);
+    if(hd<HUNT.min) steer.copy(_hs1).multiplyScalar(-1.6).add(_hs2.multiplyScalar(.4)); else steer.copy(_hs1).multiplyScalar(clamp((hd-HUNT.stand)/.8,-1.2,1)).add(_hs2);
+    spd=base*(hd<HUNT.min?1.35:1.0);
+  }
+  else if(s.mode==='pursue'&&s.target){ steer.copy(s.target.pos).addScaledVector(s.target.vel,.3).sub(s.pos); spd=base*1.18; }
   else if(s.mode==='evade'){ steer.copy(s.wp).sub(s.pos); steer.x+=Math.sin(clockT*5+s.ph)*.6; steer.y+=Math.cos(clockT*4.3+s.ph2)*.6; spd=base*1.45; if(steer.lengthSq()<.2) pickWp(s); }
   else { steer.copy(s.wp).sub(s.pos); if(steer.lengthSq()<.25) pickWp(s); }
   steer.normalize();
-  // separation
+  // separation (fighters keep ~2.2 units from each other)
   for(var i=0;i<ships.length;i++){ var o=ships[i]; if(o===s||!o.alive||o.cls!=='fighter'&&o.cls!=='hero') continue;
-    _sep.copy(s.pos).sub(o.pos); var d2=_sep.lengthSq(); if(d2<1.44&&d2>1e-6){ var dd=Math.sqrt(d2); steer.addScaledVector(_sep,(1-dd/1.2)*1.6/dd); } }
+    _sep.copy(s.pos).sub(o.pos); var d2=_sep.lengthSq(); if(d2<4.84&&d2>1e-6){ var dd=Math.sqrt(d2); steer.addScaledVector(_sep,(1-dd/2.2)*2.2/dd); } }
   // arena bound (soft ellipsoid)
   var ax=arenaAx(), ay=arenaAy(), az=arenaAz();
   var px=s.pos.x/ax, py=(s.pos.y-CY)/ay, pz=s.pos.z/az, r2=px*px+py*py+pz*pz;
@@ -609,7 +725,7 @@ function updFighter(s,dt){
   s.cd-=dt;
   if(s.cd<=0&&s.target&&s.target.alive){
     var to=_v2.copy(s.target.pos).sub(s.pos), dist=to.length();
-    if(dist<CLS.fighter.range && s.dir.angleTo(to.normalize())<.28){ fireAt(s,s.target.pos,s.target.vel); s.cd=fireInterval(s); }
+    if(dist<(s.target.hero?HUNT.range:CLS.fighter.range) && s.dir.angleTo(to.normalize())<(s.target.hero?1.3:.28)){ fireAt(s,s.target.pos,s.target.vel); s.cd=fireInterval(s)*(s.target.hero?HUNT.slow:1); }
   } else if(s.cd<=0&&!s.target){ s.cd=.4; }
 }
 function updShipLarge(s,dt){   // support + capital: dead-straight, very slow passage across the field; a slow wide turn once past the far edge
@@ -651,7 +767,7 @@ function updBase(s,dt){
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
-function setStage(st){ if(stage===st) return; stage=st; if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
+function setStage(st){ if(stage===st) return; stage=st; if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
@@ -667,7 +783,7 @@ function spawnHero(id){
 }
 function changeHero(){ ejectHero(false); fireHeld=false; setStage('select'); }
 function ejectHero(silent){
-  if(!heroShip) return; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
+  if(!heroShip) return; heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
   G.remove(heroShip.root); ships.splice(ships.indexOf(heroShip),1); heroShip=null;
 }
 // pointer → ray in G-local space
@@ -695,11 +811,28 @@ function heroCollide(s,dt){   // bumping other ships hurts (nothing actively tar
     var r=o.cls==='fighter'?Math.max(o.c.hx,o.c.hz)*o.root.scale.x*.8:lr(o)*.9;
     _v1.copy(s.pos).sub(o.pos); var d=_v1.length(); if(d>=hr+r) continue;
     var n=d>1e-4?_v1.multiplyScalar(1/d):_v1.set(0,1,0); s.pos.addScaledVector(n,hr+r-d+.02);
-    if(s.inv<=0){ s.inv=1; s.hp-=(o.cls==='fighter'?2:(o.cls==='support'?4:6)); s.spd*=.25; s.dir.lerp(n,.5).normalize();
-      burst(_v2.copy(s.pos).addScaledVector(n,-hr*.5),0xffc060,18,1.4,.6); flash(s.pos,hr*3,0xffd090); updHud(false); hudHurt();
+    if(s.inv<=0){ s.inv=1; s.hp-=1; s.spd*=.25; s.dir.lerp(n,.5).normalize();
+      burst(_v2.copy(s.pos).addScaledVector(n,-hr*.5),0xffc060,18,1.4,.6); flash(s.pos,hr*3,0xffd090); heroHit(s,true); updHud(false); hudHurt();
       if(s.hp<=0){ heroDeath(s); return; } }
   }
 }
+// damage feedback: sparks, a shake of the model, and a red emissive pulse (restored when it ends); `big` = collision, else laser chip
+function heroHit(s,big){
+  burst(s.pos,0xffc060,big?34:12,big?2.2:1.4,big?.7:.4); burst(s.pos,0xff3020,big?16:5,big?1.6:1,.5);
+  s.shake=Math.max(s.shake||0,big?1:.4); s.hurtT=Math.max(s.hurtT||0,big?1:.55); s.hurtDur=s.hurtT;
+}
+function heroFx(s,dt){
+  if(s.shake>0){ s.shake=Math.max(0,s.shake-dt*2.4); var a=s.shake*.09*(s.c.r||.3), t=clockT*70; s.bank.position.set(Math.sin(t)*a,Math.sin(t*1.31+1)*a,Math.sin(t*.87+2)*a); }
+  else if(s.bank.position.lengthSq()>0) s.bank.position.set(0,0,0);
+  var on=s.hurtT>0; if(on) s.hurtT=Math.max(0,s.hurtT-dt);
+  var k=on?Math.abs(Math.sin((1-s.hurtT/s.hurtDur)*Math.PI*(s.hurtDur>.8?3:2)))*Math.min(1,s.hurtT/s.hurtDur*2.5):0;   // two/three red pulses that fade out
+  s.root.traverse(function(m){ if(!m.isMesh||!m.material||!m.material.emissive) return; var mt=m.material;
+    if(!mt.userData.hurt0) mt.userData.hurt0={e:mt.emissive.clone(),i:mt.emissiveIntensity};
+    if(k>0){ mt.emissive.setRGB(1,.08,.04); mt.emissiveIntensity=Math.max(mt.userData.hurt0.i,2.2*k); }
+    else if(mt.userData.hurt1){ mt.emissive.copy(mt.userData.hurt0.e); mt.emissiveIntensity=mt.userData.hurt0.i; }
+    mt.userData.hurt1=k>0; });
+}
+function heroFxReset(s){ if(!s) return; s.hurtT=0; s.shake=0; s.root.traverse(function(m){ if(!m.isMesh||!m.material||!m.material.userData.hurt0) return; var mt=m.material; mt.emissive.copy(mt.userData.hurt0.e); mt.emissiveIntensity=mt.userData.hurt0.i; mt.userData.hurt1=false; }); }
 function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(function(){ if(hudEl) hudEl.classList.remove('hurt'); },320); }
 function heroDeath(s){
   burst(s.pos,0xffa040,80,3,1.5); burst(s.pos,0xffffff,30,4,.8); flash(s.pos,1.8,0xfff0c0);
@@ -723,6 +856,7 @@ function updHero(s,dt){
   s.yawRate=lerp(s.yawRate,yr,Math.min(1,dt*6));
   aim(s.root,s.dir);
   s.bankV=lerp(s.bankV,clamp(s.yawRate*.5,-1.2,1.2),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
+  heroFx(s,dt);
   s.cd-=dt;
   if(!quiet()&&fireHeld&&s.cd<=0){   // fire toward wherever the pointer is on (an object's XYZ, or the depth-plane point)
     pickAt(ptr.nx,ptr.ny,_hT);
@@ -743,7 +877,7 @@ function updCarousel(dt){
   var id=HEROES[carIdx];
   if(carModelId!==id&&cache[id]){
     if(carWrap) carGroup.remove(carWrap);
-    carWrap=new T.Group(); carModel=cache[id].proto.clone(true); carWrap.add(carModel); carGroup.add(carWrap); carModelId=id; carK=0;
+    carWrap=new T.Group(); carModel=cache[id].proto.clone(true);   /* proto materials are currently dimmed: undo it on the carousel copies */ carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var mm=o.material.clone(); mm.userData=Object.assign({},o.material.userData,{btPatched:false}); mm.envMap=envTex; var un=stage==='select'?1/SELDIM:1; mm.color.multiplyScalar(un); mm.envMapIntensity*=un; if(mm.emissiveIntensity!=null) mm.emissiveIntensity*=un; patchMaterial(mm); o.material=mm; }); carWrap.add(carModel); carGroup.add(carWrap); carModelId=id; carK=0;
     if(carUi){ var nm=carUi.querySelector('.bt-name'); if(nm) nm.textContent=BYID[id].label; }
   }
   if(!carWrap) return;
@@ -758,8 +892,9 @@ function updCarousel(dt){
 function syncUi(){
   var sel=stage==='select'&&!quiet(), pl=stage==='play'&&!quiet();
   if(carUi) carUi.style.display=sel?'flex':'none';
-  if(hintEl) hintEl.style.display=pl?'flex':'none';
+  if(hintEl) hintEl.style.display=(sel||pl)?'flex':'none';
   if(hudEl) hudEl.style.opacity=pl?1:0;
+  updCritical();
 }
 
 /* ───────────────────────────── minikits ───────────────────────────── */
@@ -948,8 +1083,9 @@ function bindInput(){
 }
 
 /* ───────────────────────────── UI: hero picker, HUD, debug panel ───────────────────────────── */
+function updCritical(){ if(vigEl) vigEl.style.display=(stage==='play'&&!quiet()&&heroShip&&heroShip.alive&&heroShip.hp<=1+1e-6)?'block':'none'; }   // 1 collision or less from death
 function updHud(pulse){
-  if(!hudEl) return; var pct=heroShip?Math.max(0,heroShip.hp/heroMax)*100:100;
+  updCritical(); if(!hudEl) return; var pct=heroShip?Math.max(0,heroShip.hp/heroMax)*100:100;
   hudEl.innerHTML='<span class="bt-hl">KILLS</span><span class="bt-hn">'+kills+'</span><div class="bt-hull"><span class="bt-hl">HULL</span><div class="bt-hbar"><i style="width:'+pct+'%;background:hsl('+Math.round(pct*1.1)+',90%,55%)"></i></div></div>';
   if(pulse){ hudEl.classList.remove('pulse'); void hudEl.offsetWidth; hudEl.classList.add('pulse'); }
 }
@@ -960,12 +1096,15 @@ function injectCss(){
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
     '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
-    '#bt-car .bt-lb{margin-top:26px}',
+    '#bt-car .bt-lb{margin-top:26px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
     '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
     '#bt-car .bt-sub b{font-weight:400;color:var(--holo,#AAF5EE)}',
     '#bt-hints{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;display:flex;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap}',
     '#bt-hints .bt-h{display:flex;align-items:center;gap:11px}',
     '#bt-hints svg{color:var(--holo,#AAF5EE);flex:none}',
+    '#bt-vig{position:fixed;inset:0;z-index:15;pointer-events:none;background:radial-gradient(ellipse at center,transparent 52%,rgba(255,30,20,.35) 80%,rgba(255,20,10,.7) 100%);animation:btvig 1s ease-in-out infinite alternate}',
+    '@keyframes btvig{from{opacity:.35}to{opacity:1}}',
+    '@media (prefers-reduced-motion:reduce){#bt-vig{animation:none;opacity:.8}}',
     '#bt-hud{position:absolute;right:24px;top:64px;z-index:16;display:flex;flex-direction:column;align-items:flex-end;line-height:1;pointer-events:none;opacity:0;transition:opacity .3s}',
     '#bt-hud .bt-hl{font-family:var(--display,sans-serif);font-size:11px;letter-spacing:4px;color:var(--muted,#6b8a85);margin-bottom:6px}',
     '#bt-hud .bt-hn{font-family:var(--mono,monospace);font-size:56px;letter-spacing:2px;color:var(--amber-hot,#F0D080);text-shadow:0 0 16px rgba(240,208,128,.45)}',
@@ -978,6 +1117,9 @@ function injectCss(){
     '#bt-bars{position:fixed;inset:0;z-index:15;pointer-events:none}',
     '#bt-bars .bt-bar{position:fixed;width:72px;height:7px;margin:-7px 0 0 -36px;border:1px solid rgba(255,255,255,.65);background:rgba(0,0,0,.55);transition:opacity .2s}',
     '#bt-bars .bt-bar.sm{width:40px;height:5px;margin:-5px 0 0 -20px}',
+    '#bt-bars .bt-xh{position:fixed;width:28px;height:28px;margin:-14px 0 0 -14px;color:#ff2a2a;filter:drop-shadow(0 0 4px rgba(255,42,42,.8));animation:btxh .5s ease-in-out infinite alternate}',
+    '@keyframes btxh{from{opacity:1}to{opacity:.12}}',
+    '@media (prefers-reduced-motion:reduce){#bt-bars .bt-xh{animation:none}}',
     '#bt-bars .bt-bar i{display:block;height:100%;width:100%}',
     '#dbg-battle details{margin:0 0 10px}#dbg-battle summary{cursor:pointer;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}',
     '#dbg-battle .ctl.tight{margin-bottom:8px}'
@@ -986,7 +1128,7 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary bt-lb">Leaderboard</button>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
@@ -995,6 +1137,7 @@ function buildUi(){
   hintEl.innerHTML='<div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 20 m-3 0 h6 M12 17 v6" stroke="currentColor" stroke-width="1.4" fill="none"/></svg><span>Move + aim</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 0 3 11 L3 13 L12 13 Z" fill="currentColor"/></svg><span>Click to fire</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 1 21 11 L21 13 L12 13 Z" fill="currentColor"/></svg><span>Right-click + drag · pan</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><rect x="10.4" y="4.6" width="3.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M9 16.5 l3 -2.6 l3 2.6 M9 22 l3 2.6 l3 -2.6" stroke="currentColor" stroke-width="1.3" fill="none"/></svg><span>Scroll · zoom</span></div><div class="bt-h"><svg viewBox="0 0 56 24" width="58" height="26" aria-hidden="true"><rect x="1.5" y="3" width="53" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 12.5 v3 h28 v-3" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Spacebar · change ship</span></div><div class="bt-h"><svg viewBox="0 0 40 24" width="42" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="37" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="20" y="16" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="currentColor">ESC</text></svg><span>Esc \u00b7 exit game</span></div>';
   document.body.appendChild(hintEl);
   barsEl=document.createElement('div'); barsEl.id='bt-bars'; document.body.appendChild(barsEl);
+  vigEl=document.createElement('div'); vigEl.id='bt-vig'; vigEl.style.display='none'; document.body.appendChild(vigEl);
   hudEl=document.createElement('div'); hudEl.id='bt-hud'; document.body.appendChild(hudEl); updHud();
   buildPanel();
 }
@@ -1019,7 +1162,7 @@ function buildPanel(){
   key('density','Density (instance multiplier)',0,2.5,.05,2,function(){ reconT=0; });
   key('speed','Speed',.1,3,.05,2);
   key('scale','Size (all ships)',.3,3,.05,2);
-  key('arena','Fighter arena radius',.4,1.4,.02,2);
+  key('arena','Fighter arena radius',.4,2.6,.02,2);
   key('clear','Fighter clearance around mark',.4,2,.05,2);
   key('laser','Laser frequency',0,4,.05,2);
   key('laserSpeed','Laser speed',.3,3,.05,2);
@@ -1071,13 +1214,13 @@ function makeSparks(){
 function makeBolts(){
   var geo=new T.BoxGeometry(1,1,1);
   [0,1,2].forEach(function(i){
-    var mat=new T.MeshBasicMaterial({color:BOLT_COL[i],fog:false});
+    var mat=new T.MeshBasicMaterial({color:BOLT_COL[i],fog:false}); boltMats[i]=mat; mat.color.multiplyScalar(stage==='select'?SELDIM:1);
     for(var n=0;n<200;n++){ var m=new T.Mesh(geo,mat); m.visible=false; m.frustumCulled=false; G.add(m); boltFree[i].push({mesh:m,vel:new T.Vector3(),prev:new T.Vector3(),idx:i,life:0,team:i}); }
   });
 }
 
 function resetState(){
-  ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
+  ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; failed={}; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
   debris=[]; timers=[]; introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
 }
@@ -1113,7 +1256,7 @@ var MWBattle={
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
     if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.near=camNear; ctx.camera.updateProjectionMatrix(); }
-    [carUi,hintEl,hudEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
+    [carUi,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
@@ -1121,6 +1264,7 @@ var MWBattle={
   assetsReady:function(){ return active&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
   summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
+  _explode:function(s){ startDying(s); }, _debris:function(){ return debris.length; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },
   spawnHero:spawnHero, openKit:function(){ if(kits[0]) openKit(kits[0],'api'); },
