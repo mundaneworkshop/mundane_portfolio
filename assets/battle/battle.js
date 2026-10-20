@@ -799,6 +799,13 @@ function pickAt(nx,ny,out){
   function test(c,r,o){ _hF.copy(c).sub(_ro); var tca=_hF.dot(_rd); if(tca<0) return; var d2=_hF.lengthSq()-tca*tca; if(d2>r*r) return; var t=tca-Math.sqrt(r*r-d2); if(t<bt){ bt=t; best=o; } }
   ships.forEach(function(sh){ if(!sh.alive||sh.hero||sh.jump||sh.leaving||!here(sh)) return; test(sh.pos,Math.max(sh.c.r*sh.root.scale.x*1.25,.2),sh); });
   kits.forEach(function(k){ if(!k.opening) test(k.pos,.38*k.root.scale.x+.1,k); });
+  if(!best){   // forgiving pick: nearest ship/kit to the cursor in screen space (works for targets whose sphere the ray misses, e.g. just behind or beside the hero)
+    var bd=.085;
+    var asp=ctx.camera.aspect||1;
+    var cand=function(o,p){ _hF.copy(p); G.localToWorld(_hF); _hF.project(ctx.camera); if(_hF.z>1) return; var dx=(_hF.x-nx)*asp, dy=_hF.y-ny, dd=Math.sqrt(dx*dx+dy*dy); if(dd<bd){ bd=dd; best=o; } };
+    ships.forEach(function(sh){ if(!sh.alive||sh.hero||sh.jump||sh.leaving||sh.cls==='base'||!here(sh)) return; cand(sh,sh.pos); });
+    kits.forEach(function(k){ if(!k.opening) cand(k,k.pos); });
+  }
   if(best){ out.copy(best.pos); return best; }
   var z=heroShip?heroShip.pos.z:0, t=Math.abs(_rd.z)>1e-4?(z-_ro.z)/_rd.z:6; if(!(t>.2)) t=6;
   out.copy(_ro).addScaledVector(_rd,t); return null;
@@ -845,7 +852,9 @@ function updHero(s,dt){
   var to=_v2.copy(_hT).sub(s.pos), d=to.length();
   if(!o) to.z-=s.pos.z*.5;                                              // the cursor can't say how deep: drift back toward mid-depth unless pointing at something
   s.prev.copy(s.dir);
-  if(d>.15){ to.normalize(); var ang=s.dir.angleTo(to); if(ang>1e-4){ s.dir.lerp(to,Math.min(1,3.6*dt/ang)).normalize(); } }
+  if(d>.15){ to.normalize(); var ang=s.dir.angleTo(to);   // true rotation toward the target, so a target directly behind still turns the ship around (a straight lerp stalls near 180°)
+    if(ang>1e-4){ var tax=_v3.crossVectors(s.dir,to); if(tax.lengthSq()<1e-6) tax.crossVectors(s.dir,_up); if(tax.lengthSq()<1e-6) tax.set(1,0,0); tax.normalize();
+      var rate=3.6*(ang>2?1.6:1); s.dir.applyAxisAngle(tax,Math.min(ang,rate*dt)).normalize(); } }
   var HSPD=.5;   // hero speed: half of the original, easier to control
   var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed*HSPD; if(o&&d<.9) want=Math.min(want,.4*HSPD);   // hovering an object: ease in, don't ram it
   s.spd=lerp(s.spd,want,Math.min(1,dt*3));

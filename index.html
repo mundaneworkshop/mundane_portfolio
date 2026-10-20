@@ -9631,7 +9631,8 @@ f 2469//2469 2470//2470 2434//2434
     // instead and an artifact can never shadow the case study.
     function takenMoonSlugs(grp,excludeMesh){ var out=['case']; (grp&&grp.userData&&grp.userData.moons||[]).forEach(function(mm){ if(mm===excludeMesh) return;
       var meta=getMoonMeta(mm); out.push(meta.slug||slugify(meta.title||'')); }); return out; }
-    function zoneSpot(zoneId){ var z=zoneById[zoneId]; var m=(z.a1-z.a0)*0.12;
+    function zoneMargin(zoneId){ return (zoneId==='social'||zoneId==='profile')?0.3:0.12; }   // Socials + Personal planets sit toward the middle of their wedge, not its edges
+    function zoneSpot(zoneId){ var z=zoneById[zoneId]; var m=(z.a1-z.a0)*zoneMargin(zoneId);
       var ang=z.a0+m+rng()*((z.a1-z.a0)-2*m); var rad=1.3+rng()*2.7; var y=0.7+rng()*2.6; var jx=rng()*0.5-0.25, jz=rng()*0.5-0.25;
       return {ang:ang,rad:rad,y:y,jx:jx,jz:jz}; }
     function spotPos(sp){ return new THREE.Vector3(Math.cos(sp.ang)*sp.rad*params.planetSpread+sp.jx, sp.y, Math.sin(sp.ang)*sp.rad*params.planetSpread+sp.jz); }
@@ -9800,11 +9801,12 @@ f 2469//2469 2470//2470 2434//2434
       _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display=document.documentElement.hasAttribute('data-bric-reticle')?'none':'block';   // reticle reads the text, shows it itself
     }
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
-    var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1;
+    var camUpV=new THREE.Vector3(0,1,0);
+    var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
-    renderer.domElement.addEventListener('pointerdown',function(e){ if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
+    renderer.domElement.addEventListener('pointerdown',function(e){ arcReturn=false; if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
       dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
@@ -9815,8 +9817,8 @@ f 2469//2469 2470//2470 2434//2434
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
           else { focusYaw-=dx*0.006; focusPitch=clamp(focusPitch+syF*dy*0.006,-0.25,1.45); }
         }
-        else { manualRot+=dx*0.004; camElev=arcadeActive?clamp(camElev-sy*dy*0.02,-14,16):clamp(camElev-sy*dy*0.02,-3,7); } } });   // arcade allows a much wider up/down range
-    renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
+        else { manualRot+=dx*0.004; if(arcadeActive&&arcadeStage==='play') arcPitch-=sy*dy*0.006; else camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });   // arcade play: unbounded 360° orbit (pitch is a free angle)
+    renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); arcReturn=false; var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
       if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
       else { camZoom=clamp(camZoom+dir*0.06,0.4,2.2); } },{passive:false});
@@ -10228,7 +10230,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
-      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; buildStars();   // big star-free play area while in the arcade
+      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true);
@@ -10247,8 +10249,8 @@ f 2469//2469 2470//2470 2434//2434
     }
     function arcadeSetStage(st){
       var was=arcadeStage; arcadeStage=st;
-      if(was==='play'&&st==='select') arcadeRestoreHolo();
-      if(st==='play'&&was!=='play') camZoom=2.2;   // game starts: pull the camera out to its maximum (the wheel's upper clamp) to see as much of the battle as possible
+      if(was==='play'&&st==='select'){ arcadeRestoreHolo(); arcReturn=true; }   // hero select: camera angle + zoom ease back to the default framing
+      if(st==='play'&&was!=='play'){ arcReturn=false; camElev=0; arcPitch=0; camZoom=2.2; }   // game starts: pull the camera out to its maximum (the wheel's upper clamp) to see as much of the battle as possible
     }
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
@@ -12939,12 +12941,14 @@ f 2469//2469 2470//2470 2434//2434
     if(!copyOvr['spot:arcade'] && zoneById['social'] && zoneById['fun']){
       var _zs=zoneById['social'], _zf=zoneById['fun'];
       function _sp(z,f,rad,y,jx,jz){ return {ang:z.a0+f*(z.a1-z.a0),rad:rad,y:y,jx:jx,jz:jz}; }
-      copyOvr['spot:li']=_sp(_zs,.22,2.0,1.1,0.05,-0.05);
-      copyOvr['spot:ig']=_sp(_zs,.80,3.6,2.7,-0.05,0.05);
+      copyOvr['spot:li']=_sp(_zs,.36,2.0,1.1,0.05,-0.05);
+      copyOvr['spot:ig']=_sp(_zs,.64,3.6,2.7,-0.05,0.05);
       copyOvr['spot:arcade']=_sp(_zf,.5,2.8,1.8,0,0);
     }
     // restore persisted randomized planet positions (saved by "Randomize planet positions")
     planets.forEach(function(grp){ var sp=copyOvr['spot:'+grp.userData.id]; if(sp){ grp.userData.spot={ang:sp.ang,rad:sp.rad,y:sp.y,jx:sp.jx,jz:sp.jz};
+      var _zn=zoneById[grp.userData.zone], _m=zoneMargin(grp.userData.zone);   // Socials/Personal: pull a saved angle that hugs a wedge edge back toward the middle
+      if(_zn && _m>0.12 && _zn.a1>_zn.a0){ var _f=(sp.ang-_zn.a0)/(_zn.a1-_zn.a0); var _cf=Math.min(1-_m,Math.max(_m,_f)); if(_cf!==_f){ grp.userData.spot.ang=_zn.a0+_cf*(_zn.a1-_zn.a0); copyOvr['spot:'+grp.userData.id].ang=grp.userData.spot.ang; } }
       var hp=spotPos(grp.userData.spot); grp.userData.homePos.copy(hp); grp.userData.posTarget.copy(hp); } });
     // sync saved artifact (moon) counts
     planets.forEach(function(grp){ var k='mooncount:'+grp.userData.id; if(copyOvr[k]!=null){ var target=copyOvr[k];
@@ -13315,8 +13319,8 @@ f 2469//2469 2470//2470 2434//2434
           if(Math.abs(ow.a0-zn.a0)<1e-6 && Math.abs(ow.a1-zn.a1)<1e-6) return;   // wedge unchanged
           f=(sp.ang-ow.a0)/(ow.a1-ow.a0);
         }
-        if(f==null||isNaN(f)) f=0.12+rng()*0.76;          // no previous wedge to measure against → land somewhere inside
-        f=Math.min(0.88,Math.max(0.12,f));               // a saved angle that sat outside its own wedge gets pulled to its nearest edge
+        if(f==null||isNaN(f)) f=zoneMargin(g.userData.zone)+rng()*(1-2*zoneMargin(g.userData.zone));          // no previous wedge to measure against → land somewhere inside
+        var _fm=zoneMargin(g.userData.zone); f=Math.min(1-_fm,Math.max(_fm,f));               // a saved angle that sat outside its own wedge gets pulled to its nearest edge
         var ns={ang:zn.a0+f*(zn.a1-zn.a0),rad:sp.rad,y:sp.y,jx:sp.jx,jz:sp.jz}; g.userData.spot=ns;
         var hp=spotPos(ns); g.userData.homePos.copy(hp); g.userData.posTarget.copy(hp); });   // eased into place by the per-frame lerp
       // Freeze every planet's spot: the boot-time fallback draws from a seeded RNG in creation order, so without this a
@@ -13704,7 +13708,12 @@ f 2469//2469 2470//2470 2434//2434
       if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it
       else if(msgFocusActive){ msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
       else if(!focused){ var _bp=(mwPhase==='entry')?ENTRY_POS:HOME_POS, _bl=(mwPhase==='entry')?ENTRY_LOOK:HOME_LOOK;
-        var oy=(_bp.y-_bl.y)*camZoom, oz=(_bp.z-_bl.z)*camZoom; camPos.set(0,_bl.y+oy+camElev,_bl.z+oz); camLook.copy(_bl); }
+        var oy=(_bp.y-_bl.y)*camZoom, oz=(_bp.z-_bl.z)*camZoom;
+        if(arcReturn){ var _k=0.09; camZoom+=(arcEntryZoom-camZoom)*_k; camElev+=(0-camElev)*_k; arcPitch+=(0-arcPitch)*_k;   // back on the hero-select view: ease the camera home
+          if(Math.abs(camZoom-arcEntryZoom)<0.003&&Math.abs(camElev)<0.01&&Math.abs(arcPitch)<0.003){ camZoom=arcEntryZoom; camElev=0; arcPitch=0; arcReturn=false; } }
+        arcPitchS+=(arcPitch-arcPitchS)*0.2; if(!arcadeActive&&!arcReturn){ arcPitch=0; }
+        var _pa=-arcPitchS, _pc=Math.cos(_pa), _ps=Math.sin(_pa);   // orbit the offset about the X axis through the look point; camera.up rolls with it so there is no pole flip
+        camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps); }
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
@@ -13748,7 +13757,8 @@ f 2469//2469 2470//2470 2434//2434
 
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
-      camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
+      if(focused||MWSub.active||msgFocusActive) camUpV.set(0,1,0);
+      camera.up.copy(camUpV); camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
       stageLens();
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
