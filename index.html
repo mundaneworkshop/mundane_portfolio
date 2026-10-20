@@ -865,7 +865,7 @@
   </div>
 
   <div id="topbar">
-    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
+    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeSndBtn" aria-pressed="true" aria-label="Sound on" title="Toggle arcade sound (M)">SND ON</button></div>
     <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
@@ -10230,16 +10230,18 @@ f 2469//2469 2470//2470 2434//2434
     }
     function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
+      if(window.MWAudio) MWAudio.unlock();   // the planet click is the user gesture that lets audio start
       arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true);
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
+      if(window.MWAudio&&window.MWLightspeed&&!noJump) MWAudio.jumpStart();   // before init: the hero-select ambience waits for the jump's exit
       MWBattle.init({ onGameOver:function(){ exitArcade(); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
-      if(window.MWLightspeed&&!noJump) MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
+      if(window.MWLightspeed&&!noJump){ MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWAudio) MWAudio.jumpReveal(); if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); } else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
@@ -10307,6 +10309,7 @@ f 2469//2469 2470//2470 2434//2434
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
       if(window.__mwLightspeed) window.__mwLightspeed.destroy(true);   // ESC mid-load
+      if(window.MWAudio) MWAudio.jumpCancel();
       var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
       // OUTRO (no hyperspace): everyone stops firing, fighters fly off screen, support/capital ships stay; the scoreboard modal comes up and
       // closing it ends the exit. Leaving without having played just tears down at once.
@@ -10323,6 +10326,11 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
     var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
+    // arcade sound toggle (assets/battle/audio.js): the SND button or the M key; the choice persists in localStorage['mw_sound']
+    var _axs=document.getElementById('arcadeSndBtn');
+    function syncSndBtn(){ if(!_axs||!window.MWAudio) return; var off=MWAudio.isMuted(); _axs.textContent=off?'SND OFF':'SND ON'; _axs.setAttribute('aria-pressed',String(!off)); _axs.setAttribute('aria-label',off?'Sound off':'Sound on'); }
+    if(_axs){ _axs.addEventListener('click',function(){ if(window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } }); window.addEventListener('mw:sound',syncSndBtn); syncSndBtn(); }
+    window.addEventListener('keydown',function(e){ if((e.key==='m'||e.key==='M')&&arcadeActive&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA)$/.test((e.target&&e.target.tagName)||'')&&window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } });
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
     function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
 
@@ -14383,6 +14391,7 @@ f 2469//2469 2470//2470 2434//2434
   </script>
   <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/battle/audio.js"></script>
   <script src="assets/battle/lightspeed.js"></script>
   <script src="assets/battle/battle.js"></script>
   <script src="assets/bric-reticle.js"></script>

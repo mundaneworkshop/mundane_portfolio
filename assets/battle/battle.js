@@ -134,7 +134,14 @@ function trackMaterials(obj,mdl){
 var fogBase=0, camFar=100, camNear=.1;
 var introHold=true, introT0=0, outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=3, LASER_DMG=.2,   /* hero hull: 3 = three collisions (any ship, 1 each); an enemy laser hit chips LASER_DMG */  timers=[];
 function quiet(){ return !!hyper||outroOn; }                       // nobody fires once the exit starts
-function here(s){ return !(s.arriveAt>clockT); }                   // false while a ship is still waiting to jump in
+function here(s){ return !(s.arriveAt>clockT); }
+// audio (assets/battle/audio.js): where a ship is on screen -> stereo pan + loudness by camera distance
+var audioRot0=0, _aw=null;
+function audioAt(s){
+  if(!window.MWAudio||!ctx||!G) return null;
+  if(!_aw) _aw=new T.Vector3(); _aw.copy(s.pos); G.localToWorld(_aw); var d=ctx.camera.position.distanceTo(_aw); _aw.project(ctx.camera);
+  return { pan:Math.max(-1,Math.min(1,_aw.x)), gain:Math.max(.12,Math.min(1,16/Math.max(d,1)))*(Math.abs(_aw.x)>1.2||_aw.z>1?.5:1) };
+}                   // false while a ship is still waiting to jump in
 var BTU={ exp:{value:1} }, SELDIM=.3;
 function patchMaterial(m){   // battle-only filmic curve: highlights roll off instead of clipping, and it does NOT touch the hologram's materials (a global renderer.toneMapping would)
   if(m.userData.btPatched||!m.isMeshStandardMaterial) return; m.userData.btPatched=true;
@@ -314,6 +321,7 @@ function tryScheduleIntro(){
   introScheduled=true;
 }
 function startArrive(s){
+  var au=audioAt(s); if(au&&(s.cls==='capital'||s.cls==='support')) MWAudio.arrive(au.pan,s.cls);
   s.arr=0; flash(s.pos,Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*(s.cls==='capital'?2.6:2)+.25,0xcff8ff);
 }
 function updArrive(s,dt){
@@ -445,6 +453,7 @@ function updSparks(dt){
   sparks.geometry.attributes.position.needsUpdate=true; sparks.geometry.attributes.color.needsUpdate=true;
 }
 function killShip(s){
+  var au=audioAt(s); if(au) MWAudio.boom('fighter',au.pan,au.gain);
   burst(s.pos,0xffa040,26,1.7,.85); burst(s.pos,0xffffff,10,2.4,.45);
   shatter(s,{small:true}); s.form=null;
   s.alive=false; s.root.visible=false; s.respawn=rnd(2.5,5.5); s.target=null;
@@ -455,6 +464,7 @@ function startDying(s){
   if(s.dying||!s.hasA) return;
   s.alive=false; s.target=null; s.hpShow=0; if(s.barEl) s.barEl.style.display='none';
   s.dying={t:0,dur:s.cls==='capital'?8:4.5,nx:0,base:s.pos.clone()};
+  if(s.cls==='capital'){ var au=audioAt(s); if(au) MWAudio.boom('capital-start',au.pan,au.gain); }
 }
 function hullPoint(s,out){
   var c=s.c; out.set(rnd(-1,1)*c.hx,rnd(-.6,1)*c.hy,rnd(-1,1)*c.hz); s.root.updateMatrix(); return out.applyMatrix4(s.root.matrix);
@@ -581,6 +591,7 @@ function fragment(s){
 }
 function later(delay,fn){ timers.push({t:delay,fn:fn}); }
 function breakApart(s){
+  var au=audioAt(s); if(au) MWAudio.boom(s.cls==='capital'?'capital':'support',au.pan,au.gain);
   var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', pos=s.pos.clone();
   // THE big one: as the hull shatters — an enormous white flash, a ring of blasts across the hull, then two delayed aftershocks
   flash(pos,sz*6,0xffffff); burst(pos,0xffffff,70,5+sz,.9); burst(pos,0xffa040,220,3.5+sz*1.2,1.9);
@@ -767,7 +778,7 @@ function updBase(s,dt){
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
-function setStage(st){ if(stage===st) return; stage=st; if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
+function setStage(st){ if(stage===st) return; stage=st; if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
@@ -1015,6 +1026,7 @@ function updLeave(s,dt){
 
 /* ───────────────────────────── frame ───────────────────────────── */
 function update(t){
+  if(window.MWAudio&&active&&stage==='play'&&ctx&&ctx.getRot) MWAudio.setYaw(ctx.getRot()-audioRot0);   // camera orbit swings the gameplay ambience's soundstage
   if(!active||dead) return;
   var dt=lastT==null?0.016:Math.min(.05,Math.max(0,t-lastT)); lastT=t; clockT+=dt;
   if(ctx.getRot){ if(!_ryQ) _ryQ=new T.Quaternion(); _ryQ.setFromAxisAngle(_up,ctx.getRot()); G.quaternion.copy(_ryQ).multiply(baseQ); }   // the whole battle turns with the horizontal drag-orbit
@@ -1252,12 +1264,13 @@ var MWBattle={
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=450; c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
+    audioRot0=c.getRot?c.getRot():0; if(window.MWAudio){ MWAudio.arcadeStart(); MWAudio.warm(); }
     window.MWBattle=MWBattle;
   },
   update:update,
   hyperspace:hyperspace, outro:outro,
   dispose:function(){
-    if(dead||!ctx) return; dead=true; active=false;
+    if(dead||!ctx) return; dead=true; active=false; if(window.MWAudio) MWAudio.stop();
     listeners.forEach(function(l){ l[0].removeEventListener(l[1],l[2],l[3]); }); listeners.length=0;
     sceneBase.forEach(function(b){ b.l.intensity=b.i; }); sceneBase.length=0;
     lights.forEach(function(l){ ctx.scene.remove(l); }); lights.length=0;

@@ -77,3 +77,12 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 - Star field has two modes (`buildStars` reads `arcadeActive`; rebuilt on arcade enter/exit): arcade = hole `STAR_HOLE_ARC` (≈ play area) out to 130; galaxy view = tight hole `STAR_HOLE_GAL` [6,5,6] around the hologram, shell to 48, ×14 the Star-density slider, 75× star-size px. On leaving the arcade the camera zoom/height reset to the saved galaxy view (`galcam`).
 
 - Galaxy star hole is now `STAR_HOLE_GAL=[30,18,30]` (covers the interactive area incl. the camera at max zoom-out; shell to 95 = the galaxy camera's far plane). Star material has `fog:false` — scene fog was erasing every distant star. Star-density slider range is 50–3000 (step 50).
+
+## Audio (Oct 20 2026, branch feat/arcade-audio)
+- `assets/battle/audio.js` (`window.MWAudio`, Web Audio only) + 29 small mono/stereo AAC `.m4a` clips in `assets/audio/` (~5 MB, fetched only when the arcade opens). Edited from the raw SFX library (`mw space battle game/sfx`); the clip → role tables are `FILES` / `POOLS` / `LEVEL` at the top of `audio.js`.
+- Hooks: `openArcade` unlocks audio (the planet click is the gesture) and drives the hyperspace jump sounds (`jumpStart` before `MWBattle.init`, `jumpReveal` in the loader's `onReveal`, `jumpCancel` on ESC mid-load). `battle.js`: `init` → `arcadeStart`, `setStage` → `stage`, `update` → `setYaw`, `startArrive` → `arrive`, `killShip` / `startDying` / `breakApart` → `boom`, `dispose` → `stop`.
+- Hero select: two muted ambient layers (space-battle bed + hangar). Play: the gameplay ambience's L/R channels are two HRTF virtual speakers anchored in the battle; `setYaw(galaxy.rotation.y − value at entry)` swings the stage as the camera orbits.
+- Hyperspace sounds only play for the galaxy → game jump. A random handful (~3–4) of capital/support arrivals get the Star Destroyer exit cue, staggered and detuned.
+- Destruction clips are chosen at random from a pool per kind (fighter / support / capital). The pools are PLACEHOLDERS picked by clip length; reassign after auditioning.
+- Mute: the `SND` button next to ESC, or the `M` key; persists in `localStorage['mw_sound']`.
+- Not yet covered (no clips edited yet): engines, hero/enemy weapon fire, hit/collision, low health, hero destruction, minikit open, carousel/button UI sounds.
