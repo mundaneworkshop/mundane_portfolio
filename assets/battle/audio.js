@@ -34,7 +34,7 @@ var DEATH={
   capital:{ seq:[{k:'cap-going-down'},{k:'exp-23'},{k:'exp-idris',fin:true}],
             small:['exp-01','exp-03','exp-22b'], final:['exp-02','exp-04','exp-05'] }
 };
-var SEQ_TAIL=1.1;      // seconds of a sequence clip that ring out after the ship breaks apart (tune by ear)
+var SEQ_TAIL=1.1;      // seconds of a sequence clip left to ring out after the ship breaks apart (and the big final lands) — tune by ear
 var SEQ_CHANCE=.6;     // otherwise: small layers + a final
 /* the flown ship. Only the Millennium Falcon has its own clips so far; ships not listed here are silent for engine / fire. */
 var HERO={
@@ -240,9 +240,12 @@ var MWAudio={
     oneShot(key,{pan:pan,gain:LEVEL.small*(gain==null?1:gain)*(.7+Math.random()*.5),rate:.9+Math.random()*.2,dest:master}); duckFor(1.2);
   },
   deathFinal:function(plan,cls,pan,gain){
-    if(!ctx) return; if(plan&&plan.seq&&!plan.fin) return;   // the sequence already holds its finale
+    if(!ctx) return; var g=(gain==null?1:gain);   // every support/capital death ends on a big explosion, lead-up sequence or not
     var key=pick(DEATH[cls].final); if(!bufs[key]){ load(key); return; }
-    var v=oneShot(key,{pan:pan,gain:LEVEL.final*(gain==null?1:gain),rate:.95+Math.random()*.1,dest:master}); duckFor(v?v.dur:3);
+    var v=oneShot(key,{pan:pan,gain:LEVEL.final*g,rate:.95+Math.random()*.1,dest:master}); duckFor(v?v.dur:3);
+    if(cls==='capital'){   // a capital breaks up in two blasts a beat apart
+      var k2=pick(DEATH.capital.final.filter(function(x){ return x!==key; })); if(bufs[k2]) oneShot(k2,{pan:pan,gain:LEVEL.final*.75*g,rate:.9+Math.random()*.1,delay:.16,dest:master});
+    }
   },
 
   /* the flown ship. id = model id ('mil-falcon'…). Ships without clips in HERO stay silent for engine / fire. */
