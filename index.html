@@ -10219,14 +10219,14 @@ f 2469//2469 2470//2470 2434//2434
     // Keeps the hologram (head, cone, ring), the monogram emitter and the base grid; hides every zone + planet; swaps the ring text.
     // Exit = the top-left button (where the breadcrumb normally sits) or ESC → ships jump to hyperspace, then the galaxy comes back.
     var arcadeActive=false, arcadeExiting=false, _ringBak=null;
-    var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 MOUSE TO MOVE \u2022 CLICK TO FIRE \u2022 ';
+    var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 PLAY TO UNLOCK COSMETIC REWARDS \u2022 ';
     var arcadeStage='select';   // 'select' (hero carousel replaces the head) | 'play' (every hologram artifact hidden, the hero flies)
     function arcadeRingText(on){
       if(on){ if(!_ringBak) _ringBak={en:BIO_EN,aur:BIO_AUR}; BIO_EN=ARCADE_RING; BIO_AUR=ARCADE_RING; }
       else if(_ringBak){ BIO_EN=_ringBak.en; BIO_AUR=_ringBak.aur; _ringBak=null; }
       redrawRings(); if(ringEn.userData.decode) ringEn.userData.decode();   // replays the Aurebesh → Latin decode on the new text
     }
-    function openArcade(id){
+    function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
       arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
@@ -10237,7 +10237,7 @@ f 2469//2469 2470//2470 2434//2434
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
-      if(window.MWLightspeed) MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
+      if(window.MWLightspeed&&!noJump) MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
@@ -10248,6 +10248,7 @@ f 2469//2469 2470//2470 2434//2434
     function arcadeSetStage(st){
       var was=arcadeStage; arcadeStage=st;
       if(was==='play'&&st==='select') arcadeRestoreHolo();
+      if(st==='play'&&was!=='play') camZoom=2.2;   // game starts: pull the camera out to its maximum (the wheel's upper clamp) to see as much of the battle as possible
     }
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
@@ -10279,9 +10280,10 @@ f 2469//2469 2470//2470 2434//2434
       html+='<div class="ar-list" aria-label="Top scores"></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
       el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
       var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err); });
-      el.addEventListener('click',function(e){ if(e.target===el) closeArcadeResult(); });
-      el.querySelector('#arClose').addEventListener('click',closeArcadeResult);
-      var again=el.querySelector('#arAgain'); if(again) again.addEventListener('click',function(){ closeArcadeResult(); var go=function(){ if(!arcadeActive) openArcade('arcade'); else setTimeout(go,150); }; go(); });
+      el.addEventListener('click',function(e){ if(e.target===el&&!sum) closeArcadeResult(); });   // game-over modal: the backdrop never dismisses (rapid clicking while playing would close it)
+      var armed=function(){ return !sum||performance.now()-arcadeResultT>1200; };   // ...and the buttons ignore clicks for the first 1.2 s
+      el.querySelector('#arClose').addEventListener('click',function(){ if(armed()) closeArcadeResult(); });
+      var again=el.querySelector('#arAgain'); if(again) again.addEventListener('click',function(){ if(!armed()) return; closeArcadeResult(); var go=function(){ if(!arcadeActive) openArcade('arcade',true); else setTimeout(go,150); }; go(); });
       var form=el.querySelector('.ar-form');
       if(form){
         var inp=form.querySelector('.ar-in'), btn=form.querySelector('.ar-sub'), msg=el.querySelector('.ar-msg');

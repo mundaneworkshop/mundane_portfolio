@@ -1,9 +1,8 @@
 /* MWLightspeed — hyperspace-jump loading screen (background only, no ship) for the space battle.
    Modelled on the Last Jedi lightspeed jump, 0:06 onward of the reference clip:
-     1. STREAK   ~1.9s  dark star field, points stretch into radial streaks that ramp from dim to white-hot (ease-in)
-     2. FLASH    ~0.3s  whole frame whites out
-     3. TUNNEL   loops  bloom decays from the vanishing point into a turbulent teal tunnel with a spiral vortex core
-     4. EXIT     ~0.7s  when assets are ready: second white flash, overlay fades off to reveal the battle
+     1. STREAK   ~3.2s  dark star field, points stretch into radial streaks that ramp from dim to white-hot (ease-in), then hold at full speed until the assets are ready
+     2. EXIT     ~1s    white-out, overlay fades off to reveal the hero-select view
+     (the old flash + turbulent-tunnel middle section was cut Oct 19 — it was on screen for a split second; the shader still has it, used only by prefers-reduced-motion)
    Usage:  MWLightspeed.start({ ready:function(){ return true when assets loaded }, onDone:fn, palette:{deep,mid,hi} })
    Only transform/opacity are animated on the DOM; all motion is one fullscreen fragment shader.
    prefers-reduced-motion: no streak ramp, no flashes, a frozen tunnel frame that cross-fades in and out. */
@@ -76,7 +75,7 @@ var FS=[
 // Palette defaults come from the site's holo teal family (--holo-fill / --holo-edge: 120,224,214 / 170,245,238).
 // Swap in the reference clip's blues by passing palette:{deep:[.02,.15,.23],mid:[.06,.45,.58],hi:[.55,.9,.98]}.
 var PAL={ deep:[.02,.13,.15], mid:[.07,.50,.49], hi:[.67,.96,.93] };
-var T_STREAK=1.9, T_FLASH=.45, T_BLOOM=1.3, T_EXIT_FLASH=.22, T_EXIT_FADE=.6;
+var T_STREAK=3.2, T_BLOOM=1.3, T_EXIT_FLASH=.35, T_EXIT_FADE=.7;   // T_STREAK = ramp length; the streaks then hold at full speed until the assets are ready
 
 function ease(x){ x=x<0?0:x>1?1:x; return x*x*(3-2*x); }
 function start(o){
@@ -130,12 +129,8 @@ function start(o){
     if(dead) return;
     var t=(now-t0)/1000, uS=0, uT=0, uW=0, uB=0;
     if(phase==='streak'){
-      uS=ease(t/T_STREAK); uW=Math.max(0,(t-T_STREAK*.7)/(T_STREAK*.3)); uW=uW*uW*.1;
-      if(t>=T_STREAK){ phase='flash'; phaseT=t; }
-    }
-    if(phase==='flash'){
-      var f=(t-phaseT)/T_FLASH; uS=1; uW=.1+.4*ease(f);
-      if(f>=1){ phase='tunnel'; tunnelAt=now; phaseT=t; }
+      uS=ease(t/T_STREAK);
+      if(t>=T_STREAK&&(wantExit||(o.ready&&o.ready())||(now-t0>failsafe))){ phase='exit'; exitAt=now; }   // no tunnel: the streaks go straight to the white-out and the reveal
     }
     if(phase==='tunnel'){
       var k=(now-tunnelAt)/1000; uT=1; uS=0;
@@ -146,10 +141,10 @@ function start(o){
       if(ok&&(now-tunnelAt)>=dwell){ phase='exit'; exitAt=now; }
     }
     if(phase==='exit'){
-      var e=(now-exitAt)/1000; uT=1; uB=0;
+      var e=(now-exitAt)/1000; uT=reduced?1:0; uS=reduced?0:1; uB=0;
       if(reduced){ if(!revealed){ revealed=true; if(o.onReveal) o.onReveal(); } el.style.opacity='0'; if(e>.5){ destroy(); return; } }
-      else if(e<T_EXIT_FLASH){ uW=ease(e/T_EXIT_FLASH)*.45; uB=uW*.6; }
-      else{ uW=.45; if(!revealed){ revealed=true; if(o.onReveal) o.onReveal(); } el.style.opacity='0'; el.style.transitionDuration=T_EXIT_FADE+'s'; if(e>T_EXIT_FLASH+T_EXIT_FADE){ destroy(); return; } }
+      else if(e<T_EXIT_FLASH){ uW=ease(e/T_EXIT_FLASH); }
+      else{ uW=1; if(!revealed){ revealed=true; if(o.onReveal) o.onReveal(); } el.style.opacity='0'; el.style.transitionDuration=T_EXIT_FADE+'s'; if(e>T_EXIT_FLASH+T_EXIT_FADE){ destroy(); return; } }
     }
     if(prog){
       var st=reduced?7.3:t;
