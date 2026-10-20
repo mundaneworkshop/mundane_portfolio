@@ -140,6 +140,7 @@ var audioRot0=0, _aw=null;
 function audioAt(s,big){   // big = a support/capital ship: heard clearly from anywhere (they sit far out and mostly off-screen), only panned
   if(!window.MWAudio||!ctx||!G) return null;
   if(!_aw) _aw=new T.Vector3(); _aw.copy(s.pos); G.localToWorld(_aw); var d=ctx.camera.position.distanceTo(_aw); _aw.project(ctx.camera);
+  if(!isFinite(_aw.x)||!isFinite(d)) return null;
   var g=Math.max(.12,Math.min(1,16/Math.max(d,1)));
   if(big) return { pan:Math.max(-1,Math.min(1,_aw.z>1?-_aw.x:_aw.x)), gain:.7+.3*g };   // behind the camera the projected x flips: mirror it so left stays left
   return { pan:Math.max(-1,Math.min(1,_aw.x)), gain:g*(Math.abs(_aw.x)>1.2||_aw.z>1?.5:1) };
@@ -797,7 +798,7 @@ function spawnHero(id){
 }
 function changeHero(){ ejectHero(false); fireHeld=false; setStage('select'); }
 function ejectHero(silent){
-  if(!heroShip) return; if(window.MWAudio&&!silent) MWAudio.heroStop(); heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
+  if(!heroShip) return; heroShip.inv=0; heroFlash(heroShip);   // the hero model's materials are shared with its prototype: put the opacity back if(window.MWAudio&&!silent) MWAudio.heroStop(); heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
   G.remove(heroShip.root); ships.splice(ships.indexOf(heroShip),1); heroShip=null;
 }
 // pointer → ray in G-local space
@@ -824,15 +825,25 @@ function pickAt(nx,ny,out){
   var z=heroShip?heroShip.pos.z:0, t=Math.abs(_rd.z)>1e-4?(z-_ro.z)/_rd.z:6; if(!(t>.2)) t=6;
   out.copy(_ro).addScaledVector(_rd,t); return null;
 }
+var INV_COLLIDE=3;   // seconds of invulnerability (to ships AND lasers) after a collision; the hero's opacity pulses while it lasts
+function heroFlash(s){   // opacity pulse during invulnerability, restored to each material's own opacity afterwards
+  var on=s.inv>0, a=on?.3+.7*(.5+.5*Math.sin(clockT*26)):1;
+  if(!on&&!s._flash) return; s._flash=on;
+  s.root.traverse(function(m){ if(!m.isMesh||!m.material) return;
+    (Array.isArray(m.material)?m.material:[m.material]).forEach(function(mt){
+      var d=mt.userData; if(!d.op0) d.op0={t:mt.transparent,o:mt.opacity};
+      var tr=a<1||d.op0.t; if(mt.transparent!==tr){ mt.transparent=tr; mt.needsUpdate=true; }
+      mt.opacity=d.op0.o*a; }); });
+}
 function heroCollide(s,dt){   // bumping other ships hurts (nothing actively targets the hero — yet)
-  s.inv-=dt; s.root.visible=s.inv<=0||Math.floor(clockT*16)%2===0;
+  s.inv-=dt; s.root.visible=true; heroFlash(s);
   var hr=Math.max(s.c.hx,s.c.hz)*s.root.scale.x*.8;
   for(var i=0;i<ships.length;i++){ var o=ships[i];
     if(o===s||!o.alive||o.dying||o.jump||o.leaving||!here(o)||o.cls==='base'||o.cls==='hero') continue;
     var r=o.cls==='fighter'?Math.max(o.c.hx,o.c.hz)*o.root.scale.x*.8:lr(o)*.9;
     _v1.copy(s.pos).sub(o.pos); var d=_v1.length(); if(d>=hr+r) continue;
     var n=d>1e-4?_v1.multiplyScalar(1/d):_v1.set(0,1,0); s.pos.addScaledVector(n,hr+r-d+.02);
-    if(s.inv<=0){ s.inv=1; s.hp-=1; s.spd*=.25; if(window.MWAudio) MWAudio.heroCollide(); s.dir.lerp(n,.5).normalize();
+    if(s.inv<=0){ s.inv=INV_COLLIDE; s.hp-=1; s.spd*=.25; if(window.MWAudio) MWAudio.heroCollide(); s.dir.lerp(n,.5).normalize();
       burst(_v2.copy(s.pos).addScaledVector(n,-hr*.5),0xffc060,18,1.4,.6); flash(s.pos,hr*3,0xffd090); heroHit(s,true); updHud(false); hudHurt();
       if(s.hp<=0){ heroDeath(s); return; } }
   }

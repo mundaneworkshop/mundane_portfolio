@@ -88,3 +88,8 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 - Ducking: support/capital destruction sounds bypass a `duck` bus that carries every other sound (ambience, engines, fire, fighter booms…). The bus dips to `DUCK_LEVEL` (.22) in ~0.2 s when such a ship starts dying and for each break-up, holds for the clip, and eases back over ~1.5 s.
 - Mute: the `SND` button next to ESC, or the `M` key; persists in `localStorage['mw_sound']`.
 - Not yet covered (no clips yet): low health, non-Falcon hero engines and fire, other ships' weapon fire, minikit open, carousel/button UI sounds.
+
+## Hero invulnerability after a collision (Oct 20 2026)
+- A collision now gives `INV_COLLIDE` = 3 s of invulnerability (to further collisions AND to lasers) instead of 1 s, so back-to-back hits no longer chain into a quick death. While it lasts the hero's opacity pulses between ~30% and 100% (`heroFlash`, replaces the old hard visible/hidden blink). The hero model's materials are shared with its prototype, so `ejectHero` restores the opacity.
+- `MWAudio` can never break the frame loop: `oneShot` sanitises its numbers and swallows errors (a non-finite pan once threw inside `update` and froze the simulation).
+- Testing note: a hidden Browser pane pauses `requestAnimationFrame`, so the game appears frozen/stuck loading; show the pane before checking game state.

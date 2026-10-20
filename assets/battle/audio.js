@@ -90,8 +90,11 @@ function duckFor(sec){
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
 /* ── one-shots ── */
-function oneShot(key,o){
+function num(v,d){ return (typeof v==='number'&&isFinite(v))?v:d; }
+function oneShot(key,o){ try{ return oneShot_(key,o); }catch(e){ if(window.console) console.warn('MWAudio: sound skipped',key,e); return null; } }   // audio must never be able to break the game's frame loop
+function oneShot_(key,o){
   o=o||{}; if(!ensure()||muted&&!o.force) return null;
+  o.gain=num(o.gain,1); o.rate=num(o.rate,1); if(o.pan!=null) o.pan=num(o.pan,0);
   if(voices>=18) return null;
   var buf=bufs[key]; if(!buf){ load(key); return null; }   // first use just warms the cache
   var s=ctx.createBufferSource(); s.buffer=buf; if(o.rate) s.playbackRate.value=o.rate;
