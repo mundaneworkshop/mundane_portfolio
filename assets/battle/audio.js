@@ -8,28 +8,51 @@
      stage('play')               gameplay ambience, spatialised: its left/right channels are two virtual speakers that stay fixed in the
                                  BATTLE, so orbiting the camera (setYaw) swings the sound field around the listener
      arrive(pan)                 a Star Destroyer-style hyperspace exit cue; a handful of the capital/support arrivals get one, staggered
-     boom(kind,pan,gain)         destruction one-shots, picked at random from a pool per kind: 'fighter' | 'support' | 'capital'
+     boom(kind,pan,gain)         fighter destruction (random from a pool; rebel ships also get an astromech scream 1 time in 10)
+     deathStart/Layer/Final      support + capital destruction (see DEATH): a lead-up sequence OR small layers + a big final
+     hero*                       the flown ship: engine idle/active crossfade, tap/hold fire, laser hit, collision, destruction
      stop()                      fade everything out (arcade teardown)
 
-   The clip → role mapping lives in FILES / POOLS below. The boom pools are placeholders chosen by clip length (short = fighter,
-   long = capital) until each clip has been auditioned: reassign here, nowhere else. */
+   The clip → role tables (FILES, POOL_FIGHTER, DEATH, HERO, HERO_SHARED) are the review page's assignments (Battle Sound Review);
+   change them here only. */
 (function(){
 'use strict';
 var BASE='assets/audio/';
 var FILES={
   ambSelA:'amb-select-a', ambSelB:'amb-select-b', ambPlay:'amb-play',
-  hsEnter:'hs-enter', hsLoop:'hs-loop', hsExit:'hs-exit', capArrive:'cap-arrive', capGoingDown:'cap-going-down'
+  hsEnter:'hs-enter', hsLoop:'hs-loop', hsExit:'hs-exit', capArrive:'cap-arrive', r2:'r2-scream'
 };
-var POOLS={
-  fighter:['boom-fighter-1','boom-fighter-2','boom-fighter-3','boom-fighter-4','boom-fighter-5','boom-fighter-6','boom-fighter-7','boom-fighter-8'],
-  support:['boom-support-1','boom-support-2','boom-support-3','boom-support-4','boom-support-5','boom-support-6','boom-support-7'],
-  capital:['boom-capital-1','boom-capital-2','boom-capital-3','boom-capital-4','boom-capital-5','boom-capital-6']
+/* fighter destruction: one at random; rebel ships also get the astromech scream 1 time in 10 */
+var POOL_FIGHTER=['exp-14','exp-15','exp-16','exp-17','exp-18'];
+var R2_CHANCE=.1;
+/* support / capital destruction. seq = a full lead-up that already contains its finale (the ship's break-up is timed to it);
+   fin = the clip needs a short big explosion appended at the break-up; small = quick explosions layered over the hull chain;
+   final = single big explosions, used on their own at the break-up when no sequence plays */
+var DEATH={
+  support:{ seq:[{k:'exp-19'},{k:'exp-21'},{k:'exp-22d'}],
+            small:['exp-01','exp-03','exp-07b','exp-08','exp-22b'], final:['exp-02','exp-06','exp-07a','exp-12'] },
+  capital:{ seq:[{k:'cap-going-down'},{k:'exp-23'},{k:'exp-idris',fin:true}],
+            small:['exp-01','exp-03','exp-22b'], final:['exp-02','exp-04','exp-05'] }
 };
-var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.7, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, capGoingDown:.8, fighter:.42, support:.62, capital:.85 };
+var SEQ_TAIL=1.1;      // seconds of a sequence clip that ring out after the ship breaks apart (tune by ear)
+var SEQ_CHANCE=.6;     // otherwise: small layers + a final
+/* the flown ship. Only the Millennium Falcon has its own clips so far; ships not listed here are silent for engine / fire. */
+var HERO={
+  'mil-falcon':{ idle:'falcon-idle', active:'falcon-active',
+    fire1:['falcon-fire-single-01','falcon-fire-single-02','falcon-fire-double-01','falcon-fire-double-02','falcon-fire-burst'],
+    fireN:['falcon-turret-01','falcon-turret-02','falcon-turret-03','falcon-turret-05','falcon-turret-07','falcon-turret-08'] }
+};
+var HERO_SHARED={
+  hitLaser:['exp-10'],
+  collide:['impact-01','impact-02','impact-03','impact-04','impact-05','impact-06','impact-07','impact-08'],
+  destroyed:['exp-01','exp-02','exp-03']
+};
+var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.7, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
+  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, idle:.32, active:.5, fire1:.55, fireN:.5 };
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
-var ctx=null, master=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0, yawS=0;
-var amb={sel:null,play:null}, jump=null, voices=0, arriveLeft=0, lastFighter=0, wired=false;
+var ctx=null, master=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
+var amb={sel:null,play:null}, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastLayer=0, wired=false, heroSnd=null;
 try{ muted=localStorage.getItem('mw_sound')==='off'; }catch(e){}
 
 function now(){ return ctx?ctx.currentTime:0; }
@@ -57,21 +80,22 @@ function load(key){
 function preload(keys){ keys.forEach(function(k){ load(k); }); }
 function gainNode(v){ var g=ctx.createGain(); g.gain.value=v; return g; }
 function fade(g,to,sec){ var t=now(); g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(to,t+Math.max(.02,sec)); }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
 /* ── one-shots ── */
 function oneShot(key,o){
   o=o||{}; if(!ensure()||muted&&!o.force) return null;
-  if(voices>=14) return null;
+  if(voices>=18) return null;
   var buf=bufs[key]; if(!buf){ load(key); return null; }   // first use just warms the cache
   var s=ctx.createBufferSource(); s.buffer=buf; if(o.rate) s.playbackRate.value=o.rate;
   var g=gainNode(o.gain==null?1:o.gain), tail=g;
   if(o.pan!=null&&ctx.createStereoPanner){ var p=ctx.createStereoPanner(); p.pan.value=Math.max(-1,Math.min(1,o.pan)); g.connect(p); tail=p; }
   if(o.lowpass){ var f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=o.lowpass; tail.connect(f); tail=f; }
   s.connect(g); tail.connect(o.dest||master); voices++;
-  s.onended=function(){ voices--; try{ s.disconnect(); tail.disconnect(); g.disconnect(); }catch(e){} };
-  s.start(now()+(o.delay||0)); return {src:s,gain:g};
+  var h={src:s,gain:g,dur:buf.duration/(o.rate||1)};
+  s.onended=function(){ voices--; if(h.onend) h.onend(); try{ s.disconnect(); tail.disconnect(); g.disconnect(); }catch(e){} };
+  s.start(now()+(o.delay||0)); return h;
 }
-function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
 /* ── loops ── */
 /* AAC decoders can leave a few ms of digital silence at the end of a clip; a looping source would replay it as a gap.
@@ -132,6 +156,14 @@ function stopGroup(which){
   setTimeout(function(){ try{ g.bus.disconnect(); if(g.inG) g.inG.disconnect(); }catch(e){} },1500);
 }
 
+/* ── the flown ship ── */
+function stopBurst(h,sec){ if(h.curBurst){ try{ fade(h.curBurst.gain,0,sec); h.curBurst.src.stop(now()+sec+.02); }catch(e){} h.curBurst=null; } }
+function heroStop(fadeSec){
+  var h=heroSnd; if(!h) return; heroSnd=null; fadeSec=fadeSec||.4;
+  endLoop(h.idle,fadeSec); endLoop(h.active,fadeSec); h.chain=false; stopBurst(h,.1);
+  setTimeout(function(){ try{ h.bus.disconnect(); }catch(e){} },fadeSec*1000+200);
+}
+
 var MWAudio={
   /* call from any user gesture; safe to call repeatedly */
   unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive']); },
@@ -159,12 +191,12 @@ var MWAudio={
   arcadeStart:function(){ if(!ensure()) return; arriveLeft=3+Math.round(Math.random()); stageName='select'; yaw=0; if(!jump) startSelect(); },   // under a hyperspace jump the ambience waits for the exit (jumpReveal)
   stage:function(st){
     if(!ctx||st===stageName) return; stageName=st;
-    if(st==='play'){ stopGroup('sel'); startPlay(); } else { stopGroup('play'); startSelect(); }
+    if(st==='play'){ stopGroup('sel'); startPlay(); } else { stopGroup('play'); heroStop(.3); startSelect(); }
   },
   /* camera yaw around the battle in radians (battle.js passes galaxy.rotation.y − its value at entry); only matters in play */
   setYaw:function(r){ if(amb.play){ yaw=r; applyYaw(false); } },
   stop:function(){
-    if(!ctx) return; MWAudio.jumpCancel(); stopGroup('sel'); stopGroup('play'); stageName='select'; voices=0;
+    if(!ctx) return; MWAudio.jumpCancel(); heroStop(.3); stopGroup('sel'); stopGroup('play'); stageName='select'; voices=0;
   },
 
   /* a Star Destroyer-style hyperspace exit for a handful of intro arrivals, staggered and slightly detuned */
@@ -172,19 +204,79 @@ var MWAudio={
     if(!ctx||arriveLeft<=0||Math.random()>(cls==='capital'?.75:.35)) return;
     arriveLeft--; oneShot('capArrive',{pan:pan,gain:LEVEL.capArrive*(.7+Math.random()*.4),rate:.92+Math.random()*.16,delay:Math.random()*.9});
   },
-  /* destruction. kind: 'fighter' | 'support' | 'capital' | 'capital-start'; pan -1..1 from the ship's screen x; gain 0..1 from its distance */
-  boom:function(kind,pan,gain){
-    if(!ctx) return; var g=(gain==null?1:gain);
-    if(kind==='capital-start'){ return oneShot('capGoingDown',{pan:pan,gain:LEVEL.capGoingDown*g}); }
-    var pool=POOLS[kind]; if(!pool) return;
-    if(kind==='fighter'){ var t=now(); if(t-lastFighter<.12) return; lastFighter=t; }
-    var key=pick(pool); if(!bufs[key]){ load(key); return; }
-    oneShot(key,{pan:pan,gain:LEVEL[kind]*g,rate:.94+Math.random()*.12,lowpass:g<.5?3500:0});
+
+  /* fighter destruction. rebel: the ship was on the rebel side → 1 in 10 also screams. pan -1..1, gain 0..1 */
+  boom:function(kind,pan,gain,rebel){
+    if(!ctx||kind!=='fighter') return; var g=(gain==null?1:gain), t=now();
+    if(t-lastFighter<.12) return; lastFighter=t;
+    var key=pick(POOL_FIGHTER); if(!bufs[key]) load(key); else oneShot(key,{pan:pan,gain:LEVEL.fighter*g,rate:.94+Math.random()*.12,lowpass:g<.5?3500:0});
+    if(rebel&&Math.random()<R2_CHANCE){ if(!bufs.r2) load('r2'); else oneShot('r2',{pan:pan,gain:LEVEL.r2*Math.max(.4,g),rate:.96+Math.random()*.1,delay:.12}); }
   },
-  /* fetch the destruction pools in the background once the arcade is open */
-  warm:function(){ if(!ensure()) return; Object.keys(POOLS).forEach(function(k){ preload(POOLS[k]); }); load('capGoingDown'); },
+
+  /* support / capital destruction. deathStart picks the plan and returns how long the ship should take to die (or null: use the default).
+     The plan goes back into deathLayer (each hull explosion) and deathFinal (the break-up). */
+  deathStart:function(cls,pan,gain){
+    if(!ctx) return null; var set=DEATH[cls]; if(!set) return null; var g=(gain==null?1:gain);
+    var plan={cls:cls,seq:null,fin:false};
+    var ready=set.seq.filter(function(c){ return bufs[c.k]; });
+    if(ready.length&&Math.random()<SEQ_CHANCE){
+      var c=pick(ready); plan.seq=c; plan.fin=!!c.fin; plan.dur=bufs[c.k].duration;
+      oneShot(c.k,{pan:pan,gain:LEVEL.seq*g});
+      return {plan:plan, dur:Math.max(3,plan.dur-SEQ_TAIL)};
+    }
+    set.seq.forEach(function(c){ load(c.k); });
+    return {plan:plan, dur:null};
+  },
+  deathLayer:function(plan,pan,gain){
+    if(!ctx||!plan) return; var t=now(); if(t-lastLayer<.35) return; if(Math.random()>(plan.seq?.35:.7)) return; lastLayer=t;
+    var key=pick(DEATH[plan.cls].small); if(!bufs[key]){ load(key); return; }
+    oneShot(key,{pan:pan,gain:LEVEL.small*(gain==null?1:gain)*(.7+Math.random()*.5),rate:.9+Math.random()*.2});
+  },
+  deathFinal:function(plan,cls,pan,gain){
+    if(!ctx) return; if(plan&&plan.seq&&!plan.fin) return;   // the sequence already holds its finale
+    var key=pick(DEATH[cls].final); if(!bufs[key]){ load(key); return; }
+    oneShot(key,{pan:pan,gain:LEVEL.final*(gain==null?1:gain),rate:.95+Math.random()*.1});
+  },
+
+  /* the flown ship. id = model id ('mil-falcon'…). Ships without clips in HERO stay silent for engine / fire. */
+  heroStart:function(id){
+    if(!ensure()) return; heroStop(.1); var def=HERO[id]; if(!def) return;
+    var bus=gainNode(1); bus.connect(master);
+    heroSnd={ id:id, def:def, bus:bus, idle:loopSource(def.idle,bus,LEVEL.idle,1.2), active:loopSource(def.active,bus,0,1.2), k:0, held:0, chain:false, curBurst:null };
+    preload(def.fire1.concat(def.fireN));
+    ['hitLaser','collide','destroyed'].forEach(function(k){ preload(HERO_SHARED[k]); });
+  },
+  heroStop:function(){ heroStop(.4); },
+  /* thrust 0..1 (from the ship's speed): crossfades idle → active, equal power */
+  heroEngine:function(k){
+    var h=heroSnd; if(!h) return; k=Math.max(0,Math.min(1,k)); if(Math.abs(k-h.k)<.01) return; h.k=k;
+    var t=now(), a=Math.sin(k*Math.PI/2), i=Math.cos(k*Math.PI/2);
+    h.idle.g.gain.setTargetAtTime(LEVEL.idle*i,t,.18); h.active.g.gain.setTargetAtTime(LEVEL.active*a,t,.18);
+  },
+  /* fire button pressed / held / released: a tap plays one single-fire clip, holding chains the multi-fire bursts until release */
+  heroFireDown:function(){
+    var h=heroSnd; if(!h) return; h.held=now(); h.chain=true;
+    oneShot(pick(h.def.fire1),{gain:LEVEL.fire1,rate:.97+Math.random()*.06});
+  },
+  heroFireHeld:function(){
+    var h=heroSnd; if(!h||!h.chain||now()-h.held<.4||h.curBurst) return;
+    var key=pick(h.def.fireN); if(!bufs[key]){ load(key); return; }
+    var v=oneShot(key,{gain:LEVEL.fireN}); if(!v) return; h.curBurst=v; v.onend=function(){ if(h.curBurst===v) h.curBurst=null; };
+  },
+  heroFireUp:function(){ var h=heroSnd; if(!h) return; h.chain=false; stopBurst(h,.14); },
+  heroHitLaser:function(){ oneShot(pick(HERO_SHARED.hitLaser),{gain:LEVEL.hitLaser,rate:.94+Math.random()*.12}); },
+  heroCollide:function(){ oneShot(pick(HERO_SHARED.collide),{gain:LEVEL.collide,rate:.96+Math.random()*.08}); },
+  heroDestroyed:function(){ heroStop(.15); oneShot(pick(HERO_SHARED.destroyed),{gain:LEVEL.destroyed}); },
+
+  /* fetch the destruction clips in the background once the arcade is open */
+  warm:function(){
+    if(!ensure()) return;
+    preload(POOL_FIGHTER); preload(['r2']);
+    Object.keys(DEATH).forEach(function(c){ var d=DEATH[c]; d.seq.forEach(function(x){ load(x.k); }); preload(d.small); preload(d.final); });
+  },
   _loopEnd:function(key){ var b=bufs[key]; return b?{end:loopEnd(b),dur:b.duration}:null; },
-  _state:function(){ return {ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, jump:!!jump, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
+  _state:function(){ return {ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:heroSnd.k,burst:!!heroSnd.curBurst}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
+  _bufs:function(){ return Object.keys(bufs); },
   _analyser:function(){ if(!ctx) return null; var a=ctx.createAnalyser(); a.fftSize=1024; comp.connect(a); return a; }
 };
 

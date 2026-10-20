@@ -453,7 +453,7 @@ function updSparks(dt){
   sparks.geometry.attributes.position.needsUpdate=true; sparks.geometry.attributes.color.needsUpdate=true;
 }
 function killShip(s){
-  var au=audioAt(s); if(au) MWAudio.boom('fighter',au.pan,au.gain);
+  var au=audioAt(s); if(au) MWAudio.boom('fighter',au.pan,au.gain,s.team===REB);
   burst(s.pos,0xffa040,26,1.7,.85); burst(s.pos,0xffffff,10,2.4,.45);
   shatter(s,{small:true}); s.form=null;
   s.alive=false; s.root.visible=false; s.respawn=rnd(2.5,5.5); s.target=null;
@@ -464,7 +464,7 @@ function startDying(s){
   if(s.dying||!s.hasA) return;
   s.alive=false; s.target=null; s.hpShow=0; if(s.barEl) s.barEl.style.display='none';
   s.dying={t:0,dur:s.cls==='capital'?8:4.5,nx:0,base:s.pos.clone()};
-  if(s.cls==='capital'){ var au=audioAt(s); if(au) MWAudio.boom('capital-start',au.pan,au.gain); }
+  var au=audioAt(s); if(au&&window.MWAudio){ var ad=MWAudio.deathStart(s.cls,au.pan,au.gain); if(ad){ s.dying.aud=ad.plan; if(ad.dur) s.dying.dur=ad.dur; } }   // a lead-up sequence sets how long the ship takes to die
 }
 function hullPoint(s,out){
   var c=s.c; out.set(rnd(-1,1)*c.hx,rnd(-.6,1)*c.hy,rnd(-1,1)*c.hz); s.root.updateMatrix(); return out.applyMatrix4(s.root.matrix);
@@ -477,6 +477,7 @@ function updDying(s,dt){
   while(D.nx<=0){
     D.nx+=(.55-.4*k)*rnd(.6,1.4)/(big?1:.8);
     hullPoint(s,_v1);
+    if(D.aud){ var au2=audioAt(s); if(au2) MWAudio.deathLayer(D.aud,au2.pan,au2.gain); }
     burst(_v1,0xff9a3a,14+Math.round(26*k),1.2+sz*.5,.9); burst(_v1,0xffffff,5,2+sz*.4,.4);
     flash(_v1,sz*(.35+.5*k)*rnd(.7,1.3),0xffa850);
     if(k>.6&&Math.random()<.35){ hullPoint(s,_v2); flash(_v2,sz*.9,0xffe2a0); burst(_v2,0xffd070,40,2.4+sz*.6,1.1); }   // secondary blasts late in the sequence
@@ -591,7 +592,7 @@ function fragment(s){
 }
 function later(delay,fn){ timers.push({t:delay,fn:fn}); }
 function breakApart(s){
-  var au=audioAt(s); if(au) MWAudio.boom(s.cls==='capital'?'capital':'support',au.pan,au.gain);
+  var au=audioAt(s); if(au) MWAudio.deathFinal(s.dying&&s.dying.aud,s.cls,au.pan,au.gain);
   var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', pos=s.pos.clone();
   // THE big one: as the hull shatters — an enormous white flash, a ring of blasts across the hull, then two delayed aftershocks
   flash(pos,sz*6,0xffffff); burst(pos,0xffffff,70,5+sz,.9); burst(pos,0xffa040,220,3.5+sz*1.2,1.9);
@@ -617,7 +618,7 @@ function explodeRandom(cls){
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
-  if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
+  if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio) MWAudio.heroHitLaser(); flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
   if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
@@ -787,14 +788,14 @@ function spawnHero(id){
   if(!cache[id]){ requestModel(id); pumpLoads(); pendingHero=id; return; }
   var s=makeShip(m); heroShip=s; s.hero=true; s.hp=heroMax;
   s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=1; s.cd=0; s.gun=0; s.hp=heroMax; s.maxhp=heroMax; s.inv=0;
-  burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false;
+  burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false; if(window.MWAudio) MWAudio.heroStart(id);
   if(!session.played){ session.played=true; session.t0=performance.now(); }
   session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label); if(session.heroIds.indexOf(m.id)<0) session.heroIds.push(m.id);
   setStage('play');
 }
 function changeHero(){ ejectHero(false); fireHeld=false; setStage('select'); }
 function ejectHero(silent){
-  if(!heroShip) return; heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
+  if(!heroShip) return; if(window.MWAudio&&!silent) MWAudio.heroStop(); heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
   G.remove(heroShip.root); ships.splice(ships.indexOf(heroShip),1); heroShip=null;
 }
 // pointer → ray in G-local space
@@ -829,7 +830,7 @@ function heroCollide(s,dt){   // bumping other ships hurts (nothing actively tar
     var r=o.cls==='fighter'?Math.max(o.c.hx,o.c.hz)*o.root.scale.x*.8:lr(o)*.9;
     _v1.copy(s.pos).sub(o.pos); var d=_v1.length(); if(d>=hr+r) continue;
     var n=d>1e-4?_v1.multiplyScalar(1/d):_v1.set(0,1,0); s.pos.addScaledVector(n,hr+r-d+.02);
-    if(s.inv<=0){ s.inv=1; s.hp-=1; s.spd*=.25; s.dir.lerp(n,.5).normalize();
+    if(s.inv<=0){ s.inv=1; s.hp-=1; s.spd*=.25; if(window.MWAudio) MWAudio.heroCollide(); s.dir.lerp(n,.5).normalize();
       burst(_v2.copy(s.pos).addScaledVector(n,-hr*.5),0xffc060,18,1.4,.6); flash(s.pos,hr*3,0xffd090); heroHit(s,true); updHud(false); hudHurt();
       if(s.hp<=0){ heroDeath(s); return; } }
   }
@@ -853,6 +854,7 @@ function heroFx(s,dt){
 function heroFxReset(s){ if(!s) return; s.hurtT=0; s.shake=0; s.root.traverse(function(m){ if(!m.isMesh||!m.material||!m.material.userData.hurt0) return; var mt=m.material; mt.emissive.copy(mt.userData.hurt0.e); mt.emissiveIntensity=mt.userData.hurt0.i; mt.userData.hurt1=false; }); }
 function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(function(){ if(hudEl) hudEl.classList.remove('hurt'); },320); }
 function heroDeath(s){
+  if(window.MWAudio) MWAudio.heroDestroyed();
   burst(s.pos,0xffa040,80,3,1.5); burst(s.pos,0xffffff,30,4,.8); flash(s.pos,1.8,0xfff0c0);
   ejectHero(true); fireHeld=false; session.died=true; updHud(false);
   if(ctx.onGameOver) ctx.onGameOver();
@@ -877,6 +879,7 @@ function updHero(s,dt){
   aim(s.root,s.dir);
   s.bankV=lerp(s.bankV,clamp(s.yawRate*.5,-1.2,1.2),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
   heroFx(s,dt);
+  if(window.MWAudio){ MWAudio.heroEngine(clamp((s.spd-.1)/.9,0,1)); if(fireHeld&&!quiet()) MWAudio.heroFireHeld(); }
   s.cd-=dt;
   if(!quiet()&&fireHeld&&s.cd<=0){   // fire toward wherever the pointer is on (an object's XYZ, or the depth-plane point)
     pickAt(ptr.nx,ptr.ny,_hT);
@@ -1087,8 +1090,8 @@ function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
     if(ptr.in&&!hyper&&stage==='play') ctx.dom.style.cursor='crosshair'; });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
-    if(stage==='play'&&heroShip&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; } });   // left button = fire (hold to keep firing)
-  on(window,'pointerup',function(e){ if(e.button===0) fireHeld=false; });
+    if(stage==='play'&&heroShip&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });   // left button = fire (hold to keep firing)
+  on(window,'pointerup',function(e){ if(e.button===0){ fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); } });
   on(ctx.dom,'contextmenu',function(e){ e.preventDefault(); });          // right-drag pans the camera; no browser menu
   // (minikits no longer respond to mouse clicks — only to the hero ship's lasers)
   on(window,'keydown',function(e){
