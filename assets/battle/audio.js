@@ -51,7 +51,7 @@ var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.7, hsLoop:.55, hsEnter:.8, hsExit:
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, idle:.32, active:.5, fire1:.55, fireN:.5 };
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
-var ctx=null, master=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
+var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
 var amb={sel:null,play:null}, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastLayer=0, wired=false, heroSnd=null;
 try{ muted=localStorage.getItem('mw_sound')==='off'; }catch(e){}
 
@@ -63,6 +63,7 @@ function ensure(){
     master=ctx.createGain(); master.gain.value=muted?0:1;
     comp=ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=18; comp.ratio.value=4; comp.attack.value=.004; comp.release.value=.25;   // many explosions at once must not clip
     master.connect(comp); comp.connect(ctx.destination);
+    duck=ctx.createGain(); duck.connect(master);   // everything except the big destruction sounds goes through here and is ducked under them
   }
   if(ctx.state==='suspended'){ var p=ctx.resume(); if(p&&p.catch) p.catch(function(){}); }
   return true;
@@ -80,6 +81,12 @@ function load(key){
 function preload(keys){ keys.forEach(function(k){ load(k); }); }
 function gainNode(v){ var g=ctx.createGain(); g.gain.value=v; return g; }
 function fade(g,to,sec){ var t=now(); g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(to,t+Math.max(.02,sec)); }
+/* Duck every other sound under a big destruction sound so it cuts through: quick dip, hold for the clip, slow recovery. */
+var DUCK_LEVEL=.22, duckUntil=0;
+function duckFor(sec){
+  if(!ctx||!duck) return; var t=now(), end=t+sec; if(end<duckUntil-.05&&duck.gain.value<DUCK_LEVEL+.05) return; duckUntil=Math.max(duckUntil,end);
+  duck.gain.cancelScheduledValues(t); duck.gain.setTargetAtTime(DUCK_LEVEL,t,.07); duck.gain.setTargetAtTime(1,duckUntil,.5);
+}
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
 /* ── one-shots ── */
@@ -91,7 +98,7 @@ function oneShot(key,o){
   var g=gainNode(o.gain==null?1:o.gain), tail=g;
   if(o.pan!=null&&ctx.createStereoPanner){ var p=ctx.createStereoPanner(); p.pan.value=Math.max(-1,Math.min(1,o.pan)); g.connect(p); tail=p; }
   if(o.lowpass){ var f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=o.lowpass; tail.connect(f); tail=f; }
-  s.connect(g); tail.connect(o.dest||master); voices++;
+  s.connect(g); tail.connect(o.dest||duck); voices++;
   var h={src:s,gain:g,dur:buf.duration/(o.rate||1)};
   s.onended=function(){ voices--; if(h.onend) h.onend(); try{ s.disconnect(); tail.disconnect(); g.disconnect(); }catch(e){} };
   s.start(now()+(o.delay||0)); return h;
@@ -123,13 +130,13 @@ function endLoop(h,sec){
 /* hero-select ambience: two muted layers, plain stereo */
 function startSelect(){
   stopGroup('sel');
-  var bus=gainNode(1); bus.connect(master);
+  var bus=gainNode(1); bus.connect(duck);
   amb.sel={ bus:bus, a:loopSource('ambSelA',bus,LEVEL.ambSelA,2.2), b:loopSource('ambSelB',bus,LEVEL.ambSelB,3) };
 }
 /* gameplay ambience: L and R of the stereo loop become two HRTF-panned virtual speakers anchored in the battle */
 function startPlay(){
   stopGroup('play');
-  var bus=gainNode(1); bus.connect(master);
+  var bus=gainNode(1); bus.connect(duck);
   var inG=gainNode(1), split=ctx.createChannelSplitter(2), pl=makePanner(-SPEAKER_AZ), pr=makePanner(SPEAKER_AZ);
   split.connect(pl.node,0); split.connect(pr.node,1); pl.node.connect(bus); pr.node.connect(bus); inG.connect(split);
   var h=loopSource('ambPlay',inG,LEVEL.ambPlay,2.5);
@@ -180,7 +187,7 @@ var MWAudio={
     if(!ensure()) return; MWAudio.unlock(); jump={ loop:null };
     ['hsEnter','hsLoop','hsExit'].forEach(load);
     load('hsEnter').then(function(){ if(jump) oneShot('hsEnter',{gain:LEVEL.hsEnter}); });
-    load('hsLoop').then(function(){ if(jump&&!jump.loop){ jump.loop=loopSource('hsLoop',master,LEVEL.hsLoop,1.2); } });
+    load('hsLoop').then(function(){ if(jump&&!jump.loop){ jump.loop=loopSource('hsLoop',duck,LEVEL.hsLoop,1.2); } });
   },
   jumpReveal:function(){
     if(!jump) return; var j=jump; jump=null; endLoop(j.loop,.9); oneShot('hsExit',{gain:LEVEL.hsExit}); if(!amb.sel&&!amb.play&&stageName==='select'&&started) startSelect();
@@ -221,27 +228,27 @@ var MWAudio={
     var ready=set.seq.filter(function(c){ return bufs[c.k]; });
     if(ready.length&&Math.random()<SEQ_CHANCE){
       var c=pick(ready); plan.seq=c; plan.fin=!!c.fin; plan.dur=bufs[c.k].duration;
-      oneShot(c.k,{pan:pan,gain:LEVEL.seq*g});
+      oneShot(c.k,{pan:pan,gain:LEVEL.seq*g,dest:master}); duckFor(plan.dur);
       return {plan:plan, dur:Math.max(3,plan.dur-SEQ_TAIL)};
     }
-    set.seq.forEach(function(c){ load(c.k); });
+    set.seq.forEach(function(c){ load(c.k); }); duckFor(cls==='capital'?8:4.5);   // layers + final: duck for the whole hull chain (the ship's default death time)
     return {plan:plan, dur:null};
   },
   deathLayer:function(plan,pan,gain){
     if(!ctx||!plan) return; var t=now(); if(t-lastLayer<.35) return; if(Math.random()>(plan.seq?.35:.7)) return; lastLayer=t;
     var key=pick(DEATH[plan.cls].small); if(!bufs[key]){ load(key); return; }
-    oneShot(key,{pan:pan,gain:LEVEL.small*(gain==null?1:gain)*(.7+Math.random()*.5),rate:.9+Math.random()*.2});
+    oneShot(key,{pan:pan,gain:LEVEL.small*(gain==null?1:gain)*(.7+Math.random()*.5),rate:.9+Math.random()*.2,dest:master}); duckFor(1.2);
   },
   deathFinal:function(plan,cls,pan,gain){
     if(!ctx) return; if(plan&&plan.seq&&!plan.fin) return;   // the sequence already holds its finale
     var key=pick(DEATH[cls].final); if(!bufs[key]){ load(key); return; }
-    oneShot(key,{pan:pan,gain:LEVEL.final*(gain==null?1:gain),rate:.95+Math.random()*.1});
+    var v=oneShot(key,{pan:pan,gain:LEVEL.final*(gain==null?1:gain),rate:.95+Math.random()*.1,dest:master}); duckFor(v?v.dur:3);
   },
 
   /* the flown ship. id = model id ('mil-falcon'…). Ships without clips in HERO stay silent for engine / fire. */
   heroStart:function(id){
     if(!ensure()) return; heroStop(.1); var def=HERO[id]; if(!def) return;
-    var bus=gainNode(1); bus.connect(master);
+    var bus=gainNode(1); bus.connect(duck);
     heroSnd={ id:id, def:def, bus:bus, idle:loopSource(def.idle,bus,LEVEL.idle,1.2), active:loopSource(def.active,bus,0,1.2), k:0, held:0, chain:false, curBurst:null };
     preload(def.fire1.concat(def.fireN));
     ['hitLaser','collide','destroyed'].forEach(function(k){ preload(HERO_SHARED[k]); });
@@ -275,7 +282,7 @@ var MWAudio={
     Object.keys(DEATH).forEach(function(c){ var d=DEATH[c]; d.seq.forEach(function(x){ load(x.k); }); preload(d.small); preload(d.final); });
   },
   _loopEnd:function(key){ var b=bufs[key]; return b?{end:loopEnd(b),dur:b.duration}:null; },
-  _state:function(){ return {ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:heroSnd.k,burst:!!heroSnd.curBurst}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
+  _state:function(){ return {duck:duck?+duck.gain.value.toFixed(2):null, ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:heroSnd.k,burst:!!heroSnd.curBurst}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
   _bufs:function(){ return Object.keys(bufs); },
   _analyser:function(){ if(!ctx) return null; var a=ctx.createAnalyser(); a.fftSize=1024; comp.connect(a); return a; }
 };
