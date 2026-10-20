@@ -83,7 +83,7 @@ MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
 var P=null, ctx=null, T=null, active=false, dead=false;
 var G=null, lights=[], clockT=0, lastT=null, hyper=null, glowTex=null, sess=0, S=1, envTex=null, sunW=null;
 var LREF=4.3;   // the battle is authored for a camera 4.3 units from its centre; G is scaled by (real distance / 4.3) so it reads the same from any camera
-var cache={}, loading={}, loadQ=[], inflight=0;
+var cache={}, loading={}, loadQ=[], inflight=0, failed={};
 var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
 var bolts=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
@@ -129,7 +129,7 @@ function trackMaterials(obj,mdl){
     matList.push(m); }); });
 }
 var fogBase=0, camFar=100, camNear=.1;
-var outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=30, timers=[];
+var introHold=true, introT0=0, outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=30, timers=[];
 function quiet(){ return !!hyper||outroOn; }                       // nobody fires once the exit starts
 function here(s){ return !(s.arriveAt>clockT); }                   // false while a ship is still waiting to jump in
 var BTU={ exp:{value:1} };
@@ -206,7 +206,7 @@ function pumpLoads(){
         cache[m.id]={ proto:inner, hx:sz.x*s/2, hy:sz.y*s/2, hz:sz.z*s/2, r:Math.max(sz.x,sz.y,sz.z)*s/2 };
         trackMaterials(inner,m); if(m.cls==='base') inner.traverse(function(o){ if(o.isMesh) [].concat(o.material).forEach(function(mt){ mt.fog=false; }); }); applyLook();
         anchorsDirty=true; reconT=0;
-      },undefined,function(e){ if(mySess!==sess) return; inflight--; delete loading[m.id]; console.warn('[battle] failed to load',m.file,e); });
+      },undefined,function(e){ if(mySess!==sess) return; inflight--; delete loading[m.id]; failed[m.id]=true; console.warn('[battle] failed to load',m.file,e); });
     })(m);
   }
 }
@@ -301,7 +301,7 @@ function tryScheduleIntro(){
   var want=0, ready=true;
   MODELS.forEach(function(m){ if(m.cls==='support'||m.cls==='capital'){ var w=wantCount(m); want+=w; if(w>0&&!cache[m.id]) ready=false; } });
   var larges=ships.filter(function(s){ return (s.cls==='support'||s.cls==='capital')&&!s.leaving&&s.hasA; });
-  if((!ready||larges.length<want)&&clockT<10) return;
+  if((!ready||larges.length<want)&&clockT-introT0<10) return;
   var a=shuffle(larges.filter(function(s){ return s.team===IMP; })), b=shuffle(larges.filter(function(s){ return s.team===REB; })), order=[];
   while(a.length||b.length){ if(a.length) order.push(a.pop()); if(b.length) order.push(b.pop()); }
   var n=order.length; order.forEach(function(s,i){ s.arriveAt=clockT+.4+(n>1?i/(n-1):0)*3+rnd(0,.06); });
@@ -882,7 +882,7 @@ function update(t){
     if(pendingHero&&cache[pendingHero]){ var h=pendingHero; pendingHero=null; spawnHero(h); }
   } else pumpLoads();
   if(anchorsDirty) assignAnchors();
-  if(!introScheduled&&!hyper) tryScheduleIntro();
+  if(!introScheduled&&!hyper&&!introHold) tryScheduleIntro();
 
   var allGone=true;
   for(var i=ships.length-1;i>=0;i--){
@@ -1078,8 +1078,8 @@ function makeBolts(){
 
 function resetState(){
   ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
-  cache={}; loading={}; loadQ=[]; inflight=0; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
-  debris=[]; timers=[]; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
+  cache={}; loading={}; loadQ=[]; inflight=0; failed={}; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
+  debris=[]; timers=[]; introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; sess++;
 }
 var MWBattle={
   init:function(c){
@@ -1117,6 +1117,8 @@ var MWBattle={
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
+  startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
+  assetsReady:function(){ return active&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
   summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },

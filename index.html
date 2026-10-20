@@ -10237,6 +10237,7 @@ f 2469//2469 2470//2470 2434//2434
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
+      if(window.MWLightspeed) MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
@@ -10301,6 +10302,7 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);   /* >350ms: the ESC that opened it must not also close it */
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
+      if(window.__mwLightspeed) window.__mwLightspeed.destroy(true);   // ESC mid-load
       var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
       // OUTRO (no hyperspace): everyone stops firing, fighters fly off screen, support/capital ships stay; the scoreboard modal comes up and
       // closing it ends the exit. Leaving without having played just tears down at once.
@@ -14369,6 +14371,7 @@ f 2469//2469 2470//2470 2434//2434
   </script>
   <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/battle/lightspeed.js"></script>
   <script src="assets/battle/battle.js"></script>
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
