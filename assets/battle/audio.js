@@ -74,12 +74,20 @@ function oneShot(key,o){
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
 /* ── loops ── */
+/* AAC decoders can leave a few ms of digital silence at the end of a clip; a looping source would replay it as a gap.
+   Find the last audible sample of every channel and loop up to there. */
+function loopEnd(b){
+  if(b._loopEnd!=null) return b._loopEnd;
+  var n=b.length, keep=0;
+  for(var c=0;c<b.numberOfChannels;c++){ var d=b.getChannelData(c), i=n-1; while(i>0&&Math.abs(d[i])<1e-4) i--; if(i+1>keep) keep=i+1; }
+  return (b._loopEnd=keep/b.sampleRate);
+}
 function loopSource(key,dest,gainTo,fadeSec){
   var g=gainNode(0); g.connect(dest);
   var h={g:g,src:null,key:key,dead:false};
   load(key).then(function(b){
     if(!b||h.dead) return;
-    var s=ctx.createBufferSource(); s.buffer=b; s.loop=true; s.connect(g); s.start(now()); h.src=s; fade(g,gainTo,fadeSec);
+    var s=ctx.createBufferSource(); s.buffer=b; s.loop=true; s.loopStart=0; s.loopEnd=loopEnd(b); s.connect(g); s.start(now()); h.src=s; fade(g,gainTo,fadeSec);
   });
   return h;
 }
@@ -175,6 +183,7 @@ var MWAudio={
   },
   /* fetch the destruction pools in the background once the arcade is open */
   warm:function(){ if(!ensure()) return; Object.keys(POOLS).forEach(function(k){ preload(POOLS[k]); }); load('capGoingDown'); },
+  _loopEnd:function(key){ var b=bufs[key]; return b?{end:loopEnd(b),dur:b.duration}:null; },
   _state:function(){ return {ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, jump:!!jump, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
   _analyser:function(){ if(!ctx) return null; var a=ctx.createAnalyser(); a.fftSize=1024; comp.connect(a); return a; }
 };
