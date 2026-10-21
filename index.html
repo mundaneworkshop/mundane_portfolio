@@ -93,25 +93,47 @@
   body.mw-arcade #arcadeExit{display:flex}
   body.mw-arcade #breadcrumb{display:none}
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
-  #arcadeResult{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(2,8,8,.62);backdrop-filter:blur(6px)}
-  #arcadeResult .ar-card{min-width:min(420px,88vw);padding:34px 40px 30px;background:var(--panel,#0a1212);border:1px solid var(--border,rgba(90,191,184,.35));clip-path:var(--clip-step,none);text-align:center;font-family:var(--display,sans-serif)}
-  #arcadeResult .ar-k{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:var(--muted,#6b8a85)}
-  #arcadeResult .ar-n{font-family:var(--mono,monospace);font-size:96px;line-height:1.05;margin-top:10px;color:var(--amber-hot,#F0D080);text-shadow:0 0 22px rgba(240,208,128,.45)}
-  #arcadeResult .ar-l{font-size:13px;letter-spacing:6px;text-transform:uppercase;color:var(--holo,#AAF5EE);margin-bottom:22px}
-  #arcadeResult .ar-meta{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;text-align:left;margin:0 auto 26px;max-width:340px;font-size:11px;letter-spacing:2px;text-transform:uppercase}
-  #arcadeResult .ar-meta span{color:var(--muted,#6b8a85)} #arcadeResult .ar-meta b{font-weight:400;color:var(--text,#E8F7F5)}
-  #arcadeResult .ar-form{display:flex;gap:10px;justify-content:center;margin:0 auto 8px;max-width:340px}
-  #arcadeResult .ar-in{flex:1;min-width:0;background:rgba(0,0,0,.35);border:1px solid var(--border,rgba(90,191,184,.4));color:var(--text,#E8F7F5);font-family:var(--mono,monospace);font-size:13px;letter-spacing:1px;padding:8px 10px}
-  #arcadeResult .ar-msg{min-height:18px;margin-bottom:10px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--holo,#AAF5EE)}
-  #arcadeResult .ar-list{margin:6px auto 22px;max-width:380px;text-align:left;font-size:12px;letter-spacing:1.5px;text-transform:uppercase}
-  #arcadeResult .ar-row{display:grid;grid-template-columns:26px 1fr auto 52px;gap:10px;align-items:baseline;padding:5px 8px;color:var(--text,#E8F7F5)}
-  #arcadeResult .ar-row.mine{outline:1px solid var(--amber-hot,#F0D080);color:var(--amber-hot,#F0D080)}
-  #arcadeResult .ar-r{color:var(--muted,#6b8a85)} #arcadeResult .ar-h{color:var(--muted,#6b8a85);font-size:10px} #arcadeResult .ar-s{text-align:right;font-family:var(--mono,monospace)}
-  #arcadeResult .ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  #arcadeResult .ar-empty{padding:10px;text-align:center;color:var(--muted,#6b8a85)}
-  #arcadeResult .ar-btns{display:flex;gap:12px;justify-content:center}
+  /* game-over + leaderboard card: design-system tokens, 8px grid, tabular numerals, every column shares one right edge */
+  #arcadeResult{position:fixed;inset:0;z-index:80;display:flex;padding:var(--bric-space-3-stud);background:var(--bric-surface-overlay);backdrop-filter:blur(6px);overflow-y:auto}
+  #arcadeResult .ar-card{width:min(520px,100%);margin:auto;padding:var(--bric-space-4-stud);background:var(--bric-surface-raised);border:1px solid var(--bric-border-default);clip-path:var(--clip-step,none);display:flex;flex-direction:column;gap:var(--bric-space-3-stud);font-family:var(--display,sans-serif);color:var(--bric-content-primary)}
+  #arcadeResult .ar-head{display:flex;flex-direction:column;align-items:center;gap:var(--bric-space-stud);text-align:center}
+  #arcadeResult .ar-k{font:600 11px/1 var(--grotesk);letter-spacing:.34em;text-transform:uppercase;color:var(--bric-content-secondary)}
+  #arcadeResult .ar-n{font-family:var(--mono);font-size:88px;line-height:1;font-variant-numeric:tabular-nums;color:var(--bric-content-brand);text-shadow:0 0 18px color-mix(in srgb,var(--bric-content-brand) 40%,transparent)}
+  #arcadeResult .ar-l{font:600 11px/1 var(--grotesk);letter-spacing:.34em;text-transform:uppercase;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-sec{display:flex;flex-direction:column;gap:var(--bric-space-1-5-stud)}
+  #arcadeResult .ar-st{font:600 10px/1 var(--grotesk);letter-spacing:.28em;text-transform:uppercase;color:var(--bric-content-tertiary)}
+  #arcadeResult table{width:100%;border-collapse:collapse;font:500 12px/1.3 var(--grotesk);letter-spacing:.12em;text-transform:uppercase}
+  #arcadeResult th{font-weight:500;font-size:10px;letter-spacing:.22em;color:var(--bric-content-tertiary);text-align:left;padding:0 0 var(--bric-space-stud);border-bottom:1px solid var(--bric-border-default)}
+  #arcadeResult td{padding:var(--bric-space-1-5-stud) 0;border-bottom:1px solid var(--bric-border-subtle);color:var(--bric-content-primary)}
+  #arcadeResult tbody tr:last-child td{border-bottom:0}
+  #arcadeResult .n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  #arcadeResult th.n,#arcadeResult td.n{padding-left:var(--bric-space-1-5-stud)}
+  #arcadeResult .zero td{color:var(--bric-content-disabled)}
+  #arcadeResult .tot td{border-top:1px solid var(--bric-border-default);border-bottom:0;color:var(--bric-content-brand)}
+  #arcadeResult .ar-meta td:first-child{color:var(--bric-content-tertiary);width:1%;white-space:nowrap;padding-right:var(--bric-space-3-stud)}
+  #arcadeResult .ar-meta td:last-child{text-align:right}
+  #arcadeResult .ar-form{display:grid;grid-template-columns:1fr auto;gap:var(--bric-space-1-5-stud)}
+  #arcadeResult .ar-in{min-width:0;height:40px;background:transparent;border:1px solid var(--bric-interactive-outline-default);color:var(--bric-content-primary);font:400 13px/1 var(--mono);letter-spacing:.06em;padding:0 var(--bric-space-1-5-stud);border-radius:0}
+  #arcadeResult .ar-in::placeholder{color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-in:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:2px}
+  #arcadeResult .ar-msg{min-height:16px;text-align:center;font:500 11px/16px var(--grotesk);letter-spacing:.14em;text-transform:uppercase;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-board td.ar-r,#arcadeResult .ar-board th.ar-r{width:32px;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-board td.ar-f,#arcadeResult .ar-board th.ar-f{width:32px;text-align:center;padding-left:0;padding-right:var(--bric-space-stud);font:16px/1 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;letter-spacing:0}
+  #arcadeResult .kit td{border-top:1px solid var(--bric-border-default);border-bottom:0;color:var(--bric-content-primary)}
+  #arcadeResult .kitnote td{padding-top:0;font-size:10px;letter-spacing:.14em;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-board td.ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0}
+  #arcadeResult .ar-board td.ar-h{width:34%;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--bric-content-secondary);padding-left:var(--bric-space-1-5-stud)}
+  #arcadeResult .ar-board th.ar-h{padding-left:var(--bric-space-1-5-stud)}
+  #arcadeResult .ar-board td.n{width:64px}
+  #arcadeResult .ar-board tr.mine td{color:var(--bric-content-brand);box-shadow:inset 0 1px 0 var(--bric-content-brand),inset 0 -1px 0 var(--bric-content-brand)}
+  #arcadeResult .ar-board tr.mine td:first-child{box-shadow:inset 1px 1px 0 var(--bric-content-brand),inset 0 -1px 0 var(--bric-content-brand);padding-left:var(--bric-space-stud)}
+  #arcadeResult .ar-board tr.mine td:last-child{box-shadow:inset -1px 1px 0 var(--bric-content-brand),inset 0 -1px 0 var(--bric-content-brand);padding-right:var(--bric-space-stud)}
+  #arcadeResult .ar-empty{padding:var(--bric-space-2-stud) 0;text-align:center;font:500 11px/1.4 var(--grotesk);letter-spacing:.16em;text-transform:uppercase;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-btns{display:flex;gap:var(--bric-space-1-5-stud);justify-content:center}
+  #arcadeResult .ar-btns .bric-btn{min-width:144px;justify-content:center}
+  @media (max-width:480px){ #arcadeResult .ar-card{padding:var(--bric-space-3-stud)} #arcadeResult .ar-n{font-size:72px} #arcadeResult .ar-board th.ar-h,#arcadeResult .ar-board td.ar-h{display:none} #arcadeResult .ar-btns .bric-btn{min-width:0;flex:1} }
   #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
-  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
+  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #soundToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   /* Save = primary action — lit amber fill */
   /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
@@ -532,7 +554,7 @@
      .admin-only rule above) so the debug panel — and its entry/dock-timing sliders — is tunable while
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
   body.mw-entrygate #labels, body.mw-entrygate #hint,
-  body.mw-entrygate #msgToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
+  body.mw-entrygate #soundToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
   #entryHint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b8a85;pointer-events:none;opacity:0;transition:opacity .4s ease}
   body.mw-entrygate #entryHint{opacity:1}
 
@@ -547,7 +569,7 @@
   /* breadcrumb nav stays put through "hide UI" — it's viewer navigation, not admin chrome; only the
      admin-only topright cluster (wordmark + save/edit/debug/hide-ui) fades out */
   body.ui-hidden #topright{opacity:0;pointer-events:none;transition:opacity .3s ease}
-  body.ui-hidden #msgToggle{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  body.ui-hidden #soundToggle{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #status{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #debug{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #hint{opacity:1;letter-spacing:3px}
@@ -555,10 +577,10 @@
   #box-hover-label{position:absolute;z-index:30;pointer-events:none;display:none;transform:translate(-50%,-50%);font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:rgba(234,254,251,0.97);text-shadow:0 0 14px rgba(90,191,184,0.95),0 0 40px rgba(90,191,184,0.5);white-space:nowrap;user-select:none;background:rgba(4,8,14,0.58);padding:9px 20px 8px;border:1px solid rgba(120,224,214,0.38);box-shadow:0 0 22px rgba(90,191,184,0.18)}
   body.mw-planet:not(.mw-altfocus) canvas{cursor:crosshair}
   body.mw-planet.box-hovered:not(.mw-altfocus) canvas{cursor:pointer}
-  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #msgToggle{opacity:0;pointer-events:none}
-  /* messages-visible toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
+  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #soundToggle{opacity:0;pointer-events:none}
+  /* sound toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
      in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views */
-  body.mw-planet #msgToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  body.mw-planet #soundToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
   /* ── CV 3D hyperspace route (drag to orbit; details reuse #manual-scene) ── */
   #cvRouteLayer{position:absolute;inset:0;z-index:16;display:none;pointer-events:none}   /* labels capture clicks; the canvas underneath stays draggable */
   #cvRouteLayer.show{display:block}
@@ -581,15 +603,25 @@
   body.editing #cvShipUp{display:block}
   #cvFxCanvas{position:absolute;inset:0;z-index:14;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize);display:none}
   body.mw-cvroute #cvFxCanvas{display:block}
-  /* messages toggle — design-system physical switch (.sw), teal accent for the message wall */
-  #msgToggle{position:absolute;bottom:40px;left:22px;z-index:21;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;outline:none}
-  #msgToggle .sw-track{width:34px;height:16px;border:1px solid var(--border);background:rgba(160,106,240,.08);position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
-  #msgToggle .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--muted);transition:transform .12s,background .12s,box-shadow .12s}
-  #msgToggle .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);transition:color .1s}
-  #msgToggle.on .sw-track{border-color:var(--bric-holonet-text)}
-  #msgToggle.on .sw-thumb{background:#C8AAFF;transform:translateX(18px);box-shadow:0 0 4px rgba(160,106,240,.6)}
-  #msgToggle.on .sw-lbl{color:#C8AAFF}
-  #msgToggle:focus-visible .sw-track{border-color:var(--bric-holonet-text)}
+  /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
+     hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
+  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21}
+  .mw-sound-switch{display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}
+  .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
+  .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
+  .mw-sound-switch .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
+  .mw-sound-switch.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(18px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}
+  .mw-sound-switch:hover .sw-track{border-color:var(--bric-interactive-outline-hover)}
+  .mw-sound-switch:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
+  .mw-sound-switch.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
+  .mw-sound-switch:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
+  /* prominent variant (arcade hero select, under Leaderboard): a bigger switch and label */
+  .mw-sound-switch--lg{gap:var(--bric-space-2-stud)}
+  .mw-sound-switch--lg .sw-track{width:52px;height:24px}
+  .mw-sound-switch--lg .sw-thumb{width:18px;height:16px;top:3px;left:3px}
+  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(27px)}
+  .mw-sound-switch--lg .sw-lbl{font-size:13px;letter-spacing:.2em;min-width:78px}
+  @media (prefers-reduced-motion:reduce){.mw-sound-switch .sw-track,.mw-sound-switch .sw-thumb,.mw-sound-switch .sw-lbl{transition:none}}
   /* message stars layer */
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
   #msgCanvas{position:absolute;inset:0;z-index:12;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
@@ -1299,7 +1331,7 @@
   <div id="entryHint">drag to orbit · scroll to zoom · click the mark to enter</div>
   <div id="hint">drag to rotate · click a planet to travel</div>
   <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
-  <div id="msgToggle" class="sw on" role="switch" aria-checked="true" tabindex="0" title="Show or hide visitor messages"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Messages visible</span></div>
+  <div id="soundToggle" class="sw mw-sound-switch on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
 
   <!-- HANDOFF: authoring-mode bootstrap. Runs synchronously (before the 3D engine loads) so the
        admin toolbar (save/edit/debug/hide-ui) never flashes for regular visitors. Visit once with
@@ -9823,7 +9855,7 @@ f 2469//2469 2470//2470 2434//2434
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
       else { camZoom=clamp(camZoom+dir*0.06,0.4,2.2); } },{passive:false});
     // SINGLE source of truth for galaxy hover, so `hovered` always reflects reality and a highlight can never get stuck.
-    function setHovered(grp){ if(grp===hovered) return; hovered=grp;
+    function setHovered(grp){ if(grp===hovered) return; hovered=grp; if(grp&&window.MWAudio&&!window.__mwArcade) MWAudio.ui('hover');
       planets.forEach(function(p){ var on=(p===hovered); p.userData.target=on?1.3:1;
         if(p.userData.label){ var _was=p.userData.label.classList.contains('hot'); p.userData.label.classList.toggle('hot',on); if(on&&!_was) GFX.label(p.userData.label);
           var lc=p.userData.labelColors; if(lc) p.userData.label.style.color=(on?lc.hot:lc.tint); } });
@@ -9963,6 +9995,7 @@ f 2469//2469 2470//2470 2434//2434
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
 
     function activate(ud){
+      if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
@@ -10230,16 +10263,18 @@ f 2469//2469 2470//2470 2434//2434
     }
     function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
+      if(window.MWAudio) MWAudio.unlock();   // the planet click is the user gesture that lets audio start
       arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true);
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
+      if(window.MWAudio&&window.MWLightspeed&&!noJump) MWAudio.jumpStart();   // before init: the hero-select ambience waits for the jump's exit
       MWBattle.init({ onGameOver:function(){ exitArcade(); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
-      if(window.MWLightspeed&&!noJump) MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
+      if(window.MWLightspeed&&!noJump){ MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWAudio) MWAudio.jumpReveal(); if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); } else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
@@ -10254,34 +10289,58 @@ f 2469//2469 2470//2470 2434//2434
     }
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
-    var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennium Falcon',n1:"Mandalorian's N-1",razorcrest:'Razor Crest','slave-1':'Slave I'};
+    var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennial Hawk',n1:"Bounty Hunter’s M-1",razorcrest:"Razor’s Edge",'slave-1':'Indentured Servant 1'};
     function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(); } }   // closing the game-over modal is what actually ends the exit
     function arcFetchTop(cb){
       if(!_sb){ cb(null,'offline'); return; }
-      _sb.from('leaderboard').select('id,name,kills,hero,created_at').order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
-        .then(function(r){ if(r.error) cb(null,r.error.message||'error'); else cb(r.data||[]); },function(e){ cb(null,'offline'); });
+      function q(cols,next){ _sb.from('leaderboard').select(cols).order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
+        .then(function(r){ if(r.error){ if(next&&/country/i.test(r.error.message||'')) q(next); else cb(null,r.error.message||'error'); } else cb(r.data||[]); },function(e){ cb(null,'offline'); }); }
+      q('id,name,kills,hero,country,created_at','id,name,kills,hero,created_at');   // the country column may not exist yet (leaderboard-schema.sql)
     }
-    function arcRenderTop(listEl,rows,err,mineId){
+    // Country flag from an ISO alpha-2 code: regional-indicator letters render as a flag emoji (Windows shows the letters instead)
+    function arcFlag(cc){ return /^[A-Z]{2}$/.test(cc||'')?String.fromCodePoint(0x1F1E6+cc.charCodeAt(0)-65,0x1F1E6+cc.charCodeAt(1)-65):''; }
+    function arcCountry(cc){ try{ return new Intl.DisplayNames(['en'],{type:'region'}).of(cc)||cc; }catch(e){ return cc; } }
+    // glyph decode on first load: every text leaf in the card resolves from Aurebesh, cascading top to bottom (a no-op under reduced motion)
+    function arcDecode(root,startAt){
+      if(typeof GFX==='undefined'||!GFX.decodeEl) return;   // GFX lives in the page's closure, not on window
+      var leaves=[].slice.call(root.querySelectorAll('.ar-k,.ar-n,.ar-l,.ar-st,th,td,.ar-btns .bric-btn,.ar-sub'));
+      leaves.forEach(function(n,i){ if(n.classList.contains('ar-f')) return; setTimeout(function(){ if(n.isConnected) GFX.decodeEl(n,n.classList.contains('bric-btn')?'Btn':'Lbl'); },(startAt||0)+Math.min(i,40)*28); });
+    }
+    function arcRenderTop(listEl,rows,err,mineId,animate){
       listEl.textContent='';
-      if(!rows){ var m=document.createElement('div'); m.className='ar-empty'; m.textContent='Leaderboard unavailable right now'; listEl.appendChild(m); return; }
-      if(!rows.length){ var e2=document.createElement('div'); e2.className='ar-empty'; e2.textContent='No scores yet — be the first'; listEl.appendChild(e2); return; }
-      rows.forEach(function(r,i){ var row=document.createElement('div'); row.className='ar-row'+(r.id===mineId?' mine':'');
-        [['ar-r',String(i+1)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['ar-s',String(r.kills)]].forEach(function(c){ var s=document.createElement('span'); s.className=c[0]; s.textContent=c[1]; row.appendChild(s); });
-        listEl.appendChild(row); });
+      function note(msg){ var m=document.createElement('div'); m.className='ar-empty'; m.textContent=msg; listEl.appendChild(m); }
+      if(!rows){ note('Leaderboard unavailable right now'); return; }
+      if(!rows.length){ note('No scores yet \u2014 be the first'); return; }
+      var tb=document.createElement('table'); tb.className='ar-board';
+      tb.innerHTML='<thead><tr><th class="ar-r">#</th><th class="ar-f"></th><th>Pilot</th><th class="ar-h">Ship</th><th class="n">Score</th></tr></thead><tbody></tbody>';
+      var body=tb.querySelector('tbody');
+      rows.forEach(function(r,i){ var tr=document.createElement('tr'); if(r.id===mineId) tr.className='mine';
+        [['ar-r',String(i+1)],['ar-f',arcFlag(r.country)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; if(c[0]==='ar-f'&&c[1]){ td.title=arcCountry(r.country); td.setAttribute('role','img'); td.setAttribute('aria-label',arcCountry(r.country)); } tr.appendChild(td); });
+        body.appendChild(tr); });
+      listEl.appendChild(tb);
+      if(animate) arcDecode(tb,0);
     }
-    // sum: {kills, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
+    function arcEsc(v){ return String(v).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    // sum: {score, fighters, support, capital, weights, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
     function showArcadeResult(sum){
       closeArcadeResult();
       var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label',sum?'Game over':'Leaderboard');
-      var scored=!!(sum&&sum.kills>0), html='<div class="ar-card">';
-      if(sum){ var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2);
-        html+='<div class="ar-k">Game over</div><div class="ar-n">'+sum.kills+'</div><div class="ar-l">'+(sum.kills===1?'kill':'kills')+'</div>'+
-          '<div class="ar-meta"><span>Flown</span><b>'+(sum.heroes.length?sum.heroes.join(' · '):'—')+'</b><span>Time</span><b>'+mins+':'+secs+'</b></div>';
-        if(scored) html+='<form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div>';
-      } else html+='<div class="ar-k">Leaderboard</div>';
-      html+='<div class="ar-list" aria-label="Top scores"></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
+      var scored=!!(sum&&sum.score>0), html='<div class="ar-card">';
+      if(sum){
+        var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2), w=sum.weights||{fighter:1,support:3,capital:7};
+        var rowsB=[['Fighters',sum.fighters,w.fighter],['Support ships',sum.support,w.support],['Capital ships',sum.capital,w.capital]].map(function(r){
+          return '<tr class="'+(r[1]?'':'zero')+'"><td>'+r[0]+'</td><td class="n">'+r[1]+'</td><td class="n">\u00d7'+r[2]+'</td><td class="n">'+(r[1]*r[2])+'</td></tr>'; }).join('');
+        html+='<div class="ar-head"><div class="ar-k">Game over</div><div class="ar-n">'+sum.score+'</div><div class="ar-l">Score</div></div>'+
+          '<div class="ar-sec"><div class="ar-st">Score breakdown</div><table class="ar-break"><thead><tr><th>Target</th><th class="n">Destroyed</th><th class="n">Value</th><th class="n">Points</th></tr></thead><tbody>'+rowsB+
+          '<tr class="tot"><td colspan="3">Total</td><td class="n">'+sum.score+'</td></tr>'+
+          '<tr class="kit"><td colspan="3">Minikits opened</td><td class="n">'+(sum.minikits||0)+'</td></tr><tr class="kitnote"><td colspan="4">Not part of your score \u00b7 reward previews coming soon</td></tr></tbody></table></div>'+
+          '<table class="ar-meta"><tbody><tr><td>Flown</td><td>'+arcEsc(sum.heroes.length?sum.heroes.join(' \u00b7 '):'\u2014')+'</td></tr><tr><td>Time</td><td>'+mins+':'+secs+'</td></tr></tbody></table>';
+        if(scored) html+='<div class="ar-sec"><form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div></div>';
+      } else html+='<div class="ar-head"><div class="ar-k">Leaderboard</div></div>';
+      html+='<div class="ar-sec">'+(sum?'<div class="ar-st">Top scores</div>':'')+'<div class="ar-list" aria-label="Top scores"></div></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">'+(sum?'Exit game':'Close')+'</button></div></div>';
       el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
-      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err); });
+      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,null,true); });
+      arcDecode(el.querySelector('.ar-card'),60);   // (the leaderboard rows decode when they arrive)
       el.addEventListener('click',function(e){ if(e.target===el&&!sum) closeArcadeResult(); });   // game-over modal: the backdrop never dismisses (rapid clicking while playing would close it)
       var armed=function(){ return !sum||performance.now()-arcadeResultT>1200; };   // ...and the buttons ignore clicks for the first 1.2 s
       el.querySelector('#arClose').addEventListener('click',function(){ if(armed()) closeArcadeResult(); });
@@ -10292,12 +10351,12 @@ f 2469//2469 2470//2470 2434//2434
         try{ inp.value=localStorage.getItem('mw_lb_name')||''; }catch(e){}
         inp.focus();
         form.addEventListener('submit',function(e){ e.preventDefault(); var name=inp.value.trim(); if(!name){ msg.textContent='Enter a name to submit'; inp.focus(); return; }
-          btn.disabled=true; msg.textContent='Submitting…'; try{ localStorage.setItem('mw_lb_name',name); }catch(e2){}
-          fetch('/api/leaderboard-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,kills:sum.kills,hero:(sum.hero&&sum.hero.id)||'',seconds:sum.seconds})})
+          btn.disabled=true; msg.textContent='Submitting\u2026'; try{ localStorage.setItem('mw_lb_name',name); }catch(e2){}
+          fetch('/api/leaderboard-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,kills:sum.score,hero:(sum.hero&&sum.hero.id)||'',seconds:sum.seconds})})   // the leaderboard's `kills` column stores the score
             .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,j:j}; }); })
             .then(function(o){
               if(!o.ok||!o.j.ok){ msg.textContent=(o.j&&o.j.error)||'Could not save your score'; btn.disabled=false; return; }
-              msg.textContent=o.j.duplicate?'Already on the board':'Saved — rank #'+o.j.rank; form.style.display='none';
+              msg.textContent=o.j.duplicate?'Already on the board':'Saved \u2014 rank #'+o.j.rank; form.style.display='none';
               arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
             },function(){ msg.textContent='Could not reach the leaderboard'; btn.disabled=false; });
         });
@@ -10307,6 +10366,7 @@ f 2469//2469 2470//2470 2434//2434
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
       if(window.__mwLightspeed) window.__mwLightspeed.destroy(true);   // ESC mid-load
+      if(window.MWAudio) MWAudio.jumpCancel();
       var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
       // OUTRO (no hyperspace): everyone stops firing, fighters fly off screen, support/capital ships stay; the scoreboard modal comes up and
       // closing it ends the exit. Leaving without having played just tears down at once.
@@ -10320,9 +10380,35 @@ f 2469//2469 2470//2470 2434//2434
       buildStars();                                                   // back to the galaxy's tight star field
       var _gc=copyOvr['galcam']; camZoom=(_gc&&_gc.zoom!=null)?_gc.zoom:1; camElev=(_gc&&_gc.elev!=null)?_gc.elev:0;   // reset the zoom/height you changed in the arcade to the galaxy's normal view
     }
-    window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
+    window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); if(window.MWAudio&&!arcadeExiting) MWAudio.ui('back'); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
     var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
+    // sound switches (.mw-sound-switch: the galaxy-view one and the arcade hero-select one) and the M key share one persisted setting (localStorage['mw_sound'])
+    // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover
+    // (mouse only), switches latch on/off, close/back controls play the back sound. Author tooling and the sound switches themselves are skipped.
+    (function(){
+      var SEL='a[href],button,[role=button],[role=switch],[role=tab],[role=menuitem],[role=option],summary,select,input[type=checkbox],input[type=radio]';
+      var SKIP='.tbtn,#debug,#projMgr,#editPanel,#uploadpanel,#marqueePanel,[data-nosound],.mw-sound-switch', downEl=null;
+      function el(e){ var t=e.target&&e.target.closest?e.target.closest(SEL):null; if(!t||t.disabled||t.getAttribute('aria-disabled')==='true'||t.closest(SKIP)) return null; return t; }
+      function isSwitch(b){ return b.getAttribute('role')==='switch'||(b.matches&&b.matches('input[type=checkbox]')); }
+      function kind(b){
+        if(b.id==='arcadeExitBtn'||b.id==='arcadeEscBtn'||b.id==='arClose') return 'back';
+        if(b.dataset&&b.dataset.d&&b.closest('#bt-car')) return 'step';
+        if(b.classList.contains('bt-play')||b.id==='arAgain') return 'confirm';
+        var lab=(((b.getAttribute('aria-label')||'')+' '+(b.textContent||''))).toLowerCase().trim();
+        if(/\b(close|back|exit|cancel|dismiss)\b/.test(lab)||/^[\u00d7\u2715\u2716x\u25c4\u2190]$/.test(lab)) return 'back';
+        return 'press';
+      }
+      function play(b,k){ MWAudio.uiReady(); MWAudio.ui(k,false,k==='step'?{dir:+b.dataset.d}:null); }
+      document.addEventListener('pointerdown',function(e){ if(!window.MWAudio||e.button>0) return; var b=el(e); if(!b||isSwitch(b)) return; downEl=b; play(b,kind(b)); },true);
+      document.addEventListener('pointerup',function(e){ if(!window.MWAudio||!downEl) return; var b=el(e); if(b===downEl&&kind(b)==='press') MWAudio.ui('release'); downEl=null; },true);
+      document.addEventListener('pointerover',function(e){ if(!window.MWAudio||e.pointerType!=='mouse'||e.buttons) return; var b=el(e); if(!b) return; var from=e.relatedTarget&&e.relatedTarget.closest?e.relatedTarget.closest(SEL):null; if(from!==b) MWAudio.ui('hover'); },true);
+      // switches: play on/off by the state AFTER the click; keyboard activation (click with detail 0) plays its own sound too
+      document.addEventListener('click',function(e){ if(!window.MWAudio) return; var b=el(e); if(!b) return;
+        if(isSwitch(b)){ setTimeout(function(){ var on=b.matches('input')?b.checked:b.getAttribute('aria-checked')==='true'; MWAudio.uiReady(); MWAudio.ui(on?'on':'off'); },0); }
+        else if(e.detail===0) play(b,kind(b)); },true);
+    })();
+    window.addEventListener('keydown',function(e){ if((e.key==='m'||e.key==='M')&&arcadeActive&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA)$/.test((e.target&&e.target.tagName)||'')&&window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } });
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
     function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
 
@@ -11097,14 +11183,17 @@ f 2469//2469 2470//2470 2434//2434
         subscribeHoloNet();
       });
     }
-    var msgVisible=true; try{ msgVisible=localStorage.getItem('mw_msgvis')!=='0'; }catch(e){}
-    (function(){ var b=document.getElementById('msgToggle'); if(!b) return;
-      var lbl=b.querySelector('.sw-lbl');
-      function sync(){ b.classList.toggle('on',msgVisible); b.setAttribute('aria-checked',msgVisible?'true':'false'); if(lbl) lbl.textContent=msgVisible?'Messages visible':'Messages hidden'; }
-      function flip(){ msgVisible=!msgVisible; try{ localStorage.setItem('mw_msgvis',msgVisible?'1':'0'); }catch(e){} sync(); }
-      sync();
-      b.addEventListener('click',flip);
-      b.addEventListener('keydown',function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } }); })();
+    var msgVisible=true;   // visitor messages are always shown (the old "messages visible" switch was replaced by the sound switch)
+    (function(){
+      var SW='.mw-sound-switch';
+      function muted(){ if(window.MWAudio) return MWAudio.isMuted(); try{ return localStorage.getItem('mw_sound')==='off'; }catch(e){ return false; } }
+      function syncAll(){ var on=!muted(); [].forEach.call(document.querySelectorAll(SW),function(b){ b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); var l=b.querySelector('.sw-lbl'); if(l) l.textContent=on?'Sound on':'Sound off'; }); }
+      function flip(){ if(window.MWAudio){ MWAudio.toggle(); } else { try{ localStorage.setItem('mw_sound',muted()?'on':'off'); }catch(e){} } syncAll(); }
+      document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest(SW); if(b){ flip(); } });
+      document.addEventListener('keydown',function(e){ if((e.key===' '||e.key==='Enter')&&e.target.matches&&e.target.matches(SW)){ e.preventDefault(); flip(); } });
+      syncAll(); window.addEventListener('mw:sound',syncAll); window.addEventListener('load',syncAll);
+      window.__mwSyncSound=syncAll;   // the arcade carousel builds its switch later and calls this
+    })();
     var msgCanvas=null, msgCtx=null;
     function setupMsgCanvas(){ msgCanvas=document.getElementById('msgCanvas'); if(!msgCanvas) return; msgCtx=msgCanvas.getContext('2d'); resizeMsgCanvas(); }
     function resizeMsgCanvas(){ if(!msgCanvas) return; var P=Math.max(1,Math.round(params.pixel||1)); msgCanvas.width=Math.max(1,Math.ceil(W/P)); msgCanvas.height=Math.max(1,Math.ceil(H/P)); }
@@ -14383,6 +14472,7 @@ f 2469//2469 2470//2470 2434//2434
   </script>
   <!-- Targeting reticle cursor (desktop mouse only). Rides the pointer everywhere and steps aside, native cursor back, over links, buttons,
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
+  <script src="assets/battle/audio.js"></script>
   <script src="assets/battle/lightspeed.js"></script>
   <script src="assets/battle/battle.js"></script>
   <script src="assets/bric-reticle.js"></script>

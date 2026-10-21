@@ -14,7 +14,7 @@ const HEROES = new Set(['mil-falcon', 'n1', 'razorcrest', 'slave-1']);
 const NAME_MAX = 20;
 const URL_RE = /(https?:\/\/|www\.|\.com\b|\.net\b|\.org\b)/i;
 const MAX_PER_WINDOW = 5, WINDOW_MIN = 10;     // submissions per IP per window
-const MAX_KILLS_PER_SEC = 1.2, SLACK = 4;      // plausibility: kills <= seconds * 1.2 + 4
+const MAX_KILLS_PER_SEC = 3, SLACK = 10;        // plausibility: score <= seconds * 3 + 10 (score = fighter kills + 3 per support ship + 7 per capital ship; the `kills` column holds the score)
 const MIN_SECONDS = 5, MAX_SECONDS = 4 * 3600;
 
 function ipHash(req) {
@@ -46,7 +46,12 @@ module.exports = async function handler(req, res) {
     if ((recent.count || 0) >= MAX_PER_WINDOW) { res.status(429).json({ error: 'too many submissions — try again in a few minutes' }); return; }
     if ((recent.data || []).some(r => r.name === name && r.kills === kills)) { res.status(200).json({ ok: true, duplicate: true }); return; }
 
-    const ins = await supabase.from('leaderboard').insert({ name, kills, hero, seconds, ip_hash: hash }).select('id,kills').single();
+    // Country flag: Vercel sets x-vercel-ip-country (ISO 3166-1 alpha-2) at the edge; we store only the code, never the IP. If the `country` column has not been
+    // added yet (see leaderboard-schema.sql) the insert is retried without it, so submissions keep working.
+    const cc = (req.headers['x-vercel-ip-country'] || '').toString().toUpperCase();
+    const country = /^[A-Z]{2}$/.test(cc) ? cc : null;
+    let ins = await supabase.from('leaderboard').insert({ name, kills, hero, seconds, ip_hash: hash, country }).select('id,kills').single();
+    if (ins.error && /country/i.test(ins.error.message || '')) ins = await supabase.from('leaderboard').insert({ name, kills, hero, seconds, ip_hash: hash }).select('id,kills').single();
     if (ins.error) { console.error('[leaderboard-submit] insert failed', ins.error); res.status(500).json({ error: 'save failed' }); return; }
 
     const better = await supabase.from('leaderboard').select('id', { count: 'exact', head: true }).eq('approved', true).gt('kills', kills);
