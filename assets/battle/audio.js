@@ -60,7 +60,7 @@ var HERO_SHARED={
   lowHealth:['lowhealth-chime']
 };
 var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
-  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:2.6, rattle:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
+  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:2.6, rattle:.55, ui:.9, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
 var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
@@ -234,7 +234,55 @@ function heroStop(fadeSec){
   setTimeout(function(){ try{ h.bus.disconnect(); }catch(e){} },fadeSec*1000+200);
 }
 
+/* ── UI sounds: synthesised, no clips ─────────────────────────────────────────────────────────────────────────────────────────────
+   Cassette-futurism hardware: stiff plastic keys, relay clacks, toggle latches and the odd square-wave bleep. Every sound is built from
+   three parts — a bandpassed noise "tick" (the key's crisp edge), a short pitch-dropping "thunk" (the housing), and optionally a stepped
+   square "bleep" (the machine answering). Pitch and level jitter a little on each press so repeats don't machine-gun. */
+var noiseBuf=null, uiLast={};
+function noise(){
+  if(noiseBuf) return noiseBuf;
+  var n=Math.round(ctx.sampleRate*.25); noiseBuf=ctx.createBuffer(1,n,ctx.sampleRate); var d=noiseBuf.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return noiseBuf;
+}
+function env(g,t,peak,dur,attack){ g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+(attack||.0012)); g.gain.exponentialRampToValueAtTime(.0001,t+dur); }
+function uiTick(out,t,f,q,dur,gain){   // bandpassed noise burst
+  var s=ctx.createBufferSource(); s.buffer=noise(); var b=ctx.createBiquadFilter(); b.type='bandpass'; b.frequency.value=f; b.Q.value=q;
+  var g=ctx.createGain(); env(g,t,gain,dur); s.connect(b); b.connect(g); g.connect(out); s.start(t,Math.random()*.1); s.stop(t+dur+.02);
+}
+function uiThunk(out,t,f0,f1,dur,gain,type){   // pitch-dropping body
+  var o=ctx.createOscillator(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur*.8);
+  var g=ctx.createGain(); env(g,t,gain,dur,.001); o.connect(g); g.connect(out); o.start(t); o.stop(t+dur+.02);
+}
+function uiBleep(out,t,steps,stepDur,gain,lp){   // stepped square tones, soft-filtered
+  var o=ctx.createOscillator(); o.type='square'; var f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=lp||2600; f.Q.value=.7;
+  var g=ctx.createGain(), total=steps.length*stepDur;
+  steps.forEach(function(hz,i){ o.frequency.setValueAtTime(hz,t+i*stepDur); });
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain,t+.004); g.gain.setValueAtTime(gain,t+total-.012); g.gain.linearRampToValueAtTime(0,t+total);
+  o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t+total+.02);
+}
+var UI={
+  hover:  function(o,t,p,L){ uiTick(o,t,rr(4800,5600)*p,7,.011,.5*L); },
+  press:  function(o,t,p,L){ uiTick(o,t,2700*p,3,.02,.95*L); uiThunk(o,t,230*p,105*p,.055,.6*L); uiTick(o,t+.017,1500*p,5,.013,.5*L); },
+  release:function(o,t,p,L){ uiTick(o,t,4200*p,4,.01,.4*L); uiThunk(o,t,320*p,190*p,.022,.18*L); },
+  step:   function(o,t,p,L){ uiTick(o,t,3100*p,4,.014,.8*L); uiTick(o,t+.034,3500*p,4,.012,.6*L); uiThunk(o,t,260*p,150*p,.04,.35*L); },
+  confirm:function(o,t,p,L){ uiTick(o,t,2500*p,3,.022,.95*L); uiThunk(o,t,200*p,70*p,.11,.8*L); uiTick(o,t+.02,1300*p,5,.016,.55*L); uiBleep(o,t+.045,[660*p,990*p],.05,.1*L); },
+  back:   function(o,t,p,L){ uiTick(o,t,2300*p,3,.02,.9*L); uiThunk(o,t,210*p,90*p,.08,.7*L); uiBleep(o,t+.04,[880*p,587*p],.05,.09*L); },
+  on:     function(o,t,p,L){ uiThunk(o,t,175*p,80*p,.075,.85*L); uiTick(o,t,2200*p,3,.022,.9*L); uiTick(o,t+.03,1250*p,5,.016,.6*L);
+                             uiBleep(o,t+.05,[520*p,780*p,1170*p],.035,.09*L); },
+  off:    function(o,t,p,L){ uiThunk(o,t,150*p,65*p,.08,.9*L); uiTick(o,t,1900*p,3,.022,.9*L); uiTick(o,t+.03,1000*p,5,.016,.6*L);
+                             uiBleep(o,t+.05,[900*p,560*p,330*p],.035,.08*L); }
+};
+function uiPlay(kind,force){
+  if(!ensure()||!UI[kind]||(muted&&!force)) return;
+  var t=now(), min=kind==='hover'?.06:.012; if(t-(uiLast[kind]||-1)<min) return; uiLast[kind]=t;   // a hair of debounce: never two identical clicks on one frame
+  var out=ctx.createGain(); out.gain.value=LEVEL.ui; out.connect(force?comp:master);   // forced sounds (the 'off' latch, the lab page) skip the mute gain
+  try{ UI[kind](out,t+.001,rr(.95,1.06),rr(.88,1)); }catch(e){ if(window.console) console.warn('MWAudio.ui',kind,e); }
+  setTimeout(function(){ try{ out.disconnect(); }catch(e){} },700);
+}
+
 var MWAudio={
+  /* UI feedback: kind = hover | press | release | step | confirm | back | on | off. Works without the clip bundle (the lab page uses it alone). */
+  ui:function(kind,force){ uiPlay(kind,force); },
+  uiReady:function(){ return ensure(); },
   /* call from any user gesture; safe to call repeatedly */
   unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive']); },
   isMuted:function(){ return muted; },
@@ -243,7 +291,11 @@ var MWAudio={
     if(master){ var t=now(); master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(muted?0:1,t,.06); }
     try{ window.dispatchEvent(new CustomEvent('mw:sound',{detail:{muted:muted}})); }catch(e){}
   },
-  toggle:function(){ MWAudio.setMuted(!muted); return muted; },
+  toggle:function(){
+    if(!ensure()) { MWAudio.setMuted(!muted); return muted; }
+    if(muted){ MWAudio.setMuted(false); uiPlay('on'); return false; }
+    uiPlay('off',true); setTimeout(function(){ MWAudio.setMuted(true); },170); return true;   // the 'off' click is heard, then the sound goes quiet
+  },
 
   /* hyperspace jump (galaxy view → game) */
   jumpStart:function(){

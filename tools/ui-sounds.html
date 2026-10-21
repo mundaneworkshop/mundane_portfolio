@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arcade UI sound lab</title>
+<style>
+  /* Dev tool (not shipped to visitors): audition the synthesised arcade UI sounds in assets/battle/audio.js. */
+  :root{--bg:#06100f;--panel:#0b1a19;--line:#1d3b38;--ink:#d7f6f2;--mute:#6f9a95;--holo:#aaf5ee;--amber:#f0d080}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 ui-monospace,Menlo,monospace;padding:32px max(16px,env(safe-area-inset-left))}
+  h1{font-size:15px;letter-spacing:3px;text-transform:uppercase;font-weight:500;margin:0 0 6px;color:var(--holo)}
+  p{color:var(--mute);margin:0 0 24px;max-width:70ch}
+  h2{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--mute);font-weight:400;margin:28px 0 10px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  button{font:inherit;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--holo);background:var(--panel);border:1px solid var(--line);padding:12px 18px;cursor:pointer;border-radius:0;min-width:88px}
+  button:hover{border-color:var(--holo)}
+  button:active{transform:translateY(1px);background:#0f2523}
+  button:focus-visible{outline:2px solid var(--holo);outline-offset:2px}
+  .sw{min-width:120px}
+  .sw[aria-pressed="true"]{background:var(--holo);color:#04201d;border-color:var(--holo)}
+  .note{margin-top:28px;font-size:12px;color:var(--mute)}
+  code{color:var(--amber)}
+</style>
+</head>
+<body>
+<h1>Arcade UI sound lab</h1>
+<p>Click, hold, release and hover to hear each sound. They are synthesised live (no files), so every press varies slightly. Sounds start after your first click.</p>
+
+<h2>Every sound</h2>
+<div class="row" id="all"></div>
+
+<h2>Feels like the game: hover, press down, release</h2>
+<div class="row"><button class="live" data-k="press">Button</button><button class="live" data-k="press">Leaderboard</button></div>
+
+<h2>Carousel and confirm</h2>
+<div class="row"><button class="live" data-k="step" aria-label="Previous">&#9668;</button><button class="live" data-k="confirm">Play</button><button class="live" data-k="step" aria-label="Next">&#9658;</button><button class="live" data-k="back">Exit arcade</button></div>
+
+<h2>Switch</h2>
+<div class="row"><button class="sw" id="sw" aria-pressed="true">Sound on</button></div>
+
+<h2>Rapid presses</h2>
+<div class="row"><button id="rapid">Ten presses, 80 ms apart</button></div>
+
+<p class="note">The recipes live in the <code>UI</code> table in <code>assets/battle/audio.js</code> (tick = bandpassed noise edge, thunk = pitch-dropping body, bleep = stepped square). Tell me what to change: crisper, heavier, higher, softer, more beepy.</p>
+
+<script src="../assets/battle/audio.js"></script>
+<script>
+(function(){
+  var kinds=['hover','press','release','step','confirm','back','on','off'], all=document.getElementById('all');
+  kinds.forEach(function(k){ var b=document.createElement('button'); b.textContent=k; b.addEventListener('pointerdown',function(){ MWAudio.uiReady(); MWAudio.ui(k,true); }); all.appendChild(b); });
+  [].forEach.call(document.querySelectorAll('.live'),function(b){
+    var k=b.dataset.k;
+    b.addEventListener('pointerenter',function(){ MWAudio.uiReady(); MWAudio.ui('hover',true); });
+    b.addEventListener('pointerdown',function(){ MWAudio.uiReady(); MWAudio.ui(k,true); });
+    b.addEventListener('pointerup',function(){ if(k==='press') MWAudio.ui('release',true); });
+  });
+  var sw=document.getElementById('sw'), on=true;
+  sw.addEventListener('click',function(){ MWAudio.uiReady(); on=!on; MWAudio.ui(on?'on':'off',true); sw.setAttribute('aria-pressed',String(on)); sw.textContent=on?'Sound on':'Sound off'; });
+  document.getElementById('rapid').addEventListener('click',function(){ MWAudio.uiReady(); var i=0; (function go(){ if(i++<10){ MWAudio.ui('press',true); setTimeout(function(){ MWAudio.ui('release',true); },40); setTimeout(go,80); } })(); });
+})();
+</script>
+</body>
+</html>

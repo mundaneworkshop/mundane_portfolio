@@ -10323,13 +10323,23 @@ f 2469//2469 2470//2470 2434//2434
       buildStars();                                                   // back to the galaxy's tight star field
       var _gc=copyOvr['galcam']; camZoom=(_gc&&_gc.zoom!=null)?_gc.zoom:1; camElev=(_gc&&_gc.elev!=null)?_gc.elev:0;   // reset the zoom/height you changed in the arcade to the galaxy's normal view
     }
-    window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); exitArcade(); } },true);
+    window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); if(window.MWAudio&&!arcadeExiting) MWAudio.ui('back'); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
     var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
     // arcade sound toggle (assets/battle/audio.js): the SND button or the M key; the choice persists in localStorage['mw_sound']
     var _axs=document.getElementById('arcadeSndBtn');
     function syncSndBtn(){ if(!_axs||!window.MWAudio) return; var off=MWAudio.isMuted(); _axs.textContent=off?'SND OFF':'SND ON'; _axs.setAttribute('aria-pressed',String(!off)); _axs.setAttribute('aria-label',off?'Sound off':'Sound on'); }
     if(_axs){ _axs.addEventListener('click',function(){ if(window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } }); window.addEventListener('mw:sound',syncSndBtn); syncSndBtn(); }
+    // tactile UI sounds (assets/battle/audio.js → MWAudio.ui): arcade buttons click down on press and up on release; hover ticks. The carousel's
+    // keyboard arrows / Enter play theirs from battle.js; the SND toggle plays its own on/off latch.
+    (function(){
+      var SEL='#arcadeExit button, #bt-car button, #arcadeResult button', downEl=null;
+      function btn(e){ var t=e.target&&e.target.closest?e.target.closest(SEL):null; return (t&&!t.disabled)?t:null; }
+      function kind(b){ if(b.id==='arcadeSndBtn') return null; if(b.id==='arcadeExitBtn'||b.id==='arcadeEscBtn'||b.id==='arClose') return 'back'; if(b.dataset&&b.dataset.d) return 'step'; if(b.classList.contains('bt-play')||b.id==='arAgain') return 'confirm'; return 'press'; }
+      document.addEventListener('pointerdown',function(e){ if(!window.MWAudio||!arcadeActive||e.button>0) return; var b=btn(e); if(!b) return; downEl=b; var k=kind(b); if(k){ MWAudio.uiReady(); MWAudio.ui(k); } },true);
+      document.addEventListener('pointerup',function(e){ if(!window.MWAudio||!downEl) return; var b=btn(e), k=b&&kind(b); if(b===downEl&&k==='press') MWAudio.ui('release'); downEl=null; },true);
+      document.addEventListener('pointerover',function(e){ if(!window.MWAudio||!arcadeActive) return; var b=btn(e); if(!b) return; var from=e.relatedTarget&&e.relatedTarget.closest?e.relatedTarget.closest(SEL):null; if(from!==b) MWAudio.ui('hover'); },true);
+    })();
     window.addEventListener('keydown',function(e){ if((e.key==='m'||e.key==='M')&&arcadeActive&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA)$/.test((e.target&&e.target.tagName)||'')&&window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } });
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
     function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }

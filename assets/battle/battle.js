@@ -1118,9 +1118,9 @@ function bindInput(){
     if(isTyping(e)||hyper) return;
     if(/^(ArrowLeft|ArrowRight|Enter|Space)$/.test(e.code)&&e.target&&e.target!==document.body&&e.target.blur&&e.target.tagName!=='A'){ e.target.blur(); }   // take focus off a slider/button so it doesn't also act on the key
     if(stage==='select'){
-      if(e.code==='ArrowLeft'){ stepCar(-1); e.preventDefault(); }
-      else if(e.code==='ArrowRight'){ stepCar(1); e.preventDefault(); }
-      else if(e.code==='Enter'||e.code==='Space'){ playHero(); e.preventDefault(); }
+      if(e.code==='ArrowLeft'){ stepCar(-1); if(window.MWAudio) MWAudio.ui('step'); e.preventDefault(); }
+      else if(e.code==='ArrowRight'){ stepCar(1); if(window.MWAudio) MWAudio.ui('step'); e.preventDefault(); }
+      else if(e.code==='Enter'||e.code==='Space'){ if(window.MWAudio) MWAudio.ui('confirm'); playHero(); e.preventDefault(); }
     } else if(e.code==='Space'){ changeHero(); e.preventDefault(); if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }
   });
   on(window,'blur',ejectKeys);
