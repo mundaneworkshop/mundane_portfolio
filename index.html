@@ -554,7 +554,7 @@
      .admin-only rule above) so the debug panel — and its entry/dock-timing sliders — is tunable while
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
   body.mw-entrygate #labels, body.mw-entrygate #hint,
-  body.mw-entrygate #soundToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
+  body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
   #entryHint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b8a85;pointer-events:none;opacity:0;transition:opacity .4s ease}
   body.mw-entrygate #entryHint{opacity:1}
 
@@ -578,10 +578,10 @@
   body.mw-planet:not(.mw-altfocus) canvas{cursor:crosshair}
   body.mw-planet.box-hovered:not(.mw-altfocus) canvas{cursor:pointer}
   html:not([data-bric-ret="hot"]) body.mw-altfocus canvas{cursor:default!important}   /* (not while the reticle is up: its cursor:none!important must win, or the system arrow shows beside it) CV route, HoloNet etc.: the galaxy's hover affordance left an inline cursor:pointer on the canvas when the planet was clicked, which made the reticle step aside for the system hand. Nothing on the canvas is a pointer target in these views. */
-  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #soundToggle{opacity:0;pointer-events:none}
-  /* sound toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
-     in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views */
-  body.mw-planet #soundToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas{opacity:0;pointer-events:none}
+  /* the "drag to rotate…" hint is galaxy-overview chrome only — hide it in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views.
+     The sound switch (#soundToggle) stays on every view except the arcade (which has its own) */
+  body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
   /* ── CV 3D hyperspace route (drag to orbit; details reuse #manual-scene) ── */
   #cvRouteLayer{position:absolute;inset:0;z-index:16;display:none;pointer-events:none}   /* labels capture clicks; the canvas underneath stays draggable */
   #cvRouteLayer.show{display:block}
@@ -610,7 +610,8 @@
   body.mw-cvroute #cvFxCanvas{display:block}
   /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
-  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21}
+  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21;transform:translateY(calc(var(--mw-snd-lift,0px) * -1));transition:transform .25s ease,opacity .3s ease}   /* --mw-snd-lift: set from JS (soundToggleAvoid) when a docked project manual would cover it */
+  @media (prefers-reduced-motion:reduce){ #soundToggle{transition:opacity .3s ease} }
   .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
   .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
   .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
@@ -14380,6 +14381,15 @@ f 2469//2469 2470//2470 2434//2434
     var _mlRaf=0;
     function mlRelayoutSoon(){ if(_mlRaf) return; _mlRaf=requestAnimationFrame(function(){ _mlRaf=0; if(manualScene.classList.contains('visible')) layoutManual(); }); }
     window.addEventListener('resize',mlRelayoutSoon);
+    // the sound switch lives bottom-left on every view; a docked project manual spans that corner, so lift the switch to sit just above the panel (transform only, via --mw-snd-lift)
+    function soundToggleAvoid(){
+      var lift=0, r;
+      if(manualScene.classList.contains('visible')&&mlIsProject()){ r=manualScene.getBoundingClientRect(); if(r.width>0&&r.left<170&&r.top<window.innerHeight-30) lift=Math.max(0,Math.round(window.innerHeight-r.top+14-40)); }
+      if(lift) document.documentElement.style.setProperty('--mw-snd-lift',lift+'px'); else document.documentElement.style.removeProperty('--mw-snd-lift');
+    }
+    window.addEventListener('resize',function(){ setTimeout(soundToggleAvoid,80); });
+    new MutationObserver(function(){ soundToggleAvoid(); setTimeout(soundToggleAvoid,350); }).observe(manualScene,{attributes:true,attributeFilter:['class','style']});
+    if(window.ResizeObserver) new ResizeObserver(function(){ soundToggleAvoid(); }).observe(manualScene);
     // content growing/shrinking (Edit Mode adding links/rows, a moon with fewer fields) re-measures the stage
     if(window.ResizeObserver) new ResizeObserver(function(){ if(mlMode) mlRelayoutSoon(); }).observe(manualBook);
     var _mlEdit=false;   // body classes flip constantly (box-hovered…) — only Edit Mode toggling (edit-focus) re-measures the stage
