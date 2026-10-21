@@ -14492,10 +14492,11 @@ f 2469//2469 2470//2470 2434//2434
        fields, drag handles and the planet hover "pointer". Same file the Framer case-study pages use. Docs: docs/project-history/reticle-cursor.md -->
   <script src="assets/battle/audio.js"></script>
   <script src="assets/battle/lightspeed.js"></script>
+  <script src="assets/battle/reticle.js"></script>
   <script src="assets/battle/battle.js"></script>
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
   <script src="assets/bric-wipe.js"></script>
-  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, selector:'[data-bric-media],[data-bric-target],.mw-sound-switch:not([aria-disabled="true"]),.bric-btn:not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
+  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, ignore:'a,button,input,textarea,select,summary,label,[role=button],[contenteditable=true],[data-mw-reticle="arcade"]', selector:'[data-bric-media],[data-bric-target],.mw-sound-switch:not([aria-disabled="true"]),.bric-btn:not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
 </body>
 </html>

@@ -641,6 +641,7 @@ function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
   if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio){ MWAudio.heroHitLaser(); if(s.hp<=1+1e-6&&s.hp>1e-6) MWAudio.heroLowHealth(); } flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
+  if(b.team===HERO&&window.MWReticle) MWReticle.hit();   // a hero laser landed: hit marker in the reticle
   if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills+=SCORE.fighter; tally.fighter++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
     s.hp--; s.hpShow=3.2; s.provT=clockT+RETAL.sec;   // the hero is shooting at us: shoot back for a few seconds
@@ -809,7 +810,8 @@ function updBase(s,dt){
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
-function setStage(st){ if(stage===st) return; stage=st; if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
+function reticleDom(playing){ if(!ctx||!ctx.dom) return; if(playing&&window.MWReticle){ ctx.dom.setAttribute('data-mw-reticle','arcade'); ctx.dom.style.cursor='none'; } else { ctx.dom.removeAttribute('data-mw-reticle'); ctx.dom.style.cursor=''; } }   // data-mw-reticle: the site-wide reticle (index.html) steps aside over the canvas while the arcade reticle is up
+function setStage(st){ if(stage===st) return; stage=st; reticleDom(st==='play'); if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
@@ -1130,6 +1132,7 @@ function update(t){
   if(!introScheduled&&!hyper&&!introHold) tryScheduleIntro();
 
   updPan(dt);
+  if(window.MWReticle) MWReticle.setActive(stage==='play'&&!quiet()&&!!heroShip&&ptr.in&&!ptr.out);   // arcade reticle: only while the hero flies and the pointer is over the battle
   var allGone=true;
   for(var i=ships.length-1;i>=0;i--){
     var s=ships[i];
@@ -1175,7 +1178,7 @@ function update(t){
 function isTyping(e){ var t=e.target; if(!t) return false; if(t.isContentEditable||t.tagName==='TEXTAREA') return true; return t.tagName==='INPUT'&&/^(text|search|url|email|password|number|tel)$/i.test(t.type||'text'); }
 function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
-    if(ptr.in&&!hyper&&stage==='play') ctx.dom.style.cursor='crosshair'; });
+    if(ptr.in&&!hyper&&stage==='play') ctx.dom.style.cursor=window.MWReticle?'none':'crosshair'; });
   on(document.documentElement,'mouseleave',function(){ ptr.out=true; });   // the cursor left the window: it must not keep panning from its last edge position
   on(document.documentElement,'mouseenter',function(){ ptr.out=false; });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
@@ -1297,6 +1300,10 @@ function buildPanel(){
       slider(d,m.id,function(){ return P.counts[m.id]||0; },function(x){ P.counts[m.id]=x; reconT=0; },0,m.cls==='fighter'?10:(m.cls==='capital'||m.cls==='support'?14:6),1,0);
     });
   });
+  if(window.MWReticle){   // arcade reticle tunables (persisted by reticle.js)
+    var rd=document.createElement('details'); rd.innerHTML='<summary>Arcade reticle</summary>'; panelEl.appendChild(rd);
+    MWReticle.controls().forEach(function(c){ slider(rd,c[1].replace('Reticle: ',''),function(){ return MWReticle.get(c[0]); },function(x){ MWReticle.set(c[0],x); },c[2],c[3],c[4],c[4]<1?2:0); });
+  }
   var ld=document.createElement('details'); ld.innerHTML='<summary>Lighting</summary>'; panelEl.appendChild(ld);
   var envT=null; function envSoon(){ clearTimeout(envT); envT=setTimeout(buildEnv,120); }
   [['fogK','Distance fog (0 = none, 1 = page default)',0,1.5,.05,0],['exposure','Exposure (filmic)',.3,2.5,.05,0],['lightKey','Sun intensity',0,4,.05,0],['sunAz','Sun azimuth \u00b0',-180,180,5,1],['sunEl','Sun elevation \u00b0',-60,85,5,1],['lightFill','Ambient',0,1.5,.02,0],['lightRim','Cool back fill',0,2,.05,0],
@@ -1342,7 +1349,7 @@ function resetState(){
 }
 var MWBattle={
   init:function(c){
-    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; P=loadCfg();
+    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; P=loadCfg(); if(window.MWReticle) MWReticle.init();
     _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
@@ -1365,7 +1372,7 @@ var MWBattle={
   update:update,
   hyperspace:hyperspace, outro:outro,
   dispose:function(){
-    if(dead||!ctx) return; dead=true; active=false; if(window.MWAudio) MWAudio.stop();
+    if(dead||!ctx) return; dead=true; active=false; if(window.MWReticle) MWReticle.dispose(); if(ctx.dom){ ctx.dom.style.cursor=''; ctx.dom.removeAttribute('data-mw-reticle'); } if(window.MWAudio) MWAudio.stop();
     listeners.forEach(function(l){ l[0].removeEventListener(l[1],l[2],l[3]); }); listeners.length=0;
     sceneBase.forEach(function(b){ b.l.intensity=b.i; }); sceneBase.length=0;
     lights.forEach(function(l){ ctx.scene.remove(l); }); lights.length=0;
