@@ -85,7 +85,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, dsDim:.45, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045,
+  kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35,
   counts:{}, ver:10
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
@@ -478,6 +478,29 @@ function killShip(s){
   shatter(s,{small:true}); s.form=null;
   s.alive=false; s.root.visible=false; s.respawn=rnd(2.5,5.5); s.target=null;
 }
+// ── fighter death sequence (random): like the hero's, a doomed fighter doesn't always just pop. With chance P.fighterBurn it catches fire, tumbles out of control
+// trailing flame and smoke for about 1-2 s, then explodes. No material changes (fighters share materials with their prototype), only particles and flashes.
+function fighterDown(s){
+  if(!quiet()&&!s.burnDeath&&Math.random()<P.fighterBurn) startBurn(s); else killShip(s);
+}
+function startBurn(s){
+  s.alive=false; s.target=null; s.form=null;   // out of the fight at once: not targetable, no collisions, no more shots
+  s.burnDeath={t:0,dur:rnd(1.1,2.3),ph:[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)],roll:rnd(8,15)*(Math.random()<.5?-1:1),nextHit:rnd(.25,.5),spd0:Math.max(.4,s.spd||.5)};
+  burst(s.pos,0xff8030,14,1.2,.6); flash(s.pos,.35,0xffb060);
+  var au=audioAt(s); if(au&&window.MWAudio&&MWAudio.hitLaserAt) MWAudio.hitLaserAt(au);   // the laser-hit sound(s) the hero gets, placed at the fighter
+}
+function updFighterBurn(s,dt){
+  var B=s.burnDeath, k=Math.min(1,B.t/B.dur); B.t+=dt;
+  _v1.set(Math.sin(B.t*3.1+B.ph[0]),Math.sin(B.t*4.3+B.ph[1]),Math.sin(B.t*3.7+B.ph[2])); if(_v1.lengthSq()<1e-4) _v1.set(0,1,0); _v1.normalize();
+  s.dir.applyAxisAngle(_v1,(3+9*k)*(.6+.4*Math.sin(B.t*8))*dt).normalize();   // erratic loops, tighter as it goes
+  s.spd=B.spd0*(1+.6*k); s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
+  aim(s.root,s.dir); s.bank.rotation.z+=dt*B.roll*(.6+k);   // corkscrewing roll
+  s.root.visible=true;
+  burst(s.pos,0xff5a14,2,.8,.45); burst(s.pos,0xffb030,1,1.1,.35); if(Math.random()<.5) burst(s.pos,0x4a4a4a,2,.45,.9);   // flames and smoke
+  if(Math.random()<.12) flash(s.pos,.22+.25*k,0xff8a30);
+  if(B.t>=B.nextHit){ B.nextHit=B.t+rnd(.25,.5); burst(s.pos,0xffe08a,8,1.3,.45); }   // the odd tearing flare
+  if(B.t>=B.dur){ s.burnDeath=null; burst(s.pos,0xffe08a,18,2,.7); killShip(s); }   // then the usual explosion + break-up
+}
 // ── capital / support destruction: a long chain of explosions along the hull, then it breaks apart
 var debris=[], shardGeo=null, shardMat=null;
 function startDying(s){
@@ -642,7 +665,7 @@ function hitShip(s,b){
   if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio){ MWAudio.heroHitLaser(); if(s.hp<=1+1e-6&&s.hp>1e-6) MWAudio.heroLowHealth(); } flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
   if(b.team===HERO&&window.MWReticle) MWReticle.hit();   // a hero laser landed: hit marker in the reticle
-  if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills+=SCORE.fighter; tally.fighter++; updHud(true); } } }
+  if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ fighterDown(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills+=SCORE.fighter; tally.fighter++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
     s.hp--; s.hpShow=3.2; s.provT=clockT+RETAL.sec;   // the hero is shooting at us: shoot back for a few seconds
     if(s.hp<=0){ startDying(s); kills+=SCORE[s.cls]; tally[s.cls]++; updHud(true); }
@@ -1145,6 +1168,7 @@ function update(t){
     if(s.arriveAt>clockT){ s.root.visible=false; continue; }            // still waiting to jump in
     if(!s.arrived){ s.arrived=true; if(s.alive){ s.root.visible=true; startArrive(s); } }
     if(s.arr!==undefined&&s.arr<1) updArrive(s,dt);
+    if(s.burnDeath){ updFighterBurn(s,dt); allGone=false; continue; }
     if(s.dying){ updDying(s,dt); continue; }
     if(!s.alive){
       if(!hyper&&!outroOn){ s.respawn-=dt;
@@ -1282,6 +1306,7 @@ function buildPanel(){
   key('speed','Speed',.1,3,.05,2);
   key('scale','Size (all ships)',.3,3,.05,2);
   key('arena','Fighter arena radius',.4,2.6,.02,2);
+  key('fighterBurn','Fighter burning-death chance (0 = always pops)',0,1,.05,2);
   key('clear','Fighter clearance around mark',.4,2,.05,2);
   key('laser','Laser frequency',0,4,.05,2);
   key('laserSpeed','Laser speed',.3,3,.05,2);

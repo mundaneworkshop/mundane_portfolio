@@ -65,7 +65,7 @@ var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
 var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
-var amb={sel:null,play:null}, selShip=null, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastLayer=0, wired=false, heroSnd=null;
+var amb={sel:null,play:null}, selShip=null, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastHitAt=0, lastLayer=0, wired=false, heroSnd=null;
 try{ muted=localStorage.getItem('mw_sound')==='off'; }catch(e){}
 
 function now(){ return ctx?ctx.currentTime:0; }
@@ -461,6 +461,12 @@ var MWAudio={
   /* low hull: the chime plays once per life, the first time the hero drops to its last hit point */
   heroLowHealth:function(){ var h=heroSnd; if(!h||h.lowDone) return; h.lowDone=true; oneShot(pick(HERO_SHARED.lowHealth),{gain:LEVEL.lowHealth,dest:master}); },   // the source chime is quiet (~-24 dB): boost it, and keep it out of the duck bus
   heroHitLaser:function(){ oneShot(pick(HERO_SHARED.hitLaser),{gain:LEVEL.hitLaser,rate:.94+Math.random()*.12}); },
+  // The same laser-hit pool (HERO_SHARED.hitLaser: add clips there and both the hero and burning fighters pick them up), placed where the fighter is.
+  hitLaserAt:function(loc){
+    if(!ctx||!loc) return; var t=now(); if(t-lastHitAt<.08) return; lastHitAt=t;   // simultaneous kills don't stack into one loud hit
+    var key=pick(HERO_SHARED.hitLaser); if(!bufs[key]){ load(key); return; }
+    oneShot(key,{loc:loc,gain:LEVEL.hitLaser*num(loc.gain,1),rate:rr(.94,1.06)});
+  },
   heroCollide:function(){ oneShot(pick(HERO_SHARED.collide),{gain:LEVEL.collide,rate:.96+Math.random()*.08}); },
   heroDying:function(){ if(!HERO_SHARED.deathSeq.length) return; var v=oneShot(pick(HERO_SHARED.deathSeq),{gain:LEVEL.deathSeq,dest:master}); if(v) duckFor(v.dur); },   // the dying hero cuts through everything else
   heroDestroyed:function(){ heroStop(.15); oneShot(pick(HERO_SHARED.destroyed),{gain:LEVEL.destroyed}); },
