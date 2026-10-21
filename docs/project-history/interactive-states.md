@@ -35,6 +35,12 @@ Hover is amber so the targeting reticle (`assets/bric-reticle.js`, amber bracket
 
 Disabled is unchanged. Active (fill + inset keyline) keeps its off-white look at rest, and on hover turns amber like primary (fill `interactive/fill/hover`, label and keyline `interactive/text/on-fill-hover`, primary glow); added after sign-off. The reticle locks onto every `.bric-btn` that is not disabled with arms 8px, outside gap 4px, no label (`--bric-ret-arm/outset/label` set on `.bric-btn`). The Aurebesh decode on hover is unchanged. The Framer `Button` code component mirrors all of this.
 
+## Toggle / sound switch (Oct 21 2026, approved in Figma "12 · Toggle · amber hover (PROPOSAL)", node 413:174)
+
+`.mw-sound-switch` (galaxy view = Small 34x16 track, arcade hero select = Large 52x24) follows the button language: hover = track stroke `interactive/outline/hover`, 22% tint `interactive/fill/hover-tint`, label `interactive/text/hover-accent`, On thumb `interactive/fill/hover`. Disabled uses the disabled tokens and never hovers. The thumb is centred in the track (travel 16 Small / 26 Large). **No new tokens.** The reticle locks onto the whole switch (arms 8, outset 4, no label), the same as `.bric-btn`, which also replaces the native pointer. Track glow was left out: the track is clipped by `--clip-step`, which would cut it.
+
+Sound proposal (not wired to the site yet): `swDown` / `swOn` / `swOff` / `swDeny` in `assets/battle/audio.js`, auditioned against the current `on`/`off` in `tools/ui-sounds.html`.
+
 ## CRT effects (dark mode only)
 
 Glow and bloom are *emitted light*, so they exist on the dark screen only — the tokens are transparent in light mode, so no mode check is needed in code.
