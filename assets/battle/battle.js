@@ -893,7 +893,7 @@ function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(f
 function heroDeath(s){
   if(s.burning) return;
   s.burning={t:0,dur:3.4,ph:[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)],nextHit:.35}; s.inv=1e9; s.hp=0; fireHeld=false; updHud(false);
-  if(window.MWAudio) MWAudio.heroFireUp();
+  if(window.MWAudio){ MWAudio.heroFireUp(); MWAudio.heroDying(); }
   burst(s.pos,0xff8030,40,2,.9); flash(s.pos,.9,0xffb060);
 }
 function updHeroBurn(s,dt){
@@ -913,7 +913,7 @@ function updHeroBurn(s,dt){
     mt.emissive.setRGB(1,.3+.25*pl,.04); mt.emissiveIntensity=1.5+1.8*pl; mt.userData.hurt1=true; });
   burst(s.pos,0xff5a14,3,.9,.55); burst(s.pos,0xffb030,2,1.3,.4); if(Math.random()<.6) burst(s.pos,0x4a4a4a,2,.5,1);
   if(Math.random()<.18) flash(s.pos,.3+.4*k,0xff8a30);
-  if(B.t>=B.nextHit){ B.nextHit=B.t+rnd(.45,.85); if(window.MWAudio) MWAudio.heroCollide(); burst(s.pos,0xffe08a,12,1.6,.5); }   // metal tearing apart
+  if(B.t>=B.nextHit){ B.nextHit=B.t+rnd(.45,.85); burst(s.pos,0xffe08a,12,1.6,.5); }   // metal tearing apart (visual only: the death-sequence sound comes from heroDying)
   if(window.MWAudio) MWAudio.heroEngine(clamp((s.spd-.1)/.9,0,1));
   if(B.t>=B.dur) finishHeroDeath(s);
 }
