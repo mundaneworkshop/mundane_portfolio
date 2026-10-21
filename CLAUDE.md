@@ -71,17 +71,19 @@ Before this, every in-page CMS edit (title/description/tags/snapshot rows/links/
 
 Deployed on Vercel. Pushing to `main` should trigger a deploy if Vercel's git integration is connected to this repo — this hasn't been independently re-verified from Claude Code, so confirm on first push rather than assuming.
 
-## Git workflow (adopted Aug 14 2026)
+## Git workflow (standing rules; updated Oct 21 2026)
 
-`main` is the source of truth and should reflect what's live. For any non-trivial change:
+Trunk-based: `main` is always deployable and is the only long-lived branch. All work happens on short-lived branches that reach `main` through a PR. **These rules are standing authorization from the owner: do the branch, push and PR steps below without being asked each time.** Never merge a PR or push to `main` unless told to.
 
-1. Branch off `main`: `git checkout -b feat/short-name` (`feat/` new work, `fix/` bugs, `chore/` cleanup/config/docs).
-2. Commit in small, clearly-described chunks as you go rather than one large commit at the end.
-3. Push the branch: `git push -u origin feat/short-name`.
-4. GitHub auto-generates a compare/PR link on push — open a PR even solo; it gives a diff view before anything lands on `main`, which matters a lot in a single 13k-line file where it's easy to lose track of exactly what changed.
-5. Merge after review.
+1. **Before the first edit of a task**, `git fetch origin`. If you're on `main`, or on a branch already merged into `origin/main` (check `git merge-base --is-ancestor HEAD origin/main`; a squash/merge leaves local `main` stale, so always compare against `origin/main`, not local `main`), cut a new branch from it: `git checkout -b feat/short-name origin/main`. Otherwise stay on the current branch if it's the same unit of work. Prefixes: `feat/` new work, `fix/` bugs, `chore/` cleanup/config/docs. One branch per unit of work; don't stack a new task on an unmerged branch.
+2. **Push the branch the moment it's created**: `git push -u origin HEAD`, so it's on GitHub from the start.
+3. **Commit in small, logical chunks** (imperative messages; `feat:`/`fix:`/`chore:` style is welcome) and **push after each commit**. Never commit secrets.
+4. **When the task is done, open a PR** with `gh pr create` (what changed, why, how it was verified). `main` is protected: PR required, the `Vercel` and `syntax` checks must pass. Squash-merge, and merged branches are deleted automatically.
+5. A `PreToolUse` hook (`.claude/hooks/branch-guard.sh`) blocks edits while on `main` or on a merged branch; if it fires, do step 1.
 
-As of Aug 18 2026, `gh` is installed and authenticated (account `mundaneworkshop`) in the Claude Code environment — use `gh pr create` directly instead of the web compare-link flow. (Earlier sessions had no `gh` CLI and used the web flow instead; if `gh auth status` fails in a future environment, fall back to that.)
+`gh` is authenticated as `mundaneworkshop`; if `gh auth status` fails in a future environment, fall back to the web compare link GitHub prints on push.
+
+CI (`.github/workflows/ci.yml`, check name `syntax`) runs `node --check` over `assets/`, `api/` and every inline `<script>` in `index.html`. There's still no test suite; see `docs/project-history/workflow-html-verification.md` for the manual/Playwright process.
 
 ## Where the rest of the context lives
 
