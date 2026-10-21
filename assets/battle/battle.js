@@ -1042,6 +1042,7 @@ function spawnKit(){
 function openKit(k,via){
   if(k.opening) return; k.opening=.001; k.via=via;
   burst(k.pos,0xffe14a,30,2,.9); burst(k.pos,0xffffff,12,2.6,.5);
+  var au=audioAt(k); if(au&&window.MWAudio&&MWAudio.kitOpen) MWAudio.kitOpen(au);   // the reward cue (Battle Sound Review: Minikit opens)
   kitCount++; updHud(true);
   try{ window.dispatchEvent(new CustomEvent('mw:minikit',{detail:{total:kitCount,via:via,reward:null}})); }catch(e){}
   if(typeof MWBattle.onUnlock==='function'){ try{ MWBattle.onUnlock({total:kitCount,via:via,reward:null}); }catch(e){} }

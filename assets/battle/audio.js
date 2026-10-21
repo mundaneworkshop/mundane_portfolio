@@ -24,6 +24,7 @@ var BASE='assets/audio/';
 var FILES={
   ambSelA:'amb-select-a', ambSelB:'amb-select-b', ambPlay:'amb-play',
   hsEnter:'hs-enter', hsLoop:'hs-loop', hsExit:'hs-exit', capArrive:'cap-arrive', r2:'r2-scream',
+  kitOpen:'minikit-open',   // minikit opening reward sound (review page: "Minikit opens")
   ambSite:'site-ambient'   // site-wide ambient background (Battle Sound Review: "Site-wide ambient background"), plays outside the arcade
 };
 /* fighter destruction: one at random; rebel ships also get the astromech scream 1 time in 10 */
@@ -61,7 +62,7 @@ var HERO_SHARED={
   lowHealth:['lowhealth-chime'],
   deathSeq:['hero-death-seq']   // plays once when the hero starts burning (~3.4 s before the explosion; the Star Citizen multi-ship explosion, trimmed and boosted)
 };
-var LEVEL={ ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
+var LEVEL={ kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
    page's "Death sequence" slot on each fighter card. Key = model id (battle.js MODELS[].id), value = clip names in assets/audio without the extension. Empty until clips are added. */
@@ -344,7 +345,7 @@ var MWAudio={
   uiReady:function(){ return ensure(); },
   uiKinds:function(){ return Object.keys(UI); },
   /* call from any user gesture; safe to call repeatedly */
-  unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive']); },
+  unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive','kitOpen']); },
   isMuted:function(){ return muted; },
   setMuted:function(m){
     muted=!!m; try{ localStorage.setItem('mw_sound',muted?'off':'on'); }catch(e){}
@@ -495,6 +496,11 @@ var MWAudio={
   },
   duckFighter:function(sec){ duckFor(sec,FIGHTER_DUCK); },   // battle.js: the whole burning-death sequence sits above the bed
   setFighterDuck:function(v){ if(typeof v==='number'&&isFinite(v)) FIGHTER_DUCK=Math.max(.05,Math.min(1,v)); },
+  /* a minikit opens: a short reward cue, positioned at the kit, always audible (baseline loudness) and not ducked */
+  kitOpen:function(loc){
+    if(!ctx||!loc) return; if(!bufs.kitOpen){ load('kitOpen'); return; }
+    oneShot('kitOpen',{loc:loc,gain:LEVEL.kitOpen*loud(loc),rate:rr(.97,1.04),dest:master});
+  },
   setMinLoud:function(v){ if(typeof v==='number'&&isFinite(v)) MIN_LOUD=Math.max(0,Math.min(1,v)); },
   heroHitLaser:function(){ oneShot(pick(HERO_SHARED.hitLaser),{gain:LEVEL.hitLaser,rate:.94+Math.random()*.12}); },
   // The same laser-hit pool (HERO_SHARED.hitLaser: add clips there and both the hero and burning fighters pick them up), placed where the fighter is.
