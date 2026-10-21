@@ -7,11 +7,14 @@
      arcadeStart()               hero-select ambience: two muted layers (space-battle bed + hangar interior)
      stage('play')               gameplay ambience, spatialised: its left/right channels are two virtual speakers that stay fixed in the
                                  BATTLE, so orbiting the camera (setYaw) swings the sound field around the listener
-     arrive(pan)                 a Star Destroyer-style hyperspace exit cue; a handful of the capital/support arrivals get one, staggered
-     boom(kind,pan,gain)         fighter destruction (random from a pool; rebel ships also get an astromech scream 1 time in 10)
+     arrive(loc,cls)             a Star Destroyer-style hyperspace exit cue; a handful of the capital/support arrivals get one, staggered
+     boom(kind,loc,rebel)        fighter destruction (random from a pool; rebel ships also get an astromech scream 1 time in 10)
      deathStart/Layer/Final      support + capital destruction (see DEATH): a lead-up sequence OR small layers + a big final
      hero*                       the flown ship: engine idle/active crossfade, tap/hold fire, laser hit, collision, destruction
      stop()                      fade everything out (arcade teardown)
+
+   loc = {pan,gain,p:[x,y,z]} from battle.js: p is the source's direction in CAMERA space, so one-shots are HRTF-positioned in 3D
+   (left/right, above/below, in front/behind) and long ones are re-aimed every frame with track() as the ship/camera move.
 
    The clip → role tables (FILES, POOL_FIGHTER, DEATH, HERO, HERO_SHARED) are the review page's assignments (Battle Sound Review);
    change them here only. */
@@ -88,21 +91,40 @@ function duckFor(sec){
   duck.gain.cancelScheduledValues(t); duck.gain.setTargetAtTime(DUCK_LEVEL,t,.07); duck.gain.setTargetAtTime(1,duckUntil,.5);
 }
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+/* shuffle-bag draw: every clip in a list plays once before any repeats, and never the same one twice in a row */
+var bags={};
+function draw(name,list){
+  var b=bags[name];
+  if(!b||!b.q.length){
+    var q=list.slice(); for(var i=q.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=q[i]; q[i]=q[j]; q[j]=t; }
+    if(b&&q.length>1&&q[q.length-1]===b.last){ var t2=q[0]; q[0]=q[q.length-1]; q[q.length-1]=t2; }
+    b=bags[name]={q:q,last:b&&b.last};
+  }
+  var v=b.q.pop(); b.last=v; return v;
+}
+function rr(a,b){ return a+Math.random()*(b-a); }
+function setPannerPos(pn,p,glide){
+  var x=num(p[0],0), y=num(p[1],0), z=num(p[2],-4), t=now();
+  if(pn.positionX){ if(glide){ pn.positionX.setTargetAtTime(x,t,.05); pn.positionY.setTargetAtTime(y,t,.05); pn.positionZ.setTargetAtTime(z,t,.05); } else { pn.positionX.value=x; pn.positionY.value=y; pn.positionZ.value=z; } }
+  else pn.setPosition(x,y,z);
+}
 
 /* ── one-shots ── */
 function num(v,d){ return (typeof v==='number'&&isFinite(v))?v:d; }
 function oneShot(key,o){ try{ return oneShot_(key,o); }catch(e){ if(window.console) console.warn('MWAudio: sound skipped',key,e); return null; } }   // audio must never be able to break the game's frame loop
 function oneShot_(key,o){
   o=o||{}; if(!ensure()||muted&&!o.force) return null;
-  o.gain=num(o.gain,1); o.rate=num(o.rate,1); if(o.pan!=null) o.pan=num(o.pan,0);
+  o.gain=num(o.gain,1); o.rate=num(o.rate,1);
   if(voices>=18) return null;
   var buf=bufs[key]; if(!buf){ load(key); return null; }   // first use just warms the cache
   var s=ctx.createBufferSource(); s.buffer=buf; if(o.rate) s.playbackRate.value=o.rate;
   var g=gainNode(o.gain==null?1:o.gain), tail=g;
-  if(o.pan!=null&&ctx.createStereoPanner){ var p=ctx.createStereoPanner(); p.pan.value=Math.max(-1,Math.min(1,o.pan)); g.connect(p); tail=p; }
+  var pn=null;
+  if(o.loc&&o.loc.p){ pn=ctx.createPanner(); pn.panningModel='HRTF'; pn.distanceModel='linear'; pn.rolloffFactor=0; pn.coneInnerAngle=360; setPannerPos(pn,o.loc.p,false); g.connect(pn); tail=pn; }   // 3D: direction only, loudness is set by o.gain
+  else if(o.loc&&ctx.createStereoPanner){ var p=ctx.createStereoPanner(); p.pan.value=Math.max(-1,Math.min(1,num(o.loc.pan,0))); g.connect(p); tail=p; }
   if(o.lowpass){ var f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=o.lowpass; tail.connect(f); tail=f; }
   s.connect(g); tail.connect(o.dest||duck); voices++;
-  var h={src:s,gain:g,dur:buf.duration/(o.rate||1)};
+  var h={src:s,gain:g,panner:pn,dur:buf.duration/(o.rate||1)};
   s.onended=function(){ voices--; if(h.onend) h.onend(); try{ s.disconnect(); tail.disconnect(); g.disconnect(); }catch(e){} };
   s.start(now()+(o.delay||0)); return h;
 }
@@ -210,45 +232,52 @@ var MWAudio={
   },
 
   /* a Star Destroyer-style hyperspace exit for a handful of intro arrivals, staggered and slightly detuned */
-  arrive:function(pan,cls){
+  arrive:function(loc,cls){
     if(!ctx||arriveLeft<=0||Math.random()>(cls==='capital'?.75:.35)) return;
-    arriveLeft--; oneShot('capArrive',{pan:pan,gain:LEVEL.capArrive*(.7+Math.random()*.4),rate:.92+Math.random()*.16,delay:Math.random()*.9});
+    arriveLeft--; oneShot('capArrive',{loc:loc,gain:LEVEL.capArrive*rr(.7,1.1),rate:rr(.9,1.1),delay:Math.random()*.9});
   },
 
-  /* fighter destruction. rebel: the ship was on the rebel side → 1 in 10 also screams. pan -1..1, gain 0..1 */
-  boom:function(kind,pan,gain,rebel){
-    if(!ctx||kind!=='fighter') return; var g=(gain==null?1:gain), t=now();
+  /* fighter destruction. rebel: the ship was on the rebel side → 1 in 10 also screams. */
+  boom:function(kind,loc,rebel){
+    if(!ctx||kind!=='fighter'||!loc) return; var g=num(loc.gain,1), t=now();
     if(t-lastFighter<.12) return; lastFighter=t;
-    var key=pick(POOL_FIGHTER); if(!bufs[key]) load(key); else oneShot(key,{pan:pan,gain:LEVEL.fighter*g,rate:.94+Math.random()*.12,lowpass:g<.5?3500:0});
-    if(rebel&&Math.random()<R2_CHANCE){ if(!bufs.r2) load('r2'); else oneShot('r2',{pan:pan,gain:LEVEL.r2*Math.max(.4,g),rate:.96+Math.random()*.1,delay:.12}); }
+    var key=draw('fighter',POOL_FIGHTER); if(!bufs[key]) load(key); else oneShot(key,{loc:loc,gain:LEVEL.fighter*g*rr(.8,1.1),rate:rr(.88,1.14),lowpass:g<.5?3500:0});
+    if(rebel&&Math.random()<R2_CHANCE){ if(!bufs.r2) load('r2'); else oneShot('r2',{loc:loc,gain:LEVEL.r2*Math.max(.4,g),rate:rr(.94,1.08),delay:.12}); }
   },
 
   /* support / capital destruction. deathStart picks the plan and returns how long the ship should take to die (or null: use the default).
-     The plan goes back into deathLayer (each hull explosion) and deathFinal (the break-up). */
-  deathStart:function(cls,pan,gain){
-    if(!ctx) return null; var set=DEATH[cls]; if(!set) return null; var g=(gain==null?1:gain);
-    var plan={cls:cls,seq:null,fin:false};
+     The plan goes back into deathLayer (each hull explosion) and deathFinal (the break-up); plan.h is the lead-up's voice, re-aimed with track().
+     Everything is drawn from shuffle bags and detuned/re-timed per ship so no two deaths sound alike. */
+  deathStart:function(cls,loc){
+    if(!ctx||!loc) return null; var set=DEATH[cls]; if(!set) return null; var g=num(loc.gain,1);
+    var plan={cls:cls,seq:null,fin:false,h:null};
     var ready=set.seq.filter(function(c){ return bufs[c.k]; });
-    if(ready.length&&Math.random()<SEQ_CHANCE){
-      var c=pick(ready); plan.seq=c; plan.fin=!!c.fin; plan.dur=bufs[c.k].duration;
-      oneShot(c.k,{pan:pan,gain:LEVEL.seq*g,dest:master}); duckFor(plan.dur);
+    if(ready.length&&Math.random()<rr(.45,.7)){
+      var k=draw('seq-'+cls,ready.map(function(c){ return c.k; })), c=ready.filter(function(x){ return x.k===k; })[0], rate=rr(.94,1.07);
+      plan.seq=c; plan.fin=!!c.fin; plan.dur=bufs[c.k].duration/rate;
+      plan.h=oneShot(c.k,{loc:loc,gain:LEVEL.seq*g,rate:rate,dest:master}); duckFor(plan.dur);
       return {plan:plan, dur:Math.max(3,plan.dur-SEQ_TAIL)};
     }
     set.seq.forEach(function(c){ load(c.k); }); duckFor(cls==='capital'?8:4.5);   // layers + final: duck for the whole hull chain (the ship's default death time)
     return {plan:plan, dur:null};
   },
-  deathLayer:function(plan,pan,gain){
-    if(!ctx||!plan) return; var t=now(); if(t-lastLayer<.35) return; if(Math.random()>(plan.seq?.35:.7)) return; lastLayer=t;
-    var key=pick(DEATH[plan.cls].small); if(!bufs[key]){ load(key); return; }
-    oneShot(key,{pan:pan,gain:LEVEL.small*(gain==null?1:gain)*(.7+Math.random()*.5),rate:.9+Math.random()*.2,dest:master}); duckFor(1.2);
+  track:function(h,loc){ if(h&&h.panner&&loc&&loc.p) setPannerPos(h.panner,loc.p,true); },   // follow a long sound's source
+  deathLayer:function(plan,loc){
+    if(!ctx||!plan||!loc) return; var t=now(); if(t-lastLayer<.3) return; if(Math.random()>(plan.seq?.35:.7)) return; lastLayer=t;
+    var key=draw('small-'+plan.cls,DEATH[plan.cls].small); if(!bufs[key]){ load(key); return; }
+    oneShot(key,{loc:loc,gain:LEVEL.small*num(loc.gain,1)*rr(.55,1.2),rate:rr(.78,1.3),delay:Math.random()*.15,lowpass:Math.random()<.2?rr(2500,5000):0,dest:master}); duckFor(1.2);
   },
-  deathFinal:function(plan,cls,pan,gain){
-    if(!ctx) return; var g=(gain==null?1:gain);   // every support/capital death ends on a big explosion, lead-up sequence or not
-    var key=pick(DEATH[cls].final); if(!bufs[key]){ load(key); return; }
-    var v=oneShot(key,{pan:pan,gain:LEVEL.final*g,rate:.95+Math.random()*.1,dest:master}); duckFor(v?v.dur:3);
-    if(cls==='capital'){   // a capital breaks up in two blasts a beat apart
-      var k2=pick(DEATH.capital.final.filter(function(x){ return x!==key; })); if(bufs[k2]) oneShot(k2,{pan:pan,gain:LEVEL.final*.75*g,rate:.9+Math.random()*.1,delay:.16,dest:master});
+  deathFinal:function(plan,cls,loc){
+    if(!ctx||!loc) return; var g=num(loc.gain,1), set=DEATH[cls], longest=0, key=draw('final-'+cls,set.final);   // every support/capital death ends on a big explosion, lead-up sequence or not
+    if(!bufs[key]){ load(key); return; }
+    var v=oneShot(key,{loc:loc,gain:LEVEL.final*g*rr(.9,1.05),rate:rr(.86,1.14),lowpass:Math.random()<.25?rr(3000,6000):0,dest:master}); if(v) longest=v.dur;
+    // a capital breaks up in two blasts a beat apart; a support ship sometimes does; either may rumble on with a deep aftershock
+    if(cls==='capital'||Math.random()<.35){
+      var k2=draw('final2-'+cls,set.final.filter(function(x){ return x!==key; }));
+      if(bufs[k2]){ var v2=oneShot(k2,{loc:loc,gain:LEVEL.final*(cls==='capital'?.75:.6)*g,rate:rr(.85,1.12),delay:rr(.08,.34),dest:master}); if(v2) longest=Math.max(longest,v2.dur+.3); }
     }
+    if(Math.random()<.3){ var k3=draw('small-'+cls,set.small); if(bufs[k3]) oneShot(k3,{loc:loc,gain:LEVEL.small*g*.9,rate:rr(.68,.88),delay:rr(.35,.75),dest:master}); }
+    duckFor(longest||3);
   },
 
   /* the flown ship. id = model id ('mil-falcon'…). Ships without clips in HERO stay silent for engine / fire. */

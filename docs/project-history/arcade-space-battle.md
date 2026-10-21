@@ -93,3 +93,7 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 - A collision now gives `INV_COLLIDE` = 3 s of invulnerability (to further collisions AND to lasers) instead of 1 s, so back-to-back hits no longer chain into a quick death. While it lasts the hero's opacity pulses between ~30% and 100% (`heroFlash`, replaces the old hard visible/hidden blink). The hero model's materials are shared with its prototype, so `ejectHero` restores the opacity.
 - `MWAudio` can never break the frame loop: `oneShot` sanitises its numbers and swallows errors (a non-finite pan once threw inside `update` and froze the simulation).
 - Testing note: a hidden Browser pane pauses `requestAnimationFrame`, so the game appears frozen/stuck loading; show the pane before checking game state.
+
+## Audio: spatial one-shots + variety (Oct 20 2026)
+- Destruction/arrival one-shots are HRTF-positioned from the ship's direction in camera space (`audioAt` → `loc.p`; loudness stays a separate gain), and a support/capital ship's long lead-up sound is re-aimed every frame while it dies (`MWAudio.track`), so it follows the ship and the camera orbit. Fighters are positioned when they die (short sounds, not tracked).
+- Variety: clips come from shuffle bags (every clip plays once before any repeats, never twice in a row), pitch is varied widely (~0.8–1.3 for layers, 0.86–1.14 finals, 0.94–1.07 sequences), some finals are low-passed, capitals always get two finals a beat apart (supports 35%), and 30% of deaths add a deep aftershock.

@@ -134,17 +134,22 @@ function trackMaterials(obj,mdl){
 var fogBase=0, camFar=100, camNear=.1;
 var introHold=true, introT0=0, outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=3, LASER_DMG=.2,   /* hero hull: 3 = three collisions (any ship, 1 each); an enemy laser hit chips LASER_DMG */  timers=[];
 function quiet(){ return !!hyper||outroOn; }                       // nobody fires once the exit starts
-function here(s){ return !(s.arriveAt>clockT); }
+function here(s){ return !(s.arriveAt>clockT); }   // false while a ship is still waiting to jump in
 // audio (assets/battle/audio.js): where a ship is on screen -> stereo pan + loudness by camera distance
-var audioRot0=0, _aw=null;
-function audioAt(s,big){   // big = a support/capital ship: heard clearly from anywhere (they sit far out and mostly off-screen), only panned
+var audioRot0=0, _aw=null, _av=null;
+function audioAt(s,big){   // -> {pan,gain,p:[x,y,z]} for MWAudio. p = the ship's direction in CAMERA space (x right, y up, -z ahead), so sounds are 3D-positioned;
+                           // big = a support/capital ship: heard clearly from anywhere (they sit far out, mostly off-screen) — only positioned
   if(!window.MWAudio||!ctx||!G) return null;
-  if(!_aw) _aw=new T.Vector3(); _aw.copy(s.pos); G.localToWorld(_aw); var d=ctx.camera.position.distanceTo(_aw); _aw.project(ctx.camera);
-  if(!isFinite(_aw.x)||!isFinite(d)) return null;
+  if(!_aw){ _aw=new T.Vector3(); _av=new T.Vector3(); }
+  _aw.copy(s.pos); G.localToWorld(_aw); var d=ctx.camera.position.distanceTo(_aw);
+  _av.copy(_aw).applyMatrix4(ctx.camera.matrixWorldInverse); var L=_av.length();
+  var p=L>1e-6?[_av.x/L*4,_av.y/L*4,_av.z/L*4]:[0,0,-4];
+  _aw.project(ctx.camera);
+  if(!isFinite(_aw.x)||!isFinite(d)||!isFinite(p[0])||!isFinite(p[1])||!isFinite(p[2])) return null;
   var g=Math.max(.12,Math.min(1,16/Math.max(d,1)));
-  if(big) return { pan:Math.max(-1,Math.min(1,_aw.z>1?-_aw.x:_aw.x)), gain:.7+.3*g };   // behind the camera the projected x flips: mirror it so left stays left
-  return { pan:Math.max(-1,Math.min(1,_aw.x)), gain:g*(Math.abs(_aw.x)>1.2||_aw.z>1?.5:1) };
-}                   // false while a ship is still waiting to jump in
+  if(big) return { pan:Math.max(-1,Math.min(1,_aw.z>1?-_aw.x:_aw.x)), gain:.7+.3*g, p:p };
+  return { pan:Math.max(-1,Math.min(1,_aw.x)), gain:g*(Math.abs(_aw.x)>1.2||_aw.z>1?.5:1), p:p };
+}
 var BTU={ exp:{value:1} }, SELDIM=.3;
 function patchMaterial(m){   // battle-only filmic curve: highlights roll off instead of clipping, and it does NOT touch the hologram's materials (a global renderer.toneMapping would)
   if(m.userData.btPatched||!m.isMeshStandardMaterial) return; m.userData.btPatched=true;
@@ -324,7 +329,7 @@ function tryScheduleIntro(){
   introScheduled=true;
 }
 function startArrive(s){
-  var au=audioAt(s); if(au&&(s.cls==='capital'||s.cls==='support')) MWAudio.arrive(au.pan,s.cls);
+  var au=audioAt(s); if(au&&(s.cls==='capital'||s.cls==='support')) MWAudio.arrive(au,s.cls);
   s.arr=0; flash(s.pos,Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*(s.cls==='capital'?2.6:2)+.25,0xcff8ff);
 }
 function updArrive(s,dt){
@@ -456,7 +461,7 @@ function updSparks(dt){
   sparks.geometry.attributes.position.needsUpdate=true; sparks.geometry.attributes.color.needsUpdate=true;
 }
 function killShip(s){
-  var au=audioAt(s); if(au) MWAudio.boom('fighter',au.pan,au.gain,s.team===REB);
+  var au=audioAt(s); if(au) MWAudio.boom('fighter',au,s.team===REB);
   burst(s.pos,0xffa040,26,1.7,.85); burst(s.pos,0xffffff,10,2.4,.45);
   shatter(s,{small:true}); s.form=null;
   s.alive=false; s.root.visible=false; s.respawn=rnd(2.5,5.5); s.target=null;
@@ -467,7 +472,7 @@ function startDying(s){
   if(s.dying||!s.hasA) return;
   s.alive=false; s.target=null; s.hpShow=0; if(s.barEl) s.barEl.style.display='none';
   s.dying={t:0,dur:s.cls==='capital'?8:4.5,nx:0,base:s.pos.clone()};
-  var au=audioAt(s,true); if(au&&window.MWAudio){ var ad=MWAudio.deathStart(s.cls,au.pan,au.gain); if(ad){ s.dying.aud=ad.plan; if(ad.dur) s.dying.dur=ad.dur; } }   // a lead-up sequence sets how long the ship takes to die
+  var au=audioAt(s,true); if(au&&window.MWAudio){ var ad=MWAudio.deathStart(s.cls,au); if(ad){ s.dying.aud=ad.plan; if(ad.dur) s.dying.dur=ad.dur; } }   // a lead-up sequence sets how long the ship takes to die
 }
 function hullPoint(s,out){
   var c=s.c; out.set(rnd(-1,1)*c.hx,rnd(-.6,1)*c.hy,rnd(-1,1)*c.hz); s.root.updateMatrix(); return out.applyMatrix4(s.root.matrix);
@@ -476,11 +481,12 @@ function updDying(s,dt){
   var D=s.dying; D.t+=dt; var k=Math.min(1,D.t/D.dur), sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital';
   var amp=(.003+.02*k)*sz; if(!D.ph) D.ph=[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)];
   s.pos.set(D.base.x+amp*(Math.sin(D.t*5.3+D.ph[0])+.5*Math.sin(D.t*11.7+D.ph[3])), D.base.y+amp*(Math.sin(D.t*6.1+D.ph[1])+.5*Math.sin(D.t*9.4+D.ph[0])), D.base.z+amp*(Math.sin(D.t*4.7+D.ph[2])+.5*Math.sin(D.t*12.9+D.ph[1])));   // the hull shudders harder as it goes — smooth low-frequency wobble, not per-frame noise
+  if(D.aud&&D.aud.h&&window.MWAudio){ var au3=audioAt(s,true); if(au3) MWAudio.track(D.aud.h,au3); }   // the lead-up sound follows the dying ship (and the camera orbit)
   D.nx-=dt;
   while(D.nx<=0){
     D.nx+=(.55-.4*k)*rnd(.6,1.4)/(big?1:.8);
     hullPoint(s,_v1);
-    if(D.aud){ var au2=audioAt(s,true); if(au2) MWAudio.deathLayer(D.aud,au2.pan,au2.gain); }
+    if(D.aud){ var au2=audioAt(s,true); if(au2) MWAudio.deathLayer(D.aud,au2); }
     burst(_v1,0xff9a3a,14+Math.round(26*k),1.2+sz*.5,.9); burst(_v1,0xffffff,5,2+sz*.4,.4);
     flash(_v1,sz*(.35+.5*k)*rnd(.7,1.3),0xffa850);
     if(k>.6&&Math.random()<.35){ hullPoint(s,_v2); flash(_v2,sz*.9,0xffe2a0); burst(_v2,0xffd070,40,2.4+sz*.6,1.1); }   // secondary blasts late in the sequence
@@ -595,7 +601,7 @@ function fragment(s){
 }
 function later(delay,fn){ timers.push({t:delay,fn:fn}); }
 function breakApart(s){
-  var au=audioAt(s,true); if(au) MWAudio.deathFinal(s.dying&&s.dying.aud,s.cls,au.pan,au.gain);
+  var au=audioAt(s,true); if(au) MWAudio.deathFinal(s.dying&&s.dying.aud,s.cls,au);
   var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', pos=s.pos.clone();
   // THE big one: as the hull shatters — an enormous white flash, a ring of blasts across the hull, then two delayed aftershocks
   flash(pos,sz*6,0xffffff); burst(pos,0xffffff,70,5+sz,.9); burst(pos,0xffa040,220,3.5+sz*1.2,1.9);
