@@ -10268,7 +10268,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
-      if(window.MWAudio) MWAudio.unlock();   // the planet click is the user gesture that lets audio start
+      if(window.MWAudio){ MWAudio.unlock(); MWAudio.siteStop(); }   // the planet click is the user gesture that lets audio start; the arcade has its own ambience, so the site's steps aside
       arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
@@ -10384,10 +10384,11 @@ f 2469//2469 2470//2470 2434//2434
     // Back to the galaxy runs through the Star Wars screen wipe (assets/bric-wipe.js, random variant): the arcade tears down while the panel fully covers the page.
     // Play again skips it (hero select, not the galaxy). The wipe no-ops under reduced motion.
     function finishArcadeAfterOutro(noWipe){
-      var swap=function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(); };
+      var swap=function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(noWipe===true); };
       if(noWipe===true||!window.bricWipe) swap(); else window.bricWipe.play(null,swap);
     }
-    function finishArcadeExit(){
+    function finishArcadeExit(again){
+      if(!again&&window.MWAudio&&MWAudio.siteStart) MWAudio.siteStart();   // back on the galaxy: the site-wide ambience returns (Play again goes straight to hero select, so it stays off)
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
       document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
       buildStars();                                                   // back to the galaxy's tight star field
@@ -10396,6 +10397,10 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); if(window.MWAudio&&!arcadeExiting) MWAudio.ui('back'); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
     var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
+    // site-wide ambient background (assets/battle/audio.js → MWAudio.siteStart): browsers keep audio locked until a gesture, so it starts on the first press or key anywhere
+    // (the entry gate's click counts) and plays under the whole site outside the arcade. The sound switch mutes it with everything else.
+    (function(){ var done=false; function go(){ if(done) return; done=true; ['pointerdown','keydown'].forEach(function(t){ document.removeEventListener(t,go,true); }); if(window.MWAudio&&!window.__mwArcade) MWAudio.siteStart(); }
+      ['pointerdown','keydown'].forEach(function(t){ document.addEventListener(t,go,true); }); })();
     // sound switches (.mw-sound-switch: the galaxy-view one and the arcade hero-select one) and the M key share one persisted setting (localStorage['mw_sound'])
     // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover
     // (mouse only), switches latch on/off, close/back controls play the back sound. Author tooling and the sound switches themselves are skipped.
