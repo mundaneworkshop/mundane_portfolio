@@ -244,7 +244,7 @@ function heroStop(fadeSec){
    plastic housings ring strongest around 250 Hz (body 100-160 Hz), rocker switches are a soft low thud, and rotary switches ratchet as a
    run of impacts ~8 ms apart.
    There are no pitched bleeps. Pitch/level jitter per press; MWAudio.uiTune() scales crack / body / ring / decay globally. */
-var noiseBuf=null, uiLast={}, TUNE={crack:1,body:1,ring:1,decay:1};
+var noiseBuf=null, uiLast={}, TUNE={crack:1.5,body:1,ring:1,decay:1.5};   // picked by ear in tools/ui-sounds.html
 function noise(){
   if(noiseBuf) return noiseBuf;
   var n=Math.round(ctx.sampleRate*.25); noiseBuf=ctx.createBuffer(1,n,ctx.sampleRate); var d=noiseBuf.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return noiseBuf;
@@ -286,7 +286,7 @@ function shutter(out,t,p,L,dir){
   var span=(pat[pat.length-1]-pat[0])/1000; mSwish(out,t+span*.15,span*.6,.07*L,2200*p);
 }
 var UI={
-  hover:  function(o,t,p,L){ mCrack(o,t,6200*p,5,.0025,1.1*L); },
+  hover:  function(o,t,p,L){ mCrack(o,t,6200*p,5,.0025,.65*L); },
   click:  function(o,t,p,L){ impact(o,t,5000*p,1450*p,0,.9*L,.03); },
   press:  function(o,t,p,L){ impact(o,t,3100*p,1500*p,150*p,.85*L,.018); impact(o,t+.012,2300*p,1100*p,0,.45*L,.012); impact(o,t+.022,3600*p,0,0,.3*L); },   // click-clack, three stages
   release:function(o,t,p,L){ mBody(o,t,200*p,.02,.5*L); mCrack(o,t,2500*p,2.5,.004,.25*L); },   // soft rocker-style thud
