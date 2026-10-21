@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Arcade reticle prototype</title>
+<link rel="stylesheet" href="../assets/tokens/bric-tokens.css">
+<style>
+  /* Dev tool (not shipped): prototype of the arcade-mode targeting reticle. The site-wide reticle (assets/bric-reticle.js) is untouched.
+     Colours are existing tokens only: amber for the crosshair + grids, off-white for the hit marker. */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;display:grid;grid-template-columns:1fr 288px;background:var(--bric-surface-scene);color:var(--bric-content-primary);font:12px/1.5 'Space Grotesk',system-ui,sans-serif}
+  #stage{position:relative;overflow:hidden;cursor:none;touch-action:none}
+  #stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #hud{position:absolute;left:20px;top:16px;max-width:46ch;color:var(--bric-content-secondary);letter-spacing:.06em;text-transform:uppercase;font-size:11px;pointer-events:none}
+  #hud b{color:var(--bric-content-primary);font-weight:500}
+  aside{overflow:auto;padding:20px;border-left:1px solid var(--bric-border-default);background:var(--bric-surface-raised)}
+  h1{margin:0 0 4px;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase}
+  p{margin:0 0 16px;color:var(--bric-content-secondary)}
+  .ctl{display:grid;grid-template-columns:1fr 44px;gap:2px 8px;margin:0 0 10px;align-items:center}
+  .ctl label{color:var(--bric-content-secondary);letter-spacing:.06em;text-transform:uppercase;font-size:10px}
+  .ctl output{text-align:right;color:var(--bric-content-primary);font-variant-numeric:tabular-nums}
+  .ctl input[type=range]{grid-column:1/3;width:100%;accent-color:var(--bric-register-amber-solid)}
+  .chk{display:flex;gap:8px;align-items:center;margin:0 0 10px;color:var(--bric-content-secondary);letter-spacing:.06em;text-transform:uppercase;font-size:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .bric-btn{cursor:pointer}
+  #read{margin-top:14px;color:var(--bric-content-secondary);font-variant-numeric:tabular-nums;white-space:pre}
+  @media (max-width:760px){ body{grid-template-columns:1fr} aside{display:none} }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg"></canvas>
+  <canvas id="fx"></canvas>
+  <div id="hud"><b>Move</b> the cursor: the grids parallax with its speed and acceleration, and settle when it stops. <b>Click</b> to fire. <b>H</b> = simulate a hit. Hit a drifting target to see the real thing.</div>
+</div>
+<aside>
+  <h1>Arcade reticle</h1>
+  <p>Oval = crosshair. The reticle runs at a low, stepped frame rate (8 fps by default) like the CRT displays in the films; set the slider to 60 for smooth. The two perspective grids show turn angle: they recede toward the oval (the convergence slider sets how much), the direction of the cursor yaws / tilts them, and the harder you steer the closer they swing to edge-on. Everything below is tunable.</p>
+  <div id="ctls"></div>
+  <label class="chk"><input type="checkbox" id="inv"> Invert turn direction</label>
+  <label class="chk"><input type="checkbox" id="stepPos"> Step the cursor position at the same frame rate</label>
+  <div class="row">
+    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="hit" type="button">Simulate hit</button>
+    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="reset" type="button">Reset</button>
+    <button class="bric-btn bric-btn--primary bric-btn--sm" id="copy" type="button">Copy settings</button>
+  </div>
+  <div id="read"></div>
+</aside>
+<link rel="stylesheet" href="../assets/bric-components.css">
+<script>
+(function(){
+  'use strict';
+  var DEF={ turn:53, pitch:40, rest:80, edge:1, edgeMax:86, accel:.5, stiff:90, damp:11, vref:900,
+            cells:4, gw:80, gh:124, dist:24, persp:300, ovalW:13, ovalH:25, scale:1, weight:1.5, glow:8, tick0:6, tick1:15, hitW:4, fps:8 };
+  var CFG=JSON.parse(JSON.stringify(DEF)), INV=false, STEPPOS=false;
+  var SCHEMA=[
+    ['turn','Direction: yaw at full steer (deg)',0,80,1],['pitch','Direction: pitch at full steer (deg)',0,60,1],
+    ['rest','Convergence toward the oval (deg)',0,80,1],['edge','Swing toward edge-on at full steer',0,1,.05],['edgeMax','Edge-on angle (deg)',70,89,1],
+    ['accel','Acceleration weight',0,2,.05],
+    ['stiff','Response (spring stiffness)',20,300,5],['damp','Settle (damping)',2,30,.5],['vref','Pointer speed for full steer (px/s)',200,2500,50],
+    ['cells','Grid cells',2,9,1],['gw','Grid width (px)',30,140,2],['gh','Grid height (px)',60,220,2],['dist','Gap: centre to inner grid edge (px)',4,100,1],
+    ['persp','Perspective depth',200,900,10],['ovalW','Oval half-width (px)',6,30,1],['ovalH','Oval half-height (px)',10,50,1],
+    ['hitW','Hit marker stroke (px)',1,8,.25],['fps','Reticle frame rate (fps; 60 = smooth)',4,60,1],['scale','Reticle scale',.5,2,.05],['weight','Line weight (px)',.75,3,.25],['glow','Glow (px)',0,20,1]
+  ];
+  var css=getComputedStyle(document.documentElement);
+  var AMBER=(css.getPropertyValue('--bric-register-amber-text')||'').trim()||'#E9A73E';
+  var WHITE=(css.getPropertyValue('--bric-content-primary')||'').trim()||'#F5F4F2';
+  var DIM=(css.getPropertyValue('--bric-content-secondary')||'').trim()||'#94908A';
+  var rmq=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
+  function reduced(){ return !!(rmq&&rmq.matches); }
+
+  // ── controls
+  var ctls=document.getElementById('ctls'), outs={};
+  SCHEMA.forEach(function(d){
+    var w=document.createElement('div'); w.className='ctl';
+    w.innerHTML='<label for="c_'+d[0]+'">'+d[1]+'</label><output></output><input type="range" id="c_'+d[0]+'" min="'+d[2]+'" max="'+d[3]+'" step="'+d[4]+'">';
+    var i=w.querySelector('input'), o=w.querySelector('output'); outs[d[0]]=[i,o];
+    i.value=CFG[d[0]]; o.textContent=CFG[d[0]];
+    i.addEventListener('input',function(){ CFG[d[0]]=+i.value; o.textContent=i.value; });
+    ctls.appendChild(w);
+  });
+  document.getElementById('inv').addEventListener('change',function(e){ INV=e.target.checked; });
+  document.getElementById('stepPos').addEventListener('change',function(e){ STEPPOS=e.target.checked; });
+  document.getElementById('reset').addEventListener('click',function(){ Object.keys(DEF).forEach(function(k){ CFG[k]=DEF[k]; if(outs[k]){ outs[k][0].value=DEF[k]; outs[k][1].textContent=DEF[k]; } }); });
+  document.getElementById('copy').addEventListener('click',function(){ var v=JSON.stringify(Object.assign({invert:INV,stepPos:STEPPOS},CFG)); if(navigator.clipboard) navigator.clipboard.writeText(v).catch(function(){}); document.getElementById('read').dataset.copied=v; });
+  document.getElementById('hit').addEventListener('click',function(){ hitT=performance.now(); });
+
+  // ── canvases
+  var stage=document.getElementById('stage'), bg=document.getElementById('bg'), fx=document.getElementById('fx');
+  var bctx=bg.getContext('2d'), ctx=fx.getContext('2d'), W=0,H=0,DPR=1, stars=[];
+  function resize(){
+    DPR=Math.min(2,window.devicePixelRatio||1); W=stage.clientWidth; H=stage.clientHeight;
+    [bg,fx].forEach(function(c){ c.width=Math.round(W*DPR); c.height=Math.round(H*DPR); });
+    stars=[]; for(var i=0;i<120;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.3,a:Math.random()*.5+.15});
+    drawBg();
+  }
+  function drawBg(){
+    bctx.setTransform(DPR,0,0,DPR,0,0); bctx.clearRect(0,0,W,H); bctx.fillStyle=DIM;
+    stars.forEach(function(s){ bctx.globalAlpha=s.a; bctx.beginPath(); bctx.arc(s.x,s.y,s.r,0,6.2832); bctx.fill(); }); bctx.globalAlpha=1;
+  }
+  window.addEventListener('resize',resize); resize();
+
+  // ── pointer
+  var px=W/2, py=H/2, inside=false;
+  stage.addEventListener('pointermove',function(e){ var r=stage.getBoundingClientRect(); px=e.clientX-r.left; py=e.clientY-r.top; inside=true; });
+  stage.addEventListener('pointerleave',function(){ inside=false; });
+  stage.addEventListener('pointerdown',function(e){ var r=stage.getBoundingClientRect(); px=e.clientX-r.left; py=e.clientY-r.top; inside=true; fire(); });
+  window.addEventListener('keydown',function(e){ if(/INPUT|TEXTAREA/.test((e.target||{}).tagName||'')) return; if(e.key==='h'||e.key==='H') hitT=performance.now(); });
+
+  // ── targets: drifting triangles (the blips in the reference)
+  var targets=[], shots=[], hitT=-1e9;
+  function spawn(){ var a=Math.random()*6.2832; return {x:Math.random()*W,y:Math.random()*H*.8+H*.05,vx:Math.cos(a)*14,vy:Math.sin(a)*10,rot:Math.random()*6.2832,spin:(Math.random()-.5)*.6}; }
+  function seed(){ targets=[]; for(var i=0;i<7;i++) targets.push(spawn()); }
+  seed(); window.addEventListener('resize',seed);
+  function fire(){
+    shots.push({t:performance.now(),x:px,y:py});
+    for(var i=0;i<targets.length;i++){ var t=targets[i]; var dx=t.x-px, dy=t.y-py; if(dx*dx+dy*dy<26*26){ hitT=performance.now(); targets[i]=spawn(); break; } }
+  }
+
+  // ── steering model: pointer velocity + acceleration drive a damped spring per axis; it returns to 0 when the pointer is still
+  var lpx=px, lpy=py, vx=0, vy=0, ax=0, ay=0, sx=0, sy=0, svx=0, svy=0, last=performance.now(), rd=document.getElementById('read');
+  function step(dt){
+    var rvx=(px-lpx)/dt, rvy=(py-lpy)/dt; lpx=px; lpy=py;
+    var k=Math.min(1,dt*22), nvx=vx+(rvx-vx)*k, nvy=vy+(rvy-vy)*k;
+    ax+=(((nvx-vx)/dt)-ax)*k; ay+=(((nvy-vy)/dt)-ay)*k; vx=nvx; vy=nvy;
+    var tx=Math.tanh((vx+CFG.accel*.05*ax)/CFG.vref), ty=Math.tanh((vy+CFG.accel*.05*ay)/CFG.vref);   // saturates: a harder flick = more parallax, never past full
+    if(!inside){ tx=0; ty=0; }
+    svx+=(CFG.stiff*(tx-sx)-CFG.damp*svx)*dt; svy+=(CFG.stiff*(ty-sy)-CFG.damp*svy)*dt; sx+=svx*dt; sy+=svy*dt;
+    sx=Math.max(-1.25,Math.min(1.25,sx)); sy=Math.max(-1.25,Math.min(1.25,sy));   // a little overshoot is allowed, it reads as weight
+  }
+
+  // ── projection: each grid is a plane in 3D; the whole pair yaws / pitches about the crosshair, then everything is perspective-projected
+  var D2R=Math.PI/180;
+  function proj(x,y,z,yaw,pit){
+    var cy=Math.cos(yaw), sy_=Math.sin(yaw), x1=x*cy+z*sy_, z1=-x*sy_+z*cy;
+    var cp=Math.cos(pit), sp=Math.sin(pit), y2=y*cp-z1*sp, z2=y*sp+z1*cp;
+    var k=CFG.persp/(CFG.persp+z2); return [x1*k,y2*k,k];
+  }
+  function clamp01(v){ return v<0?0:(v>1?1:v); }
+  // One grid plane. phiDeg = its angle from face-on (0 = flat to the viewer, ~90 = edge-on). cx = where its centre sits: the caller derives it from the gap so the inner edge never crosses the oval.
+  function planeDepth(cx,yaw,pit){ return proj(cx,0,0,yaw,pit)[2]; }
+  function drawGrid(side,yaw,pit,phiDeg,cx){
+    var phi=phiDeg*D2R, ux=Math.cos(phi), uz=-side*Math.sin(phi), n=CFG.cells, hw=CFG.gw/2, hh=CFG.gh/2;
+    function P(a,b){ return proj(cx+ux*a, b, uz*a, yaw, pit); }   // inner edge sits farther away: both grids recede toward the crosshair, which is their vanishing point
+    function line(a0,b0,a1,b1,w,al){ var p=P(a0,b0), q=P(a1,b1), k=(p[2]+q[2])/2; ctx.globalAlpha=al*Math.min(1,.35+k*.65); ctx.lineWidth=w*CFG.weight; ctx.beginPath(); ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke(); }
+    for(var i=0;i<=n;i++){
+      var edge=(i===0||i===n), a=-hw+CFG.gw*i/n, b=-hh+CFG.gh*i/n, w=edge?1:.6, al=edge?1:.7;
+      line(a,-hh,a,hh,w,al);   // verticals
+      line(-hw,b,hw,b,w,al);   // horizontals
+    }
+  }
+  function drawOval(){
+    ctx.globalAlpha=1; ctx.lineWidth=CFG.weight*1.1; ctx.beginPath(); ctx.ellipse(0,0,CFG.ovalW,CFG.ovalH,0,0,6.2832); ctx.stroke();
+  }
+  function drawHit(now){
+    var T=(now-hitT)/(reduced()?240:320); if(T<0||T>=1) return;
+    var e=1-Math.pow(1-Math.min(1,T*2.2),3), off=reduced()?0:(1-e)*9, al=T<.35?1:1-(T-.35)/.65;   // snaps in from slightly outside, holds, fades
+    ctx.save(); ctx.strokeStyle=AMBER; ctx.shadowColor=AMBER; ctx.shadowBlur=CFG.glow*.6; ctx.globalAlpha=al; ctx.lineWidth=CFG.hitW; ctx.lineCap='round';   // same amber as the crosshair, heavier stroke so it reads as an event
+    [[1,1],[-1,1],[-1,-1],[1,-1]].forEach(function(d){ var r0=CFG.tick0+off, r1=CFG.tick1+off, s=Math.SQRT1_2;   // four ticks on the diagonals, centre left open
+      ctx.beginPath(); ctx.moveTo(d[0]*s*r0,d[1]*s*r0); ctx.lineTo(d[0]*s*r1,d[1]*s*r1); ctx.stroke(); });
+    ctx.restore();
+  }
+
+  // ── stepped frame rate: the reticle (grid pose + hit marker, optionally its position) only refreshes every 1/fps seconds, so it reads like a low-rate CRT display
+  var shown={sx:0,sy:0,px:0,py:0,now:0}, lastTick=-1e9;
+  function tick(now){
+    var iv=1000/Math.max(4,CFG.fps);
+    if(CFG.fps>=60||reduced()||now-lastTick>=iv-2){ lastTick=(now-lastTick<iv*2)?lastTick+iv:now;   // carry the remainder so the average rate is exact even when fps does not divide the display rate
+      shown.sx=sx; shown.sy=sy; shown.px=px; shown.py=py; shown.now=now; }
+  }
+
+  // ── frame
+  function frame(now){
+    var dt=Math.min(.05,Math.max(.001,(now-last)/1000)); last=now;
+    step(dt); tick(now);
+    ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+    // targets
+    ctx.fillStyle=AMBER; ctx.globalAlpha=.9;
+    targets.forEach(function(t){
+      if(!reduced()){ t.x+=t.vx*dt; t.y+=t.vy*dt; t.rot+=t.spin*dt; if(t.x<-20) t.x=W+20; if(t.x>W+20) t.x=-20; if(t.y<-20) t.y=H+20; if(t.y>H+20) t.y=-20; }
+      ctx.save(); ctx.translate(t.x,t.y); ctx.rotate(t.rot); ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-7,6); ctx.lineTo(-4,0); ctx.lineTo(-7,-6); ctx.closePath(); ctx.fill(); ctx.restore();
+    });
+    // shots (a short laser from the bottom centre to where you fired)
+    ctx.lineCap='round'; ctx.strokeStyle=WHITE; ctx.lineWidth=1.5;
+    shots=shots.filter(function(s){ var a=1-(now-s.t)/140; if(a<=0) return false; ctx.globalAlpha=a*.8; ctx.beginPath(); ctx.moveTo(W/2,H); ctx.lineTo(s.x,s.y); ctx.stroke(); return true; });
+    // reticle
+    if(inside){
+      var steer=reduced()?0:1, yaw=shown.sx*CFG.turn*D2R*(INV?-1:1)*steer, pit=-shown.sy*CFG.pitch*D2R*steer;
+      var spread=clamp01(Math.hypot(shown.sx,shown.sy))*steer;                                  // how hard you are steering, any direction: 0 = rest, 1 = full
+      var phi=CFG.rest+(CFG.edgeMax-CFG.rest)*spread*CFG.edge;                      // rest = the convergence slider; steering swings it toward edge-on
+      var cx=CFG.dist+(CFG.gw/2)*Math.cos(phi*D2R);                                 // centre placed so the inner edge stays CFG.dist from the oval at every angle: the grids never overlap
+      ctx.save(); ctx.translate(STEPPOS?shown.px:px,STEPPOS?shown.py:py); ctx.scale(CFG.scale,CFG.scale);
+      ctx.strokeStyle=AMBER; ctx.shadowColor=AMBER; ctx.shadowBlur=CFG.glow; ctx.lineCap='round'; ctx.lineJoin='round';
+      var order=[-1,1].sort(function(a,b){ return planeDepth(a*cx,yaw,pit)-planeDepth(b*cx,yaw,pit); });   // farther plane first, so the nearer one overlaps it when yawed
+      order.forEach(function(sd){ drawGrid(sd,yaw,pit,phi,sd*cx); });
+      drawOval();
+      ctx.shadowBlur=0; drawHit(shown.now);
+      ctx.restore();
+    }
+    rd.textContent='steer  x '+sx.toFixed(2)+'   y '+sy.toFixed(2)+'\nspeed  '+Math.round(Math.hypot(vx,vy))+' px/s'+(rd.dataset.copied?'\n\ncopied:\n'+rd.dataset.copied:'');
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  // test hooks for the preview
+  window.__ret={cfg:CFG,hit:function(){ hitT=performance.now(); },steer:function(){ return {x:sx,y:sy}; },shown:function(){ return shown; }};
+})();
+</script>
+</body>
+</html>
