@@ -10336,7 +10336,7 @@ f 2469//2469 2470//2470 2434//2434
       var SEL='#arcadeExit button, #bt-car button, #arcadeResult button', downEl=null;
       function btn(e){ var t=e.target&&e.target.closest?e.target.closest(SEL):null; return (t&&!t.disabled)?t:null; }
       function kind(b){ if(b.id==='arcadeSndBtn') return null; if(b.id==='arcadeExitBtn'||b.id==='arcadeEscBtn'||b.id==='arClose') return 'back'; if(b.dataset&&b.dataset.d) return 'step'; if(b.classList.contains('bt-play')||b.id==='arAgain') return 'confirm'; return 'press'; }
-      document.addEventListener('pointerdown',function(e){ if(!window.MWAudio||!arcadeActive||e.button>0) return; var b=btn(e); if(!b) return; downEl=b; var k=kind(b); if(k){ MWAudio.uiReady(); MWAudio.ui(k); } },true);
+      document.addEventListener('pointerdown',function(e){ if(!window.MWAudio||!arcadeActive||e.button>0) return; var b=btn(e); if(!b) return; downEl=b; var k=kind(b); if(k){ MWAudio.uiReady(); MWAudio.ui(k,false,k==='step'?{dir:+b.dataset.d}:null); } },true);
       document.addEventListener('pointerup',function(e){ if(!window.MWAudio||!downEl) return; var b=btn(e), k=b&&kind(b); if(b===downEl&&k==='press') MWAudio.ui('release'); downEl=null; },true);
       document.addEventListener('pointerover',function(e){ if(!window.MWAudio||!arcadeActive) return; var b=btn(e); if(!b) return; var from=e.relatedTarget&&e.relatedTarget.closest?e.relatedTarget.closest(SEL):null; if(from!==b) MWAudio.ui('hover'); },true);
     })();

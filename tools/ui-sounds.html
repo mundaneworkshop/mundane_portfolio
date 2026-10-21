@@ -25,7 +25,7 @@
 </head>
 <body>
 <h1>Arcade UI sound lab</h1>
-<p>Click, hold, release and hover to hear each sound. They are synthesised live (no files), so every press varies slightly. Sounds start after your first click.</p>
+<p>Mechanical, modelled on measurements of two reference reels (switches, buttons, camera shutter, clicks). Click, hold, release and hover to hear each sound. They are synthesised live (no files), so every press varies slightly. Sounds start after your first click.</p>
 
 <h2>Every sound</h2>
 <div class="row" id="all"></div>
@@ -36,25 +36,35 @@
 <h2>Carousel and confirm</h2>
 <div class="row"><button class="live" data-k="step" aria-label="Previous">&#9668;</button><button class="live" data-k="confirm">Play</button><button class="live" data-k="step" aria-label="Next">&#9658;</button><button class="live" data-k="back">Exit arcade</button></div>
 
+<h2>Tune the mechanics (applies to every sound)</h2>
+<div id="tune"></div>
+<div class="row"><button id="copy">Copy settings</button><button id="resetTune">Reset</button><span id="copied" style="color:var(--mute)"></span></div>
+
 <h2>Switch</h2>
 <div class="row"><button class="sw" id="sw" aria-pressed="true">Sound on</button></div>
 
 <h2>Rapid presses</h2>
 <div class="row"><button id="rapid">Ten presses, 80 ms apart</button></div>
 
-<p class="note">The recipes live in the <code>UI</code> table in <code>assets/battle/audio.js</code> (tick = bandpassed noise edge, thunk = pitch-dropping body, bleep = stepped square). Tell me what to change: crisper, heavier, higher, softer, more beepy.</p>
+<p class="note">The recipes live in the <code>UI</code> table in <code>assets/battle/audio.js</code> (crack = the sharp edge, ring = the housing resonating, body = the low thump; shutter = 2–4 impacts with a faint blade swish). Tell me what to change, or paste the settings you land on.</p>
 
 <script src="../assets/battle/audio.js"></script>
 <script>
 (function(){
-  var kinds=['hover','press','release','step','confirm','back','on','off'], all=document.getElementById('all');
+  var kinds=MWAudio.uiKinds(), all=document.getElementById('all');
   kinds.forEach(function(k){ var b=document.createElement('button'); b.textContent=k; b.addEventListener('pointerdown',function(){ MWAudio.uiReady(); MWAudio.ui(k,true); }); all.appendChild(b); });
   [].forEach.call(document.querySelectorAll('.live'),function(b){
     var k=b.dataset.k;
     b.addEventListener('pointerenter',function(){ MWAudio.uiReady(); MWAudio.ui('hover',true); });
-    b.addEventListener('pointerdown',function(){ MWAudio.uiReady(); MWAudio.ui(k,true); });
+    var dir=b.getAttribute('aria-label')==='Previous'?-1:(b.getAttribute('aria-label')==='Next'?1:0);
+    b.addEventListener('pointerdown',function(){ MWAudio.uiReady(); MWAudio.ui(k,true,dir?{dir:dir}:null); });
     b.addEventListener('pointerup',function(){ if(k==='press') MWAudio.ui('release',true); });
   });
+  var tune=document.getElementById('tune'), cur=MWAudio.uiTune(), ids=[['crack','Crack (the sharp edge)'],['body','Body (low thump)'],['ring','Ring (housing resonance)'],['decay','Decay (tight \u2194 loose)']];
+  ids.forEach(function(d){ var w=document.createElement('label'); w.style.cssText='display:flex;gap:12px;align-items:center;margin:6px 0;color:var(--mute);font-size:12px'; w.innerHTML='<span style="width:210px">'+d[1]+'</span><input type="range" min="0.3" max="2.5" step="0.05" value="'+cur[d[0]]+'" style="width:220px"><output style="width:40px;color:var(--ink)">'+cur[d[0]]+'</output>';
+    var inp=w.querySelector('input'), out=w.querySelector('output'); inp.addEventListener('input',function(){ var o={}; o[d[0]]=+inp.value; out.textContent=MWAudio.uiTune(o)[d[0]].toFixed(2); }); inp.addEventListener('change',function(){ MWAudio.uiReady(); MWAudio.ui('press',true); }); tune.appendChild(w); });
+  document.getElementById('copy').addEventListener('click',function(){ var v=JSON.stringify(MWAudio.uiTune()); (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){ document.getElementById('copied').textContent='copied '+v; },function(){ document.getElementById('copied').textContent=v; }); });
+  document.getElementById('resetTune').addEventListener('click',function(){ MWAudio.uiTune({crack:1,body:1,ring:1,decay:1}); [].forEach.call(tune.querySelectorAll('input'),function(i){ i.value=1; i.nextElementSibling.textContent='1'; }); });
   var sw=document.getElementById('sw'), on=true;
   sw.addEventListener('click',function(){ MWAudio.uiReady(); on=!on; MWAudio.ui(on?'on':'off',true); sw.setAttribute('aria-pressed',String(on)); sw.textContent=on?'Sound on':'Sound off'; });
   document.getElementById('rapid').addEventListener('click',function(){ MWAudio.uiReady(); var i=0; (function go(){ if(i++<10){ MWAudio.ui('press',true); setTimeout(function(){ MWAudio.ui('release',true); },40); setTimeout(go,80); } })(); });

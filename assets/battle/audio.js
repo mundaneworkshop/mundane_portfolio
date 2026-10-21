@@ -60,7 +60,7 @@ var HERO_SHARED={
   lowHealth:['lowhealth-chime']
 };
 var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
-  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:2.6, rattle:.55, ui:.9, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
+  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:2.6, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
 var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
@@ -235,54 +235,85 @@ function heroStop(fadeSec){
 }
 
 /* ── UI sounds: synthesised, no clips ─────────────────────────────────────────────────────────────────────────────────────────────
-   Cassette-futurism hardware: stiff plastic keys, relay clacks, toggle latches and the odd square-wave bleep. Every sound is built from
-   three parts — a bandpassed noise "tick" (the key's crisp edge), a short pitch-dropping "thunk" (the housing), and optionally a stepped
-   square "bleep" (the machine answering). Pitch and level jitter a little on each press so repeats don't machine-gun. */
-var noiseBuf=null, uiLast={};
+   MECHANICAL, not arcade: modelled on measurements of a reference sound-effects reel (switches, buttons, camera shutter, clicks):
+   - every action is a short chain of 2-4 hard impacts a few ms apart (a snap, then the part bottoming out), not one tick;
+   - each impact is a crack (bandpassed noise, 2-5 ms), a ring (the housing resonating, ~1.4-1.6 kHz and its inharmonic partials, 10-30 ms)
+     and a body (a 100-250 Hz thump, 15-40 ms), with very fast decay (-20 dB inside 5-15 ms);
+   - the camera shutter is two or three impacts spread over ~100 ms with a faint blade-swish between them (4 varied patterns).
+   A second reference (a reel of real switch recordings) adds: a toggle is an ACTUATE impact then a softer RETURN impact ~25-35 ms later,
+   plastic housings ring strongest around 250 Hz (body 100-160 Hz), rocker switches are a soft low thud, and rotary switches ratchet as a
+   run of impacts ~8 ms apart.
+   There are no pitched bleeps. Pitch/level jitter per press; MWAudio.uiTune() scales crack / body / ring / decay globally. */
+var noiseBuf=null, uiLast={}, TUNE={crack:1,body:1,ring:1,decay:1};
 function noise(){
   if(noiseBuf) return noiseBuf;
   var n=Math.round(ctx.sampleRate*.25); noiseBuf=ctx.createBuffer(1,n,ctx.sampleRate); var d=noiseBuf.getChannelData(0); for(var i=0;i<n;i++) d[i]=Math.random()*2-1; return noiseBuf;
 }
-function env(g,t,peak,dur,attack){ g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+(attack||.0012)); g.gain.exponentialRampToValueAtTime(.0001,t+dur); }
-function uiTick(out,t,f,q,dur,gain){   // bandpassed noise burst
+function expEnv(g,t,peak,dur){ g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+.0004); g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.003,dur)); }
+function mCrack(out,t,f,q,dur,gain){   // the hard edge: very short bandpassed noise
   var s=ctx.createBufferSource(); s.buffer=noise(); var b=ctx.createBiquadFilter(); b.type='bandpass'; b.frequency.value=f; b.Q.value=q;
-  var g=ctx.createGain(); env(g,t,gain,dur); s.connect(b); b.connect(g); g.connect(out); s.start(t,Math.random()*.1); s.stop(t+dur+.02);
+  var g=ctx.createGain(); expEnv(g,t,gain*TUNE.crack,dur*TUNE.decay); s.connect(b); b.connect(g); g.connect(out); s.start(t,Math.random()*.15); s.stop(t+dur*TUNE.decay+.02);
 }
-function uiThunk(out,t,f0,f1,dur,gain,type){   // pitch-dropping body
-  var o=ctx.createOscillator(); o.type=type||'sine'; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur*.8);
-  var g=ctx.createGain(); env(g,t,gain,dur,.001); o.connect(g); g.connect(out); o.start(t); o.stop(t+dur+.02);
+var PARTIALS=[[1,1],[2.76,.5],[5.4,.22]];
+function mRing(out,t,f,decay,gain){   // struck housing: damped sines at inharmonic ratios
+  PARTIALS.forEach(function(pr,i){
+    var o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f*pr[0]*(1+(Math.random()-.5)*.012); var g=ctx.createGain();
+    expEnv(g,t,gain*pr[1]*TUNE.ring,decay*TUNE.decay/(1+i*.7)); o.connect(g); g.connect(out); o.start(t); o.stop(t+decay*TUNE.decay+.03);
+  });
 }
-function uiBleep(out,t,steps,stepDur,gain,lp){   // stepped square tones, soft-filtered
-  var o=ctx.createOscillator(); o.type='square'; var f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=lp||2600; f.Q.value=.7;
-  var g=ctx.createGain(), total=steps.length*stepDur;
-  steps.forEach(function(hz,i){ o.frequency.setValueAtTime(hz,t+i*stepDur); });
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain,t+.004); g.gain.setValueAtTime(gain,t+total-.012); g.gain.linearRampToValueAtTime(0,t+total);
-  o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t+total+.02);
+function mBody(out,t,f,decay,gain){   // low thump with a tiny pitch settle
+  var o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(f*1.35,t); o.frequency.exponentialRampToValueAtTime(f,t+.012);
+  var g=ctx.createGain(); expEnv(g,t,gain*TUNE.body,decay*TUNE.decay); o.connect(g); g.connect(out); o.start(t); o.stop(t+decay*TUNE.decay+.03);
+}
+function mSwish(out,t,dur,gain,f){   // shutter blades: a faint lowpassed rush
+  var s=ctx.createBufferSource(); s.buffer=noise(); var b=ctx.createBiquadFilter(); b.type='bandpass'; b.frequency.value=f; b.Q.value=.9;
+  var g=ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain,t+dur*.4); g.gain.linearRampToValueAtTime(0,t+dur); s.connect(b); b.connect(g); g.connect(out); s.start(t,Math.random()*.1); s.stop(t+dur+.02);
+}
+/* one impact: c = crack Hz, r = ring Hz, b = body Hz (0 = none), g = level */
+function impact(out,t,c,r,b,g,ringDecay){
+  mCrack(out,t,c,3.2,.004,g); if(r) mRing(out,t,r,ringDecay||.02,g*.5); if(b) mBody(out,t,b,.03,g*.75);
+}
+/* shutter timing patterns (ms of each impact), taken from four takes in the reference */
+var SHUTTER=[[7,18,80,108],[3,15,62,90],[21,67,95],[10,54,83]];
+function shutter(out,t,p,L,dir){
+  var pat=SHUTTER[Math.floor(Math.random()*SHUTTER.length)], first=pat[0]/1000, d=dir<0?.93:1;
+  pat.forEach(function(ms,i){
+    var tt=t+(ms-pat[0])/1000, last=i===pat.length-1, open=i<2;
+    if(open) impact(out,tt,(6300-i*900)*p*d,3400*p*d,0,.62*L,.012);          // blades snapping open: bright, light
+    else if(last) impact(out,tt,2600*p*d,1500*p*d,230*p,.7*L,.026);           // the shutter bottoming out: darker, with body
+    else impact(out,tt,4200*p*d,2000*p*d,0,.5*L,.016);
+  });
+  var span=(pat[pat.length-1]-pat[0])/1000; mSwish(out,t+span*.15,span*.6,.07*L,2200*p);
 }
 var UI={
-  hover:  function(o,t,p,L){ uiTick(o,t,rr(4800,5600)*p,7,.011,.5*L); },
-  press:  function(o,t,p,L){ uiTick(o,t,2700*p,3,.02,.95*L); uiThunk(o,t,230*p,105*p,.055,.6*L); uiTick(o,t+.017,1500*p,5,.013,.5*L); },
-  release:function(o,t,p,L){ uiTick(o,t,4200*p,4,.01,.4*L); uiThunk(o,t,320*p,190*p,.022,.18*L); },
-  step:   function(o,t,p,L){ uiTick(o,t,3100*p,4,.014,.8*L); uiTick(o,t+.034,3500*p,4,.012,.6*L); uiThunk(o,t,260*p,150*p,.04,.35*L); },
-  confirm:function(o,t,p,L){ uiTick(o,t,2500*p,3,.022,.95*L); uiThunk(o,t,200*p,70*p,.11,.8*L); uiTick(o,t+.02,1300*p,5,.016,.55*L); uiBleep(o,t+.045,[660*p,990*p],.05,.1*L); },
-  back:   function(o,t,p,L){ uiTick(o,t,2300*p,3,.02,.9*L); uiThunk(o,t,210*p,90*p,.08,.7*L); uiBleep(o,t+.04,[880*p,587*p],.05,.09*L); },
-  on:     function(o,t,p,L){ uiThunk(o,t,175*p,80*p,.075,.85*L); uiTick(o,t,2200*p,3,.022,.9*L); uiTick(o,t+.03,1250*p,5,.016,.6*L);
-                             uiBleep(o,t+.05,[520*p,780*p,1170*p],.035,.09*L); },
-  off:    function(o,t,p,L){ uiThunk(o,t,150*p,65*p,.08,.9*L); uiTick(o,t,1900*p,3,.022,.9*L); uiTick(o,t+.03,1000*p,5,.016,.6*L);
-                             uiBleep(o,t+.05,[900*p,560*p,330*p],.035,.08*L); }
+  hover:  function(o,t,p,L){ mCrack(o,t,6200*p,5,.0025,1.1*L); },
+  click:  function(o,t,p,L){ impact(o,t,5000*p,1450*p,0,.9*L,.03); },
+  press:  function(o,t,p,L){ impact(o,t,3100*p,1500*p,150*p,.85*L,.018); impact(o,t+.012,2300*p,1100*p,0,.45*L,.012); impact(o,t+.022,3600*p,0,0,.3*L); },   // click-clack, three stages
+  release:function(o,t,p,L){ mBody(o,t,200*p,.02,.5*L); mCrack(o,t,2500*p,2.5,.004,.25*L); },   // soft rocker-style thud
+  step:   function(o,t,p,L,opt){ shutter(o,t,p,L,opt&&opt.dir); },
+  on:     function(o,t,p,L){ impact(o,t,3300*p,250*p,125*p,.95*L,.03); mCrack(o,t+.003,4800*p,3,.003,.4*L); impact(o,t+.03,1900*p,250*p,160*p,.55*L,.02); },   // actuate, then the return
+  off:    function(o,t,p,L){ impact(o,t,2600*p,230*p,110*p,.95*L,.03); mCrack(o,t+.003,3600*p,3,.003,.35*L); impact(o,t+.03,1500*p,230*p,150*p,.5*L,.02); },
+  ratchet:function(o,t,p,L){ for(var i=0;i<8;i++) impact(o,t+i*.0085,(3600-i*140)*p,0,i%2?0:200*p,(.55-i*.02)*L); mBody(o,t,110*p,.06,.4*L); },        // rotary detent run
+  confirm:function(o,t,p,L){ UI.on(o,t,p*.94,L); mBody(o,t,85*p,.09,.55*L); impact(o,t+.075,2100*p,1100*p,160*p,.5*L,.018); },                     // heavy latch, then the relay settles
+  back:   function(o,t,p,L){ UI.off(o,t,p*.96,L*.9); impact(o,t+.06,1800*p,0,140*p,.3*L); }
 };
-function uiPlay(kind,force){
+/* uiLab() lets tools/ui-sounds.html list every kind */
+function uiPlay(kind,force,opt){
   if(!ensure()||!UI[kind]||(muted&&!force)) return;
   var t=now(), min=kind==='hover'?.06:.012; if(t-(uiLast[kind]||-1)<min) return; uiLast[kind]=t;   // a hair of debounce: never two identical clicks on one frame
-  var out=ctx.createGain(); out.gain.value=LEVEL.ui; out.connect(force?comp:master);   // forced sounds (the 'off' latch, the lab page) skip the mute gain
-  try{ UI[kind](out,t+.001,rr(.95,1.06),rr(.88,1)); }catch(e){ if(window.console) console.warn('MWAudio.ui',kind,e); }
-  setTimeout(function(){ try{ out.disconnect(); }catch(e){} },700);
+  var out=ctx.createGain(); out.gain.value=LEVEL.ui; var tail=out;
+  if(opt&&opt.dir&&ctx.createStereoPanner){ var pn=ctx.createStereoPanner(); pn.pan.value=opt.dir<0?-.35:.35; out.connect(pn); tail=pn; }   // paging left/right leans that way
+  tail.connect(force?comp:master);
+  try{ UI[kind](out,t+.001,rr(.95,1.06),rr(.88,1),opt||null); }catch(e){ if(window.console) console.warn('MWAudio.ui',kind,e); }
+  setTimeout(function(){ try{ out.disconnect(); tail.disconnect(); }catch(e){} },900);
 }
 
 var MWAudio={
-  /* UI feedback: kind = hover | press | release | step | confirm | back | on | off. Works without the clip bundle (the lab page uses it alone). */
-  ui:function(kind,force){ uiPlay(kind,force); },
+  /* UI feedback: kind = hover | click | press | release | step (opt.dir -1/+1) | confirm | back | on | off. Works without the clip bundle (the lab page uses it alone). */
+  ui:function(kind,force,opt){ uiPlay(kind,force,opt); },
+  uiTune:function(o){ if(o) Object.keys(TUNE).forEach(function(k){ if(typeof o[k]==='number'&&isFinite(o[k])) TUNE[k]=Math.max(.2,Math.min(3,o[k])); }); return Object.assign({},TUNE); },
   uiReady:function(){ return ensure(); },
+  uiKinds:function(){ return Object.keys(UI); },
   /* call from any user gesture; safe to call repeatedly */
   unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive']); },
   isMuted:function(){ return muted; },
