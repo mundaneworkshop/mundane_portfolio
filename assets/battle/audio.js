@@ -296,7 +296,13 @@ var UI={
   off:    function(o,t,p,L){ impact(o,t,2600*p,230*p,110*p,.95*L,.03); mCrack(o,t+.003,3600*p,3,.003,.35*L); impact(o,t+.03,1500*p,230*p,150*p,.5*L,.02); },
   ratchet:function(o,t,p,L){ for(var i=0;i<8;i++) impact(o,t+i*.0085,(3600-i*140)*p,0,i%2?0:200*p,(.55-i*.02)*L); mBody(o,t,110*p,.06,.4*L); },        // rotary detent run
   confirm:function(o,t,p,L){ UI.on(o,t,p*.94,L); mBody(o,t,85*p,.09,.55*L); impact(o,t+.075,2100*p,1100*p,160*p,.5*L,.018); },                     // heavy latch, then the relay settles
-  back:   function(o,t,p,L){ UI.off(o,t,p*.96,L*.9); impact(o,t+.06,1800*p,0,140*p,.3*L); }
+  back:   function(o,t,p,L){ UI.off(o,t,p*.96,L*.9); impact(o,t+.06,1800*p,0,140*p,.3*L); },
+  /* TOGGLE (approved Oct 21 2026, recipe B in tools/ui-sounds.html; MWAudio.toggle plays swOn / swOff, index.html adds the hover tick + swDown). A metal toggle: bright, dry and clicky, with almost no low end (body thump reads as
+     muffled). ACTUATE snap, then the RETURN snap ~26 ms later (per the switch reference reel). On sits higher and brighter than off. Disabled is a dull dead tap. */
+  swDown: function(o,t,p,L){ impact(o,t,4600*p,2800*p,0,.4*L,.01); },
+  swOn:   function(o,t,p,L){ impact(o,t,5400*p,3300*p,0,.95*L,.012); mCrack(o,t+.001,7800*p,4,.002,.5*L); impact(o,t+.026,4400*p,2700*p,0,.65*L,.01); mBody(o,t+.026,210*p,.015,.12*L); },
+  swOff:  function(o,t,p,L){ impact(o,t,4500*p,2800*p,0,.95*L,.012); mCrack(o,t+.001,6600*p,4,.002,.5*L); impact(o,t+.026,3600*p,2300*p,0,.6*L,.01); mBody(o,t+.026,180*p,.015,.12*L); },
+  swDeny: function(o,t,p,L){ mBody(o,t,130*p,.04,.35*L); mCrack(o,t,1700*p,2,.003,.2*L); }
 };
 /* uiLab() lets tools/ui-sounds.html list every kind */
 function uiPlay(kind,force,opt){
@@ -329,8 +335,8 @@ var MWAudio={
   },
   toggle:function(){
     if(!ensure()) { MWAudio.setMuted(!muted); return muted; }
-    if(muted){ MWAudio.setMuted(false); uiPlay('on'); return false; }
-    uiPlay('off',true); setTimeout(function(){ MWAudio.setMuted(true); },170); return true;   // the 'off' click is heard, then the sound goes quiet
+    if(muted){ MWAudio.setMuted(false); uiPlay('swOn'); return false; }
+    uiPlay('swOff',true); setTimeout(function(){ MWAudio.setMuted(true); },170); return true;   // the 'off' click is heard, then the sound goes quiet
   },
 
   /* hyperspace jump (galaxy view → game) */

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Arcade UI sound lab</title>
+<link rel="stylesheet" href="../assets/tokens/bric-tokens.css">
 <style>
   /* Dev tool (not shipped to visitors): audition the synthesised arcade UI sounds in assets/battle/audio.js. */
   :root{--bg:#06100f;--panel:#0b1a19;--line:#1d3b38;--ink:#d7f6f2;--mute:#6f9a95;--holo:#aaf5ee;--amber:#f0d080}
@@ -21,6 +22,32 @@
   .sw[aria-pressed="true"]{background:var(--holo);color:#04201d;border-color:var(--holo)}
   .note{margin-top:28px;font-size:12px;color:var(--mute)}
   code{color:var(--amber)}
+  /* toggle: a copy of the site's .mw-sound-switch rules (index.html), so the lab shows the approved design (Figma 12 · Toggle) with the real tokens */
+  :root{--grotesk:'Space Grotesk',system-ui,sans-serif;--clip-step:polygon(0 6px,0 3px,3px 3px,3px 0,6px 0, calc(100% - 6px) 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% 6px, 100% calc(100% - 6px),100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,calc(100% - 6px) 100%, 6px 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px),0 calc(100% - 6px))}
+  .mw-sound-switch{display:inline-flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}
+  .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
+  .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
+  .mw-sound-switch .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
+  .mw-sound-switch.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(16px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}
+  .mw-sound-switch:hover .sw-track{border-color:var(--bric-interactive-outline-hover);background:var(--bric-interactive-fill-hover-tint);box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-stroke-near),0 0 24px 2px var(--bric-fx-glow-amber-stroke-far)}
+  .mw-sound-switch:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
+  .mw-sound-switch.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
+  .mw-sound-switch:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
+  .mw-sound-switch--lg{gap:var(--bric-space-2-stud)}
+  .mw-sound-switch--lg .sw-track{width:52px;height:24px}
+  .mw-sound-switch--lg .sw-thumb{width:18px;height:16px;top:3px;left:3px}
+  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(26px)}
+  .mw-sound-switch--lg .sw-lbl{font-size:13px;letter-spacing:.2em;min-width:78px}
+  .mw-sound-switch[aria-disabled="true"]{cursor:not-allowed;pointer-events:none}
+  .mw-sound-switch[aria-disabled="true"] .sw-track{border-color:var(--bric-interactive-outline-disabled);background:transparent}
+  .mw-sound-switch[aria-disabled="true"] .sw-thumb{background:var(--bric-interactive-fill-disabled);box-shadow:none}
+  .mw-sound-switch[aria-disabled="true"] .sw-lbl{color:var(--bric-interactive-text-disabled)}
+  .tg{display:grid;grid-template-columns:120px 220px 220px;gap:18px 24px;align-items:center;padding:20px 24px;background:var(--bric-surface-scene,#070C0C);border:1px solid var(--line);max-width:640px}
+  .tg .h{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)}
+  .tg .rl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--mute)}
+  .opt{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px;color:var(--ink);font-size:12px}
+  .opt label{display:flex;gap:8px;align-items:flex-start;max-width:300px;cursor:pointer}
+  .opt small{display:block;color:var(--mute)}
 </style>
 </head>
 <body>
@@ -40,8 +67,16 @@
 <div id="tune"></div>
 <div class="row"><button id="copy">Copy settings</button><button id="resetTune">Reset</button><span id="copied" style="color:var(--mute)"></span></div>
 
-<h2>Switch</h2>
-<div class="row"><button class="sw" id="sw" aria-pressed="true">Sound on</button></div>
+<h2>Toggle (B shipped)</h2>
+<p style="margin-bottom:14px">The approved switch design (Figma <code>12 · Toggle</code>) with its sound states. Hover for the tick, press and hold for the press-in, release to latch. Space or Enter latches without the press-in. Disabled is silent and never hovers. Pick a recipe, then compare.</p>
+<div class="opt" id="recipe">
+  <label><input type="radio" name="rc" value="A"><span>A &middot; Current<small>on / off: actuate, then the return. No press-in sound, no hover tick on the switch (the site skips switches today).</small></span></label>
+  <label><input type="radio" name="rc" value="B" checked><span>B &middot; Proposed<small>hover tick, soft press-in (<code>swDown</code>), then <code>swOn</code> / <code>swOff</code>: a bright metal toggle: actuate snap, then a return snap 26 ms later, almost no low end. On is higher than off.</small></span></label>
+</div>
+<div class="tg" id="tg">
+  <span></span><span class="h">Live (hover, press, click)</span><span class="h">Disabled (silent)</span>
+</div>
+<div class="row" style="margin-top:14px"><button id="seqOn">Play: hover &rarr; press &rarr; latch On</button><button id="seqOff">Play: hover &rarr; press &rarr; latch Off</button></div>
 
 <h2>Rapid presses</h2>
 <div class="row"><button id="rapid">Ten presses, 80 ms apart</button></div>
@@ -66,8 +101,29 @@
   document.getElementById('copy').addEventListener('click',function(){ var v=JSON.stringify(MWAudio.uiTune()); (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){ document.getElementById('copied').textContent='copied '+v; },function(){ document.getElementById('copied').textContent=v; }); });
   var DEF={crack:1.5,body:1,ring:1,decay:1.5};   // the shipped defaults (audio.js TUNE)
   document.getElementById('resetTune').addEventListener('click',function(){ MWAudio.uiTune(DEF); ids.forEach(function(d,n){ var i=tune.querySelectorAll('input')[n], o=tune.querySelectorAll('output')[n]; i.value=DEF[d[0]]; o.textContent=DEF[d[0]]; }); });
-  var sw=document.getElementById('sw'), on=true;
-  sw.addEventListener('click',function(){ MWAudio.uiReady(); on=!on; MWAudio.ui(on?'on':'off',true); sw.setAttribute('aria-pressed',String(on)); sw.textContent=on?'Sound on':'Sound off'; });
+  // toggle: recipe A = what the site plays now, B = the proposal. The grid mirrors the Figma matrix (Large/Small x Off/On, live + disabled).
+  var rc=function(){ return document.querySelector('input[name=rc]:checked').value; };
+  function latch(el){ var on=!el.classList.contains('on'); el.classList.toggle('on',on); el.setAttribute('aria-checked',String(on)); el.querySelector('.sw-lbl').textContent=on?'Sound on':'Sound off'; MWAudio.ui(rc()==='B'?(on?'swOn':'swOff'):(on?'on':'off'),true); }
+  var tg=document.getElementById('tg');
+  [['Large',true,false],['Large',true,true],['Small',false,false],['Small',false,true]].forEach(function(r){
+    var lab=document.createElement('span'); lab.className='rl'; lab.textContent=r[0]+' \u00b7 '+(r[2]?'On':'Off'); tg.appendChild(lab);
+    [false,true].forEach(function(dis){
+      var el=document.createElement('div'); el.className='mw-sound-switch'+(r[1]?' mw-sound-switch--lg':'')+(r[2]?' on':''); el.setAttribute('role','switch'); el.setAttribute('aria-checked',String(r[2])); el.setAttribute('aria-label','Sound');
+      el.innerHTML='<span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">'+(r[2]?'Sound on':'Sound off')+'</span>';
+      if(dis){ el.setAttribute('aria-disabled','true'); } else {
+        el.tabIndex=0;
+        el.addEventListener('pointerenter',function(e){ if(rc()==='B'&&e.pointerType==='mouse'){ MWAudio.uiReady(); MWAudio.ui('hover',true); } });
+        el.addEventListener('pointerdown',function(){ MWAudio.uiReady(); if(rc()==='B') MWAudio.ui('swDown',true); });
+        el.addEventListener('click',function(){ MWAudio.uiReady(); latch(el); });
+        el.addEventListener('keydown',function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); MWAudio.uiReady(); latch(el); } });
+      }
+      tg.appendChild(el);
+    });
+  });
+  function seq(on){ MWAudio.uiReady(); var el=tg.querySelector('.mw-sound-switch:not([aria-disabled])'), want=on; if(el.classList.contains('on')===want){ el.classList.toggle('on',!want); el.setAttribute('aria-checked',String(!want)); el.querySelector('.sw-lbl').textContent=!want?'Sound on':'Sound off'; }
+    var B=rc()==='B'; if(B) MWAudio.ui('hover',true); setTimeout(function(){ if(B) MWAudio.ui('swDown',true); },350); setTimeout(function(){ latch(el); },520); }
+  document.getElementById('seqOn').addEventListener('click',function(){ seq(true); });
+  document.getElementById('seqOff').addEventListener('click',function(){ seq(false); });
   document.getElementById('rapid').addEventListener('click',function(){ MWAudio.uiReady(); var i=0; (function go(){ if(i++<10){ MWAudio.ui('press',true); setTimeout(function(){ MWAudio.ui('release',true); },40); setTimeout(go,80); } })(); });
 })();
 </script>
