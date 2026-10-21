@@ -85,7 +85,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, dsDim:.45, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6,
+  kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
   counts:{}, ver:10
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
@@ -480,6 +480,7 @@ function killShip(s){
 }
 // ── fighter death sequence (random): like the hero's, a doomed fighter doesn't always just pop. With chance P.fighterBurn it catches fire, tumbles out of control
 // trailing flame and smoke for about 1-2 s, then explodes. No material changes (fighters share materials with their prototype), only particles and flashes.
+var BURN_MAX=4.7;   // longest a burning death runs (s). Death-sequence clips are pre-compressed to fit under this (see docs); anything longer is faded out as a safety
 function fighterDown(s){
   if(!quiet()&&!s.burnDeath&&Math.random()<P.fighterBurn) startBurn(s); else killShip(s);
 }
@@ -487,10 +488,17 @@ function startBurn(s){
   s.alive=false; s.target=null; s.form=null;   // out of the fight at once: not targetable, no collisions, no more shots
   s.burnDeath={t:0,dur:rnd(1.1,2.3),ph:[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)],roll:rnd(8,15)*(Math.random()<.5?-1:1),nextHit:rnd(.25,.5),spd0:Math.max(.4,s.spd||.5)};
   burst(s.pos,0xff8030,14,1.2,.6); flash(s.pos,.35,0xffb060);
-  var au=audioAt(s); if(au&&window.MWAudio&&MWAudio.hitLaserAt) MWAudio.hitLaserAt(au);   // the laser-hit sound(s) the hero gets, placed at the fighter
+  var au=audioAt(s), B=s.burnDeath;
+  if(au&&window.MWAudio){
+    if(MWAudio.hitLaserAt) MWAudio.hitLaserAt(au);   // the laser-hit sound(s) the hero gets, placed at the fighter
+    var sd=MWAudio.fighterDeath?MWAudio.fighterDeath(s.id,au,BURN_MAX):null;   // this ship's own death-sequence clip (Battle Sound Review page)
+    if(sd){ B.dur=Math.max(.9,sd.dur-.1); B.snd=sd.h; }   // ...sets how long the sequence runs; the starfighter explosion then ends it
+    if(MWAudio.duckFighter) MWAudio.duckFighter(B.dur+1.2);   // the rest of the mix sits down for the whole burn and the explosion after it
+  }
 }
 function updFighterBurn(s,dt){
   var B=s.burnDeath, k=Math.min(1,B.t/B.dur); B.t+=dt;
+  if(B.snd&&window.MWAudio){ var at=audioAt(s); if(at) MWAudio.track(B.snd,at); }   // the death sound follows the tumbling ship
   _v1.set(Math.sin(B.t*3.1+B.ph[0]),Math.sin(B.t*4.3+B.ph[1]),Math.sin(B.t*3.7+B.ph[2])); if(_v1.lengthSq()<1e-4) _v1.set(0,1,0); _v1.normalize();
   s.dir.applyAxisAngle(_v1,(3+9*k)*(.6+.4*Math.sin(B.t*8))*dt).normalize();   // erratic loops, tighter as it goes
   s.spd=B.spd0*(1+.6*k); s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
@@ -1308,6 +1316,7 @@ function buildPanel(){
   key('arena','Fighter arena radius',.4,2.6,.02,2);
   key('fighterBurn','Fighter burning-death chance (0 = always pops)',0,1,.05,2);
   key('minBoom','Hit + explosion minimum loudness (far away)',0,1,.05,2,function(){ if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom); });
+  key('fighterDuck','Fighter death: how far the rest of the mix ducks (1 = none)',.05,1,.05,2,function(){ if(window.MWAudio&&MWAudio.setFighterDuck) MWAudio.setFighterDuck(P.fighterDuck); });
   key('clear','Fighter clearance around mark',.4,2,.05,2);
   key('laser','Laser frequency',0,4,.05,2);
   key('laserSpeed','Laser speed',.3,3,.05,2);
@@ -1375,7 +1384,7 @@ function resetState(){
 }
 var MWBattle={
   init:function(c){
-    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; P=loadCfg(); if(window.MWReticle) MWReticle.init(); if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom);
+    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; P=loadCfg(); if(window.MWReticle) MWReticle.init(); if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom); if(window.MWAudio&&MWAudio.setFighterDuck) MWAudio.setFighterDuck(P.fighterDuck);
     _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
