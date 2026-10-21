@@ -606,12 +606,12 @@
   /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
   #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21}
-  .mw-sound-switch{display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}
-  .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
+  .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
+  .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
   .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
   .mw-sound-switch .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
-  .mw-sound-switch.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(18px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}
-  .mw-sound-switch:hover .sw-track{border-color:var(--bric-interactive-outline-hover)}
+  .mw-sound-switch.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(16px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}   /* travel 16 = thumb centred in the track (Figma 12 · Toggle) */
+  .mw-sound-switch:hover .sw-track{border-color:var(--bric-interactive-outline-hover);background:var(--bric-interactive-fill-hover-tint);box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-stroke-near),0 0 24px 2px var(--bric-fx-glow-amber-stroke-far)}
   .mw-sound-switch:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
   .mw-sound-switch.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
   .mw-sound-switch:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
@@ -619,8 +619,13 @@
   .mw-sound-switch--lg{gap:var(--bric-space-2-stud)}
   .mw-sound-switch--lg .sw-track{width:52px;height:24px}
   .mw-sound-switch--lg .sw-thumb{width:18px;height:16px;top:3px;left:3px}
-  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(27px)}
+  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(26px)}
   .mw-sound-switch--lg .sw-lbl{font-size:13px;letter-spacing:.2em;min-width:78px}
+  /* disabled (Figma 12 · Toggle): outline, thumb and label drop to the disabled tokens; no hover, no reticle */
+  .mw-sound-switch[aria-disabled="true"]{cursor:not-allowed;pointer-events:none}
+  .mw-sound-switch[aria-disabled="true"] .sw-track{border-color:var(--bric-interactive-outline-disabled);background:transparent}
+  .mw-sound-switch[aria-disabled="true"] .sw-thumb{background:var(--bric-interactive-fill-disabled);box-shadow:none}
+  .mw-sound-switch[aria-disabled="true"] .sw-lbl{color:var(--bric-interactive-text-disabled)}
   @media (prefers-reduced-motion:reduce){.mw-sound-switch .sw-track,.mw-sound-switch .sw-thumb,.mw-sound-switch .sw-lbl{transition:none}}
   /* message stars layer */
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
@@ -10290,7 +10295,8 @@ f 2469//2469 2470//2470 2434//2434
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
     var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennial Hawk',n1:"Bounty Hunter’s M-1",razorcrest:"Razor’s Edge",'slave-1':'Indentured Servant 1'};
-    function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(); } }   // closing the game-over modal is what actually ends the exit
+    function closeArcadeResult(again){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(again); } }   // closing the game-over modal is what actually ends the exit; again=true → straight back to hero select (no wipe)
+    function arcadeAgain(){ closeArcadeResult(true); var go=function(){ if(!arcadeActive) openArcade('arcade',true); else setTimeout(go,150); }; go(); }
     function arcFetchTop(cb){
       if(!_sb){ cb(null,'offline'); return; }
       function q(cols,next){ _sb.from('leaderboard').select(cols).order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
@@ -10344,7 +10350,7 @@ f 2469//2469 2470//2470 2434//2434
       el.addEventListener('click',function(e){ if(e.target===el&&!sum) closeArcadeResult(); });   // game-over modal: the backdrop never dismisses (rapid clicking while playing would close it)
       var armed=function(){ return !sum||performance.now()-arcadeResultT>1200; };   // ...and the buttons ignore clicks for the first 1.2 s
       el.querySelector('#arClose').addEventListener('click',function(){ if(armed()) closeArcadeResult(); });
-      var again=el.querySelector('#arAgain'); if(again) again.addEventListener('click',function(){ if(!armed()) return; closeArcadeResult(); var go=function(){ if(!arcadeActive) openArcade('arcade',true); else setTimeout(go,150); }; go(); });
+      var again=el.querySelector('#arAgain'); if(again) again.addEventListener('click',function(){ if(!armed()) return; arcadeAgain(); });
       var form=el.querySelector('.ar-form');
       if(form){
         var inp=form.querySelector('.ar-in'), btn=form.querySelector('.ar-sub'), msg=el.querySelector('.ar-msg');
@@ -10362,7 +10368,9 @@ f 2469//2469 2470//2470 2434//2434
         });
       } else { var af=el.querySelector('#arAgain')||el.querySelector('#arClose'); if(af) af.focus(); }
     }
-    window.addEventListener('keydown',function(e){ if(arcadeResultEl&&performance.now()-arcadeResultT>350&&e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeArcadeResult(); } },true);   /* >350ms: the ESC that opened it must not also close it */
+    window.addEventListener('keydown',function(e){ if(arcadeResultEl&&e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation();   // stopImmediate: the arcade-exit ESC handler below must not also run
+      if(performance.now()-arcadeResultT<=350) return;   /* >350ms: the ESC that opened it must not also close it */
+      if(arcadeResultEl.querySelector('#arAgain')) arcadeAgain(); else closeArcadeResult(); } },true);   // game-over modal: ESC = back to hero select (same as Play again); leaderboard: just closes
     function exitArcade(){
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
       if(window.__mwLightspeed) window.__mwLightspeed.destroy(true);   // ESC mid-load
@@ -10373,7 +10381,12 @@ f 2469//2469 2470//2470 2434//2434
       if(_sum&&_sum.played){ MWBattle.outro(); showArcadeResult(_sum); }
       else finishArcadeAfterOutro();
     }
-    function finishArcadeAfterOutro(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(); }
+    // Back to the galaxy runs through the Star Wars screen wipe (assets/bric-wipe.js, random variant): the arcade tears down while the panel fully covers the page.
+    // Play again skips it (hero select, not the galaxy). The wipe no-ops under reduced motion.
+    function finishArcadeAfterOutro(noWipe){
+      var swap=function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(); };
+      if(noWipe===true||!window.bricWipe) swap(); else window.bricWipe.play(null,swap);
+    }
     function finishArcadeExit(){
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
       document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
@@ -11189,6 +11202,9 @@ f 2469//2469 2470//2470 2434//2434
       function muted(){ if(window.MWAudio) return MWAudio.isMuted(); try{ return localStorage.getItem('mw_sound')==='off'; }catch(e){ return false; } }
       function syncAll(){ var on=!muted(); [].forEach.call(document.querySelectorAll(SW),function(b){ b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); var l=b.querySelector('.sw-lbl'); if(l) l.textContent=on?'Sound on':'Sound off'; }); }
       function flip(){ if(window.MWAudio){ MWAudio.toggle(); } else { try{ localStorage.setItem('mw_sound',muted()?'on':'off'); }catch(e){} } syncAll(); }
+      // switch sounds (recipe B, tools/ui-sounds.html): mouse hover ticks, press-in thud on pointerdown, then the latch (swOn / swOff) from MWAudio.toggle on click
+      document.addEventListener('pointerover',function(e){ var b=e.target.closest&&e.target.closest(SW); if(!b||e.pointerType!=='mouse'||b.contains(e.relatedTarget)||!window.MWAudio) return; MWAudio.uiReady(); MWAudio.ui('hover'); });
+      document.addEventListener('pointerdown',function(e){ var b=e.target.closest&&e.target.closest(SW); if(!b||e.button>0||!window.MWAudio) return; MWAudio.uiReady(); MWAudio.ui('swDown'); },true);
       document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest(SW); if(b){ flip(); } });
       document.addEventListener('keydown',function(e){ if((e.key===' '||e.key==='Enter')&&e.target.matches&&e.target.matches(SW)){ e.preventDefault(); flip(); } });
       syncAll(); window.addEventListener('mw:sound',syncAll); window.addEventListener('load',syncAll);
@@ -13793,7 +13809,7 @@ f 2469//2469 2470//2470 2434//2434
         var _rib=focused.userData.hit.userData.marqRibbon, _mqc=curMarquee();
         if(_rib.material && _rib.material.map){ var _sgn=_mqc.reverse?-1:1; _rib.material.map.offset.x=((_rib.material.map.offset.x + _sgn*(_mqc.speed||0)*0.01)%1 + 1)%1; }
       }
-      if(autoRotate) manualRot+=0.0011*params.spin*params.camRotDir; galaxy.rotation.y=manualRot;
+      if(autoRotate&&!(arcadeActive&&arcadeStage==='play')) manualRot+=0.0011*params.spin*params.camRotDir;   /* no auto-revolve while the hero flies; hero select and the galaxy still drift */ galaxy.rotation.y=manualRot;
       if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it
       else if(msgFocusActive){ msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
       else if(!focused){ var _bp=(mwPhase==='entry')?ENTRY_POS:HOME_POS, _bl=(mwPhase==='entry')?ENTRY_LOOK:HOME_LOOK;
@@ -13802,7 +13818,9 @@ f 2469//2469 2470//2470 2434//2434
           if(Math.abs(camZoom-arcEntryZoom)<0.003&&Math.abs(camElev)<0.01&&Math.abs(arcPitch)<0.003){ camZoom=arcEntryZoom; camElev=0; arcPitch=0; arcReturn=false; } }
         arcPitchS+=(arcPitch-arcPitchS)*0.2; if(!arcadeActive&&!arcReturn){ arcPitch=0; }
         var _pa=-arcPitchS, _pc=Math.cos(_pa), _ps=Math.sin(_pa);   // orbit the offset about the X axis through the look point; camera.up rolls with it so there is no pole flip
-        camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps); }
+        camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps);
+        if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getPan){ var _pn=MWBattle.getPan();   // edge-dwell pan (battle.js): a true pan: only the look point moves along the camera's right / up, the camera stays put and turns (no dolly)
+          if(_pn&&(_pn.x||_pn.y)){ camLook.x+=_pn.x; camLook.addScaledVector(camUpV,_pn.y); } } }
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
@@ -14478,6 +14496,6 @@ f 2469//2469 2470//2470 2434//2434
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
   <script src="assets/bric-wipe.js"></script>
-  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, selector:'[data-bric-media],[data-bric-target],.bric-btn:not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
+  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, selector:'[data-bric-media],[data-bric-target],.mw-sound-switch:not([aria-disabled="true"]),.bric-btn:not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
 </body>
 </html>
