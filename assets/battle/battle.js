@@ -97,7 +97,12 @@ var cache={}, loading={}, loadQ=[], inflight=0, failed={};
 var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
 var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
-var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0};
+var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
+/* Edge pan: keep the cursor in the outer ~19% of the screen for EDGE_DWELL seconds and the camera glides that way (up to PAN_REACH of the arena), so the
+   player can fly out into the rest of the field. index.html adds MWBattle.getPan() (camera-plane world units) to the camera's LOOK point (the camera turns in place, it does not move). Easing back to the middle
+   does not recentre it: the pan stays where the player left it until they pan back, change hero or restart. */
+var EDGE_ZONE=.62, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
+var pan={x:0,y:0,vx:0,vy:0,dwell:0}, _panW={x:0,y:0};
 var keys={}, fireHeld=false;
 var uiEl=null, hudEl=null, vigEl=null, panelEl=null, styleEl=null, listeners=[];
 var BOLT_COL=[0x39ff5a /*imp green*/, 0xff2a2a /*reb red*/, 0xffe14a /*hero yellow*/];
@@ -1093,6 +1098,21 @@ function updLeave(s,dt){
   if(s.pos.length()>150){ s.alive=false; s.root.visible=false; s.respawn=1e9; }
 }
 
+function reduceMotion(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }   // the pan is a camera glide: off under reduced motion (right-drag still orbits)
+function updPan(dt){
+  var on_=!reduceMotion()&&stage==='play'&&!quiet()&&heroShip&&heroShip.alive&&!heroShip.burning&&ptr.in&&!ptr.out;
+  var dx=0,dy=0;
+  if(on_){ dx=clamp((Math.abs(ptr.nx)-EDGE_ZONE)/(1-EDGE_ZONE),0,1); dy=clamp((Math.abs(ptr.ny)-EDGE_ZONE)/(1-EDGE_ZONE),0,1); }
+  if(dx>0||dy>0) pan.dwell+=dt; else pan.dwell=Math.max(0,pan.dwell-dt*3);   // a quick graze of the edge fades out instead of counting
+  var k=clamp((pan.dwell-EDGE_DWELL)/EDGE_RAMP,0,1); k=k*k*(3-2*k);           // smoothstep: nothing for the first second, then eases up to full speed
+  var tx=ptr.nx<0?-dx:dx, ty=ptr.ny<0?-dy:dy;
+  var sx=halfW(0)*PAN_SPEED*k*tx, sy=halfH(0)*PAN_SPEED*k*ty;
+  var a=Math.min(1,dt*2.5); pan.vx+=(sx-pan.vx)*a; pan.vy+=(sy-pan.vy)*a;
+  var mx=arenaAx()*PAN_REACH, my=arenaAy()*PAN_REACH;
+  pan.x=clamp(pan.x+pan.vx*dt,-mx,mx); pan.y=clamp(pan.y+pan.vy*dt,-my,my);
+  if(stage!=='play'){ pan.x*=1-Math.min(1,dt*3); pan.y*=1-Math.min(1,dt*3); pan.vx=pan.vy=pan.dwell=0; }   // hero select: back to the home framing
+}
+
 /* ───────────────────────────── frame ───────────────────────────── */
 function update(t){
   if(window.MWAudio&&active&&stage==='play'&&ctx&&ctx.getRot) MWAudio.setYaw(ctx.getRot()-audioRot0);   // camera orbit swings the gameplay ambience's soundstage
@@ -1109,6 +1129,7 @@ function update(t){
   if(anchorsDirty) assignAnchors();
   if(!introScheduled&&!hyper&&!introHold) tryScheduleIntro();
 
+  updPan(dt);
   var allGone=true;
   for(var i=ships.length-1;i>=0;i--){
     var s=ships[i];
@@ -1155,6 +1176,8 @@ function isTyping(e){ var t=e.target; if(!t) return false; if(t.isContentEditabl
 function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
     if(ptr.in&&!hyper&&stage==='play') ctx.dom.style.cursor='crosshair'; });
+  on(document.documentElement,'mouseleave',function(){ ptr.out=true; });   // the cursor left the window: it must not keep panning from its last edge position
+  on(document.documentElement,'mouseenter',function(){ ptr.out=false; });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
     if(stage==='play'&&heroShip&&!heroShip.burning&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });   // left button = fire (hold to keep firing)
   on(window,'pointerup',function(e){ if(e.button===0){ fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); } });
@@ -1319,7 +1342,7 @@ function resetState(){
 }
 var MWBattle={
   init:function(c){
-    if(active) return; dead=false; resetState(); ctx=c; T=c.THREE; P=loadCfg();
+    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; P=loadCfg();
     _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
@@ -1354,6 +1377,7 @@ var MWBattle={
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
+  getPan:function(){ _panW.x=pan.x*S; _panW.y=pan.y*S; return _panW; },   // {x,y}: edge-pan camera offset in WORLD units (battle units x G's scale), along the camera's right / up
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
   assetsReady:function(){ return active&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
