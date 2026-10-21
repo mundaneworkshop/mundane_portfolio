@@ -72,6 +72,12 @@ var CLS={   // per-class feel: base fire interval (s), weapon range, bolt aim sp
   hero:   { int:.13, range:99,  spread:.015 }
 };
 
+/* Score = fighter-kill equivalents: a fighter is the base unit, a support ship is worth 3, a capital ship 7 (tune here; the results screen reads these). */
+var SCORE={ fighter:1, support:3, capital:7 };
+/* Support/capital ships fire BACK at the hero for RETAL.sec after the hero last hit them. Interval is stretched and the aim loosened so a
+   head-on attack is dangerous but survivable (hero hull = 3 collisions or 15 laser hits). */
+var RETAL={ sec:5, slow:2.2, spread:1.5, rangeK:1.15 };
+
 var DEFAULTS={
   on:true, density:1, speed:1, scale:1.5, laser:1, laserSpeed:1, boltSize:1, arena:1.7,
   scaleFighter:.5, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1.6, scaleKit:1,
@@ -400,7 +406,7 @@ function assignAnchors(){
 function enemies(s){ return ships.filter(function(e){ return e.alive&&!e.leaving&&e.cls!=='base'&&e.team!==s.team&&e.team!==HERO&&!e.jump&&here(e); }); }
 function pickTarget(s){
   if(s.cls==='fighter'&&heroShip&&heroShip.alive&&!quiet()&&!s.form&&!(s.huntCool>0)&&Math.random()<HUNT.chance){
-    var hn=0; for(var hi=0;hi<ships.length;hi++){ if(ships[hi]!==s&&ships[hi].alive&&ships[hi].target===heroShip) hn++; }
+    var hn=0; for(var hi=0;hi<ships.length;hi++){ if(ships[hi]!==s&&ships[hi].alive&&ships[hi].cls==='fighter'&&ships[hi].target===heroShip) hn++; }   // only fighters count toward the hunter cap (large ships retaliate separately)
     if(hn<HUNT.max){ s.target=heroShip; s.tT=99; s.huntT=rnd(HUNT.lock[0],HUNT.lock[1]); s.orbit=Math.random()<.5?1:-1; s.mode='pursue'; s.mT=1; return; }   // a few fighters at a time break off to hunt the hero
   }
   var list=enemies(s); if(!list.length){ s.target=null; return; }
@@ -434,7 +440,7 @@ function fireAt(s,tpos,tvel){
   var mp=muzzle(s,_v1.set(0,0,0)); var cl=CLS[s.cls];
   var d=_v2.copy(tpos); if(tvel){ var dist=d.distanceTo(mp); d.addScaledVector(tvel,dist/(7*P.laserSpeed)*.7); }
   d.sub(mp).normalize();
-  var sp=cl.spread*((s.target&&s.target.hero)?HUNT.spread:1); d.x+=rnd(-1,1)*sp; d.y+=rnd(-1,1)*sp; d.z+=rnd(-1,1)*sp; d.normalize();
+  var sp=cl.spread*((s.target&&s.target.hero)?(s.cls==='fighter'?HUNT.spread:RETAL.spread):1); d.x+=rnd(-1,1)*sp; d.y+=rnd(-1,1)*sp; d.z+=rnd(-1,1)*sp; d.normalize();
   spawnBolt(s.team,mp,d,false);
 }
 function burst(p,col,n,spd,life){
@@ -629,10 +635,10 @@ function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
   if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio){ MWAudio.heroHitLaser(); if(s.hp<=1+1e-6&&s.hp>1e-6) MWAudio.heroLowHealth(); } flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
-  if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills++; updHud(true); } } }
+  if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills+=SCORE.fighter; tally.fighter++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
-    s.hp--; s.hpShow=3.2;
-    if(s.hp<=0){ startDying(s); kills++; updHud(true); }
+    s.hp--; s.hpShow=3.2; s.provT=clockT+RETAL.sec;   // the hero is shooting at us: shoot back for a few seconds
+    if(s.hp<=0){ startDying(s); kills+=SCORE[s.cls]; tally[s.cls]++; updHud(true); }
   }
 }
 // ── floating health bars (DOM) over large ships that have just been hit by the hero
@@ -761,11 +767,16 @@ function updShipLarge(s,dt){   // support + capital: dead-straight, very slow pa
   s.prev.copy(s.pos); s.pos.addScaledVector(s.hd,sp*dt);
   s.vel.copy(s.hd).multiplyScalar(sp); s.dir.copy(s.hd);
   aim(s.root,s.hd); s.bank.rotation.z=0;
+  // provoked (the hero hit us within RETAL.sec): aim at the hero instead of the usual AI target
+  var angry=s.provT>clockT&&heroShip&&heroShip.alive&&!quiet()&&stage==='play';
+  if(angry){ if(s.target!==heroShip){ s.target=heroShip; } s.tT=Math.max(s.tT,.3); }
+  else if(s.target&&s.target.hero){ s.target=null; s.tT=0; }
   s.tT-=dt; if(!s.target||!s.target.alive||s.tT<=0) pickTarget(s);
   s.cd-=dt;
   if(s.cd<=0){
-    if(s.target&&s.target.alive&&s.target.pos.distanceTo(s.pos)<CLS[s.cls].range){ fireAt(s,s.target.pos,s.target.vel); }
-    s.cd=fireInterval(s);
+    var tg=s.target&&s.target.alive?s.target:null, rng=CLS[s.cls].range*(tg&&tg.hero?RETAL.rangeK:1);
+    if(tg&&tg.pos.distanceTo(s.pos)<rng){ fireAt(s,tg.pos,tg.vel); }
+    s.cd=fireInterval(s)*(tg&&tg.hero?RETAL.slow:1);
   }
 }
 // large ships never overlap: soft positional separation on bounding spheres (they move so slowly that this resolves gradually)
@@ -786,7 +797,7 @@ function updBase(s,dt){
 // stage 'select': the hologram's head is replaced by a carousel of the playable hero ships (◄ PLAY ► under the cone).
 // stage 'play'  : every hologram artifact hides (ctx.onStage) and the chosen hero flies — it travels toward the mouse, fires where you click.
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
-var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, carUi=null, hintEl=null, pendingHero=null;
+var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
 function setStage(st){ if(stage===st) return; stage=st; if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
@@ -1130,7 +1141,7 @@ function bindInput(){
 function updCritical(){ if(vigEl) vigEl.style.display=(stage==='play'&&!quiet()&&heroShip&&heroShip.alive&&heroShip.hp<=1+1e-6)?'block':'none'; }   // 1 collision or less from death
 function updHud(pulse){
   updCritical(); if(!hudEl) return; var pct=heroShip?Math.max(0,heroShip.hp/heroMax)*100:100;
-  hudEl.innerHTML='<span class="bt-hl">KILLS</span><span class="bt-hn">'+kills+'</span><div class="bt-hull"><span class="bt-hl">HULL</span><div class="bt-hbar"><i style="width:'+pct+'%;background:hsl('+Math.round(pct*1.1)+',90%,55%)"></i></div></div>';
+  hudEl.innerHTML='<span class="bt-hl">SCORE</span><span class="bt-hn">'+kills+'</span><div class="bt-hull"><span class="bt-hl">HULL</span><div class="bt-hbar"><i style="width:'+pct+'%;background:hsl('+Math.round(pct*1.1)+',90%,55%)"></i></div></div>';
   if(pulse){ hudEl.classList.remove('pulse'); void hudEl.offsetWidth; hudEl.classList.add('pulse'); }
 }
 function injectCss(){
@@ -1283,7 +1294,7 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    kills=0; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=450; c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
@@ -1308,7 +1319,7 @@ var MWBattle={
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
   assetsReady:function(){ return active&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
-  summary:function(){ return { played:session.played, kills:kills, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
+  summary:function(){ return { played:session.played, score:kills, kills:kills, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _explode:function(s){ startDying(s); }, _debris:function(){ return debris.length; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },

@@ -14,7 +14,7 @@ const HEROES = new Set(['mil-falcon', 'n1', 'razorcrest', 'slave-1']);
 const NAME_MAX = 20;
 const URL_RE = /(https?:\/\/|www\.|\.com\b|\.net\b|\.org\b)/i;
 const MAX_PER_WINDOW = 5, WINDOW_MIN = 10;     // submissions per IP per window
-const MAX_KILLS_PER_SEC = 1.2, SLACK = 4;      // plausibility: kills <= seconds * 1.2 + 4
+const MAX_KILLS_PER_SEC = 3, SLACK = 10;        // plausibility: score <= seconds * 3 + 10 (score = fighter kills + 3 per support ship + 7 per capital ship; the `kills` column holds the score)
 const MIN_SECONDS = 5, MAX_SECONDS = 4 * 3600;
 
 function ipHash(req) {
