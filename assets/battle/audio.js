@@ -45,7 +45,7 @@ var HERO={
      without one set chain:[...] instead, and every bolt fired while held plays one of those clips (short, rapid) to fake a burst. */
   'mil-falcon':{ idle:'falcon-idle', active:'falcon-active',
     fire1:['falcon-fire-single-01','falcon-fire-single-02','falcon-fire-double-01','falcon-fire-double-02','falcon-fire-burst'],
-    fireN:['falcon-turret-01','falcon-turret-02','falcon-turret-03','falcon-turret-05','falcon-turret-07','falcon-turret-08'] },
+    fireN:['falcon-turret-01','falcon-turret-02','falcon-turret-05','falcon-turret-07','falcon-turret-08'], rattle:'falcon-turret-rattle' },   // burst 03's closing rattle plays when fire is released
   'n1':{ idle:'n1-idle', active:'n1-active',
     fire1:['n1-fire-1','n1-fire-2','n1-fire-3'], chain:['n1-fire-1','n1-fire-2','n1-fire-3'] },
   'razorcrest':{ idle:null, active:'razor-active',                              // no idle engine clip yet
@@ -59,8 +59,8 @@ var HERO_SHARED={
   destroyed:['exp-01','exp-02','exp-03'],
   lowHealth:['lowhealth-chime']
 };
-var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.7, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
-  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:.7, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
+var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
+  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:2.6, rattle:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
 var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
@@ -73,7 +73,7 @@ function ensure(){
     var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return false;
     ctx=new AC();
     master=ctx.createGain(); master.gain.value=muted?0:1;
-    comp=ctx.createDynamicsCompressor(); comp.threshold.value=-14; comp.knee.value=18; comp.ratio.value=4; comp.attack.value=.004; comp.release.value=.25;   // many explosions at once must not clip
+    comp=ctx.createDynamicsCompressor(); comp.threshold.value=-8; comp.knee.value=14; comp.ratio.value=3; comp.attack.value=.006; comp.release.value=.18;   // many explosions at once must not clip
     master.connect(comp); comp.connect(ctx.destination);
     duck=ctx.createGain(); duck.connect(master);   // everything except the big destruction sounds goes through here and is ducked under them
   }
@@ -124,7 +124,7 @@ function oneShot(key,o){ try{ return oneShot_(key,o); }catch(e){ if(window.conso
 function oneShot_(key,o){
   o=o||{}; if(!ensure()||muted&&!o.force) return null;
   o.gain=num(o.gain,1); o.rate=num(o.rate,1);
-  if(voices>=18) return null;
+  if(voices>=28) return null;
   var buf=bufs[key]; if(!buf){ load(key); return null; }   // first use just warms the cache
   var s=ctx.createBufferSource(); s.buffer=buf; if(o.rate) s.playbackRate.value=o.rate;
   var g=gainNode(o.gain==null?1:o.gain), tail=g;
@@ -329,7 +329,7 @@ var MWAudio={
     if(!ensure()) return; heroStop(.1); var def=HERO[id]; if(!def) return;
     var bus=gainNode(1); bus.connect(duck);
     heroSnd={ id:id, def:def, bus:bus, idle:def.idle?loopSource(def.idle,bus,LEVEL.idle,1.2):null, active:def.active?loopSource(def.active,bus,0,1.2):null, k:0, held:0, chain:false, curBurst:null, lastShot:-9, lowDone:false };
-    preload(def.fire1.concat(def.fireN||[]).concat(def.chain||[]));
+    preload(def.fire1.concat(def.fireN||[]).concat(def.chain||[]).concat(def.rattle?[def.rattle]:[]));
     ['hitLaser','collide','destroyed','lowHealth'].forEach(function(k){ preload(HERO_SHARED[k]); });
   },
   heroStop:function(){ heroStop(.4); },
@@ -343,7 +343,7 @@ var MWAudio={
      Ships with chain clips instead: heroShot() is called for every bolt the ship fires — an isolated shot plays a full fire1 clip, and
      shots in quick succession play short (~0.5 s) chain clips, so holding fire sounds like a burst of singles. */
   heroFireDown:function(){
-    var h=heroSnd; if(!h) return; h.held=now(); h.chain=true;
+    var h=heroSnd; if(!h) return; h.held=now(); h.chain=true; h.bursted=false;
     if(!h.def.chain) oneShot(pick(h.def.fire1),{gain:LEVEL.fire1,rate:.97+Math.random()*.06});
   },
   heroFireHeld:function(){
@@ -351,16 +351,21 @@ var MWAudio={
     if(h.curBurst&&now()<h.nextAt) return;                       // the next burst starts the moment this one stops being audible
     var key=pick(h.def.fireN); if(!bufs[key]){ load(key); return; }
     var bt=burstTiming(bufs[key]), v=oneShot(key,{gain:LEVEL.fireN,maxDur:bt.cut}); if(!v) return;
-    h.curBurst=v; h.nextAt=now()+bt.next; v.onend=function(){ if(h.curBurst===v) h.curBurst=null; };
+    h.curBurst=v; h.bursted=true; h.nextAt=now()+bt.next; v.onend=function(){ if(h.curBurst===v) h.curBurst=null; };
   },
   heroShot:function(){
     var h=heroSnd; if(!h||!h.def.chain) return; var t=now(), gap=t-h.lastShot; h.lastShot=t;
     if(gap>.6) oneShot(draw('shot1-'+h.id,h.def.fire1),{gain:LEVEL.fire1,rate:rr(.97,1.04)});
     else oneShot(draw('chain-'+h.id,h.def.chain),{gain:LEVEL.chain,rate:rr(.94,1.08),maxDur:.5});
   },
-  heroFireUp:function(){ var h=heroSnd; if(!h) return; h.chain=false; stopBurst(h,.14); },
+  heroFireUp:function(){
+    var h=heroSnd; if(!h) return; h.chain=false;
+    if(h.bursted&&h.def.rattle){ stopBurst(h,.05); oneShot(h.def.rattle,{gain:LEVEL.rattle,rate:rr(.97,1.04)}); }   // a held burst ends on the rattle
+    else stopBurst(h,.14);
+    h.bursted=false;
+  },
   /* low hull: the chime plays once per life, the first time the hero drops to its last hit point */
-  heroLowHealth:function(){ var h=heroSnd; if(!h||h.lowDone) return; h.lowDone=true; oneShot(pick(HERO_SHARED.lowHealth),{gain:LEVEL.lowHealth}); },
+  heroLowHealth:function(){ var h=heroSnd; if(!h||h.lowDone) return; h.lowDone=true; oneShot(pick(HERO_SHARED.lowHealth),{gain:LEVEL.lowHealth,dest:master}); },   // the source chime is quiet (~-24 dB): boost it, and keep it out of the duck bus
   heroHitLaser:function(){ oneShot(pick(HERO_SHARED.hitLaser),{gain:LEVEL.hitLaser,rate:.94+Math.random()*.12}); },
   heroCollide:function(){ oneShot(pick(HERO_SHARED.collide),{gain:LEVEL.collide,rate:.96+Math.random()*.08}); },
   heroDestroyed:function(){ heroStop(.15); oneShot(pick(HERO_SHARED.destroyed),{gain:LEVEL.destroyed}); },
@@ -371,6 +376,7 @@ var MWAudio={
     preload(POOL_FIGHTER); preload(['r2']);
     Object.keys(DEATH).forEach(function(c){ var d=DEATH[c]; d.seq.forEach(function(x){ load(x.k); }); preload(d.small); preload(d.final); });
   },
+  _comp:function(){ return comp; },
   _audLen:function(key){ var b=bufs[key]; if(!b) return null; var t=burstTiming(b); return {next:+t.next.toFixed(2),cut:+t.cut.toFixed(2),dur:+b.duration.toFixed(2),audible:+audibleLen(b).toFixed(2)}; },
   _loopEnd:function(key){ var b=bufs[key]; return b?{end:loopEnd(b),dur:b.duration}:null; },
   _state:function(){ return {duck:duck?+duck.gain.value.toFixed(2):null, ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, selShip:selShip&&selShip.id, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:+heroSnd.k.toFixed(2),burst:!!heroSnd.curBurst,low:heroSnd.lowDone}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
