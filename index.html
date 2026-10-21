@@ -605,16 +605,23 @@
   body.mw-cvroute #cvFxCanvas{display:block}
   /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
-  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}
-  #soundToggle .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
-  #soundToggle .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
-  #soundToggle .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
-  #soundToggle.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(18px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}
-  #soundToggle:hover .sw-track{border-color:var(--bric-interactive-outline-hover)}
-  #soundToggle:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
-  #soundToggle.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
-  #soundToggle:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
-  @media (prefers-reduced-motion:reduce){#soundToggle .sw-track,#soundToggle .sw-thumb,#soundToggle .sw-lbl{transition:none}}
+  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21}
+  .mw-sound-switch{display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}
+  .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
+  .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
+  .mw-sound-switch .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
+  .mw-sound-switch.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(18px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}
+  .mw-sound-switch:hover .sw-track{border-color:var(--bric-interactive-outline-hover)}
+  .mw-sound-switch:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
+  .mw-sound-switch.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
+  .mw-sound-switch:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
+  /* prominent variant (arcade hero select, under Leaderboard): a bigger switch and label */
+  .mw-sound-switch--lg{gap:var(--bric-space-2-stud)}
+  .mw-sound-switch--lg .sw-track{width:52px;height:24px}
+  .mw-sound-switch--lg .sw-thumb{width:18px;height:16px;top:3px;left:3px}
+  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(27px)}
+  .mw-sound-switch--lg .sw-lbl{font-size:13px;letter-spacing:.2em;min-width:78px}
+  @media (prefers-reduced-motion:reduce){.mw-sound-switch .sw-track,.mw-sound-switch .sw-thumb,.mw-sound-switch .sw-lbl{transition:none}}
   /* message stars layer */
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
   #msgCanvas{position:absolute;inset:0;z-index:12;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
@@ -890,7 +897,7 @@
   </div>
 
   <div id="topbar">
-    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeSndBtn" aria-pressed="true" aria-label="Sound on" title="Toggle arcade sound (M)">SND ON</button></div>
+    <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
     <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
@@ -1324,7 +1331,7 @@
   <div id="entryHint">drag to orbit · scroll to zoom · click the mark to enter</div>
   <div id="hint">drag to rotate · click a planet to travel</div>
   <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
-  <div id="soundToggle" class="sw on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
+  <div id="soundToggle" class="sw mw-sound-switch on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
 
   <!-- HANDOFF: authoring-mode bootstrap. Runs synchronously (before the 3D engine loads) so the
        admin toolbar (save/edit/debug/hide-ui) never flashes for regular visitors. Visit once with
@@ -10376,15 +10383,12 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); if(window.MWAudio&&!arcadeExiting) MWAudio.ui('back'); exitArcade(); } },true);
     var _axb=document.getElementById('arcadeExitBtn'); if(_axb) _axb.addEventListener('click',exitArcade);
     var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
-    // arcade sound toggle (assets/battle/audio.js): the SND button or the M key; the choice persists in localStorage['mw_sound']
-    var _axs=document.getElementById('arcadeSndBtn');
-    function syncSndBtn(){ if(!_axs||!window.MWAudio) return; var off=MWAudio.isMuted(); _axs.textContent=off?'SND OFF':'SND ON'; _axs.setAttribute('aria-pressed',String(!off)); _axs.setAttribute('aria-label',off?'Sound off':'Sound on'); }
-    if(_axs){ _axs.addEventListener('click',function(){ if(window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } }); window.addEventListener('mw:sound',syncSndBtn); syncSndBtn(); }
+    // sound switches (.mw-sound-switch: the galaxy-view one and the arcade hero-select one) and the M key share one persisted setting (localStorage['mw_sound'])
     // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover
     // (mouse only), switches latch on/off, close/back controls play the back sound. Author tooling and the sound switches themselves are skipped.
     (function(){
       var SEL='a[href],button,[role=button],[role=switch],[role=tab],[role=menuitem],[role=option],summary,select,input[type=checkbox],input[type=radio]';
-      var SKIP='.tbtn,#debug,#projMgr,#editPanel,#uploadpanel,#marqueePanel,[data-nosound],#soundToggle,#arcadeSndBtn', downEl=null;
+      var SKIP='.tbtn,#debug,#projMgr,#editPanel,#uploadpanel,#marqueePanel,[data-nosound],.mw-sound-switch', downEl=null;
       function el(e){ var t=e.target&&e.target.closest?e.target.closest(SEL):null; if(!t||t.disabled||t.getAttribute('aria-disabled')==='true'||t.closest(SKIP)) return null; return t; }
       function isSwitch(b){ return b.getAttribute('role')==='switch'||(b.matches&&b.matches('input[type=checkbox]')); }
       function kind(b){
@@ -11180,14 +11184,16 @@ f 2469//2469 2470//2470 2434//2434
       });
     }
     var msgVisible=true;   // visitor messages are always shown (the old "messages visible" switch was replaced by the sound switch)
-    (function(){ var b=document.getElementById('soundToggle'); if(!b) return;
-      var lbl=b.querySelector('.sw-lbl');
+    (function(){
+      var SW='.mw-sound-switch';
       function muted(){ if(window.MWAudio) return MWAudio.isMuted(); try{ return localStorage.getItem('mw_sound')==='off'; }catch(e){ return false; } }
-      function sync(){ var on=!muted(); b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); if(lbl) lbl.textContent=on?'Sound on':'Sound off'; }
-      function flip(){ if(window.MWAudio){ MWAudio.toggle(); } else { try{ localStorage.setItem('mw_sound',muted()?'on':'off'); }catch(e){} } sync(); }
-      sync(); window.addEventListener('mw:sound',sync); window.addEventListener('load',sync);
-      b.addEventListener('click',flip);
-      b.addEventListener('keydown',function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } }); })();
+      function syncAll(){ var on=!muted(); [].forEach.call(document.querySelectorAll(SW),function(b){ b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); var l=b.querySelector('.sw-lbl'); if(l) l.textContent=on?'Sound on':'Sound off'; }); }
+      function flip(){ if(window.MWAudio){ MWAudio.toggle(); } else { try{ localStorage.setItem('mw_sound',muted()?'on':'off'); }catch(e){} } syncAll(); }
+      document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest(SW); if(b){ flip(); } });
+      document.addEventListener('keydown',function(e){ if((e.key===' '||e.key==='Enter')&&e.target.matches&&e.target.matches(SW)){ e.preventDefault(); flip(); } });
+      syncAll(); window.addEventListener('mw:sound',syncAll); window.addEventListener('load',syncAll);
+      window.__mwSyncSound=syncAll;   // the arcade carousel builds its switch later and calls this
+    })();
     var msgCanvas=null, msgCtx=null;
     function setupMsgCanvas(){ msgCanvas=document.getElementById('msgCanvas'); if(!msgCanvas) return; msgCtx=msgCanvas.getContext('2d'); resizeMsgCanvas(); }
     function resizeMsgCanvas(){ if(!msgCanvas) return; var P=Math.max(1,Math.round(params.pixel||1)); msgCanvas.width=Math.max(1,Math.ceil(W/P)); msgCanvas.height=Math.max(1,Math.ceil(H/P)); }

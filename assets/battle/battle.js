@@ -1162,6 +1162,7 @@ function bindInput(){
   // (minikits no longer respond to mouse clicks — only to the hero ship's lasers)
   on(window,'keydown',function(e){
     if(isTyping(e)||hyper) return;
+    if(e.target&&e.target.closest&&e.target.closest('.mw-sound-switch')) return;   // Enter/Space on the sound switch flips it; it must not also start the game
     if(/^(ArrowLeft|ArrowRight|Enter|Space)$/.test(e.code)&&e.target&&e.target!==document.body&&e.target.blur&&e.target.tagName!=='A'){ e.target.blur(); }   // take focus off a slider/button so it doesn't also act on the key
     if(stage==='select'){
       if(e.code==='ArrowLeft'){ stepCar(-1); if(window.MWAudio) MWAudio.ui('step',false,{dir:-1}); e.preventDefault(); }
@@ -1186,6 +1187,7 @@ function injectCss(){
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
     '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
+    '#bt-car .mw-sound-switch{margin-top:var(--bric-space-3-stud,24px)}',
     '#bt-car .bt-lb{margin-top:26px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
     '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
     '#bt-car .bt-sub b{font-weight:400;color:var(--holo,#AAF5EE)}',
@@ -1218,7 +1220,8 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button><div class="sw mw-sound-switch mw-sound-switch--lg on" role="switch" aria-checked="true" tabindex="0" title="Sound on or off (M)"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>';
+  if(window.__mwSyncSound) window.__mwSyncSound();
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
