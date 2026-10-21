@@ -577,6 +577,7 @@
   #box-hover-label{position:absolute;z-index:30;pointer-events:none;display:none;transform:translate(-50%,-50%);font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:rgba(234,254,251,0.97);text-shadow:0 0 14px rgba(90,191,184,0.95),0 0 40px rgba(90,191,184,0.5);white-space:nowrap;user-select:none;background:rgba(4,8,14,0.58);padding:9px 20px 8px;border:1px solid rgba(120,224,214,0.38);box-shadow:0 0 22px rgba(90,191,184,0.18)}
   body.mw-planet:not(.mw-altfocus) canvas{cursor:crosshair}
   body.mw-planet.box-hovered:not(.mw-altfocus) canvas{cursor:pointer}
+  body.mw-altfocus canvas{cursor:default!important}   /* CV route, HoloNet etc.: the galaxy's hover affordance left an inline cursor:pointer on the canvas when the planet was clicked, which made the reticle step aside for the system hand. Nothing on the canvas is a pointer target in these views. */
   body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #soundToggle{opacity:0;pointer-events:none}
   /* sound toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
      in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views */
@@ -10639,6 +10640,7 @@ f 2469//2469 2470//2470 2434//2434
       // Quiet the galaxy: suppress hover/auto-rotate and clear any artifact focus, so the
       // galaxy's own camera branches stand down while this scene owns the view.
       focused = grp || null; autoRotate = false; focusedMoon = null;
+      setHovered(null);   // clear the galaxy hover state (and its inline pointer cursor) left by the planet click that brought us here
       galaxy.visible = false;
       this.group.visible = true;
       this.active = true;
