@@ -53,10 +53,10 @@ var MODELS=[
   {id:'star-destroyer',    file:'nano-star-destroyer',         team:IMP, cls:'capital', size:2.9, n:10},
   {id:'death-star',        file:'nano-death-star',             team:IMP, cls:'base',    size:2.8, n:1, max:1},
   // heroes (user-spawned)
-  {id:'mil-falcon',        file:'nano-mil-falcon',             team:HERO, cls:'hero',   size:.30, n:0, label:'Millennium Falcon'},
-  {id:'n1',                file:'nano-n1',                     team:HERO, cls:'hero',   size:.30, n:0, label:"Mandalorian's N-1", rot:[0,Math.PI,0]},
-  {id:'razorcrest',        file:'nano-razorcrest',             team:HERO, cls:'hero',   size:.30, n:0, label:'Razor Crest'},
-  {id:'slave-1',           file:'nano-slave-1',                team:HERO, cls:'hero',   size:.30, n:0, label:'Slave I'},   /* as authored: the neon-orange engine sits at the -Z end, so the nose is +Z with the wings folded vertical (no pre-rotation) */
+  {id:'mil-falcon',        file:'nano-mil-falcon',             team:HERO, cls:'hero',   size:.30, n:0, label:'Millennial Hawk'},
+  {id:'n1',                file:'nano-n1',                     team:HERO, cls:'hero',   size:.30, n:0, label:"Bounty Hunter’s M-1", rot:[0,Math.PI,0]},
+  {id:'razorcrest',        file:'nano-razorcrest',             team:HERO, cls:'hero',   size:.30, n:0, label:"Razor’s Edge"},
+  {id:'slave-1',           file:'nano-slave-1',                team:HERO, cls:'hero',   size:.30, n:0, label:'Indentured Servant 1'},   /* as authored: the neon-orange engine sits at the -Z end, so the nose is +Z with the wings folded vertical (no pre-rotation) */
   // pickup
   {id:'minikit',           file:'minikit',                     team:-1,  cls:'minikit', size:.20, n:0}
 ];
@@ -627,7 +627,7 @@ function explodeRandom(cls){
 }
 function hitShip(s,b){
   burst(b.mesh.position,BOLT_COL[b.idx],7,1.1,.4);
-  if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio) MWAudio.heroHitLaser(); flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
+  if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio){ MWAudio.heroHitLaser(); if(s.hp<=1+1e-6&&s.hp>1e-6) MWAudio.heroLowHealth(); } flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
   if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ killShip(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills++; updHud(true); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
@@ -849,7 +849,7 @@ function heroCollide(s,dt){   // bumping other ships hurts (nothing actively tar
     var r=o.cls==='fighter'?Math.max(o.c.hx,o.c.hz)*o.root.scale.x*.8:lr(o)*.9;
     _v1.copy(s.pos).sub(o.pos); var d=_v1.length(); if(d>=hr+r) continue;
     var n=d>1e-4?_v1.multiplyScalar(1/d):_v1.set(0,1,0); s.pos.addScaledVector(n,hr+r-d+.02);
-    if(s.inv<=0){ s.inv=INV_COLLIDE; s.hp-=1; s.spd*=.25; if(window.MWAudio) MWAudio.heroCollide(); s.dir.lerp(n,.5).normalize();
+    if(s.inv<=0){ s.inv=INV_COLLIDE; s.hp-=1; s.spd*=.25; if(window.MWAudio){ MWAudio.heroCollide(); if(s.hp<=1+1e-6&&s.hp>1e-6) MWAudio.heroLowHealth(); } s.dir.lerp(n,.5).normalize();
       burst(_v2.copy(s.pos).addScaledVector(n,-hr*.5),0xffc060,18,1.4,.6); flash(s.pos,hr*3,0xffd090); heroHit(s,true); updHud(false); hudHurt();
       if(s.hp<=0){ heroDeath(s); return; } }
   }
@@ -904,7 +904,7 @@ function updHero(s,dt){
     pickAt(ptr.nx,ptr.ny,_hT);
     var mp=muzzle(s,_v1.set(0,0,0)); var dd=_v2.copy(_hT).sub(mp); if(dd.lengthSq()<1e-4) dd.copy(s.dir); dd.normalize();
     dd.x+=rnd(-1,1)*CLS.hero.spread; dd.y+=rnd(-1,1)*CLS.hero.spread; dd.normalize();
-    spawnBolt(HERO,mp,dd,true); s.cd=CLS.hero.int/Math.max(.2,P.laser);
+    spawnBolt(HERO,mp,dd,true); s.cd=CLS.hero.int/Math.max(.2,P.laser); if(window.MWAudio) MWAudio.heroShot();   // ships without a burst clip chain their singles per bolt
   }
   heroCollide(s,dt);
 }

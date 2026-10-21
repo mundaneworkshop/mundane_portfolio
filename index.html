@@ -10256,7 +10256,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
-    var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennium Falcon',n1:"Mandalorian's N-1",razorcrest:'Razor Crest','slave-1':'Slave I'};
+    var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennial Hawk',n1:"Bounty Hunter’s M-1",razorcrest:"Razor’s Edge",'slave-1':'Indentured Servant 1'};
     function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(); } }   // closing the game-over modal is what actually ends the exit
     function arcFetchTop(cb){
       if(!_sb){ cb(null,'offline'); return; }
