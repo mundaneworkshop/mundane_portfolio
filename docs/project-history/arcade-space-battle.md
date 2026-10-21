@@ -143,3 +143,9 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 ## Site-wide ambient background (Oct 21 2026)
 - `assets/audio/site-ambient.m4a` (17.8 s loop, from the Battle Sound Review page's "Site-wide ambient background" card) plays under the whole site outside the arcade: entry gate, galaxy view and everything opened from it. `MWAudio.siteStart()` / `siteStop()` in `audio.js` (`startSite`, level `LEVEL.ambSite` 0.4, 3 s fade-in, routed through the duck bus and the master gain, so the sound switch mutes it).
 - Browsers lock audio until a gesture, so `index.html` starts it on the first press or key anywhere (the entry gate click counts). Opening the arcade stops it (the arcade has its own beds); leaving the arcade for the galaxy restarts it, Play again does not. Framer case-study pages are a separate site and have no ambience.
+
+## Site sound review page + dock/boot events (Oct 21 2026)
+
+- The "Battle Sound Review" artifact is now **Site Sound Review** (same URL, notes carried over) because it covers the whole site. New section "Site events: dock and boot" with cards `evt-dock` (click, land), `evt-boot` (beam, head, grid) and `evt-planets` (each, done).
+- Code side: `SITE_EVENTS` at the top of `assets/battle/audio.js` (keys `dockClick`, `dockLand`, `bootBeam`, `bootHead`, `bootGrid`, `planetLoad`, `planetsDone`) is empty until clips from those cards are dropped into `assets/audio/` and listed there. `index.html` fires them through `MWAudio.site(name)` from `startDock()`, the dock-complete branch of `mwUpdate()` and `updateBootCascade()` (each once per boot; deep links skip the boot, so no sound).
+- Empty clicks (canvas or page, not controls, planets, labels, fields or a text selection) play the existing `release` UI sound via `emptyClick()`. Not played in the arcade.
