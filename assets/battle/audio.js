@@ -58,7 +58,7 @@ var HERO_SHARED={
   collide:['impact-01','impact-02','impact-03','impact-04','impact-05','impact-06','impact-07','impact-08'],
   destroyed:['exp-01','exp-02','exp-03'],
   lowHealth:['lowhealth-chime'],
-  deathSeq:[]   // plays once when the hero starts burning (~3.4 s before the explosion); assign clips from the review page's "Death sequence" slot
+  deathSeq:['hero-death-seq']   // plays once when the hero starts burning (~3.4 s before the explosion; the Star Citizen multi-ship explosion, trimmed and boosted)
 };
 var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
@@ -418,7 +418,7 @@ var MWAudio={
     var bus=gainNode(1); bus.connect(duck);
     heroSnd={ id:id, def:def, bus:bus, idle:def.idle?loopSource(def.idle,bus,LEVEL.idle,1.2):null, active:def.active?loopSource(def.active,bus,0,1.2):null, k:0, held:0, chain:false, curBurst:null, lastShot:-9, lowDone:false };
     preload(def.fire1.concat(def.fireN||[]).concat(def.chain||[]).concat(def.rattle?[def.rattle]:[]));
-    ['hitLaser','collide','destroyed','lowHealth'].forEach(function(k){ preload(HERO_SHARED[k]); });
+    ['hitLaser','collide','destroyed','lowHealth','deathSeq'].forEach(function(k){ preload(HERO_SHARED[k]); });
   },
   heroStop:function(){ heroStop(.4); },
   /* thrust 0..1 (from the ship's speed): crossfades idle → active, equal power */
@@ -456,7 +456,7 @@ var MWAudio={
   heroLowHealth:function(){ var h=heroSnd; if(!h||h.lowDone) return; h.lowDone=true; oneShot(pick(HERO_SHARED.lowHealth),{gain:LEVEL.lowHealth,dest:master}); },   // the source chime is quiet (~-24 dB): boost it, and keep it out of the duck bus
   heroHitLaser:function(){ oneShot(pick(HERO_SHARED.hitLaser),{gain:LEVEL.hitLaser,rate:.94+Math.random()*.12}); },
   heroCollide:function(){ oneShot(pick(HERO_SHARED.collide),{gain:LEVEL.collide,rate:.96+Math.random()*.08}); },
-  heroDying:function(){ if(HERO_SHARED.deathSeq.length) oneShot(pick(HERO_SHARED.deathSeq),{gain:LEVEL.deathSeq}); },
+  heroDying:function(){ if(!HERO_SHARED.deathSeq.length) return; var v=oneShot(pick(HERO_SHARED.deathSeq),{gain:LEVEL.deathSeq,dest:master}); if(v) duckFor(v.dur); },   // the dying hero cuts through everything else
   heroDestroyed:function(){ heroStop(.15); oneShot(pick(HERO_SHARED.destroyed),{gain:LEVEL.destroyed}); },
 
   /* fetch the destruction clips in the background once the arcade is open */
