@@ -300,6 +300,10 @@ var UI={
 /* uiLab() lets tools/ui-sounds.html list every kind */
 function uiPlay(kind,force,opt){
   if(!ensure()||!UI[kind]||(muted&&!force)) return;
+  if(ctx.state!=='running'){   // a suspended context would queue the click and play it late: only wake it for a real user gesture, otherwise stay silent
+    if(navigator.userActivation&&navigator.userActivation.isActive) ctx.resume().then(function(){ uiPlay(kind,force,opt); },function(){});
+    return;
+  }
   var t=now(), min=kind==='hover'?.06:.012; if(t-(uiLast[kind]||-1)<min) return; uiLast[kind]=t;   // a hair of debounce: never two identical clicks on one frame
   var out=ctx.createGain(); out.gain.value=LEVEL.ui; var tail=out;
   if(opt&&opt.dir&&ctx.createStereoPanner){ var pn=ctx.createStereoPanner(); pn.pan.value=opt.dir<0?-.35:.35; out.connect(pn); tail=pn; }   // paging left/right leans that way

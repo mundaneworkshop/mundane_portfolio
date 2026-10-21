@@ -111,7 +111,7 @@
   #arcadeResult .ar-empty{padding:10px;text-align:center;color:var(--muted,#6b8a85)}
   #arcadeResult .ar-btns{display:flex;gap:12px;justify-content:center}
   #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
-  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
+  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #soundToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   /* Save = primary action — lit amber fill */
   /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
@@ -532,7 +532,7 @@
      .admin-only rule above) so the debug panel — and its entry/dock-timing sliders — is tunable while
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
   body.mw-entrygate #labels, body.mw-entrygate #hint,
-  body.mw-entrygate #msgToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
+  body.mw-entrygate #soundToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
   #entryHint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b8a85;pointer-events:none;opacity:0;transition:opacity .4s ease}
   body.mw-entrygate #entryHint{opacity:1}
 
@@ -547,7 +547,7 @@
   /* breadcrumb nav stays put through "hide UI" — it's viewer navigation, not admin chrome; only the
      admin-only topright cluster (wordmark + save/edit/debug/hide-ui) fades out */
   body.ui-hidden #topright{opacity:0;pointer-events:none;transition:opacity .3s ease}
-  body.ui-hidden #msgToggle{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  body.ui-hidden #soundToggle{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #status{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #debug{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #hint{opacity:1;letter-spacing:3px}
@@ -555,10 +555,10 @@
   #box-hover-label{position:absolute;z-index:30;pointer-events:none;display:none;transform:translate(-50%,-50%);font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:rgba(234,254,251,0.97);text-shadow:0 0 14px rgba(90,191,184,0.95),0 0 40px rgba(90,191,184,0.5);white-space:nowrap;user-select:none;background:rgba(4,8,14,0.58);padding:9px 20px 8px;border:1px solid rgba(120,224,214,0.38);box-shadow:0 0 22px rgba(90,191,184,0.18)}
   body.mw-planet:not(.mw-altfocus) canvas{cursor:crosshair}
   body.mw-planet.box-hovered:not(.mw-altfocus) canvas{cursor:pointer}
-  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #msgToggle{opacity:0;pointer-events:none}
-  /* messages-visible toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
+  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #soundToggle{opacity:0;pointer-events:none}
+  /* sound toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
      in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views */
-  body.mw-planet #msgToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  body.mw-planet #soundToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
   /* ── CV 3D hyperspace route (drag to orbit; details reuse #manual-scene) ── */
   #cvRouteLayer{position:absolute;inset:0;z-index:16;display:none;pointer-events:none}   /* labels capture clicks; the canvas underneath stays draggable */
   #cvRouteLayer.show{display:block}
@@ -581,15 +581,18 @@
   body.editing #cvShipUp{display:block}
   #cvFxCanvas{position:absolute;inset:0;z-index:14;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize);display:none}
   body.mw-cvroute #cvFxCanvas{display:block}
-  /* messages toggle — design-system physical switch (.sw), teal accent for the message wall */
-  #msgToggle{position:absolute;bottom:40px;left:22px;z-index:21;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;outline:none}
-  #msgToggle .sw-track{width:34px;height:16px;border:1px solid var(--border);background:rgba(160,106,240,.08);position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
-  #msgToggle .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--muted);transition:transform .12s,background .12s,box-shadow .12s}
-  #msgToggle .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);transition:color .1s}
-  #msgToggle.on .sw-track{border-color:var(--bric-holonet-text)}
-  #msgToggle.on .sw-thumb{background:#C8AAFF;transform:translateX(18px);box-shadow:0 0 4px rgba(160,106,240,.6)}
-  #msgToggle.on .sw-lbl{color:#C8AAFF}
-  #msgToggle:focus-visible .sw-track{border-color:var(--bric-holonet-text)}
+  /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
+     hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
+  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}
+  #soundToggle .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;transition:border-color .1s;clip-path:var(--clip-step)}
+  #soundToggle .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
+  #soundToggle .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
+  #soundToggle.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(18px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}
+  #soundToggle:hover .sw-track{border-color:var(--bric-interactive-outline-hover)}
+  #soundToggle:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
+  #soundToggle.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
+  #soundToggle:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
+  @media (prefers-reduced-motion:reduce){#soundToggle .sw-track,#soundToggle .sw-thumb,#soundToggle .sw-lbl{transition:none}}
   /* message stars layer */
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
   #msgCanvas{position:absolute;inset:0;z-index:12;pointer-events:none;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
@@ -1299,7 +1302,7 @@
   <div id="entryHint">drag to orbit · scroll to zoom · click the mark to enter</div>
   <div id="hint">drag to rotate · click a planet to travel</div>
   <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
-  <div id="msgToggle" class="sw on" role="switch" aria-checked="true" tabindex="0" title="Show or hide visitor messages"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Messages visible</span></div>
+  <div id="soundToggle" class="sw on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
 
   <!-- HANDOFF: authoring-mode bootstrap. Runs synchronously (before the 3D engine loads) so the
        admin toolbar (save/edit/debug/hide-ui) never flashes for regular visitors. Visit once with
@@ -9823,7 +9826,7 @@ f 2469//2469 2470//2470 2434//2434
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
       else { camZoom=clamp(camZoom+dir*0.06,0.4,2.2); } },{passive:false});
     // SINGLE source of truth for galaxy hover, so `hovered` always reflects reality and a highlight can never get stuck.
-    function setHovered(grp){ if(grp===hovered) return; hovered=grp;
+    function setHovered(grp){ if(grp===hovered) return; hovered=grp; if(grp&&window.MWAudio&&!window.__mwArcade) MWAudio.ui('hover');
       planets.forEach(function(p){ var on=(p===hovered); p.userData.target=on?1.3:1;
         if(p.userData.label){ var _was=p.userData.label.classList.contains('hot'); p.userData.label.classList.toggle('hot',on); if(on&&!_was) GFX.label(p.userData.label);
           var lc=p.userData.labelColors; if(lc) p.userData.label.style.color=(on?lc.hot:lc.tint); } });
@@ -9963,6 +9966,7 @@ f 2469//2469 2470//2470 2434//2434
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
 
     function activate(ud){
+      if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
@@ -10330,15 +10334,29 @@ f 2469//2469 2470//2470 2434//2434
     var _axs=document.getElementById('arcadeSndBtn');
     function syncSndBtn(){ if(!_axs||!window.MWAudio) return; var off=MWAudio.isMuted(); _axs.textContent=off?'SND OFF':'SND ON'; _axs.setAttribute('aria-pressed',String(!off)); _axs.setAttribute('aria-label',off?'Sound off':'Sound on'); }
     if(_axs){ _axs.addEventListener('click',function(){ if(window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } }); window.addEventListener('mw:sound',syncSndBtn); syncSndBtn(); }
-    // tactile UI sounds (assets/battle/audio.js → MWAudio.ui): arcade buttons click down on press and up on release; hover ticks. The carousel's
-    // keyboard arrows / Enter play theirs from battle.js; the SND toggle plays its own on/off latch.
+    // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover
+    // (mouse only), switches latch on/off, close/back controls play the back sound. Author tooling and the sound switches themselves are skipped.
     (function(){
-      var SEL='#arcadeExit button, #bt-car button, #arcadeResult button', downEl=null;
-      function btn(e){ var t=e.target&&e.target.closest?e.target.closest(SEL):null; return (t&&!t.disabled)?t:null; }
-      function kind(b){ if(b.id==='arcadeSndBtn') return null; if(b.id==='arcadeExitBtn'||b.id==='arcadeEscBtn'||b.id==='arClose') return 'back'; if(b.dataset&&b.dataset.d) return 'step'; if(b.classList.contains('bt-play')||b.id==='arAgain') return 'confirm'; return 'press'; }
-      document.addEventListener('pointerdown',function(e){ if(!window.MWAudio||!arcadeActive||e.button>0) return; var b=btn(e); if(!b) return; downEl=b; var k=kind(b); if(k){ MWAudio.uiReady(); MWAudio.ui(k,false,k==='step'?{dir:+b.dataset.d}:null); } },true);
-      document.addEventListener('pointerup',function(e){ if(!window.MWAudio||!downEl) return; var b=btn(e), k=b&&kind(b); if(b===downEl&&k==='press') MWAudio.ui('release'); downEl=null; },true);
-      document.addEventListener('pointerover',function(e){ if(!window.MWAudio||!arcadeActive) return; var b=btn(e); if(!b) return; var from=e.relatedTarget&&e.relatedTarget.closest?e.relatedTarget.closest(SEL):null; if(from!==b) MWAudio.ui('hover'); },true);
+      var SEL='a[href],button,[role=button],[role=switch],[role=tab],[role=menuitem],[role=option],summary,select,input[type=checkbox],input[type=radio]';
+      var SKIP='.tbtn,#debug,#projMgr,#editPanel,#uploadpanel,#marqueePanel,[data-nosound],#soundToggle,#arcadeSndBtn', downEl=null;
+      function el(e){ var t=e.target&&e.target.closest?e.target.closest(SEL):null; if(!t||t.disabled||t.getAttribute('aria-disabled')==='true'||t.closest(SKIP)) return null; return t; }
+      function isSwitch(b){ return b.getAttribute('role')==='switch'||(b.matches&&b.matches('input[type=checkbox]')); }
+      function kind(b){
+        if(b.id==='arcadeExitBtn'||b.id==='arcadeEscBtn'||b.id==='arClose') return 'back';
+        if(b.dataset&&b.dataset.d&&b.closest('#bt-car')) return 'step';
+        if(b.classList.contains('bt-play')||b.id==='arAgain') return 'confirm';
+        var lab=(((b.getAttribute('aria-label')||'')+' '+(b.textContent||''))).toLowerCase().trim();
+        if(/\b(close|back|exit|cancel|dismiss)\b/.test(lab)||/^[\u00d7\u2715\u2716x\u25c4\u2190]$/.test(lab)) return 'back';
+        return 'press';
+      }
+      function play(b,k){ MWAudio.uiReady(); MWAudio.ui(k,false,k==='step'?{dir:+b.dataset.d}:null); }
+      document.addEventListener('pointerdown',function(e){ if(!window.MWAudio||e.button>0) return; var b=el(e); if(!b||isSwitch(b)) return; downEl=b; play(b,kind(b)); },true);
+      document.addEventListener('pointerup',function(e){ if(!window.MWAudio||!downEl) return; var b=el(e); if(b===downEl&&kind(b)==='press') MWAudio.ui('release'); downEl=null; },true);
+      document.addEventListener('pointerover',function(e){ if(!window.MWAudio||e.pointerType!=='mouse'||e.buttons) return; var b=el(e); if(!b) return; var from=e.relatedTarget&&e.relatedTarget.closest?e.relatedTarget.closest(SEL):null; if(from!==b) MWAudio.ui('hover'); },true);
+      // switches: play on/off by the state AFTER the click; keyboard activation (click with detail 0) plays its own sound too
+      document.addEventListener('click',function(e){ if(!window.MWAudio) return; var b=el(e); if(!b) return;
+        if(isSwitch(b)){ setTimeout(function(){ var on=b.matches('input')?b.checked:b.getAttribute('aria-checked')==='true'; MWAudio.uiReady(); MWAudio.ui(on?'on':'off'); },0); }
+        else if(e.detail===0) play(b,kind(b)); },true);
     })();
     window.addEventListener('keydown',function(e){ if((e.key==='m'||e.key==='M')&&arcadeActive&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA)$/.test((e.target&&e.target.tagName)||'')&&window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } });
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
@@ -11115,12 +11133,13 @@ f 2469//2469 2470//2470 2434//2434
         subscribeHoloNet();
       });
     }
-    var msgVisible=true; try{ msgVisible=localStorage.getItem('mw_msgvis')!=='0'; }catch(e){}
-    (function(){ var b=document.getElementById('msgToggle'); if(!b) return;
+    var msgVisible=true;   // visitor messages are always shown (the old "messages visible" switch was replaced by the sound switch)
+    (function(){ var b=document.getElementById('soundToggle'); if(!b) return;
       var lbl=b.querySelector('.sw-lbl');
-      function sync(){ b.classList.toggle('on',msgVisible); b.setAttribute('aria-checked',msgVisible?'true':'false'); if(lbl) lbl.textContent=msgVisible?'Messages visible':'Messages hidden'; }
-      function flip(){ msgVisible=!msgVisible; try{ localStorage.setItem('mw_msgvis',msgVisible?'1':'0'); }catch(e){} sync(); }
-      sync();
+      function muted(){ if(window.MWAudio) return MWAudio.isMuted(); try{ return localStorage.getItem('mw_sound')==='off'; }catch(e){ return false; } }
+      function sync(){ var on=!muted(); b.classList.toggle('on',on); b.setAttribute('aria-checked',on?'true':'false'); if(lbl) lbl.textContent=on?'Sound on':'Sound off'; }
+      function flip(){ if(window.MWAudio){ MWAudio.toggle(); } else { try{ localStorage.setItem('mw_sound',muted()?'on':'off'); }catch(e){} } sync(); }
+      sync(); window.addEventListener('mw:sound',sync); window.addEventListener('load',sync);
       b.addEventListener('click',flip);
       b.addEventListener('keydown',function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); flip(); } }); })();
     var msgCanvas=null, msgCtx=null;
