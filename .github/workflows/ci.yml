@@ -1,0 +1,31 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  syntax:
+    name: syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Check JS syntax (assets, api, inline scripts in index.html)
+        run: |
+          set -e
+          for f in assets/*.js assets/battle/*.js api/*.js; do node --check "$f"; done
+          python3 - <<'PY'
+          import re, subprocess, sys, tempfile, os
+          s = open('index.html').read()
+          bad = 0
+          for m in re.finditer(r'<script([^>]*)>(.*?)</script>', s, re.S):
+              attrs, code = m.group(1), m.group(2)
+              if 'src=' in attrs or 'json' in attrs or not code.strip(): continue
+              if code.lstrip().startswith('{'): continue   # JSON-LD
+              f = tempfile.NamedTemporaryFile('w', suffix='.js', delete=False); f.write(code); f.close()
+              r = subprocess.run(['node', '--check', f.name], capture_output=True, text=True)
+              if r.returncode: bad += 1; print(r.stderr[:400])
+              os.unlink(f.name)
+          sys.exit(1 if bad else 0)
+          PY
