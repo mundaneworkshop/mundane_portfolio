@@ -597,8 +597,9 @@
   .cvrlbl-ctl button:hover{border-color:#5ABFB8;color:#AAF5EE}
   #cvRouteCtl{position:absolute;top:58px;left:22px;z-index:21;display:none;flex-direction:column;gap:8px;align-items:flex-start}
   #cvRouteCtl.show{display:flex}
-  /* Recenter sits at the middle of the top edge (fixed to the viewport, so it ignores the left-hand control stack it lives in) */
-  #cvmOverview{position:fixed;top:14px;left:0;right:0;margin-inline:auto;width:max-content}
+  /* camera control hint: middle of the top edge (fixed to the viewport, so it ignores the left-hand control stack it lives in). Clicking empty space zooms back out to the whole route, so there is no Recenter button. */
+  #cvHint{position:fixed;top:18px;left:0;right:0;margin-inline:auto;width:max-content;pointer-events:none}
+  @media (max-width:700px){ #cvHint{top:52px} }   /* clear of the breadcrumb on a phone */
   .cvrlbl{--bric-ret-arm:8px;--bric-ret-outset:2px}   /* the reticle frames a node label tightly (labels are targets: see where they are built) */
   .cvr-pill{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:rgba(8,14,13,.7);border:1px solid rgba(90,191,184,.4);border-radius:2px;padding:8px 11px;cursor:pointer;backdrop-filter:blur(4px)}
   .cvr-pill:hover{border-color:#5ABFB8}
@@ -1234,9 +1235,8 @@
   </div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
-    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="cvmOverview">⛶ Recenter</button>
     <label class="cvr-pill glb-up" id="cvShipUp" data-bric-target data-bric-label="">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
-    <span class="cvr-pill cvr-hint">drag orbit · shift-drag pan Y · scroll zoom</span>
+    <span class="cvr-pill cvr-hint" id="cvHint">drag orbit · shift-drag pan Y · scroll zoom</span>
   </div>
 
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
@@ -10996,7 +10996,6 @@ f 2469//2469 2470//2470 2434//2434
       }
     }
     (function wireCVRoute(){
-      var ov=document.getElementById('cvmOverview'); if(ov) ov.addEventListener('click',cvOverview);
       var vg=document.getElementById('cCvVariegate'); if(vg) vg.addEventListener('click',cvVariegate);
       var si=document.getElementById('cvShipInput'); if(si) si.addEventListener('change',function(){ var f=si.files[0]; if(!f) return;
         var r=new FileReader(); r.onload=function(e){ var buf=e.target.result; cvSetShip(buf); if(window.BRICStore) BRICStore.set('cv:ship:glb',{kind:'glb',buffer:buf,name:f.name}); if(typeof toast==='function') toast('ship model ✓'); }; r.readAsArrayBuffer(f); });
