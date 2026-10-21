@@ -7,7 +7,7 @@
  *   (automatic on load)         entry: if the URL carries ?wipe=<variant>, the page starts covered, then the SAME
  *                               wipe keeps travelling and uncovers it. The param is stripped after.
  *   bricWipe.intercept(hosts)   wipe on ordinary link clicks that leave this site for one of hosts (used on Framer for the way back)
- *   bricWipe.play([variant])    preview in place: cover then uncover, no navigation
+ *   bricWipe.play([variant], [mid])  in place: cover then uncover, no navigation; mid() runs while fully covered (view swaps)
  *   bricWipe.variants           list of ids
  *
  * Variants (all feathered): lr rl tb bt, diag-tl diag-tr diag-bl diag-br, clock, iris-in iris-out, oval-in oval-out.
@@ -119,11 +119,12 @@
       build(v, false);
       run(cfg.outMs, function () { location.href = withParam(url, v); });
     },
-    play: function (variant) {
-      if (!supported()) return;
+    // mid (optional) runs once the page is fully covered: swap the view underneath it. Reduced motion / no mask support: mid runs at once, no wipe.
+    play: function (variant, mid) {
+      if (reduced() || !supported()) { if (mid) mid(); return null; }
       var v = pick(variant);
       build(v, false);
-      run(cfg.outMs, function () { build(v, true); el.style.setProperty('--bw-p', 0); run(cfg.inMs, hide); });
+      run(cfg.outMs, function () { if (mid) mid(); build(v, true); el.style.setProperty('--bw-p', 0); run(cfg.inMs, hide); });
       return v;
     },
     enter: function () {
