@@ -554,7 +554,7 @@
      .admin-only rule above) so the debug panel — and its entry/dock-timing sliders — is tunable while
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
   body.mw-entrygate #labels, body.mw-entrygate #hint,
-  body.mw-entrygate #soundToggle, body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
+  body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
   #entryHint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b8a85;pointer-events:none;opacity:0;transition:opacity .4s ease}
   body.mw-entrygate #entryHint{opacity:1}
 
@@ -577,10 +577,11 @@
   #box-hover-label{position:absolute;z-index:30;pointer-events:none;display:none;transform:translate(-50%,-50%);font-family:var(--display);font-size:14px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:rgba(234,254,251,0.97);text-shadow:0 0 14px rgba(90,191,184,0.95),0 0 40px rgba(90,191,184,0.5);white-space:nowrap;user-select:none;background:rgba(4,8,14,0.58);padding:9px 20px 8px;border:1px solid rgba(120,224,214,0.38);box-shadow:0 0 22px rgba(90,191,184,0.18)}
   body.mw-planet:not(.mw-altfocus) canvas{cursor:crosshair}
   body.mw-planet.box-hovered:not(.mw-altfocus) canvas{cursor:pointer}
-  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas,body.mw-altfocus #soundToggle{opacity:0;pointer-events:none}
-  /* sound toggle + the "drag to rotate…" hint are galaxy-overview chrome only — hide them
-     in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views */
-  body.mw-planet #soundToggle, body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  html:not([data-bric-ret="hot"]) body.mw-altfocus canvas{cursor:default!important}   /* (not while the reticle is up: its cursor:none!important must win, or the system arrow shows beside it) CV route, HoloNet etc.: the galaxy's hover affordance left an inline cursor:pointer on the canvas when the planet was clicked, which made the reticle step aside for the system hand. Nothing on the canvas is a pointer target in these views. */
+  body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas{opacity:0;pointer-events:none}
+  /* the "drag to rotate…" hint is galaxy-overview chrome only — hide it in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views.
+     The sound switch (#soundToggle) stays on every view except the arcade (which has its own) */
+  body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
   /* ── CV 3D hyperspace route (drag to orbit; details reuse #manual-scene) ── */
   #cvRouteLayer{position:absolute;inset:0;z-index:16;display:none;pointer-events:none}   /* labels capture clicks; the canvas underneath stays draggable */
   #cvRouteLayer.show{display:block}
@@ -597,6 +598,10 @@
   .cvrlbl-ctl button:hover{border-color:#5ABFB8;color:#AAF5EE}
   #cvRouteCtl{position:absolute;top:58px;left:22px;z-index:21;display:none;flex-direction:column;gap:8px;align-items:flex-start}
   #cvRouteCtl.show{display:flex}
+  /* camera control hint: middle of the top edge (fixed to the viewport, so it ignores the left-hand control stack it lives in). Clicking empty space zooms back out to the whole route, so there is no Recenter button. */
+  #cvHint{position:fixed;top:18px;left:0;right:0;margin-inline:auto;width:max-content;pointer-events:none}
+  @media (max-width:700px){ #cvHint{top:52px} }   /* clear of the breadcrumb on a phone */
+  .cvrlbl{--bric-ret-arm:8px;--bric-ret-outset:2px}   /* the reticle frames a node label tightly (labels are targets: see where they are built) */
   .cvr-pill{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:rgba(8,14,13,.7);border:1px solid rgba(90,191,184,.4);border-radius:2px;padding:8px 11px;cursor:pointer;backdrop-filter:blur(4px)}
   .cvr-pill:hover{border-color:#5ABFB8}
   .cvr-hint{color:#6b8a85;cursor:default;border:none;background:transparent;padding:8px 2px;backdrop-filter:none}
@@ -605,7 +610,8 @@
   body.mw-cvroute #cvFxCanvas{display:block}
   /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
-  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21}
+  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21;transform:translateY(calc(var(--mw-snd-lift,0px) * -1));transition:transform .25s ease,opacity .3s ease}   /* --mw-snd-lift: set from JS (soundToggleAvoid) when a docked project manual would cover it */
+  @media (prefers-reduced-motion:reduce){ #soundToggle{transition:opacity .3s ease} }
   .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
   .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
   .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
@@ -1231,9 +1237,8 @@
   </div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
-    <button class="bric-btn bric-btn--secondary bric-btn--sm" id="cvmOverview">⛶ Route overview</button>
-    <label class="cvr-pill glb-up" id="cvShipUp">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
-    <span class="cvr-pill cvr-hint">drag orbit · shift-drag pan Y · scroll zoom</span>
+    <label class="cvr-pill glb-up" id="cvShipUp" data-bric-target data-bric-label="">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
+    <span class="cvr-pill cvr-hint" id="cvHint">drag orbit · shift-drag pan Y · scroll zoom</span>
   </div>
 
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
@@ -9353,7 +9358,7 @@ f 2469//2469 2470//2470 2434//2434
     // (params.dockDur/bootGap/bootStageDur/bootPlanetStagger) is live-tunable in the debug panel.
     var BOOT_T0=null, BOOT_DONE=(mwPhase!=='entry');
     var bootLogoGate=BOOT_DONE, bootPlanetGate=null, bootPlanetVal=null, bootGridVal=BOOT_DONE?1:0;   // bootPlanetVal/bootGridVal: continuous 0..1, drive the matching label flicker-in (planets, zones)
-    var FLICK_TICKS=9;
+    var FLICK_TICKS=9, bootSndDone={};   // bootSndDone: which boot sound events have fired (each plays once per boot)
     function bootGap(){ return params.bootGap!=null?params.bootGap:0.08; }
     function bootStageDur(){ return params.bootStageDur!=null?params.bootStageDur:0.21; }
     function bootPlanetStagger(){ return params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03; }
@@ -9383,6 +9388,9 @@ f 2469//2469 2470//2470 2434//2434
       ringEn.visible=(vRing>0.3) && !copyOvr['ringEnHidden'];
       ringAur.visible=(vRing>0.3) && !copyOvr['ringAurHidden'];
       bootLogoGate=vHead>0.3;
+      // sound: each stage's event fires once, the first frame it switches on (MWAudio.site, clips assigned in audio.js SITE_EVENTS)
+      function bootSnd(k,on,o){ if(on&&!bootSndDone[k]){ bootSndDone[k]=1; if(window.MWAudio) MWAudio.site(k,o); } }
+      bootSnd('bootBeam',vBeam>0.3); bootSnd('bootHead',vHead>0.3);
       // The grid is one big surface — a single short on/off blip (the same window every other stage
       // gets) reads as one pop, not a flicker; there's nothing else on screen at that scale to make it
       // read as "flickering" the way several small staggered planets do. Give it its own longer window
@@ -9390,15 +9398,17 @@ f 2469//2469 2470//2470 2434//2434
       // powering up, not a light switch — and hold planets back until that settles.
       var gridDelay=4*g, gridDur=bootStageDur()*3, gridTicks=FLICK_TICKS*2;
       var vGrid=bootFlickAmt((clock.getElapsedTime()-BOOT_T0-gridDelay)/gridDur, gridTicks);
-      studPlane.visible=vGrid>0.05;
+      studPlane.visible=vGrid>0.05; bootSnd('bootGrid',vGrid>0.05);
       if(vGrid<1) studMatPlane.opacity=studFad.base*vGrid;   // continuous jitter (applied after the generic fadables pass already ran this frame, so this wins) — reads as staticky/flickering rather than one hard blink
       bootGridVal=vGrid;   // zone labels ride this too (see the ZONES label-opacity line) — same premature-visibility bug the planet labels had
       ZONES.forEach(function(z){ z.mesh.visible=vGrid>0.3; });
       if(!bootPlanetGate){ bootPlanetGate=planets.map(function(){ return false; }); bootPlanetVal=planets.map(function(){ return 0; }); }
       var allDone=(vBeam>=1 && vRing>=1 && vHead>=1 && vGrid>=1);
       var planetsDelay=gridDelay+gridDur;   // start right after the grid's own extended flicker settles
-      planets.forEach(function(p,i){ var v=bootWinVal(planetsDelay+i*bootPlanetStagger()); bootPlanetGate[i]=v>0.3; bootPlanetVal[i]=v; if(v<1) allDone=false; });
+      planets.forEach(function(p,i){ var v=bootWinVal(planetsDelay+i*bootPlanetStagger()); bootPlanetGate[i]=v>0.3; bootPlanetVal[i]=v; if(v<1) allDone=false;
+        if(v>0.3&&!bootSndDone['p'+i]){ bootSndDone['p'+i]=1; if(window.MWAudio) MWAudio.site('planetLoad',{rate:.94+Math.random()*.12,gain:.8+Math.random()*.2}); } });
       if(allDone){
+        bootSnd('planetsDone',true);
         BOOT_DONE=true; setSiteVisible(true);   // catch-all for anything not explicitly staged above
         ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];   // ...except don't let that catch-all override a saved ring-hide choice
         bootLogoGate=true; bootGridVal=1; bootPlanetGate=bootPlanetGate.map(function(){ return true; }); bootPlanetVal=bootPlanetVal.map(function(){ return 1; });
@@ -9466,6 +9476,7 @@ f 2469//2469 2470//2470 2434//2434
     function startDock(){
       if(mwPhase!=='entry') return;
       mwPhase='docking'; mwDockStart=clock.getElapsedTime();
+      if(window.MWAudio) MWAudio.site('dockClick');
       _mwDockStartQ.copy(logo.quaternion).multiply(mwTiltQ);   // freeze the current spin+tilt — slerp source down to flat/grid-aligned
       camElev=0; camZoom=1; manualRot=0;   // settle the camera pull-back onto a clean home framing
       // NOTE: 'mw-entrygate' is removed once docking actually COMPLETES (see mwUpdate's mwDockT>=1
@@ -9479,7 +9490,7 @@ f 2469//2469 2470//2470 2434//2434
       if(on && mwState==='idle') mwLoad();
       if(mwPhase==='docking'){
         mwDockT=Math.min(1,(clock.getElapsedTime()-mwDockStart)/(params.dockDur!=null?params.dockDur:DOCK_DUR));
-        if(mwDockT>=1){ mwPhase='docked'; BOOT_T0=clock.getElapsedTime(); document.body.classList.remove('mw-entrygate'); }
+        if(mwDockT>=1){ mwPhase='docked'; BOOT_T0=clock.getElapsedTime(); document.body.classList.remove('mw-entrygate'); if(window.MWAudio) MWAudio.site('dockLand'); }
       }
       var docked=(mwPhase==='docked');
       var ease=mwDockT<1?(mwDockT*mwDockT*(3-2*mwDockT)):1;   // smoothstep
@@ -9974,13 +9985,17 @@ f 2469//2469 2470//2470 2434//2434
       var ph=ray.intersectObjects(planetHits,false); var grp=ph.length?ph[0].object.parent:null;
       setHovered(grp);
       if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
+    // A click on nothing (empty canvas, empty page): the soft "release" thud from the UI sounds. Controls and planets have their own sounds.
+    function emptyClick(){ if(window.MWAudio&&!window.__mwArcade&&!arcadeActive){ MWAudio.uiReady(); MWAudio.ui('release'); } }
     renderer.domElement.addEventListener('click',function(){ if(dragMoved)return;
       if(arcadeActive) return;   // arcade: the battle's own capture-phase handler owns clicks (minikits, hero fire)
       if(mwPhase!=='docked'){   // entry gate / mid-dock: the only click target is the monogram itself
-        if(mwPhase==='entry' && mwQuad && mwQuad.visible){ ray.setFromCamera(mouse,camera); if(ray.intersectObject(mwQuad,false).length) startDock(); }
+        var _onMono=false;
+        if(mwPhase==='entry' && mwQuad && mwQuad.visible){ ray.setFromCamera(mouse,camera); if(ray.intersectObject(mwQuad,false).length){ _onMono=true; startDock(); } }
+        if(!_onMono) emptyClick();
         return;
       }
-      if(MWSub.active){ MWSub.active.click(); return; }   // a sub-scene owns the canvas: pick a node, else back out one level
+      if(MWSub.active){ if(MWSub.active.click()===false) emptyClick(); return; }   // a sub-scene owns the canvas: pick a node, else back out one level (that back-out is an empty click)
       if(editMode && meshSelectMode){ ray.setFromCamera(mouse,camera);   // EDIT MODE + mesh select: click SELECTS (no zoom); panel edits galaxy mesh; "Open kit box" for faces
         var tgts=focused?editHits.concat(focused.userData.moons):editHits;   // moons selectable while focused
         var eh=ray.intersectObjects(tgts,false);
@@ -9991,13 +10006,13 @@ f 2469//2469 2470//2470 2434//2434
       if(focused){ ray.setFromCamera(mouse,camera);
         var mh=ray.intersectObjects(focused.userData.moons,false);   // click an artifact → focus it + show its manual
         if(mh.length){ if(mh[0].object!==focusedMoon) focusMoon(mh[0].object); return; }
-        if(focusedMoon){ unfocusMoon(); return; }   // click off the artifact → back to the project manual
+        if(focusedMoon){ emptyClick(); unfocusMoon(); return; }   // click off the artifact → back to the project manual
         // click the kit box face (when hover affordance is active) → enter case study
         if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
           clearBoxHover(); openProjectCta(); return; }
-        goHome(); return; }
+        emptyClick(); goHome(); return; }
       ray.setFromCamera(mouse,camera);
-      var ph=ray.intersectObjects(planetHits,false); if(!ph.length)return; activate(ph[0].object.parent.userData); });
+      var ph=ray.intersectObjects(planetHits,false); if(!ph.length){ emptyClick(); return; } activate(ph[0].object.parent.userData); });
 
     function activate(ud){
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
@@ -10425,6 +10440,12 @@ f 2469//2469 2470//2470 2434//2434
       document.addEventListener('click',function(e){ if(!window.MWAudio) return; var b=el(e); if(!b) return;
         if(isSwitch(b)){ setTimeout(function(){ var on=b.matches('input')?b.checked:b.getAttribute('aria-checked')==='true'; MWAudio.uiReady(); MWAudio.ui(on?'on':'off'); },0); }
         else if(e.detail===0) play(b,kind(b)); },true);
+      // empty page: a click on nothing interactive (not a control, field, planet, label or text selection) plays the release thud; canvas clicks decide for themselves (emptyClick above)
+      document.addEventListener('click',function(e){ var t=e.target; if(!window.MWAudio||e.detail===0||!t||!t.closest||t.tagName==='CANVAS'||el(e)) return;
+        if(editMode||t.closest(SKIP+',input,textarea,[contenteditable=true],label')) return;
+        if(window.getSelection&&String(window.getSelection())) return;
+        if(getComputedStyle(t).cursor==='pointer'||(t.closest&&t.closest('.cvrlbl,.msgbeacon,[data-bric-target]'))) return;
+        emptyClick(); });
     })();
     window.addEventListener('keydown',function(e){ if((e.key==='m'||e.key==='M')&&arcadeActive&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA)$/.test((e.target&&e.target.tagName)||'')&&window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } });
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
@@ -10620,6 +10641,7 @@ f 2469//2469 2470//2470 2434//2434
       // Quiet the galaxy: suppress hover/auto-rotate and clear any artifact focus, so the
       // galaxy's own camera branches stand down while this scene owns the view.
       focused = grp || null; autoRotate = false; focusedMoon = null;
+      setHovered(null);   // clear the galaxy hover state (and its inline pointer cursor) left by the planet click that brought us here
       galaxy.visible = false;
       this.group.visible = true;
       this.active = true;
@@ -10659,7 +10681,7 @@ f 2469//2469 2470//2470 2434//2434
         }
       }
       if(this.onBack) this.onBack();
-      return true;
+      return false;   // nothing picked: the caller treats this as an empty click
     };
 
     // ══════ CV — 3D HYPERSPACE ROUTE (branchable tree; CV focus view) ══════
@@ -10814,7 +10836,7 @@ f 2469//2469 2470//2470 2434//2434
         var mesh=new THREE.Mesh(new THREE.SphereGeometry(0.16,18,18),new THREE.MeshBasicMaterial({color:n.disabled?0x2f5f59:0x78E0D6,fog:false,transparent:true,opacity:n.disabled?0.45:1}));
         mesh.position.set(n.pos[0],n.pos[1],n.pos[2]); cvLaneGroup.add(mesh);
         if(!n.disabled) mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.27,14,14),new THREE.MeshBasicMaterial({color:0x5ABFB8,transparent:true,opacity:0.16,depthWrite:false,fog:false})));
-        var lbl=document.createElement('div'); lbl.className='cvrlbl'+(n.disabled?' dis':'');
+        var lbl=document.createElement('div'); lbl.className='cvrlbl'+(n.disabled?' dis':''); lbl.setAttribute('data-bric-target',''); lbl.setAttribute('data-bric-label','');   // the page's pointer cursor on a label is the reticle here, not the native hand
         lbl.innerHTML='<div class="cvrlbl-txt"><div class="cvrlbl-t"></div><div class="cvrlbl-s"></div></div>'
           +'<div class="cvrlbl-ctl edit-only"><button data-act="linear" title="add linear step">＋</button><button data-act="branch" title="add branch">⑂</button>'
           +'<button data-act="convert" title="linear ⇄ branch">⇄</button><button data-act="disable" title="toggle disabled">⊘</button><button data-act="del" title="delete">✕</button></div>';
@@ -10977,7 +10999,6 @@ f 2469//2469 2470//2470 2434//2434
       }
     }
     (function wireCVRoute(){
-      var ov=document.getElementById('cvmOverview'); if(ov) ov.addEventListener('click',cvOverview);
       var vg=document.getElementById('cCvVariegate'); if(vg) vg.addEventListener('click',cvVariegate);
       var si=document.getElementById('cvShipInput'); if(si) si.addEventListener('change',function(){ var f=si.files[0]; if(!f) return;
         var r=new FileReader(); r.onload=function(e){ var buf=e.target.result; cvSetShip(buf); if(window.BRICStore) BRICStore.set('cv:ship:glb',{kind:'glb',buffer:buf,name:f.name}); if(typeof toast==='function') toast('ship model ✓'); }; r.readAsArrayBuffer(f); });
@@ -14360,6 +14381,15 @@ f 2469//2469 2470//2470 2434//2434
     var _mlRaf=0;
     function mlRelayoutSoon(){ if(_mlRaf) return; _mlRaf=requestAnimationFrame(function(){ _mlRaf=0; if(manualScene.classList.contains('visible')) layoutManual(); }); }
     window.addEventListener('resize',mlRelayoutSoon);
+    // the sound switch lives bottom-left on every view; a docked project manual spans that corner, so lift the switch to sit just above the panel (transform only, via --mw-snd-lift)
+    function soundToggleAvoid(){
+      var lift=0, r;
+      if(manualScene.classList.contains('visible')&&mlIsProject()){ r=manualScene.getBoundingClientRect(); if(r.width>0&&r.left<170&&r.top<window.innerHeight-30) lift=Math.max(0,Math.round(window.innerHeight-r.top+14-40)); }
+      if(lift) document.documentElement.style.setProperty('--mw-snd-lift',lift+'px'); else document.documentElement.style.removeProperty('--mw-snd-lift');
+    }
+    window.addEventListener('resize',function(){ setTimeout(soundToggleAvoid,80); });
+    new MutationObserver(function(){ soundToggleAvoid(); setTimeout(soundToggleAvoid,350); }).observe(manualScene,{attributes:true,attributeFilter:['class','style']});
+    if(window.ResizeObserver) new ResizeObserver(function(){ soundToggleAvoid(); }).observe(manualScene);
     // content growing/shrinking (Edit Mode adding links/rows, a moon with fewer fields) re-measures the stage
     if(window.ResizeObserver) new ResizeObserver(function(){ if(mlMode) mlRelayoutSoon(); }).observe(manualBook);
     var _mlEdit=false;   // body classes flip constantly (box-hovered…) — only Edit Mode toggling (edit-focus) re-measures the stage

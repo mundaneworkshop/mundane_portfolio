@@ -62,7 +62,18 @@ var HERO_SHARED={
   lowHealth:['lowhealth-chime'],
   deathSeq:['hero-death-seq']   // plays once when the hero starts burning (~3.4 s before the explosion; the Star Citizen multi-ship explosion, trimmed and boosted)
 };
-var LEVEL={ kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
+/* Site events: the entry-gate dock and the hologram boot that follows it (index.html calls MWAudio.site(name)). Value = clip names in assets/audio without the
+   extension; several clips = one drawn at random (shuffle bag). Filled from the Battle Sound Review page's "Dock and boot" cards; an empty list is silent. */
+var SITE_EVENTS={
+  dockClick:[],     // monogram clicked: it starts descending to the emitter
+  dockLand:[],      // monogram lands on the emitter, the boot begins
+  bootBeam:[],      // beam and rings power on
+  bootHead:[],      // gatekeeper (head / logo) appears in the beam
+  bootGrid:[],      // grid plate flickers on
+  planetLoad:[],    // each planet appears (staggered, so a pool: one clip per planet)
+  planetsDone:[]    // the last planet is in: the galaxy is live
+};
+var LEVEL={ site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
    page's "Death sequence" slot on each fighter card. Key = model id (battle.js MODELS[].id), value = clip names in assets/audio without the extension. Empty until clips are added. */
@@ -343,6 +354,12 @@ var MWAudio={
   ui:function(kind,force,opt){ uiPlay(kind,force,opt); },
   uiTune:function(o){ if(o) Object.keys(TUNE).forEach(function(k){ if(typeof o[k]==='number'&&isFinite(o[k])) TUNE[k]=Math.max(.2,Math.min(3,o[k])); }); return Object.assign({},TUNE); },
   uiReady:function(){ return ensure(); },
+  /* a site event from SITE_EVENTS (dock / boot). Loads its clip on first use, so it also plays on the very first gesture; o = {gain,rate,delay}. */
+  site:function(name,o){
+    var list=SITE_EVENTS[name]; if(!list||!list.length||!ensure()||muted) return; o=o||{};
+    var k=draw('site:'+name,list);
+    load(k).then(function(b){ if(b) oneShot(k,{gain:LEVEL.site*num(o.gain,1),rate:o.rate,delay:o.delay}); });
+  },
   uiKinds:function(){ return Object.keys(UI); },
   /* call from any user gesture; safe to call repeatedly */
   unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive','kitOpen']); },
