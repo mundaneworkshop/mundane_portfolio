@@ -917,6 +917,7 @@ function updCarousel(dt){
   if(!carGroup) return;
   var show=stage==='select'&&!quiet(); carGroup.visible=show; if(!show) return;
   var id=HEROES[carIdx];
+  if(window.MWAudio&&carModelId) MWAudio.carouselShip(carModelId);   // the ship on show idles quietly under the hero-select ambience
   if(carModelId!==id&&cache[id]){
     if(carWrap) carGroup.remove(carWrap);
     carWrap=new T.Group(); carModel=cache[id].proto.clone(true);   /* proto materials are currently dimmed: undo it on the carousel copies */ carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var mm=o.material.clone(); mm.userData=Object.assign({},o.material.userData,{btPatched:false}); mm.envMap=envTex; var un=stage==='select'?1/SELDIM:1; mm.color.multiplyScalar(un); mm.envMapIntensity*=un; if(mm.emissiveIntensity!=null) mm.emissiveIntensity*=un; patchMaterial(mm); o.material=mm; }); carWrap.add(carModel); carGroup.add(carWrap); carModelId=id; carK=0;

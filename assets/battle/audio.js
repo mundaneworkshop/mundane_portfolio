@@ -51,11 +51,11 @@ var HERO_SHARED={
   destroyed:['exp-01','exp-02','exp-03']
 };
 var LEVEL={ ambSelA:.5, ambSelB:.34, ambPlay:.7, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
-  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, idle:.32, active:.5, fire1:.55, fireN:.5 };
+  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, collide:.8, destroyed:.9, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
 var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
-var amb={sel:null,play:null}, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastLayer=0, wired=false, heroSnd=null;
+var amb={sel:null,play:null}, selShip=null, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastLayer=0, wired=false, heroSnd=null;
 try{ muted=localStorage.getItem('mw_sound')==='off'; }catch(e){}
 
 function now(){ return ctx?ctx.currentTime:0; }
@@ -183,6 +183,7 @@ function applyYaw(instant){
 }
 function stopGroup(which){
   var g=amb[which]; if(!g) return; amb[which]=null;
+  if(which==='sel'&&selShip){ endLoop(selShip.loop,.4); selShip=null; }
   if(which==='sel'){ endLoop(g.a,1.2); endLoop(g.b,1.2); }
   else endLoop(g.h,1.2);
   setTimeout(function(){ try{ g.bus.disconnect(); if(g.inG) g.inG.disconnect(); }catch(e){} },1500);
@@ -224,6 +225,12 @@ var MWAudio={
   stage:function(st){
     if(!ctx||st===stageName) return; stageName=st;
     if(st==='play'){ stopGroup('sel'); startPlay(); } else { stopGroup('play'); heroStop(.3); startSelect(); }
+  },
+  /* hero select: the ship on the carousel idles quietly under the ambience; cycling swaps it. battle.js calls this every frame (cheap: deduped by id). */
+  carouselShip:function(id){
+    if(!ctx||stageName!=='select'||!id||!amb.sel||(selShip&&selShip.id===id)) return;
+    if(selShip) endLoop(selShip.loop,.3);
+    var def=HERO[id]; selShip={ id:id, loop:def?loopSource(def.idle,amb.sel.bus,LEVEL.selIdle,.7):null };
   },
   /* camera yaw around the battle in radians (battle.js passes galaxy.rotation.y − its value at entry); only matters in play */
   setYaw:function(r){ if(amb.play){ yaw=r; applyYaw(false); } },
@@ -317,7 +324,7 @@ var MWAudio={
     Object.keys(DEATH).forEach(function(c){ var d=DEATH[c]; d.seq.forEach(function(x){ load(x.k); }); preload(d.small); preload(d.final); });
   },
   _loopEnd:function(key){ var b=bufs[key]; return b?{end:loopEnd(b),dur:b.duration}:null; },
-  _state:function(){ return {duck:duck?+duck.gain.value.toFixed(2):null, ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:heroSnd.k,burst:!!heroSnd.curBurst}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
+  _state:function(){ return {duck:duck?+duck.gain.value.toFixed(2):null, ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, selShip:selShip&&selShip.id, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:heroSnd.k,burst:!!heroSnd.curBurst}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
   _bufs:function(){ return Object.keys(bufs); },
   _analyser:function(){ if(!ctx) return null; var a=ctx.createAnalyser(); a.fftSize=1024; comp.connect(a); return a; }
 };
