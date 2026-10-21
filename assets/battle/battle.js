@@ -74,9 +74,10 @@ var CLS={   // per-class feel: base fire interval (s), weapon range, bolt aim sp
 
 /* Score = fighter-kill equivalents: a fighter is the base unit, a support ship is worth 3, a capital ship 7 (tune here; the results screen reads these). */
 var SCORE={ fighter:1, support:3, capital:7 };
-/* Support/capital ships fire BACK at the hero for RETAL.sec after the hero last hit them. Interval is stretched and the aim loosened so a
-   head-on attack is dangerous but survivable (hero hull = 3 collisions or 15 laser hits). */
-var RETAL={ sec:5, slow:2.2, spread:1.5, rangeK:1.15 };
+/* Support/capital ships fire BACK at the hero for RETAL.sec after the hero last hit them, in VOLLEYS: each volley is a run of bolts from random hull
+   batteries, staggered by RETAL.stagger seconds, then a pause (RETAL.gap) before the next. Aim error is RETAL.spread x the class spread, so most bolts
+   miss but a volley that finds you hurts (hero hull = 3 collisions or 15 laser hits). */
+var RETAL={ sec:8, spread:1.0, rangeK:1.5, stagger:.06, volley:{support:[3,5],capital:[7,12]}, gap:{support:[1.4,2.2],capital:[1,1.7]} };
 
 var DEFAULTS={
   on:true, density:1, speed:1, scale:1.5, laser:1, laserSpeed:1, boltSize:1, arena:1.7,
@@ -774,10 +775,14 @@ function updShipLarge(s,dt){   // support + capital: dead-straight, very slow pa
   s.tT-=dt; if(!s.target||!s.target.alive||s.tT<=0) pickTarget(s);
   s.cd-=dt;
   if(s.cd<=0){
-    var tg=s.target&&s.target.alive?s.target:null, rng=CLS[s.cls].range*(tg&&tg.hero?RETAL.rangeK:1);
-    if(tg&&tg.pos.distanceTo(s.pos)<rng){ fireAt(s,tg.pos,tg.vel); }
-    s.cd=fireInterval(s)*(tg&&tg.hero?RETAL.slow:1);
+    var tg=s.target&&s.target.alive?s.target:null, hunting=!!(tg&&tg.hero), rng=CLS[s.cls].range*(hunting?RETAL.rangeK:1);
+    if(tg&&tg.pos.distanceTo(s.pos)<rng){ if(hunting) fireVolley(s); else fireAt(s,tg.pos,tg.vel); }
+    s.cd=hunting?rnd(RETAL.gap[s.cls][0],RETAL.gap[s.cls][1]):fireInterval(s);
   }
+}
+function fireVolley(s){   // a barrage at the hero: many bolts from random hull batteries over ~half a second
+  var v=RETAL.volley[s.cls]||RETAL.volley.support, n=Math.round(rnd(v[0],v[1]));
+  for(var i=0;i<n;i++) later(i*RETAL.stagger+rnd(0,.03),function(){ if(s.alive&&!s.dying&&heroShip&&heroShip.alive&&!quiet()) fireAt(s,heroShip.pos,heroShip.vel); });
 }
 // large ships never overlap: soft positional separation on bounding spheres (they move so slowly that this resolves gradually)
 function lr(s){ return Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*.85; }
@@ -815,7 +820,8 @@ function spawnHero(id){
 }
 function changeHero(){ ejectHero(false); fireHeld=false; setStage('select'); }
 function ejectHero(silent){
-  if(!heroShip) return; heroShip.inv=0; heroFlash(heroShip);   // the hero model's materials are shared with its prototype: put the opacity back if(window.MWAudio&&!silent) MWAudio.heroStop(); heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
+  if(!heroShip) return; heroShip.inv=0; heroFlash(heroShip);   // the hero model's materials are shared with its prototype: put the opacity back
+  if(window.MWAudio&&!silent) MWAudio.heroStop(); heroFxReset(heroShip); heroShip.alive=false; burst(heroShip.pos,0xaaf5ee,14,1.2,.5);
   G.remove(heroShip.root); ships.splice(ships.indexOf(heroShip),1); heroShip=null;
 }
 // pointer → ray in G-local space
@@ -883,13 +889,42 @@ function heroFx(s,dt){
 }
 function heroFxReset(s){ if(!s) return; s.hurtT=0; s.shake=0; s.root.traverse(function(m){ if(!m.isMesh||!m.material||!m.material.userData.hurt0) return; var mt=m.material; mt.emissive.copy(mt.userData.hurt0.e); mt.emissiveIntensity=mt.userData.hurt0.i; mt.userData.hurt1=false; }); }
 function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(function(){ if(hudEl) hudEl.classList.remove('hurt'); },320); }
+// The hero doesn't just vanish at 0 hull: it catches fire, tumbles and zooms erratically in loops for ~3.4 s, then explodes and the game-over card appears.
 function heroDeath(s){
+  if(s.burning) return;
+  s.burning={t:0,dur:3.4,ph:[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)],nextHit:.35}; s.inv=1e9; s.hp=0; fireHeld=false; updHud(false);
+  if(window.MWAudio) MWAudio.heroFireUp();
+  burst(s.pos,0xff8030,40,2,.9); flash(s.pos,.9,0xffb060);
+}
+function updHeroBurn(s,dt){
+  var B=s.burning, k=Math.min(1,B.t/B.dur); B.t+=dt;
+  _v1.set(Math.sin(B.t*3.7+B.ph[0]),Math.sin(B.t*5.1+B.ph[1]),Math.sin(B.t*4.3+B.ph[2])); if(_v1.lengthSq()<1e-4) _v1.set(0,1,0); _v1.normalize();
+  s.dir.applyAxisAngle(_v1,(4+7*k)*(.6+.4*Math.sin(B.t*9))*dt).normalize();                 // wrenches through erratic loops, tighter and faster as it goes
+  s.spd=lerp(s.spd,2.2+1.6*k,Math.min(1,dt*3));
+  s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
+  var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
+  s.pos.x=clamp(s.pos.x,-ax,ax); s.pos.y=clamp(s.pos.y,CY-ay,CY+ay); s.pos.z=clamp(s.pos.z,-az,az*.9);
+  aim(s.root,s.dir); s.bank.rotation.z+=dt*(7+11*k);                                           // corkscrewing roll
+  s.root.visible=true;
+  // fire: a hot orange emissive pulse, a trail of flames and smoke, the odd flare
+  var pl=.5+.5*Math.sin(B.t*30);
+  s.root.traverse(function(m){ if(!m.isMesh||!m.material||!m.material.emissive) return; var mt=m.material;
+    if(!mt.userData.hurt0) mt.userData.hurt0={e:mt.emissive.clone(),i:mt.emissiveIntensity};
+    mt.emissive.setRGB(1,.3+.25*pl,.04); mt.emissiveIntensity=1.5+1.8*pl; mt.userData.hurt1=true; });
+  burst(s.pos,0xff5a14,3,.9,.55); burst(s.pos,0xffb030,2,1.3,.4); if(Math.random()<.6) burst(s.pos,0x4a4a4a,2,.5,1);
+  if(Math.random()<.18) flash(s.pos,.3+.4*k,0xff8a30);
+  if(B.t>=B.nextHit){ B.nextHit=B.t+rnd(.45,.85); if(window.MWAudio) MWAudio.heroCollide(); burst(s.pos,0xffe08a,12,1.6,.5); }   // metal tearing apart
+  if(window.MWAudio) MWAudio.heroEngine(clamp((s.spd-.1)/.9,0,1));
+  if(B.t>=B.dur) finishHeroDeath(s);
+}
+function finishHeroDeath(s){
   if(window.MWAudio) MWAudio.heroDestroyed();
-  burst(s.pos,0xffa040,80,3,1.5); burst(s.pos,0xffffff,30,4,.8); flash(s.pos,1.8,0xfff0c0);
+  burst(s.pos,0xffa040,110,3.4,1.6); burst(s.pos,0xffffff,40,4.4,.9); flash(s.pos,2.4,0xfff0c0);
   ejectHero(true); fireHeld=false; session.died=true; updHud(false);
-  if(ctx.onGameOver) ctx.onGameOver();
+  if(ctx.onGameOver) later(.5,function(){ ctx.onGameOver(); });   // let the explosion read before the card
 }
 function updHero(s,dt){
+  if(s.burning){ updHeroBurn(s,dt); return; }
   var o=pickAt(ptr.nx,ptr.ny,_hT);
   if(!ptr.in) _hT.copy(s.pos).addScaledVector(s.dir,1);               // pointer off the canvas: coast on
   var to=_v2.copy(_hT).sub(s.pos), d=to.length();
@@ -1121,7 +1156,7 @@ function bindInput(){
   on(window,'pointermove',function(e){ var r=ctx.dom.getBoundingClientRect(); ptr.nx=((e.clientX-r.left)/r.width)*2-1; ptr.ny=-((e.clientY-r.top)/r.height)*2+1; ptr.in=e.target===ctx.dom;
     if(ptr.in&&!hyper&&stage==='play') ctx.dom.style.cursor='crosshair'; });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
-    if(stage==='play'&&heroShip&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });   // left button = fire (hold to keep firing)
+    if(stage==='play'&&heroShip&&!heroShip.burning&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });   // left button = fire (hold to keep firing)
   on(window,'pointerup',function(e){ if(e.button===0){ fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); } });
   on(ctx.dom,'contextmenu',function(e){ e.preventDefault(); });          // right-drag pans the camera; no browser menu
   // (minikits no longer respond to mouse clicks — only to the hero ship's lasers)
@@ -1319,7 +1354,7 @@ var MWBattle={
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
   assetsReady:function(){ return active&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
-  summary:function(){ return { played:session.played, score:kills, kills:kills, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
+  summary:function(){ return { played:session.played, score:kills, kills:kills, minikits:kitCount, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _explode:function(s){ startDying(s); }, _debris:function(){ return debris.length; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },

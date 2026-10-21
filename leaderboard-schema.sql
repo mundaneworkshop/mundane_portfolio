@@ -31,3 +31,12 @@ revoke select on public.leaderboard from anon, authenticated;
 --   grant select (id, name, kills, hero, seconds, created_at, approved) on public.leaderboard to anon, authenticated;
 revoke select on public.leaderboard from anon, authenticated;
 grant select (id, name, kills, hero, seconds, created_at, approved) on public.leaderboard to anon, authenticated;
+
+
+-- ── Country flag (Oct 20 2026) — run once in the SQL Editor. ISO 3166-1 alpha-2 code taken from Vercel's x-vercel-ip-country header at submit time
+-- (the code only, never the IP). Existing rows stay NULL (no flag). The client and the API both tolerate this column not existing yet.
+alter table public.leaderboard add column if not exists country text;
+do $$ begin
+  alter table public.leaderboard add constraint lb_country check (country is null or country ~ '^[A-Z]{2}$');
+exception when duplicate_object then null; end $$;
+grant select (country) on public.leaderboard to anon, authenticated;

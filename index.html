@@ -117,7 +117,10 @@
   #arcadeResult .ar-in::placeholder{color:var(--bric-content-tertiary)}
   #arcadeResult .ar-in:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:2px}
   #arcadeResult .ar-msg{min-height:16px;text-align:center;font:500 11px/16px var(--grotesk);letter-spacing:.14em;text-transform:uppercase;color:var(--bric-content-tertiary)}
-  #arcadeResult .ar-board td.ar-r{width:36px;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-board td.ar-r,#arcadeResult .ar-board th.ar-r{width:32px;color:var(--bric-content-tertiary)}
+  #arcadeResult .ar-board td.ar-f,#arcadeResult .ar-board th.ar-f{width:32px;text-align:center;padding-left:0;padding-right:var(--bric-space-stud);font:16px/1 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;letter-spacing:0}
+  #arcadeResult .kit td{border-top:1px solid var(--bric-border-default);border-bottom:0;color:var(--bric-content-primary)}
+  #arcadeResult .kitnote td{padding-top:0;font-size:10px;letter-spacing:.14em;color:var(--bric-content-tertiary)}
   #arcadeResult .ar-board td.ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0}
   #arcadeResult .ar-board td.ar-h{width:34%;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--bric-content-secondary);padding-left:var(--bric-space-1-5-stud)}
   #arcadeResult .ar-board th.ar-h{padding-left:var(--bric-space-1-5-stud)}
@@ -10283,21 +10286,32 @@ f 2469//2469 2470//2470 2434//2434
     function closeArcadeResult(){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(); } }   // closing the game-over modal is what actually ends the exit
     function arcFetchTop(cb){
       if(!_sb){ cb(null,'offline'); return; }
-      _sb.from('leaderboard').select('id,name,kills,hero,created_at').order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
-        .then(function(r){ if(r.error) cb(null,r.error.message||'error'); else cb(r.data||[]); },function(e){ cb(null,'offline'); });
+      function q(cols,next){ _sb.from('leaderboard').select(cols).order('kills',{ascending:false}).order('created_at',{ascending:true}).limit(10)
+        .then(function(r){ if(r.error){ if(next&&/country/i.test(r.error.message||'')) q(next); else cb(null,r.error.message||'error'); } else cb(r.data||[]); },function(e){ cb(null,'offline'); }); }
+      q('id,name,kills,hero,country,created_at','id,name,kills,hero,created_at');   // the country column may not exist yet (leaderboard-schema.sql)
     }
-    function arcRenderTop(listEl,rows,err,mineId){
+    // Country flag from an ISO alpha-2 code: regional-indicator letters render as a flag emoji (Windows shows the letters instead)
+    function arcFlag(cc){ return /^[A-Z]{2}$/.test(cc||'')?String.fromCodePoint(0x1F1E6+cc.charCodeAt(0)-65,0x1F1E6+cc.charCodeAt(1)-65):''; }
+    function arcCountry(cc){ try{ return new Intl.DisplayNames(['en'],{type:'region'}).of(cc)||cc; }catch(e){ return cc; } }
+    // glyph decode on first load: every text leaf in the card resolves from Aurebesh, cascading top to bottom (a no-op under reduced motion)
+    function arcDecode(root,startAt){
+      if(typeof GFX==='undefined'||!GFX.decodeEl) return;   // GFX lives in the page's closure, not on window
+      var leaves=[].slice.call(root.querySelectorAll('.ar-k,.ar-n,.ar-l,.ar-st,th,td,.ar-btns .bric-btn,.ar-sub'));
+      leaves.forEach(function(n,i){ if(n.classList.contains('ar-f')) return; setTimeout(function(){ if(n.isConnected) GFX.decodeEl(n,n.classList.contains('bric-btn')?'Btn':'Lbl'); },(startAt||0)+Math.min(i,40)*28); });
+    }
+    function arcRenderTop(listEl,rows,err,mineId,animate){
       listEl.textContent='';
       function note(msg){ var m=document.createElement('div'); m.className='ar-empty'; m.textContent=msg; listEl.appendChild(m); }
       if(!rows){ note('Leaderboard unavailable right now'); return; }
       if(!rows.length){ note('No scores yet \u2014 be the first'); return; }
       var tb=document.createElement('table'); tb.className='ar-board';
-      tb.innerHTML='<thead><tr><th>#</th><th>Pilot</th><th class="ar-h">Ship</th><th class="n">Score</th></tr></thead><tbody></tbody>';
+      tb.innerHTML='<thead><tr><th class="ar-r">#</th><th class="ar-f"></th><th>Pilot</th><th class="ar-h">Ship</th><th class="n">Score</th></tr></thead><tbody></tbody>';
       var body=tb.querySelector('tbody');
       rows.forEach(function(r,i){ var tr=document.createElement('tr'); if(r.id===mineId) tr.className='mine';
-        [['ar-r',String(i+1)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; tr.appendChild(td); });
+        [['ar-r',String(i+1)],['ar-f',arcFlag(r.country)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; if(c[0]==='ar-f'&&c[1]){ td.title=arcCountry(r.country); td.setAttribute('role','img'); td.setAttribute('aria-label',arcCountry(r.country)); } tr.appendChild(td); });
         body.appendChild(tr); });
       listEl.appendChild(tb);
+      if(animate) arcDecode(tb,0);
     }
     function arcEsc(v){ return String(v).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     // sum: {score, fighters, support, capital, weights, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
@@ -10311,13 +10325,15 @@ f 2469//2469 2470//2470 2434//2434
           return '<tr class="'+(r[1]?'':'zero')+'"><td>'+r[0]+'</td><td class="n">'+r[1]+'</td><td class="n">\u00d7'+r[2]+'</td><td class="n">'+(r[1]*r[2])+'</td></tr>'; }).join('');
         html+='<div class="ar-head"><div class="ar-k">Game over</div><div class="ar-n">'+sum.score+'</div><div class="ar-l">Score</div></div>'+
           '<div class="ar-sec"><div class="ar-st">Score breakdown</div><table class="ar-break"><thead><tr><th>Target</th><th class="n">Destroyed</th><th class="n">Value</th><th class="n">Points</th></tr></thead><tbody>'+rowsB+
-          '<tr class="tot"><td colspan="3">Total</td><td class="n">'+sum.score+'</td></tr></tbody></table></div>'+
+          '<tr class="tot"><td colspan="3">Total</td><td class="n">'+sum.score+'</td></tr>'+
+          '<tr class="kit"><td colspan="3">Minikits opened</td><td class="n">'+(sum.minikits||0)+'</td></tr><tr class="kitnote"><td colspan="4">Not part of your score \u00b7 reward previews coming soon</td></tr></tbody></table></div>'+
           '<table class="ar-meta"><tbody><tr><td>Flown</td><td>'+arcEsc(sum.heroes.length?sum.heroes.join(' \u00b7 '):'\u2014')+'</td></tr><tr><td>Time</td><td>'+mins+':'+secs+'</td></tr></tbody></table>';
         if(scored) html+='<div class="ar-sec"><form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div></div>';
       } else html+='<div class="ar-head"><div class="ar-k">Leaderboard</div></div>';
       html+='<div class="ar-sec">'+(sum?'<div class="ar-st">Top scores</div>':'')+'<div class="ar-list" aria-label="Top scores"></div></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">Close</button></div></div>';
       el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
-      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err); });
+      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,null,true); });
+      arcDecode(el.querySelector('.ar-card'),60);   // (the leaderboard rows decode when they arrive)
       el.addEventListener('click',function(e){ if(e.target===el&&!sum) closeArcadeResult(); });   // game-over modal: the backdrop never dismisses (rapid clicking while playing would close it)
       var armed=function(){ return !sum||performance.now()-arcadeResultT>1200; };   // ...and the buttons ignore clicks for the first 1.2 s
       el.querySelector('#arClose').addEventListener('click',function(){ if(armed()) closeArcadeResult(); });
