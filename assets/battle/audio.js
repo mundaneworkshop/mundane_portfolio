@@ -140,6 +140,32 @@ function oneShot_(key,o){
   return h;
 }
 
+/* How long a clip is perceptually "on": up to the last 50 ms window within 20 dB of its loudest. Chained bursts cut the clip there and start
+   the next one, so the quiet ring-out baked into a clip (a second of decay after the last shot) never opens a gap between bursts. */
+function audibleLen(b){
+  if(b._aud!=null) return b._aud;
+  var d=b.getChannelData(0), W=Math.max(1,Math.round(b.sampleRate*.05)), lv=[], pk=-200;
+  for(var i=0;i+W<=d.length;i+=W){ var q=0; for(var k=0;k<W;k++) q+=d[i+k]*d[i+k]; var v=10*Math.log10(q/W+1e-12); lv.push(v); if(v>pk) pk=v; }
+  var last=0; for(var j=0;j<lv.length;j++) if(lv[j]>pk-20) last=j;
+  return (b._aud=Math.min(b.duration,(last+1)*W/b.sampleRate+.06));
+}
+
+/* Chained bursts keep the clip's OWN cadence: find its shot onsets, and start the next burst one shot-interval after the last onset, so
+   the pause between bursts equals the pause between shots (no silent tail). Falls back to audibleLen() for clips with < 2 shots. */
+function burstTiming(b){
+  if(b._bt) return b._bt;
+  var d=b.getChannelData(0), W=Math.max(1,Math.round(b.sampleRate*.01)), lv=[], pk=-200;
+  for(var i=0;i+W<=d.length;i+=W){ var q=0; for(var k=0;k<W;k++) q+=d[i+k]*d[i+k]; var v=10*Math.log10(q/W+1e-12); lv.push(v); if(v>pk) pk=v; }
+  var on=[]; for(var j=3;j<lv.length;j++){ var base=Math.min(lv[j-1],lv[j-2],lv[j-3]); if(lv[j]>pk-30&&lv[j]-base>8&&(!on.length||j-on[on.length-1]>8)) on.push(j); }
+  var t;
+  if(on.length>=2){
+    var gaps=[]; for(var g=1;g<on.length;g++) gaps.push(on[g]-on[g-1]); gaps.sort(function(x,y){ return x-y; });
+    var step=gaps[Math.floor(gaps.length/2)]*.01, last=on[on.length-1]*.01;
+    t={ next:last+step, cut:Math.min(b.duration,last+step+.14) };
+  } else { var a=audibleLen(b); t={ next:a-.04, cut:a }; }
+  return (b._bt=t);
+}
+
 /* ── loops ── */
 /* AAC decoders can leave a few ms of digital silence at the end of a clip; a looping source would replay it as a gap.
    Find the last audible sample of every channel and loop up to there. */
@@ -321,9 +347,11 @@ var MWAudio={
     if(!h.def.chain) oneShot(pick(h.def.fire1),{gain:LEVEL.fire1,rate:.97+Math.random()*.06});
   },
   heroFireHeld:function(){
-    var h=heroSnd; if(!h||!h.chain||!h.def.fireN||now()-h.held<.4||h.curBurst) return;
+    var h=heroSnd; if(!h||!h.chain||!h.def.fireN||now()-h.held<.4) return;
+    if(h.curBurst&&now()<h.nextAt) return;                       // the next burst starts the moment this one stops being audible
     var key=pick(h.def.fireN); if(!bufs[key]){ load(key); return; }
-    var v=oneShot(key,{gain:LEVEL.fireN}); if(!v) return; h.curBurst=v; v.onend=function(){ if(h.curBurst===v) h.curBurst=null; };
+    var bt=burstTiming(bufs[key]), v=oneShot(key,{gain:LEVEL.fireN,maxDur:bt.cut}); if(!v) return;
+    h.curBurst=v; h.nextAt=now()+bt.next; v.onend=function(){ if(h.curBurst===v) h.curBurst=null; };
   },
   heroShot:function(){
     var h=heroSnd; if(!h||!h.def.chain) return; var t=now(), gap=t-h.lastShot; h.lastShot=t;
@@ -343,6 +371,7 @@ var MWAudio={
     preload(POOL_FIGHTER); preload(['r2']);
     Object.keys(DEATH).forEach(function(c){ var d=DEATH[c]; d.seq.forEach(function(x){ load(x.k); }); preload(d.small); preload(d.final); });
   },
+  _audLen:function(key){ var b=bufs[key]; if(!b) return null; var t=burstTiming(b); return {next:+t.next.toFixed(2),cut:+t.cut.toFixed(2),dur:+b.duration.toFixed(2),audible:+audibleLen(b).toFixed(2)}; },
   _loopEnd:function(key){ var b=bufs[key]; return b?{end:loopEnd(b),dur:b.duration}:null; },
   _state:function(){ return {duck:duck?+duck.gain.value.toFixed(2):null, ctx:ctx&&ctx.state, muted:muted, stage:stageName, yaw:yaw, loaded:Object.keys(bufs).length, voices:voices, play:!!amb.play, sel:!!amb.sel, selShip:selShip&&selShip.id, jump:!!jump, hero:heroSnd?{id:heroSnd.id,k:+heroSnd.k.toFixed(2),burst:!!heroSnd.curBurst,low:heroSnd.lowDone}:null, spk:amb.play?[amb.play.pl.node.positionX.value,amb.play.pl.node.positionZ.value,amb.play.pr.node.positionX.value,amb.play.pr.node.positionZ.value].map(function(v){return Math.round(v*100)/100;}):null}; },
   _bufs:function(){ return Object.keys(bufs); },
