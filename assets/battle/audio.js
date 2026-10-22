@@ -67,9 +67,8 @@ var HERO_SHARED={
 /* Site events: the entry-gate dock and the hologram boot that follows it (index.html calls MWAudio.site(name)). Value = clip names in assets/audio without the
    extension; several clips = one drawn at random (shuffle bag). Filled from the Battle Sound Review page's "Dock and boot" cards; an empty list is silent. */
 var SITE_EVENTS={
-  gateLoad:['gate-load-1','gate-load-2'],   // the monogram's initial-load sound: plays once, when audio first unlocks at the gate (see MWAudio.gateStart)
   gateHover:['gate-hover-1','gate-hover-2','gate-hover-3','gate-hover-4','gate-hover-5','gate-hover-6'],   // pointer enters the monogram. EMPTY = the site's default UI 'hover' tick; clips here replace it
-  gateClick:['gate-click-1','gate-click-2'],   // monogram clicked. EMPTY = the site's default UI 'click'; clips here replace it
+  gateClick:['gate-click-1','gate-click-2','gate-click-3','gate-click-4'],   // monogram clicked. EMPTY = the site's default UI 'click'; clips here replace it
   dockClick:[],     // monogram clicked: it starts descending to the emitter
   dockLand:[],      // monogram lands on the emitter, the boot begins
   bootBeam:['holo-beam'],   // beam and rings power on (3 s, the opening of the hologram boot-up; the idle hum fades in under its tail)
@@ -84,7 +83,7 @@ var GAMEOVER_DUCK=.12;   // how far everything else drops under the sting (1 = n
 var GAME_OVER=['game-over-1','game-over-2','game-over-3','game-over-4'];
 /* per-event trim on top of LEVEL.site, to balance the boot: the beam clip is a long, loud sweep (peaks 0 dBFS) that buried the short planet pings (peak -6 dBFS) */
 var IDLE_HOLD=4, IDLE_SETTLE=4;   // idle hum: seconds at full level after it starts, then seconds to ease down to LEVEL.holoIdleRest
-var SITE_GAIN={ bootBeam:.2, planetLoad:1.4, gateLoad:.6, gateHover:.5, gateClick:.6 };
+var SITE_GAIN={ bootBeam:.2, planetLoad:1.4, gateHover:.5, gateClick:.6 };
 var LEVEL={ gameOver:.85, site:.7, gateIdle:.4, holoIdle:.5, holoIdleRest:.1, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.7, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
@@ -444,9 +443,9 @@ var MWAudio={
      and again when the arcade closes; siteStop fades it out as the arcade opens. Both are safe to call repeatedly; the sound switch mutes it with everything else. */
   siteStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} startSite(); if(idleWanted) startIdle(); },
   siteStop:function(){ stopGroup('site'); stopGroup('idle'); stopGroup('gate'); },
-  /* the entry gate: the first press (not on the monogram itself) or key at the gate unlocks audio, so the monogram's initial-load sound plays and its idle loop starts;
-     the dock click fades the loop out (gateStop). Browsers keep audio locked until that first gesture, so a visitor who goes straight for the monogram hears neither. */
-  gateStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} if(amb.gate) return; startGate(); MWAudio.site('gateLoad'); },
+  /* the entry gate: the first press (not on the monogram itself) or key at the gate unlocks audio, so the monogram's idle loop starts;
+     the dock click fades the loop out (gateStop). Browsers keep audio locked until that first gesture, so a visitor who goes straight for the monogram never hears the idle loop. */
+  gateStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} if(amb.gate) return; startGate(); },
   gateStop:function(){ stopGroup('gate'); },
   /* try to start sound on page load, with no gesture: resolves true only when the browser lets the audio context run by itself (e.g. Chrome for a visitor it trusts; Safari and Firefox almost never do).
      The state is checked after a beat instead of awaiting resume(), because a refused resume() stays pending and would resolve later, on the first press. */
