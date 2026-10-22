@@ -796,6 +796,38 @@
   #projMgr .pm-addp{width:100%;margin-top:6px;padding:7px;border-style:dashed;text-align:center}
   #projMgr .pm-foot{min-height:0;padding:0 12px;font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.7)}
   #projMgr .pm-foot:not(:empty){padding:8px 12px;border-top:1px solid rgba(233,167,62,.22);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  /* OUTFITS MANAGER: same visual language as the Projects Manager */
+  #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
+  body.oc-open #outfitMgr{display:flex}
+  body.oc-open.pm-open #outfitMgr{left:362px}
+  body.edit-focus #outfitMgr, body.cs-focus #outfitMgr, body.mw-casestudy #outfitMgr, body.mw-entrygate #outfitMgr, body.mw-altfocus #outfitMgr, body.ui-hidden #outfitMgr{display:none}
+  #outfitMgr .pm-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px}
+  #outfitMgr .pm-title{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#E9A73E}
+  #outfitMgr .pm-tools{display:flex;align-items:center;gap:10px;padding:0 12px 10px;border-bottom:1px solid rgba(233,167,62,.22)}
+  #outfitMgr .pm-body{flex:1;min-height:0;overflow-y:auto;padding:8px 12px 4px}
+  #outfitMgr .pm-zone{border:1px solid rgba(233,167,62,.3);border-radius:3px;padding:8px;margin-bottom:10px;background:rgba(233,167,62,.04)}
+  #outfitMgr .pm-zone.is-hidden{border-style:dashed;border-color:rgba(240,237,232,.22);background:transparent}
+  #outfitMgr .pm-row{display:flex;align-items:center;gap:6px}
+  #outfitMgr .pm-row + .pm-row{margin-top:5px}
+  #outfitMgr input[type=text]{flex:1;min-width:0;background:rgba(0,0,0,.35);border:1px solid rgba(233,167,62,.3);color:#F0EDE8;font-family:'Space Mono',monospace;font-size:11px;padding:5px 7px;border-radius:2px;box-sizing:border-box}
+  #outfitMgr input[type=text]:focus{outline:none;border-color:#E9A73E;background:rgba(0,0,0,.5)}
+  #outfitMgr input[type=number]{width:56px;background:rgba(0,0,0,.35);border:1px solid rgba(233,167,62,.3);color:#F0EDE8;font-family:'Space Mono',monospace;font-size:11px;padding:4px 6px;border-radius:2px}
+  #outfitMgr .pm-znm{font-weight:700;letter-spacing:1px;text-transform:uppercase}
+  #outfitMgr .is-hidden input[type=text]{opacity:.5}
+  #outfitMgr .oc-cfg{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.7)}
+  #outfitMgr .oc-cfg .oc-lbl{flex:1}
+  #outfitMgr .oc-cfg input[type=range]{width:90px}
+  #outfitMgr .oc-val{min-width:30px;text-align:right}
+  #outfitMgr .oc-on{font-size:9px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+  #outfitMgr .pm-zactions{display:flex;justify-content:flex-end;gap:6px;margin:6px 0 0}
+  #outfitMgr .pm-zactions .pm-danger{min-width:86px;text-align:center}
+  #outfitMgr .pm-count{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.45)}
+  #outfitMgr .pm-planets{list-style:none;margin:6px 0 0;padding:0}
+  #outfitMgr .pm-planet{padding:5px 0;border-top:1px solid rgba(233,167,62,.14)}
+  #outfitMgr .pm-psub{font-size:10px;color:rgba(240,237,232,.75);overflow-wrap:anywhere}
+  #outfitMgr .pm-empty{font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.4);padding:6px 0;text-transform:uppercase}
+  #outfitMgr .pm-foot{min-height:0;padding:0 12px;font-size:9px;letter-spacing:1px;color:rgba(240,237,232,.7)}
+  #outfitMgr .pm-foot:not(:empty){padding:8px 12px;border-top:1px solid rgba(233,167,62,.22)}
   #debug input[type=color]{vertical-align:middle;width:26px;height:18px;padding:0;border:1px solid rgba(90,191,184,.25);background:transparent;cursor:pointer}
   /* Label: Chakra Petch · value: Space Mono with teal glow */
   #debug label{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
@@ -942,6 +974,14 @@
     <div class="pm-foot" id="pmFoot" role="status" aria-live="polite"></div>
   </div>
 
+  <!-- OUTFITS MANAGER: upload/manage minifigure outfits (each = one or more GLBs). See docs/project-history/outfits.md. -->
+  <div id="outfitMgr" role="dialog" aria-label="Outfits Manager">
+    <div class="pm-head"><span class="pm-title">Outfits</span><button type="button" class="pm-close" id="ocClose" aria-label="Close Outfits Manager">✕</button></div>
+    <div class="pm-tools"><button type="button" class="pm-btn pm-newzone" data-oc="new">＋ New outfit</button><button type="button" class="pm-btn" data-oc="export" title="Download assets/outfits.json + the draft GLBs as a zip to unzip at the repo root">⇩ Export bundle</button></div>
+    <div class="pm-body" id="ocBody"></div>
+    <div class="pm-foot" id="ocFoot" role="status" aria-live="polite"></div>
+  </div>
+
   <div id="topbar">
     <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
     <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
@@ -951,6 +991,7 @@
       <button class="tbtn admin-only" id="editBtn">✎ edit</button>
       <button class="tbtn admin-only" id="meshModeBtn" title="When on, clicking a project/artifact selects it for mesh/box editing instead of opening its content">⛭ mesh select</button>
       <button class="tbtn admin-only" id="pmBtn" title="Add, remove, rename and hide zones and the planets inside them (Edit Mode)">▤ projects</button>
+      <button class="tbtn admin-only" id="ocBtn" title="Upload and manage minifigure outfits (each one or more GLBs)">☺ outfits</button>
       <button class="tbtn admin-only" id="debugBtn">⚙ debug</button>
       <button class="tbtn admin-only" id="hideUIBtn">⊘ hide ui</button>
       <div id="wordmark">Mundane Workshop</div>
@@ -10150,7 +10191,9 @@ f 2469//2469 2470//2470 2434//2434
           clearBoxHover(); openProjectCta(); return; }
         emptyClick(); goHomeV(); return; }
       ray.setFromCamera(mouse,camera);
-      var ph=ray.intersectObjects(planetHits,false); if(!ph.length){ emptyClick(); return; } activate(ph[0].object.parent.userData); });
+      var ph=ray.intersectObjects(planetHits,false), _oh=ocHit();   // click the outfit figure → next outfit (unless a planet is in front of it)
+      if(_oh && ocCycleList().length>1 && (!ph.length||_oh.distance<ph[0].distance)){ emptyClick(); ocNext(); return; }
+      if(!ph.length){ emptyClick(); return; } activate(ph[0].object.parent.userData); });
 
     // View change wipe: opening a project / the CV / Contact (and backing out) swaps whole assets in one frame
     // (planet -> kit box, hologram -> CV route, galaxy hidden). Those hard cuts are hidden under the site's
@@ -13803,6 +13846,211 @@ f 2469//2469 2470//2470 2434//2434
         pmPurgeLegacyMenuKeys(); persistModel(); pmUndo=null; document.getElementById('pmFoot').innerHTML='';
       });
     })();
+    // ═══ OUTFITS — full-minifigure outfits on the hologram (docs/project-history/outfits.md) ═══
+    // Outfits are listed in assets/outfits.json (repo truth, what visitors get) and live as GLBs in assets/models/outfits/<id>/.
+    // An outfit = one or more GLBs fitted together as ONE figure. Renames / enabled / order / size / cycle sync via copyOvr
+    // ('outfitMeta', 'outfitCfg'). DRAFTS (uploaded in the manager) are this browser only: metadata in localStorage
+    // 'mw_outfit_drafts', binaries in BRICStore 'outfit:<id>:<uid>'; "Export bundle" turns them into repo files.
+    // With no enabled outfits nothing here touches the scene and the original sig-fig head shows.
+    var OUTFITS_JSON='assets/outfits.json', OUTFIT_DIR='assets/models/outfits/', OUTFIT_NOMINAL_H=2.9;
+    var outfitRepo=[], outfitDrafts=[], outfitFailed={}, outfitCache={}, outfitCur=null, outfitPrev=null, outfitSeq=0, outfitLastSwitch=0, outfitHeadHidden=false, ocArmed=null, ocArmedT=0, ocMsg='';
+    var outfitStage=new THREE.Group(); outfitStage.visible=false; logo.add(outfitStage);
+    var _ocRM=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):null;
+    function ocNum(v,d){ v=parseFloat(v); return isFinite(v)?v:d; }
+    function ocCfg(){ var c=copyOvr['outfitCfg']||{}; return {height:ocNum(c.height,OUTFIT_NOMINAL_H), y:ocNum(c.y,0), cycle:ocNum(c.cycle,8)}; }
+    function ocSetCfg(k,v){ var c=copyOvr['outfitCfg']=copyOvr['outfitCfg']||{}; c[k]=v; persistCopy(); }
+    function ocMeta(){ var m=copyOvr['outfitMeta']; if(!m||typeof m!=='object'){ m=copyOvr['outfitMeta']={order:[],meta:{}}; } m.order=m.order||[]; m.meta=m.meta||{}; return m; }
+    function ocSlug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'outfit'; }
+    function ocSafeFile(n){ n=(n||'part.glb').replace(/[^A-Za-z0-9._-]+/g,'-'); return /\.glb$/i.test(n)?n:n+'.glb'; }
+    // The merged outfit list, in cycle order. A draft with the same id as a repo outfit shadows it (you're previewing your local copy).
+    function ocAll(){
+      var list=[], meta=ocMeta();
+      outfitDrafts.forEach(function(d){ list.push({id:d.id,name:d.name,enabled:d.enabled!==false,src:'draft',parts:d.parts||[]}); });
+      outfitRepo.forEach(function(o){ if(outfitDrafts.some(function(d){ return d.id===o.id; })) return; var mt=meta.meta[o.id]||{}; if(mt.removed) return;
+        list.push({id:o.id,name:mt.name||o.name||o.id,enabled:mt.enabled!=null?!!mt.enabled:o.enabled!==false,src:'repo',parts:o.parts||[]}); });
+      list.forEach(function(o,i){ var oi=meta.order.indexOf(o.id); o._k=(oi<0?1e6:oi)*1000+i; });
+      list.sort(function(a,b){ return a._k-b._k; }); return list;
+    }
+    function ocFind(id){ return ocAll().filter(function(o){ return o.id===id; })[0]||null; }
+    function ocCycleList(){ return ocAll().filter(function(o){ return o.enabled&&!outfitFailed[o.id]&&o.parts.length; }); }
+    function ocUniqueId(base,except){ var id=base,n=2; while(ocAll().some(function(o){ return o.id===id&&o.id!==except; })) id=base+'-'+(n++); return id; }
+    function ocSig(o){ return o.src+':'+o.id+':'+o.parts.map(function(p){ return p.key||p.file; }).join('|'); }
+
+    function ocPartBuffer(o,p){
+      if(o.src==='draft') return BRICStore.get(p.key).then(function(r){ if(!r||!r.buffer) throw new Error('missing local file '+p.name); return r.buffer; });
+      return fetch(p.file).then(function(r){ if(!r.ok) throw new Error(p.file+' → '+r.status); return r.arrayBuffer(); });
+    }
+    function ocBuild(o){
+      return Promise.all(o.parts.map(function(p){ return ocPartBuffer(o,p).then(function(buf){ return new Promise(function(res,rej){ loadGLBScene(buf,function(sc,err){ if(sc) res(sc); else rej(new Error(err||'glb parse error')); }); }); }); })).then(function(scenes){
+        var root=new THREE.Group(); scenes.forEach(function(s){ root.add(s); }); root.updateMatrixWorld(true);
+        var size=new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
+        if(!(size.y>0)||!isFinite(size.y)) throw new Error('outfit has no geometry');
+        // buildHoloGLB fits the LONGEST side to radius*2, so scale the radius until the figure's HEIGHT is the nominal height (arms-out poses stay in proportion).
+        var ext=Math.max(size.x,size.y,size.z);
+        return buildHoloGLB(root,FX_LOGO,(OUTFIT_NOMINAL_H/2)*(ext/size.y));
+      });
+    }
+    function ocSetAlpha(grp,a){ if(grp.userData.ocA===a) return; grp.userData.ocA=a;
+      grp.traverse(function(o){ if(!o.isMesh||!o.material) return; var m=o.material; if(m.userData.ocT==null) m.userData.ocT=m.transparent;
+        m.transparent=a<1?true:m.userData.ocT; m.opacity=a; m.needsUpdate=true; }); }
+    function ocInstant(){ return !!(_ocRM&&_ocRM.matches); }
+    function ocShow(id,instant){
+      var o=ocFind(id); if(!o||!o.parts.length) return; var seq=++outfitSeq, sig=ocSig(o);
+      function go(grp){
+        if(seq!==outfitSeq) return;
+        if(outfitCur&&outfitCur.group===grp){ outfitCur.id=id; return; }
+        if(outfitPrev) outfitStage.remove(outfitPrev.group);
+        outfitPrev=outfitCur;
+        var quick=instant||ocInstant();
+        outfitCur={id:id,group:grp,t0:performance.now(),dur:quick?0:600};
+        if(quick&&outfitPrev){ outfitStage.remove(outfitPrev.group); ocSetAlpha(outfitPrev.group,1); outfitPrev=null; }
+        ocSetAlpha(grp,quick?1:0); outfitStage.add(grp); outfitLastSwitch=performance.now(); if(document.body.classList.contains('oc-open')) ocRender();
+      }
+      if(outfitCache[sig]) go(outfitCache[sig]);
+      else ocBuild(o).then(function(g){ outfitCache[sig]=g; go(g); }).catch(function(e){
+        console.warn('[outfits] "'+o.name+'" failed to load:',e); outfitFailed[o.id]=String(e&&e.message||e); ocMsg='"'+o.name+'" failed: '+outfitFailed[o.id];
+        if(document.body.classList.contains('oc-open')) ocRender(); });
+    }
+    function ocInvalidate(id){ Object.keys(outfitCache).forEach(function(k){ if(k.indexOf(':'+id+':')>0){ delete outfitCache[k]; } }); delete outfitFailed[id]; }
+    function ocClear(){ outfitSeq++; if(outfitCur) outfitStage.remove(outfitCur.group); if(outfitPrev) outfitStage.remove(outfitPrev.group); outfitCur=outfitPrev=null; }
+    function ocNext(){ var l=ocCycleList(); if(l.length<2) return; var i=-1; l.forEach(function(o,n){ if(outfitCur&&o.id===outfitCur.id) i=n; }); ocShow(l[(i+1)%l.length].id); }
+    // After any add/remove/enable/disable: make sure what's on the hologram is still valid.
+    function ocReconcile(){ var l=ocCycleList(); if(!l.length){ ocClear(); return; } if(!outfitCur||!l.some(function(o){ return o.id===outfitCur.id; })) ocShow(l[0].id); }
+    function ocHit(){ if(!outfitCur||!outfitStage.visible) return null; var h=ray.intersectObject(outfitCur.group,true); return h.length?h[0]:null; }
+    // Per frame (called from animate): fade, head hand-off, tunables, auto-cycle.
+    function ocTick(){
+      if(!outfitCur&&!outfitHeadHidden) return;
+      if(outfitCur){
+        var now=performance.now(), k=outfitCur.dur?Math.min(1,(now-outfitCur.t0)/outfitCur.dur):1;
+        if(k<1||outfitCur.group.userData.ocA!==1){ ocSetAlpha(outfitCur.group,k); if(outfitPrev) ocSetAlpha(outfitPrev.group,1-k); }
+        if(k>=1&&outfitPrev){ outfitStage.remove(outfitPrev.group); ocSetAlpha(outfitPrev.group,1); outfitPrev=null; }
+        var cfg=ocCfg(); outfitStage.scale.setScalar(cfg.height/OUTFIT_NOMINAL_H); outfitStage.position.y=cfg.y;
+        holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false;   // the figure replaces the head
+        outfitStage.visible=!arcadeActive; outfitHeadHidden=true;
+        if(cfg.cycle>0&&!ocInstant()&&!focused&&!arcadeActive&&mwPhase==='docked'&&document.visibilityState==='visible'&&now-outfitLastSwitch>cfg.cycle*1000) ocNext();
+      } else {   // outfits all gone: hand the scene back to the original head
+        outfitStage.visible=false; outfitHeadHidden=false;
+        if(logo.userData.glbGroup) logo.userData.glbGroup.visible=true; else { holoHead.visible=true; glowShell.visible=true; }
+      }
+    }
+    function ocLoadDrafts(){ try{ var d=JSON.parse(localStorage.getItem('mw_outfit_drafts')||'[]'); outfitDrafts=Array.isArray(d)?d:[]; }catch(e){ outfitDrafts=[]; } }
+    function ocSaveDrafts(){ try{ localStorage.setItem('mw_outfit_drafts',JSON.stringify(outfitDrafts)); }catch(e){ ocMsg='could not save drafts locally'; } }
+    (function ocInit(){
+      ocLoadDrafts();
+      fetch(OUTFITS_JSON,{cache:'no-cache'}).then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; }).then(function(j){
+        outfitRepo=(j&&Array.isArray(j.outfits))?j.outfits.filter(function(o){ return o&&o.id&&Array.isArray(o.parts); }):[];
+        var l=ocCycleList(); if(l.length) ocShow(l[0].id,true);
+      });
+    })();
+
+    // ── Export bundle: a store-only zip (assets/outfits.json + the draft GLBs) to unzip at the repo root ──
+    var _ocCrcT=null;
+    function ocCrc(u8){ if(!_ocCrcT){ _ocCrcT=[]; for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); _ocCrcT[n]=c>>>0; } }
+      var c=0xFFFFFFFF; for(var i=0;i<u8.length;i++) c=_ocCrcT[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+    function ocZip(files){
+      var enc=new TextEncoder(), parts=[], central=[], off=0, csize=0;
+      files.forEach(function(f){ var nm=enc.encode(f.name), d=f.data, crc=ocCrc(d);
+        var lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(12,0x21,true); lh.setUint32(14,crc,true); lh.setUint32(18,d.length,true); lh.setUint32(22,d.length,true); lh.setUint16(26,nm.length,true);
+        parts.push(lh.buffer,nm,d);
+        var ch=new DataView(new ArrayBuffer(46)); ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(14,0x21,true); ch.setUint32(16,crc,true); ch.setUint32(20,d.length,true); ch.setUint32(24,d.length,true); ch.setUint16(28,nm.length,true); ch.setUint32(42,off,true);
+        central.push(ch.buffer,nm); csize+=46+nm.length; off+=30+nm.length+d.length; });
+      var end=new DataView(new ArrayBuffer(22)); end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,csize,true); end.setUint32(16,off,true);
+      return new Blob(parts.concat(central,[end.buffer]),{type:'application/zip'});
+    }
+    // Builds the bundle blob (also used by the test hook) → Promise<{blob,count}>
+    function ocBuildBundle(){
+      var list=ocAll(), files=[], manifest={version:1,outfits:[]}, reads=[];
+      list.forEach(function(o){
+        var entry={id:o.id,name:o.name,enabled:o.enabled,parts:[]}, used={};
+        o.parts.forEach(function(p){
+          if(o.src==='repo'){ entry.parts.push({file:p.file}); return; }
+          var fn=ocSafeFile(p.name), base=fn, n=2; while(used[fn]){ fn=base.replace(/\.glb$/i,'')+'-'+(n++)+'.glb'; } used[fn]=1;
+          var path=OUTFIT_DIR+o.id+'/'+fn; entry.parts.push({file:path});
+          reads.push(BRICStore.get(p.key).then(function(r){ if(!r||!r.buffer) throw new Error('missing local file '+p.name); files.push({name:path,data:new Uint8Array(r.buffer)}); }));
+        });
+        manifest.outfits.push(entry);
+      });
+      return Promise.all(reads).then(function(){
+        files.unshift({name:'assets/outfits.json',data:new TextEncoder().encode(JSON.stringify(manifest,null,2)+'\n')});
+        return {blob:ocZip(files),count:manifest.outfits.length,files:files.length};
+      });
+    }
+    function ocExport(){
+      ocBuildBundle().then(function(r){
+        var a=document.createElement('a'); a.href=URL.createObjectURL(r.blob); a.download='mw-outfits.zip'; document.body.appendChild(a); a.click();
+        setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1000);
+        ocMsg='exported '+r.count+' outfit'+(r.count===1?'':'s')+' · unzip at repo root, commit, push'; ocRender();
+      }).catch(function(e){ ocMsg='export failed: '+e.message; ocRender(); });
+    }
+
+    // ── Manager panel ──
+    function ocEl(tag,cls,text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+    function ocBtn(label,act,id,title,cls,extra){ var b=ocEl('button','pm-btn'+(cls?' '+cls:''),label); b.type='button'; b.setAttribute('data-oc',act); if(id) b.setAttribute('data-id',id); if(extra!=null) b.setAttribute('data-x',extra); if(title){ b.title=title; b.setAttribute('aria-label',title); } return b; }
+    function ocRender(){
+      var body=document.getElementById('ocBody'), foot=document.getElementById('ocFoot'); if(!body) return; var st=body.scrollTop; body.innerHTML='';
+      var cfg=ocCfg(), s=ocEl('div','pm-zone');
+      function cfgRow(label,key,type,min,max,step,val){ var r=ocEl('label','pm-row oc-cfg'); r.appendChild(ocEl('span','oc-lbl',label)); var i=ocEl('input'); i.type=type; if(type==='range'){ i.min=min; i.max=max; i.step=step; } else { i.min=min; i.step=step; } i.value=val; i.setAttribute('data-oc-cfg',key); r.appendChild(i); var v=ocEl('span','oc-val',String(val)); v.setAttribute('data-oc-val',key); r.appendChild(v); s.appendChild(r); }
+      cfgRow('Auto-cycle (s, 0 = off)','cycle','number',0,'',1,cfg.cycle); cfgRow('Figure height','height','range',1,4.2,0.05,cfg.height); cfgRow('Vertical offset','y','range',-1.5,1.5,0.05,cfg.y);
+      body.appendChild(s);
+      var list=ocAll(); if(!list.length) body.appendChild(ocEl('div','pm-empty','no outfits yet · the original head is showing'));
+      list.forEach(function(o,i){
+        var card=ocEl('div','pm-zone'+(o.enabled?'':' is-hidden')), top=ocEl('div','pm-row'), nm=ocEl('input','pm-znm'); nm.type='text'; nm.value=o.name; nm.setAttribute('data-oc-field','name'); nm.setAttribute('data-id',o.id); nm.setAttribute('aria-label','Outfit name'); nm.autocomplete='off'; nm.spellcheck=false; top.appendChild(nm); card.appendChild(top);
+        var r2=ocEl('div','pm-row oc-r2'); var on=ocEl('label','oc-on'); var cb=ocEl('input'); cb.type='checkbox'; cb.checked=o.enabled; cb.setAttribute('data-oc-field','enabled'); cb.setAttribute('data-id',o.id); on.appendChild(cb); on.appendChild(ocEl('span',null,' show')); r2.appendChild(on);
+        r2.appendChild(ocEl('span','pm-count oc-src',o.src==='draft'?'draft · this browser only':'repo')); var sp=ocEl('span'); sp.style.flex='1'; r2.appendChild(sp);
+        r2.appendChild(ocBtn('↑','up',o.id,'Move earlier',null)); r2.appendChild(ocBtn('↓','down',o.id,'Move later',null)); r2.appendChild(ocBtn('preview','preview',o.id,'Show this outfit on the hologram now',null)); card.appendChild(r2);
+        if(outfitFailed[o.id]) card.appendChild(ocEl('div','pm-empty','failed to load · '+outfitFailed[o.id]));
+        var ul=ocEl('ul','pm-planets'); o.parts.forEach(function(p,pi){ var li=ocEl('li','pm-planet'), row=ocEl('div','pm-row'); var t=ocEl('span','pm-psub',(p.name||(p.file||'').split('/').pop())+(p.size?'  '+Math.round(p.size/1024)+' KB':'')); t.style.flex='1'; row.appendChild(t); if(o.src==='draft') row.appendChild(ocBtn('✕','rm-part',o.id,'Remove this GLB',null,pi)); li.appendChild(row); ul.appendChild(li); });
+        if(!o.parts.length) ul.appendChild(ocEl('li','pm-empty','no GLBs yet')); card.appendChild(ul);
+        var act=ocEl('div','pm-zactions'); if(o.src==='draft') act.appendChild(ocBtn('⬆ Add GLB(s)','add-glb',o.id,'Upload one or more GLBs for this outfit',null));
+        var armed=ocArmed===o.id; act.appendChild(ocBtn(armed?'sure?':(o.src==='draft'?'delete':'remove'),'delete',o.id,o.src==='draft'?'Delete this draft and its local files':'Hide this repo outfit (files stay in the repo until you delete them there)','pm-danger')); card.appendChild(act);
+        body.appendChild(card); });
+      body.scrollTop=st; foot.innerHTML=''; if(ocMsg) foot.appendChild(ocEl('span',null,ocMsg));
+    }
+    function ocOpen(on){ if(on&&!editMode) setEditMode(true); document.body.classList.toggle('oc-open',!!on); var b=document.getElementById('ocBtn'); if(b) b.classList.toggle('on',!!on); if(on){ ocArmed=null; ocMsg=''; ocRender(); } }
+    function ocAddFiles(id,files){
+      var d=outfitDrafts.filter(function(x){ return x.id===id; })[0]; if(!d||!files||!files.length) return;
+      var jobs=[].slice.call(files).map(function(f){
+        if(!/\.glb$/i.test(f.name)) return Promise.reject(new Error(f.name+' is not a .glb'));
+        return f.arrayBuffer().then(function(buf){ return new Promise(function(res,rej){ loadGLBScene(buf.slice(0),function(sc,err){ if(sc) res(buf); else rej(new Error(f.name+': '+(err||'bad glb'))); }); }); })
+          .then(function(buf){ var key='outfit:'+id+':'+Math.random().toString(36).slice(2,9); return BRICStore.set(key,{kind:'glb',buffer:buf,name:f.name}).then(function(){ d.parts.push({name:f.name,key:key,size:buf.byteLength}); }); });
+      });
+      Promise.all(jobs).then(function(){ ocMsg=files.length+' GLB'+(files.length===1?'':'s')+' added'; }).catch(function(e){ ocMsg=e.message; }).then(function(){
+        ocSaveDrafts(); ocInvalidate(id); ocRender(); if(d.parts.length&&d.enabled!==false) ocShow(id,true); });
+    }
+    function ocSetOrder(ids){ ocMeta().order=ids; persistCopy(); }
+    (function wireOC(){
+      var panel=document.getElementById('outfitMgr'), btn=document.getElementById('ocBtn'); if(!panel||!btn) return;
+      btn.addEventListener('click',function(){ ocOpen(!document.body.classList.contains('oc-open')); });
+      document.getElementById('ocClose').addEventListener('click',function(){ ocOpen(false); });
+      panel.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Escape'){ ocOpen(false); return; } if(e.key==='Enter'&&e.target.matches('input[type=text]')){ e.preventDefault(); e.target.blur(); } });
+      panel.addEventListener('click',function(e){
+        var b=e.target.closest&&e.target.closest('[data-oc]'); if(!b||b.disabled) return; var act=b.getAttribute('data-oc'), id=b.getAttribute('data-id');
+        if(ocArmed&&!(act==='delete'&&ocArmed===id)){ ocArmed=null; clearTimeout(ocArmedT); }
+        if(act==='new'){ var nid=ocUniqueId('outfit'); outfitDrafts.push({id:nid,name:'New outfit',enabled:true,parts:[]}); ocSaveDrafts(); ocMsg='name it, then add GLB(s)'; ocRender(); var inp=panel.querySelector('input[data-id="'+nid+'"][data-oc-field="name"]'); if(inp){ inp.focus(); inp.select(); } }
+        else if(act==='export') ocExport();
+        else if(act==='preview'){ ocShow(id,false); }
+        else if(act==='up'||act==='down'){ var ids=ocAll().map(function(o){ return o.id; }), i=ids.indexOf(id), j=act==='up'?i-1:i+1; if(i<0||j<0||j>=ids.length) return; ids.splice(j,0,ids.splice(i,1)[0]); ocSetOrder(ids); ocMsg='order changed · SAVE to sync'; ocRender(); }
+        else if(act==='add-glb'){ var fi=document.createElement('input'); fi.type='file'; fi.accept='.glb'; fi.multiple=true; fi.onchange=function(){ ocAddFiles(id,fi.files); }; fi.click(); }
+        else if(act==='rm-part'){ var d=outfitDrafts.filter(function(x){ return x.id===id; })[0]; if(!d) return; var p=d.parts.splice(+b.getAttribute('data-x'),1)[0]; if(p&&p.key) BRICStore.del(p.key); ocSaveDrafts(); ocInvalidate(id); if(!d.parts.length&&outfitCur&&outfitCur.id===id) ocReconcile(); else if(outfitCur&&outfitCur.id===id) ocShow(id,true); ocRender(); }
+        else if(act==='delete'){
+          if(ocArmed!==id){ ocArmed=id; clearTimeout(ocArmedT); ocArmedT=setTimeout(function(){ ocArmed=null; ocRender(); },6000); ocRender(); return; }
+          ocArmed=null; var o=ocFind(id); if(!o) return;
+          if(o.src==='draft'){ var dd=outfitDrafts.filter(function(x){ return x.id===id; })[0]; (dd.parts||[]).forEach(function(p){ if(p.key) BRICStore.del(p.key); }); outfitDrafts=outfitDrafts.filter(function(x){ return x.id!==id; }); ocSaveDrafts(); }
+          else { ocMeta().meta[id]=Object.assign(ocMeta().meta[id]||{},{removed:true}); persistCopy(); ocMsg='hidden · SAVE to sync (files remain in the repo)'; }
+          ocInvalidate(id); ocReconcile(); ocRender(); }
+      });
+      panel.addEventListener('input',function(e){ var k=e.target.getAttribute&&e.target.getAttribute('data-oc-cfg'); if(!k) return; var v=ocNum(e.target.value,null); if(v==null) return; ocSetCfg(k,v); var lab=panel.querySelector('[data-oc-val="'+k+'"]'); if(lab) lab.textContent=String(v); });
+      panel.addEventListener('change',function(e){
+        var f=e.target.getAttribute&&e.target.getAttribute('data-oc-field'); if(!f) return; var id=e.target.getAttribute('data-id'), o=ocFind(id); if(!o) return;
+        var d=outfitDrafts.filter(function(x){ return x.id===id; })[0];
+        if(f==='name'){ var v=e.target.value.trim(); if(!v){ e.target.value=o.name; return; }
+          if(d){ var nid=ocUniqueId(ocSlug(v),id); if(nid!==id){ var ord=ocMeta().order, oi=ord.indexOf(id); if(oi>=0) ord[oi]=nid; ocInvalidate(id); d.id=nid; d.parts.forEach(function(p){ /* keys are id-independent */ }); if(outfitCur&&outfitCur.id===id) outfitCur.id=nid; } d.name=v; ocSaveDrafts(); }
+          else { ocMeta().meta[id]=Object.assign(ocMeta().meta[id]||{},{name:v}); persistCopy(); ocMsg='renamed · SAVE to sync'; } ocRender(); }
+        else if(f==='enabled'){ if(d){ d.enabled=e.target.checked; ocSaveDrafts(); } else { ocMeta().meta[id]=Object.assign(ocMeta().meta[id]||{},{enabled:e.target.checked}); persistCopy(); ocMsg='changed · SAVE to sync'; }
+          ocReconcile(); if(e.target.checked&&!outfitCur) ocShow(id,true); ocRender(); }
+      });
+    })();
+    window.MWOutfits={list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
@@ -14165,6 +14413,7 @@ f 2469//2469 2470//2470 2434//2434
         if(arcadeStage==='select'){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; }   // the hero carousel replaces the head
         else { galaxy.children.forEach(function(c){ if(c!==starPoints) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
       }
+      ocTick();   // outfits: fade / head hand-off / auto-cycle (after the arcade block so the figure obeys arcadeActive)
       renderer.setRenderTarget(rt);
       if(logo.userData.glbGroup && logoHolo.value>0.001 && !params.logoHoloAdd){
         // (1) depth-only pre-pass of the logo alone → buffer holds the front-most logo surface
@@ -14728,9 +14977,9 @@ f 2469//2469 2470//2470 2434//2434
   <script>
   (function(){
     var MAP=[
-      ['#saveBtn, #viewSetBtn, #projMgr .pm-newzone','bric-btn bric-btn--sm bric-btn--primary'],
-      ['.tbtn, #projMgr .pm-btn, #debug .resetbtn, .tag-add, .manual-links .link-add','bric-btn bric-btn--sm bric-btn--secondary'],
-      ['#projMgr .pm-close, #debug .seg button, .axis-btn, #ml-switch .seg button, .epFace','bric-btn bric-btn--sm']
+      ['#saveBtn, #viewSetBtn, #projMgr .pm-newzone, #outfitMgr .pm-newzone','bric-btn bric-btn--sm bric-btn--primary'],
+      ['.tbtn, #projMgr .pm-btn, #outfitMgr .pm-btn:not(.pm-newzone), #debug .resetbtn, .tag-add, .manual-links .link-add','bric-btn bric-btn--sm bric-btn--secondary'],
+      ['#projMgr .pm-close, #outfitMgr .pm-close, #debug .seg button, .axis-btn, #ml-switch .seg button, .epFace','bric-btn bric-btn--sm']
     ];
     var ALL=MAP.map(function(m){return m[0];}).join(',');
     function adopt(el){ if(el.__bricAuthor) return; el.__bricAuthor=true;
