@@ -974,28 +974,32 @@
       <div class="ctl"><label>Scatter <b id="vGxZoneScatter">0</b></label><input type="range" id="cGxZoneScatter" min="0" max="1" step="0.05"></div>
     <button class="resetbtn" id="gxZonePlay">▶ Replay section names</button>
     <div class="menudiv"></div>
-      <div class="ctl sec"><label>Entry gate · text ribbons (H1 + perpendicular H2, floating around the cube)</label></div>
-      <div class="ctl"><label>H1 ribbon: angular segments (4 = square, more = rounder) <b id="vGateH1Seg">4</b></label><input type="range" id="cGateH1Seg" min="3" max="64" step="1" value="4"></div>
-      <div class="ctl"><label>H1 ribbon: text size (% of cube side, capped to fit one loop) <b id="vGateH1Size">16</b></label><input type="range" id="cGateH1Size" min="4" max="40" step="1" value="16"></div>
-      <div class="ctl"><label>H1 ribbon: height off the monogram (% of cube half-side) <b id="vGateH1Lift">18</b></label><input type="range" id="cGateH1Lift" min="0" max="120" step="1" value="18"></div>
-      <div class="ctl"><label>H1 ribbon text colour</label><input type="color" id="cGateH1Color" value="#AAF5EE"><input type="text" id="cGateH1ColorHex" value="" placeholder="theme" class="hexin"><button class="resetbtn" id="cGateH1ColorReset" style="margin:0 0 0 6px">theme</button></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH1Flip"> H1 ribbon: flip baseline (text upside down)</label></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH1Rev"> H1 ribbon: reverse scroll direction</label></div>
-      <div class="ctl"><label>H2 ribbon: angular segments (4 = square, more = rounder) <b id="vGateH2Seg">4</b></label><input type="range" id="cGateH2Seg" min="3" max="64" step="1" value="4"></div>
-      <div class="ctl"><label>H2 ribbon: text size (% of cube side, capped to fit one loop) <b id="vGateH2Size">16</b></label><input type="range" id="cGateH2Size" min="4" max="40" step="1" value="16"></div>
-      <div class="ctl"><label>H2 ribbon: height off the monogram (% of cube half-side) <b id="vGateH2Lift">40</b></label><input type="range" id="cGateH2Lift" min="0" max="120" step="1" value="40"></div>
-      <div class="ctl"><label>H2 ribbon text colour</label><input type="color" id="cGateH2Color" value="#AAF5EE"><input type="text" id="cGateH2ColorHex" value="" placeholder="theme" class="hexin"><button class="resetbtn" id="cGateH2ColorReset" style="margin:0 0 0 6px">theme</button></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Flip"> H2 ribbon: flip baseline (text upside down)</label></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Rev"> H2 ribbon: reverse scroll direction</label></div>
+      <div class="ctl sec"><label>Entry gate · both ribbons</label></div>
       <div class="ctl"><label>Scroll speed (% of a loop per second) <b id="vGateSpeed">6</b></label><input type="range" id="cGateSpeed" min="0" max="40" step="1" value="6"></div>
-      <div class="ctl"><label>H1 ribbon text</label><input type="text" id="cGateH1Text" style="width:100%"></div>
-      <div class="ctl"><label>H2 ribbon text, line 1</label><input type="text" id="cGateH2TextA" style="width:100%"></div>
-      <div class="ctl"><label>H2 ribbon text, line 2 (blank = single line)</label><input type="text" id="cGateH2TextB" style="width:100%"></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Alt" checked> H2 band alternates its two lines each loop</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Alt" checked> H2 ribbon alternates its two lines each loop</label></div>
       <div class="ctl"><label>Fade-in (ms) <b id="vGateIn">2000</b></label><input type="range" id="cGateIn" min="100" max="6000" step="50" value="2000"></div>
       <div class="ctl"><label>Fade-out on dock (ms) <b id="vGateFade">380</b></label><input type="range" id="cGateFade" min="50" max="3000" step="10" value="380"></div>
-      <div class="ctl"><label>H1 band delay after the camera settles (ms) <b id="vGateH1Delay">0</b></label><input type="range" id="cGateH1Delay" min="0" max="5000" step="50" value="0"></div>
-      <div class="ctl"><label>H2 band delay after the settle (ms) <b id="vGateH2Delay">1000</b></label><input type="range" id="cGateH2Delay" min="0" max="6000" step="50" value="1000"></div>
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label>Entry gate · H1 ribbon</label></div>
+      <div class="ctl"><label>Text</label><input type="text" id="cGateH1Text" style="width:100%"></div>
+      <div class="ctl"><label>Angular segments (4 = square, more = rounder) <b id="vGateH1Seg">4</b></label><input type="range" id="cGateH1Seg" min="3" max="64" step="1" value="4"></div>
+      <div class="ctl"><label>Text size (% of cube side, capped to fit one loop) <b id="vGateH1Size">16</b></label><input type="range" id="cGateH1Size" min="4" max="40" step="1" value="16"></div>
+      <div class="ctl"><label>Height off the monogram (% of cube half-side) <b id="vGateH1Lift">18</b></label><input type="range" id="cGateH1Lift" min="0" max="120" step="1" value="18"></div>
+      <div class="ctl"><label>Text colour</label><input type="color" id="cGateH1Color" value="#AAF5EE"><input type="text" id="cGateH1ColorHex" value="" placeholder="theme" class="hexin"><button class="resetbtn" id="cGateH1ColorReset" style="margin:0 0 0 6px">theme</button></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH1Flip"> Flip baseline (text upside down)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH1Rev"> Reverse scroll direction</label></div>
+      <div class="ctl"><label>Fade-in delay after the camera settles (ms) <b id="vGateH1Delay">0</b></label><input type="range" id="cGateH1Delay" min="0" max="5000" step="50" value="0"></div>
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label>Entry gate · H2 ribbon</label></div>
+      <div class="ctl"><label>Text, line 1</label><input type="text" id="cGateH2TextA" style="width:100%"></div>
+      <div class="ctl"><label>Text, line 2 (blank = single line)</label><input type="text" id="cGateH2TextB" style="width:100%"></div>
+      <div class="ctl"><label>Angular segments (4 = square, more = rounder) <b id="vGateH2Seg">4</b></label><input type="range" id="cGateH2Seg" min="3" max="64" step="1" value="4"></div>
+      <div class="ctl"><label>Text size (% of cube side, capped to fit one loop) <b id="vGateH2Size">16</b></label><input type="range" id="cGateH2Size" min="4" max="40" step="1" value="16"></div>
+      <div class="ctl"><label>Height off the monogram (% of cube half-side) <b id="vGateH2Lift">40</b></label><input type="range" id="cGateH2Lift" min="0" max="120" step="1" value="40"></div>
+      <div class="ctl"><label>Text colour</label><input type="color" id="cGateH2Color" value="#AAF5EE"><input type="text" id="cGateH2ColorHex" value="" placeholder="theme" class="hexin"><button class="resetbtn" id="cGateH2ColorReset" style="margin:0 0 0 6px">theme</button></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Flip"> Flip baseline (text upside down)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Rev"> Reverse scroll direction</label></div>
+      <div class="ctl"><label>Fade-in delay after the camera settles (ms) <b id="vGateH2Delay">1000</b></label><input type="range" id="cGateH2Delay" min="0" max="6000" step="50" value="1000"></div>
 
     <!-- ── Galaxy view ── -->
     <div class="dbg-ctx" id="dbg-galaxy">
