@@ -78,7 +78,7 @@ var SITE_EVENTS={
 var GAMEOVER_DUCK=.12;   // how far everything else drops under the sting (1 = no duck)
 var GAME_OVER=['game-over-1','game-over-2','game-over-3','game-over-4'];
 var LEVEL={ gameOver:.85, site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
-  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
+  fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.7, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
    page's "Death sequence" slot on each fighter card. Key = model id (battle.js MODELS[].id), value = clip names in assets/audio without the extension. Empty until clips are added. */
 var FIGHTER_DEATH={
@@ -103,6 +103,7 @@ function ensure(){
     master=ctx.createGain(); master.gain.value=muted?0:1;
     comp=ctx.createDynamicsCompressor(); comp.threshold.value=-8; comp.knee.value=14; comp.ratio.value=3; comp.attack.value=.006; comp.release.value=.18;   // many explosions at once must not clip
     master.connect(comp); comp.connect(ctx.destination);
+    boomBus=ctx.createGain(); boomBus.gain.value=SELECT_BOOM; boomBus.connect(master);
     duck=ctx.createGain(); duck.connect(master);   // everything except the big destruction sounds goes through here and is ducked under them
   }
   if(ctx.state==='suspended'){ var p=ctx.resume(); if(p&&p.catch) p.catch(function(){}); }
@@ -122,9 +123,13 @@ function preload(keys){ keys.forEach(function(k){ load(k); }); }
 function gainNode(v){ var g=ctx.createGain(); g.gain.value=v; return g; }
 function fade(g,to,sec){ var t=now(); g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(to,t+Math.max(.02,sec)); }
 /* Duck every other sound under a big destruction sound so it cuts through: quick dip, hold for the clip, slow recovery. */
+var SELECT_BOOM=.2;   // hero select: battle explosions and fighter deaths play at this fraction (low, not muted) so the carousel ship's engine idle is the prominent sound
+var boomBus=null;
+function boomDest(){ return boomBus||master; }
+function boomLevel(){ if(!boomBus) return; var t=now(); boomBus.gain.cancelScheduledValues(t); boomBus.gain.setTargetAtTime(stageName==='play'?1:SELECT_BOOM,t,.15); }
 var DUCK_LEVEL=.22, FIGHTER_DUCK=.35, duckUntil=0, duckLvl=1;   // FIGHTER_DUCK: how far everything else drops under a fighter's death sequence (1 = no duck); big ships use DUCK_LEVEL
 function duckFor(sec,lvl){
-  if(!ctx||!duck) return; var t=now(), end=t+sec; lvl=(lvl==null?DUCK_LEVEL:lvl); if(t<duckUntil) lvl=Math.min(lvl,duckLvl);   // a lighter duck never lifts a deeper one still running
+  if(!ctx||!duck||(stageName!=='play'&&lvl!==GAMEOVER_DUCK)) return; var t=now(), end=t+sec; lvl=(lvl==null?DUCK_LEVEL:lvl); if(t<duckUntil) lvl=Math.min(lvl,duckLvl);   // a lighter duck never lifts a deeper one still running
   if(end<duckUntil-.05&&duck.gain.value<lvl+.05) return; duckUntil=Math.max(duckUntil,end); duckLvl=lvl;
   duck.gain.cancelScheduledValues(t); duck.gain.setTargetAtTime(lvl,t,.07); duck.gain.setTargetAtTime(1,duckUntil,.5);
 }
@@ -404,9 +409,9 @@ var MWAudio={
   jumpCancel:function(){ if(!jump) return; var j=jump; jump=null; endLoop(j.loop,.4); },
 
   /* arcade session */
-  arcadeStart:function(){ if(!ensure()) return; stopGameOver(.3); preload(GAME_OVER); arriveLeft=3+Math.round(Math.random()); stageName='select'; yaw=0; if(!jump) startSelect(); },   // under a hyperspace jump the ambience waits for the exit (jumpReveal)
+  arcadeStart:function(){ if(!ensure()) return; stopGameOver(.3); preload(GAME_OVER); arriveLeft=3+Math.round(Math.random()); stageName='select'; boomLevel(); yaw=0; if(!jump) startSelect(); },   // under a hyperspace jump the ambience waits for the exit (jumpReveal)
   stage:function(st){
-    if(!ctx||st===stageName) return; stageName=st;
+    if(!ctx||st===stageName) return; stageName=st; boomLevel();
     if(st==='play'){ stopGameOver(.4); stopGroup('sel'); startPlay(); } else { stopGroup('play'); heroStop(.3); startSelect(); }
   },
   /* site-wide ambient background. siteStart needs a user gesture (browsers keep audio locked until one): index.html calls it on the first press or key anywhere,
@@ -439,7 +444,7 @@ var MWAudio={
   boom:function(kind,loc,rebel){
     if(!ctx||kind!=='fighter'||!loc) return; var raw=num(loc.gain,1), g=loud(loc), t=now();
     if(t-lastFighter<.12) return; lastFighter=t;
-    var key=draw('fighter',POOL_FIGHTER); if(!bufs[key]) load(key); else oneShot(key,{loc:loc,gain:LEVEL.fighter*g*rr(.8,1.1),rate:rr(.88,1.14),lowpass:raw<.5?3500:0,dest:master}); duckFor(1.1,FIGHTER_DUCK);   // far ones keep their muffled tone but never drop below the baseline; it plays over the ducked mix
+    var key=draw('fighter',POOL_FIGHTER); if(!bufs[key]) load(key); else oneShot(key,{loc:loc,gain:LEVEL.fighter*g*rr(.8,1.1),rate:rr(.88,1.14),lowpass:raw<.5?3500:0,dest:boomDest()}); duckFor(1.1,FIGHTER_DUCK);   // far ones keep their muffled tone but never drop below the baseline; it plays over the ducked mix
     if(rebel&&Math.random()<R2_CHANCE){ if(!bufs.r2) load('r2'); else oneShot('r2',{loc:loc,gain:LEVEL.r2*Math.max(.4,g),rate:rr(.94,1.08),delay:.12}); }
   },
 
@@ -453,7 +458,7 @@ var MWAudio={
     if(ready.length&&Math.random()<rr(.45,.7)){
       var k=draw('seq-'+cls,ready.map(function(c){ return c.k; })), c=ready.filter(function(x){ return x.k===k; })[0], rate=rr(.94,1.07);
       plan.seq=c; plan.fin=!!c.fin; plan.dur=bufs[c.k].duration/rate;
-      plan.h=oneShot(c.k,{loc:loc,gain:LEVEL.seq*g,rate:rate,dest:master}); duckFor(plan.dur);
+      plan.h=oneShot(c.k,{loc:loc,gain:LEVEL.seq*g,rate:rate,dest:boomDest()}); duckFor(plan.dur);
       return {plan:plan, dur:Math.max(3,plan.dur-SEQ_TAIL)};
     }
     set.seq.forEach(function(c){ load(c.k); }); duckFor(cls==='capital'?8:4.5);   // layers + final: duck for the whole hull chain (the ship's default death time)
@@ -463,18 +468,18 @@ var MWAudio={
   deathLayer:function(plan,loc){
     if(!ctx||!plan||!loc) return; var t=now(); if(t-lastLayer<.3) return; if(Math.random()>(plan.seq?.35:.7)) return; lastLayer=t;
     var key=draw('small-'+plan.cls,DEATH[plan.cls].small); if(!bufs[key]){ load(key); return; }
-    oneShot(key,{loc:loc,gain:LEVEL.small*loud(loc)*rr(.55,1.2),rate:rr(.78,1.3),delay:Math.random()*.15,lowpass:Math.random()<.2?rr(2500,5000):0,dest:master}); duckFor(1.2);
+    oneShot(key,{loc:loc,gain:LEVEL.small*loud(loc)*rr(.55,1.2),rate:rr(.78,1.3),delay:Math.random()*.15,lowpass:Math.random()<.2?rr(2500,5000):0,dest:boomDest()}); duckFor(1.2);
   },
   deathFinal:function(plan,cls,loc){
     if(!ctx||!loc) return; var g=loud(loc), set=DEATH[cls], longest=0, key=draw('final-'+cls,set.final);   // every support/capital death ends on a big explosion, lead-up sequence or not
     if(!bufs[key]){ load(key); return; }
-    var v=oneShot(key,{loc:loc,gain:LEVEL.final*g*rr(.9,1.05),rate:rr(.86,1.14),lowpass:Math.random()<.25?rr(3000,6000):0,dest:master}); if(v) longest=v.dur;
+    var v=oneShot(key,{loc:loc,gain:LEVEL.final*g*rr(.9,1.05),rate:rr(.86,1.14),lowpass:Math.random()<.25?rr(3000,6000):0,dest:boomDest()}); if(v) longest=v.dur;
     // a capital breaks up in two blasts a beat apart; a support ship sometimes does; either may rumble on with a deep aftershock
     if(cls==='capital'||Math.random()<.35){
       var k2=draw('final2-'+cls,set.final.filter(function(x){ return x!==key; }));
-      if(bufs[k2]){ var v2=oneShot(k2,{loc:loc,gain:LEVEL.final*(cls==='capital'?.75:.6)*g,rate:rr(.85,1.12),delay:rr(.08,.34),dest:master}); if(v2) longest=Math.max(longest,v2.dur+.3); }
+      if(bufs[k2]){ var v2=oneShot(k2,{loc:loc,gain:LEVEL.final*(cls==='capital'?.75:.6)*g,rate:rr(.85,1.12),delay:rr(.08,.34),dest:boomDest()}); if(v2) longest=Math.max(longest,v2.dur+.3); }
     }
-    if(Math.random()<.3){ var k3=draw('small-'+cls,set.small); if(bufs[k3]) oneShot(k3,{loc:loc,gain:LEVEL.small*g*.9,rate:rr(.68,.88),delay:rr(.35,.75),dest:master}); }
+    if(Math.random()<.3){ var k3=draw('small-'+cls,set.small); if(bufs[k3]) oneShot(k3,{loc:loc,gain:LEVEL.small*g*.9,rate:rr(.68,.88),delay:rr(.35,.75),dest:boomDest()}); }
     duckFor(longest||3);
   },
 
@@ -520,12 +525,12 @@ var MWAudio={
     h.bursted=false;
   },
   /* low hull: the chime plays once per life, the first time the hero drops to its last hit point */
-  heroLowHealth:function(){ var h=heroSnd; if(!h||h.lowDone) return; h.lowDone=true; oneShot(pick(HERO_SHARED.lowHealth),{gain:LEVEL.lowHealth,dest:master}); },   // the source chime is quiet (~-24 dB): boost it, and keep it out of the duck bus
+  heroLowHealth:function(){ var h=heroSnd; if(!h||h.lowDone) return; h.lowDone=true; oneShot(pick(HERO_SHARED.lowHealth),{gain:LEVEL.lowHealth,dest:boomDest()}); },   // the source chime is quiet (~-24 dB): boost it, and keep it out of the duck bus
   /* a fighter's own death-sequence sound (FIGHTER_DEATH[id], a shuffle bag so clips don't repeat back to back); the rest of the mix ducks for its length. Returns {h,dur} so battle.js can run the sequence for that long. */
   fighterDeath:function(id,loc,maxDur){
     var set=FIGHTER_DEATH[id]; if(!ctx||!loc||!set||!set.length) return null;
     var key=draw('fdeath-'+id,set); if(!bufs[key]){ load(key); return null; }   // not decoded yet: this death goes without (the clips are preloaded when play starts)
-    var o={loc:loc,gain:LEVEL.fdeath*loud(loc)*rr(.92,1.06),rate:rr(.97,1.03),dest:master};
+    var o={loc:loc,gain:LEVEL.fdeath*loud(loc)*rr(.92,1.06),rate:rr(.97,1.03),dest:boomDest()};
     if(maxDur&&bufs[key].duration/o.rate>maxDur) o.maxDur=maxDur;   // a clip longer than the cap is faded out at the cap, so the explosion lands on time
     var v=oneShot(key,o); if(!v) return null;
     var len=Math.min(v.dur,maxDur||v.dur); duckFor(len+.2,FIGHTER_DUCK);
@@ -536,7 +541,7 @@ var MWAudio={
   /* a minikit opens: a short reward cue, positioned at the kit, always audible (baseline loudness) and not ducked */
   kitOpen:function(loc){
     if(!ctx||!loc) return; if(!bufs.kitOpen){ load('kitOpen'); return; }
-    oneShot('kitOpen',{loc:loc,gain:LEVEL.kitOpen*loud(loc),rate:rr(.97,1.04),dest:master});
+    oneShot('kitOpen',{loc:loc,gain:LEVEL.kitOpen*loud(loc),rate:rr(.97,1.04),dest:boomDest()});
   },
   setMinLoud:function(v){ if(typeof v==='number'&&isFinite(v)) MIN_LOUD=Math.max(0,Math.min(1,v)); },
   heroHitLaser:function(){ oneShot(pick(HERO_SHARED.hitLaser),{gain:LEVEL.hitLaser,rate:.94+Math.random()*.12}); },
@@ -544,10 +549,10 @@ var MWAudio={
   hitLaserAt:function(loc){
     if(!ctx||!loc) return; var t=now(); if(t-lastHitAt<.08) return; lastHitAt=t;   // simultaneous kills don't stack into one loud hit
     var key=pick(HERO_SHARED.hitLaser); if(!bufs[key]){ load(key); return; }
-    oneShot(key,{loc:loc,gain:LEVEL.hitLaser*loud(loc),rate:rr(.94,1.06),dest:master});
+    oneShot(key,{loc:loc,gain:LEVEL.hitLaser*loud(loc),rate:rr(.94,1.06),dest:boomDest()});
   },
   heroCollide:function(){ oneShot(pick(HERO_SHARED.collide),{gain:LEVEL.collide,rate:.96+Math.random()*.08}); },
-  heroDying:function(){ if(!HERO_SHARED.deathSeq.length) return; var v=oneShot(pick(HERO_SHARED.deathSeq),{gain:LEVEL.deathSeq,dest:master}); if(v) duckFor(v.dur); },   // the dying hero cuts through everything else
+  heroDying:function(){ if(!HERO_SHARED.deathSeq.length) return; var v=oneShot(pick(HERO_SHARED.deathSeq),{gain:LEVEL.deathSeq,dest:boomDest()}); if(v) duckFor(v.dur); },   // the dying hero cuts through everything else
   heroDestroyed:function(){ heroStop(.15); oneShot(pick(HERO_SHARED.destroyed),{gain:LEVEL.destroyed}); },
 
   /* fetch the destruction clips in the background once the arcade is open */

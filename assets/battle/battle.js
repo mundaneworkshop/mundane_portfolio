@@ -1014,18 +1014,19 @@ function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(f
    • dynamic zoom: the further the hero is from the camera (toward the back of the play volume) the closer the camera comes in; it relaxes back as the hero returns.
    • auto snap: a hero flying at the camera that reaches the screen before the volume's edge keeps its heading, and the camera swings round to face that way.
    • death: zooms right in on the burning ship, then holds on the break-up. */
-var cam={follow:0,z:1,zT:1,snap:false,snapT:0,aligned:0,cool:0,yaw:null,fk:0,death:false,breakup:false,focusL:null,focusW:null,out:{zoom:1,yaw:null,fk:0,focus:null}};
+var cam={follow:0,z:1,zT:1,fT:0,snap:false,snapT:0,aligned:0,cool:0,yaw:null,fk:0,death:false,breakup:false,focusL:null,focusW:null,out:{zoom:1,yaw:null,fk:0,focus:null}};
 var _camL=null, _camRef=null, _cen=null, _hd=null;
-function camReset(){ cam.z=cam.zT=1; cam.snap=false; cam.snapT=0; cam.cool=0; cam.follow=0; cam.yaw=null; cam.fk=0; cam.death=false; cam.breakup=false; }
+function camReset(){ cam.z=cam.zT=1; cam.snap=false; cam.snapT=0; cam.cool=0; cam.follow=0; cam.fT=0; cam.yaw=null; cam.fk=0; cam.death=false; cam.breakup=false; }
 function smooth01(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
 function updHeroSnap(s,dt){   // returns true while the hero is held on its heading by the snap
-  cam.cool=Math.max(0,cam.cool-dt); cam.yaw=null; cam.zT=1;
+  cam.cool=Math.max(0,cam.cool-dt); cam.yaw=null; cam.zT=1; cam.fT=0;
   if(!_camL){ _camL=new T.Vector3(); _camRef=new T.Vector3(); _cen=new T.Vector3(); _hd=new T.Vector3(); }
   if(reduceMotion()||stage!=='play'||quiet()||s.burning){ cam.snap=false; return false; }
   _cen.set(CX,CY,CZ); G.worldToLocal(_camL.copy(ctx.camera.position));
-  _camRef.copy(_camL).sub(_cen).divideScalar(cam.z).add(_cen);                 // where the camera sits WITHOUT the auto zoom, so the zoom doesn't feed back into its own trigger
+  _camRef.copy(_camL).sub(_cen); if(cam.focusL&&cam.fk>.001) _camRef.addScaledVector(_hd.copy(cam.focusL).sub(_cen),-cam.fk); _camRef.divideScalar(cam.z).add(_cen);   // where the camera sits WITHOUT the auto zoom or pivot slide, so neither feeds back into its own trigger
   var dCen=_camRef.distanceTo(_cen)||1, dShip=_camRef.distanceTo(s.pos), r=dShip/dCen;
-  cam.zT=1-.4*smooth01((r-1.12)/.5);                                           // far toward the back of the volume: come in
+  var dFar=clamp((dShip-dCen)/(arenaAz()*.5),0,1), dNear=clamp((dCen-dShip)/(dCen*.55),0,1);   // how far into the back of the volume / how close to the lens (the camera is only L from the centre, so "near" is measured against that, not the arena depth)
+  cam.zT=1-.45*smooth01(dFar)+.8*smooth01(dNear); cam.fT=.8*smooth01(dFar);   // far: shrink the camera's offset AND slide the pivot toward the ship (zoom alone only closes ~15% of the gap: it moves toward the battle centre, not the ship); near: pull back out (1.8x)
   var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
   var atEdge=s.pos.z>=az*.9-.06||Math.abs(s.pos.x)>=ax-.06||Math.abs(s.pos.y-CY)>=ay-.06;
   _hd.copy(_camRef).sub(s.pos).normalize(); var toward=s.dir.dot(_hd);
@@ -1045,10 +1046,11 @@ function updCamAssist(dt){
   if(cam.snap) cam.follow=2.5; else cam.follow=Math.max(0,cam.follow-dt);
   var fkT=cam.death?1:0;
   if(!cam.death&&cam.follow>0&&s&&s.alive){ if(!cam.focusL) cam.focusL=new T.Vector3(); cam.focusL.copy(s.pos); fkT=.7; }   // after a snap, keep the hero framed while the camera settles behind it
+  if(!cam.death&&cam.fT>.01&&s&&s.alive&&!s.burning){ if(!cam.focusL) cam.focusL=new T.Vector3(); cam.focusL.copy(s.pos); fkT=Math.max(fkT,cam.fT); }   // far hero: the pivot drifts onto it so the camera really closes the distance
   if(cam.death){ cam.zT=cam.breakup?.45:.3; cam.yaw=null; if(s&&s.burning) cam.focusL.copy(s.pos); }
   var rm=reduceMotion();
   if(cam.death&&rm){ cam.z=.6; cam.fk=1; }
-  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:1.6))); cam.fk+=(fkT-cam.fk)*(1-Math.exp(-dt*(cam.death?2.2:3))); }
+  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:2.6))); cam.fk+=(fkT-cam.fk)*(1-Math.exp(-dt*(cam.death?2.2:3))); }
   cam.out.zoom=cam.z; cam.out.yaw=cam.yaw; cam.out.fk=cam.fk;
   if(cam.focusL){ if(!cam.focusW) cam.focusW=new T.Vector3(); cam.focusW.copy(cam.focusL); G.localToWorld(cam.focusW); cam.out.focus=cam.focusW; } else cam.out.focus=null;
 }
