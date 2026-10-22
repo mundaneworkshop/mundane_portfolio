@@ -111,6 +111,7 @@ var CX=0, CY=0, CZ=0;   // battle centre in G's local frame = the monogram's ent
 var baseQ=null, _ryQ=null, rot0=0, rot0T=0;   // rot0 = the galaxy rotation the battle is measured from: the angle when the arcade opened, re-zeroed (eased) when a game starts, so each game opens on the designed framing
 var L=4.3;              // entry-camera distance to the centre
 
+var _rf=null;
 var _v1, _v2, _v3, _v4, _ray, _plane, _q, _zero, _up;
 
 /* ───────────────────────────── utils ───────────────────────────── */
@@ -943,6 +944,7 @@ function localRay(nx,ny){
   _ray.setFromCamera(_v4.set(nx,ny,.5),ctx.camera);
   _ro.copy(_ray.ray.origin); G.worldToLocal(_ro);
   _rd.copy(_ray.ray.direction).applyQuaternion(_q.copy(G.quaternion).invert()).normalize();
+  if(!_rf) _rf=new T.Vector3(); ctx.camera.getWorldDirection(_rf).applyQuaternion(_q).normalize();   // the camera's forward, in G-local
 }
 // What is the pointer on? An object (ship / minikit) gives a real XYZ; empty space is approximated by the plane at the hero's depth.
 // Writes the target into `out` (G-local) and returns the object hit, or null.
@@ -959,7 +961,9 @@ function pickAt(nx,ny,out){
     kits.forEach(function(k){ if(!k.opening) cand(k,k.pos); });
   }
   if(best){ out.copy(best.pos); return best; }
-  var z=heroShip?heroShip.pos.z:0, t=Math.abs(_rd.z)>1e-4?(z-_ro.z)/_rd.z:6; if(!(t>.2)) t=6;
+  // empty space: the point under the cursor on the plane through the hero PERPENDICULAR TO THE VIEW (a fixed-z plane degenerates as the hero nears the camera,
+  // which threw the target around and made the ship slow down and wobble)
+  var den=_rd.dot(_rf), t=6; if(heroShip&&den>1e-4){ t=_hF.copy(heroShip.pos).sub(_ro).dot(_rf)/den; if(!(t>.3)) t=.3; }
   out.copy(_ro).addScaledVector(_rd,t); return null;
 }
 var INV_COLLIDE=3;   // seconds of invulnerability (to ships AND lasers) after a collision; the hero's opacity pulses while it lasts
@@ -1009,14 +1013,14 @@ function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(f
    • dynamic zoom: the further the hero is from the camera (toward the back of the play volume) the closer the camera comes in; it relaxes back as the hero returns.
    • auto snap: a hero flying at the camera that reaches the screen before the volume's edge keeps its heading, and the camera swings round to face that way.
    • death: zooms right in on the burning ship, then holds on the break-up. */
-var cam={z:1,zT:1,snap:false,snapT:0,aligned:0,cool:0,yaw:null,fk:0,death:false,breakup:false,focusL:null,focusW:null,out:{zoom:1,yaw:null,fk:0,focus:null}};
+var cam={follow:0,z:1,zT:1,snap:false,snapT:0,aligned:0,cool:0,yaw:null,fk:0,death:false,breakup:false,focusL:null,focusW:null,out:{zoom:1,yaw:null,fk:0,focus:null}};
 var _camL=null, _camRef=null, _cen=null, _hd=null;
-function camReset(){ cam.z=cam.zT=1; cam.snap=false; cam.snapT=0; cam.cool=0; cam.yaw=null; cam.fk=0; cam.death=false; cam.breakup=false; }
+function camReset(){ cam.z=cam.zT=1; cam.snap=false; cam.snapT=0; cam.cool=0; cam.follow=0; cam.yaw=null; cam.fk=0; cam.death=false; cam.breakup=false; }
 function smooth01(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
 function updHeroSnap(s,dt){   // returns true while the hero is held on its heading by the snap
   cam.cool=Math.max(0,cam.cool-dt); cam.yaw=null; cam.zT=1;
-  if(reduceMotion()||stage!=='play'||quiet()||s.burning){ cam.snap=false; return false; }
   if(!_camL){ _camL=new T.Vector3(); _camRef=new T.Vector3(); _cen=new T.Vector3(); _hd=new T.Vector3(); }
+  if(reduceMotion()||stage!=='play'||quiet()||s.burning){ cam.snap=false; return false; }
   _cen.set(CX,CY,CZ); G.worldToLocal(_camL.copy(ctx.camera.position));
   _camRef.copy(_camL).sub(_cen).divideScalar(cam.z).add(_cen);                 // where the camera sits WITHOUT the auto zoom, so the zoom doesn't feed back into its own trigger
   var dCen=_camRef.distanceTo(_cen)||1, dShip=_camRef.distanceTo(s.pos), r=dShip/dCen;
@@ -1037,10 +1041,13 @@ function updCamAssist(dt){
   var s=heroShip;
   if(s&&s.alive&&!s.burning&&!cam.death) { /* zT / yaw are set by updHeroSnap during updHero */ }
   else if(!cam.death){ cam.snap=false; cam.yaw=null; cam.zT=1; }
+  if(cam.snap) cam.follow=2.5; else cam.follow=Math.max(0,cam.follow-dt);
+  var fkT=cam.death?1:0;
+  if(!cam.death&&cam.follow>0&&s&&s.alive){ if(!cam.focusL) cam.focusL=new T.Vector3(); cam.focusL.copy(s.pos); fkT=.7; }   // after a snap, keep the hero framed while the camera settles behind it
   if(cam.death){ cam.zT=cam.breakup?.45:.3; cam.yaw=null; if(s&&s.burning) cam.focusL.copy(s.pos); }
   var rm=reduceMotion();
   if(cam.death&&rm){ cam.z=.6; cam.fk=1; }
-  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:1.6))); cam.fk+=((cam.death?1:0)-cam.fk)*(1-Math.exp(-dt*2.2)); }
+  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:1.6))); cam.fk+=(fkT-cam.fk)*(1-Math.exp(-dt*(cam.death?2.2:3))); }
   cam.out.zoom=cam.z; cam.out.yaw=cam.yaw; cam.out.fk=cam.fk;
   if(cam.focusL){ if(!cam.focusW) cam.focusW=new T.Vector3(); cam.focusW.copy(cam.focusL); G.localToWorld(cam.focusW); cam.out.focus=cam.focusW; } else cam.out.focus=null;
 }
@@ -1100,7 +1107,7 @@ function updHero(s,dt){
   var o=pickAt(ptr.nx,ptr.ny,_hT);
   if(!ptr.in) _hT.copy(s.pos).addScaledVector(s.dir,1);               // pointer off the canvas: coast on
   var to=_v2.copy(_hT).sub(s.pos), d=to.length();
-  if(!o) to.z-=s.pos.z*.5;                                              // the cursor can't say how deep: drift back toward mid-depth unless pointing at something
+  if(!o&&!hold&&_rf){ var dz=_hF.copy(s.pos).sub(_cen.set(CX,CY,CZ)).dot(_rf); if(dz>0) to.addScaledVector(_rf,-dz*.5); }   // the cursor can't say how deep: drift back toward mid-depth when the hero is FAR side; never pull it back from the near side (it must fly right up to the camera)
   s.prev.copy(s.dir);
   if(d>.15&&!hold){ to.normalize(); var ang=s.dir.angleTo(to);   // true rotation toward the target, so a target directly behind still turns the ship around (a straight lerp stalls near 180°)
     if(ang>1e-4){ var tax=_v3.crossVectors(s.dir,to); if(tax.lengthSq()<1e-6) tax.crossVectors(s.dir,_up); if(tax.lengthSq()<1e-6) tax.set(1,0,0); tax.normalize();
@@ -1148,7 +1155,8 @@ function updCarousel(dt){
   carWrap.rotation.y+=dt*.9; carWrap.rotation.x=.22; carGroup.position.y=Math.sin(clockT*1.3)*.05/S;
   if(carUi){   // sit the ◄ PLAY ► row just under the hologram's emitter
     _hF.set(0,(.8-ctx.center[1])/S,0); G.localToWorld(_hF); _hF.project(ctx.camera);
-    var r=ctx.dom.getBoundingClientRect(); carUi.style.left=((_hF.x+1)/2*r.width+r.left)+'px'; carUi.style.top=((1-_hF.y)/2*r.height+r.top)+'px';
+    var r=ctx.dom.getBoundingClientRect(); var cl=Math.round((_hF.x+1)/2*r.width+r.left), ct=Math.round((1-_hF.y)/2*r.height+r.top);   // whole pixels, written only on change: the row used to creep a fraction of a pixel every frame under the cursor
+    if(cl!==carUi.__l){ carUi.__l=cl; carUi.style.left=cl+'px'; } if(ct!==carUi.__t){ carUi.__t=ct; carUi.style.top=ct+'px'; }
   }
 }
 function syncUi(){
@@ -1380,6 +1388,7 @@ function injectCss(){
   styleEl=document.createElement('style'); styleEl.textContent=[
     'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints, body:not(.mw-arcade) #bt-bars{display:none!important}',
     'body.mw-arcade #dbg-battle{display:block}',
+    '#bt-car .bric-btn,#arcadeExit .bric-btn,#arcadeResult .bric-btn{touch-action:manipulation}',
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
     '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
@@ -1565,7 +1574,7 @@ var MWBattle={
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
-  _camState:function(){ return cam; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
+  _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
   getPan:function(){ _panW.x=pan.x*S; _panW.y=pan.y*S; return _panW; },   // {x,y}: edge-pan camera offset in WORLD units (battle units x G's scale), along the camera's right / up
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
