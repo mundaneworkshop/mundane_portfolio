@@ -73,7 +73,11 @@ var SITE_EVENTS={
   planetLoad:[],    // each planet appears (staggered, so a pool: one clip per planet)
   planetsDone:[]    // the last planet is in: the galaxy is live
 };
-var LEVEL={ site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
+/* Game over: a sting that plays once, as the game over modal pops up after the hero's death (battle.js finishHeroDeath → MWAudio.gameOver). One of these at random (shuffle bag).
+   Filled from the Site Sound Review's "Game over" card (Oct 22 2026: four Squadrons soundtrack bites, trimmed and faded). */
+var GAMEOVER_DUCK=.12;   // how far everything else drops under the sting (1 = no duck)
+var GAME_OVER=['game-over-1','game-over-2','game-over-3','game-over-4'];
+var LEVEL={ gameOver:.85, site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
    page's "Death sequence" slot on each fighter card. Key = model id (battle.js MODELS[].id), value = clip names in assets/audio without the extension. Empty until clips are added. */
@@ -147,12 +151,13 @@ function setPannerPos(pn,p,glide){
 function num(v,d){ return (typeof v==='number'&&isFinite(v))?v:d; }
 /* oneShot that does not drop the sound when its clip is not decoded yet (first use / first load): it waits for the clip, then plays */
 function shot(key,o){ if(bufs[key]) return oneShot(key,o); if(!ensure()) return; load(key).then(function(b){ if(b) oneShot(key,o); }); }
-var lastArrive=-1;
+var lastArrive=-1, goSnd=null;   // goSnd: the game over sting, so it can be faded if the player restarts or leaves while it rings out
+function stopGameOver(sec){ if(goSnd){ try{ fade(goSnd.gain,0,sec||.4); }catch(e){} goSnd=null; } }
 function oneShot(key,o){ try{ return oneShot_(key,o); }catch(e){ if(window.console) console.warn('MWAudio: sound skipped',key,e); return null; } }   // audio must never be able to break the game's frame loop
 function oneShot_(key,o){
   o=o||{}; if(!ensure()||muted&&!o.force) return null;
   o.gain=num(o.gain,1); o.rate=num(o.rate,1);
-  if(voices>=28) return null;
+  if(voices>=28&&!o.vip) return null;   // vip (the game over sting): never dropped, even in a crowded battle
   var buf=bufs[key]; if(!buf){ load(key); return null; }   // first use just warms the cache
   var s=ctx.createBufferSource(); s.buffer=buf; if(o.rate) s.playbackRate.value=o.rate;
   var g=gainNode(o.gain==null?1:o.gain), tail=g;
@@ -357,6 +362,13 @@ var MWAudio={
   ui:function(kind,force,opt){ uiPlay(kind,force,opt); },
   uiTune:function(o){ if(o) Object.keys(TUNE).forEach(function(k){ if(typeof o[k]==='number'&&isFinite(o[k])) TUNE[k]=Math.max(.2,Math.min(3,o[k])); }); return Object.assign({},TUNE); },
   uiReady:function(){ return ensure(); },
+  /* the game over sting: once, as the game over modal appears. It goes straight to the master (NOT through the duck bus, which would duck the sting along with the
+     battle ambience it is meant to cut through), and the whole duck bus (battle ambience, hero engine, UI) drops to GAMEOVER_DUCK for its length, then eases back. */
+  gameOver:function(){
+    if(!ctx||muted||!GAME_OVER.length) return;
+    var k=draw('gameOver',GAME_OVER); stopGameOver(.2);
+    load(k).then(function(b){ if(!b) return; var h=oneShot(k,{gain:LEVEL.gameOver,vip:true,dest:master}); if(h){ goSnd=h; duckFor(Math.max(1.5,b.duration),GAMEOVER_DUCK); } });
+  },
   /* a site event from SITE_EVENTS (dock / boot). Loads its clip on first use, so it also plays on the very first gesture; o = {gain,rate,delay}. */
   site:function(name,o){
     var list=SITE_EVENTS[name]; if(!list||!list.length||!ensure()||muted) return; o=o||{};
@@ -392,10 +404,10 @@ var MWAudio={
   jumpCancel:function(){ if(!jump) return; var j=jump; jump=null; endLoop(j.loop,.4); },
 
   /* arcade session */
-  arcadeStart:function(){ if(!ensure()) return; arriveLeft=3+Math.round(Math.random()); stageName='select'; yaw=0; if(!jump) startSelect(); },   // under a hyperspace jump the ambience waits for the exit (jumpReveal)
+  arcadeStart:function(){ if(!ensure()) return; stopGameOver(.3); preload(GAME_OVER); arriveLeft=3+Math.round(Math.random()); stageName='select'; yaw=0; if(!jump) startSelect(); },   // under a hyperspace jump the ambience waits for the exit (jumpReveal)
   stage:function(st){
     if(!ctx||st===stageName) return; stageName=st;
-    if(st==='play'){ stopGroup('sel'); startPlay(); } else { stopGroup('play'); heroStop(.3); startSelect(); }
+    if(st==='play'){ stopGameOver(.4); stopGroup('sel'); startPlay(); } else { stopGroup('play'); heroStop(.3); startSelect(); }
   },
   /* site-wide ambient background. siteStart needs a user gesture (browsers keep audio locked until one): index.html calls it on the first press or key anywhere,
      and again when the arcade closes; siteStop fades it out as the arcade opens. Both are safe to call repeatedly; the sound switch mutes it with everything else. */
@@ -410,7 +422,7 @@ var MWAudio={
   /* camera yaw around the battle in radians (battle.js passes galaxy.rotation.y − its value at entry); only matters in play */
   setYaw:function(r){ if(amb.play){ yaw=r; applyYaw(false); } },
   stop:function(){
-    if(!ctx) return; MWAudio.jumpCancel(); heroStop(.3); stopGroup('sel'); stopGroup('play'); stageName='select'; voices=0;
+    if(!ctx) return; MWAudio.jumpCancel(); stopGameOver(.5); heroStop(.3); stopGroup('sel'); stopGroup('play'); stageName='select'; voices=0;
   },
 
   /* a Star Destroyer-style hyperspace exit for a handful of intro arrivals, staggered and slightly detuned */
