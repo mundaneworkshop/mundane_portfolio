@@ -974,9 +974,19 @@
       <div class="ctl"><label>Scatter <b id="vGxZoneScatter">0</b></label><input type="range" id="cGxZoneScatter" min="0" max="1" step="0.05"></div>
     <button class="resetbtn" id="gxZonePlay">▶ Replay section names</button>
     <div class="menudiv"></div>
-      <div class="ctl sec"><label>Entry gate · text bands (H1 band + perpendicular H2 band, floating around the cube)</label></div>
-      <div class="ctl"><label>Float height above the cube faces (% of half-side) <b id="vGateLift">18</b></label><input type="range" id="cGateLift" min="4" max="60" step="1" value="18"></div>
-      <div class="ctl"><label>Band height (% of cube side) <b id="vGateBandH">16</b></label><input type="range" id="cGateBandH" min="6" max="40" step="1" value="16"></div>
+      <div class="ctl sec"><label>Entry gate · text ribbons (H1 + perpendicular H2, floating around the cube)</label></div>
+      <div class="ctl"><label>H1 ribbon: angular segments (4 = square, more = rounder) <b id="vGateH1Seg">4</b></label><input type="range" id="cGateH1Seg" min="3" max="64" step="1" value="4"></div>
+      <div class="ctl"><label>H1 ribbon: text size (% of cube side, capped to fit one loop) <b id="vGateH1Size">16</b></label><input type="range" id="cGateH1Size" min="4" max="40" step="1" value="16"></div>
+      <div class="ctl"><label>H1 ribbon: height off the monogram (% of cube half-side) <b id="vGateH1Lift">18</b></label><input type="range" id="cGateH1Lift" min="0" max="120" step="1" value="18"></div>
+      <div class="ctl"><label>H1 ribbon text colour</label><input type="color" id="cGateH1Color" value="#AAF5EE"><input type="text" id="cGateH1ColorHex" value="" placeholder="theme" class="hexin"><button class="resetbtn" id="cGateH1ColorReset" style="margin:0 0 0 6px">theme</button></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH1Flip"> H1 ribbon: flip baseline (text upside down)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH1Rev"> H1 ribbon: reverse scroll direction</label></div>
+      <div class="ctl"><label>H2 ribbon: angular segments (4 = square, more = rounder) <b id="vGateH2Seg">4</b></label><input type="range" id="cGateH2Seg" min="3" max="64" step="1" value="4"></div>
+      <div class="ctl"><label>H2 ribbon: text size (% of cube side, capped to fit one loop) <b id="vGateH2Size">16</b></label><input type="range" id="cGateH2Size" min="4" max="40" step="1" value="16"></div>
+      <div class="ctl"><label>H2 ribbon: height off the monogram (% of cube half-side) <b id="vGateH2Lift">40</b></label><input type="range" id="cGateH2Lift" min="0" max="120" step="1" value="40"></div>
+      <div class="ctl"><label>H2 ribbon text colour</label><input type="color" id="cGateH2Color" value="#AAF5EE"><input type="text" id="cGateH2ColorHex" value="" placeholder="theme" class="hexin"><button class="resetbtn" id="cGateH2ColorReset" style="margin:0 0 0 6px">theme</button></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Flip"> H2 ribbon: flip baseline (text upside down)</label></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Rev"> H2 ribbon: reverse scroll direction</label></div>
       <div class="ctl"><label>Scroll speed (% of a loop per second) <b id="vGateSpeed">6</b></label><input type="range" id="cGateSpeed" min="0" max="40" step="1" value="6"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Alt" checked> H2 band alternates its two lines each loop</label></div>
       <div class="ctl"><label>Fade-in (ms) <b id="vGateIn">2000</b></label><input type="range" id="cGateIn" min="100" max="6000" step="50" value="2000"></div>
@@ -1518,7 +1528,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateLift:18,gateBandH:16,gateSpeed:6,gateH2Alt:true, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateH1Lift:18,gateH1Size:16,gateH1Seg:4,gateH1Color:'',gateH2Lift:40,gateH2Size:16,gateH2Seg:4,gateH2Color:'',gateH1Flip:false,gateH1Rev:false,gateH2Flip:false,gateH2Rev:false,gateSpeed:6,gateH2Alt:true, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     // ══════ GLYPH DECODE (Aurebesh → Latin) ══════
     // One shared engine, three surfaces: the Latin marquee ring (canvas, on load + hover), planet labels (DOM, hover),
@@ -9526,73 +9536,80 @@ f 2469//2469 2470//2470 2434//2434
     // Click: startDock fades them out (params.gateFade) while the monogram HOLDS for params.dockHold seconds; only then does the dock itself (beginDock, params.dockDur) run.
     var _gP=new THREE.Vector3(), _gShown=false, _gSince=0, _gFirst=0, _gSnap=null, _gOnAt=0, _gOutAt=0, _gDbg=null, GATE_SETTLE_MS=150, GATE_MAX_WAIT_MS=4000, GATE_STILL_PX=1.5, GATE_BOX_K=1, _dockAt=null;
     var gateBands=null, _gbBuilding=false, _gbBuiltKey='', _gbT=0, GB_REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-    var GB_BANDS=[   // axis = the loop's rotation axis in monogram space; texts alternate per loop when params.gateH2Alt; dir = scroll direction; delay/size key into params
-      { axis:'y', texts:['MUNDANE WORKSHOP'], font:'600 {S}px "Chakra Petch"', track:.34, dir:1, delayKey:'gateH1Delay', alpha:1, extra:0 },
-      { axis:'x', texts:['The creative practice of product designer Jason Hsin','Building delightful digital consumer experiences'], font:'500 {S}px "Space Grotesk"', track:.14, dir:-1, delayKey:'gateH2Delay', alpha:.92, extra:1 }
+    var GB_BANDS=[   // axis = the loop's rotation axis in monogram space; texts alternate per loop when params.gateH2Alt; dir = scroll direction; the *Key fields name this ribbon's params
+      { axis:'y', texts:['MUNDANE WORKSHOP'], font:'600 {S}px "Chakra Petch"', track:.34, dir:1, delayKey:'gateH1Delay', liftKey:'gateH1Lift', sizeKey:'gateH1Size', segKey:'gateH1Seg', colorKey:'gateH1Color', flipKey:'gateH1Flip', revKey:'gateH1Rev' },
+      { axis:'x', texts:['The creative practice of product designer Jason Hsin','Building delightful digital consumer experiences'], font:'500 {S}px "Space Grotesk"', track:.14, dir:-1, delayKey:'gateH2Delay', liftKey:'gateH2Lift', sizeKey:'gateH2Size', segKey:'gateH2Seg', colorKey:'gateH2Color', flipKey:'gateH2Flip', revKey:'gateH2Rev' }
     ];
     var _gbColor='#AAF5EE';
     function gbHolo(){ var c=getComputedStyle(document.documentElement).getPropertyValue('--holo').trim(); return c||'#AAF5EE'; }
     _gbColor=gbHolo();
-    new MutationObserver(function(){ _gbColor=gbHolo(); if(gateBands) gateBands.bands.forEach(function(bd){ bd.mat.color.set(_gbColor); }); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme','style']});   // theme switch re-tints the bands (the text is drawn white and tinted by the material colour)
-    // One marquee tile: the text, a gap, a small square separator, a gap. Returns {canvas, w, h} (px).
-    function gbTile(text,fontTpl,track){
-      var S=96, H=Math.round(S*1.5), cv=document.createElement('canvas'), x=cv.getContext('2d'), font=fontTpl.replace('{S}',S);
+    window.__gateThemeColor=function(){ return _gbColor; };
+    new MutationObserver(function(){ _gbColor=gbHolo(); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme','style']});   // theme switch: ribbons with no explicit colour follow --holo (the text is drawn white and tinted by the material colour)
+    // One marquee tile: the text, a gap, a small square separator, a gap (+ pad, so the tile spans exactly 1/reps of the loop). Opaque white glyphs on a transparent canvas: the ribbon has no background.
+    function gbTile(text,fontTpl,track,padPx){
+      var S=72, H=Math.round(S*1.5), cv=document.createElement('canvas'), x=cv.getContext('2d'), font=fontTpl.replace('{S}',S);
       x.font=font; if('letterSpacing' in x) x.letterSpacing=(track*S)+'px';
-      text=text.toUpperCase(); var tw=Math.ceil(x.measureText(text).width), gap=Math.round(S*1.1), sq=Math.round(S*.26), W=tw+gap*2+sq;
-      cv.width=W; cv.height=H; x=cv.getContext('2d'); x.font=font; if('letterSpacing' in x) x.letterSpacing=(track*S)+'px';
-      x.fillStyle='#fff'; x.textBaseline='middle'; x.shadowColor='#fff'; x.shadowBlur=S*.12;
-      x.fillText(text,0,H/2+S*.04); x.shadowBlur=0; x.fillRect(tw+gap,(H-sq)/2,sq,sq);
+      text=text.toUpperCase(); var tw=Math.ceil(x.measureText(text).width), gap=Math.round(S*1.1), sq=Math.round(S*.26), W=tw+gap*2+sq+Math.round(padPx||0);
+      cv.width=Math.min(W,8192); cv.height=H; x=cv.getContext('2d'); x.font=font; if('letterSpacing' in x) x.letterSpacing=(track*S)+'px';
+      x.fillStyle='#fff'; x.textBaseline='middle';
+      x.fillText(text,0,H/2+S*.04); x.fillRect(tw+gap,(H-sq)/2,sq,sq);
       return {canvas:cv,w:W,h:H};
     }
-    // Rounded-square loop of half-side a and corner radius rc, as samples {p:[u,v], n:[nu,nv]} (n = outward normal), counter-clockwise, ~ds apart.
-    function gbLoop(a,rc,ds){
-      var st=a-rc, pts=[];
-      function line(x0,y0,x1,y1,nx,ny){ var n=Math.max(1,Math.round(Math.hypot(x1-x0,y1-y0)/ds)); for(var i=0;i<n;i++){ var t=i/n; pts.push({p:[x0+(x1-x0)*t,y0+(y1-y0)*t],n:[nx,ny]}); } }
-      function arc(cx,cy,a0){ var n=Math.max(2,Math.round(rc*Math.PI/2/ds)); for(var i=0;i<n;i++){ var an=a0+Math.PI/2*i/n; pts.push({p:[cx+Math.cos(an)*rc,cy+Math.sin(an)*rc],n:[Math.cos(an),Math.sin(an)]}); } }
-      line(a,-st,a,st,1,0); arc(st,st,0); line(st,a,-st,a,0,1); arc(-st,st,Math.PI/2); line(-a,st,-a,-st,-1,0); arc(-st,-st,Math.PI); line(-st,-a,st,-a,0,-1); arc(st,-st,Math.PI*1.5);
+    // Regular N-gon loop (N >= 3) of apothem rho, one flat edge facing +u, as samples {p:[u,v], n:[nu,nv]} (n = the edge's outward normal), counter-clockwise, ~ds apart.
+    function gbPoly(N,rho,ds){
+      var pts=[], R=rho/Math.cos(Math.PI/N);
+      for(var k=0;k<N;k++){
+        var th=2*Math.PI*k/N, x0=Math.cos(th-Math.PI/N)*R, y0=Math.sin(th-Math.PI/N)*R, x1=Math.cos(th+Math.PI/N)*R, y1=Math.sin(th+Math.PI/N)*R, nx=Math.cos(th), ny=Math.sin(th), n=Math.max(1,Math.round(Math.hypot(x1-x0,y1-y0)/ds));
+        for(var i=0;i<n;i++){ var t=i/n; pts.push({p:[x0+(x1-x0)*t,y0+(y1-y0)*t],n:[nx,ny]}); }
+      }
       return pts;
     }
-    function gbDispose(){ if(!gateBands) return; scene.remove(gateBands.group); gateBands.group.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); } }); gateBands.bands.forEach(function(bd){ bd.maps.forEach(function(m){ m.dispose(); }); }); gateBands=null; }
-    function gbKey(){ return [params.gateLift,params.gateBandH,params.gateH2Alt].join('|'); }
+    function gbDispose(){ if(!gateBands) return; scene.remove(gateBands.group); gateBands.group.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); gateBands.bands.forEach(function(bd){ bd.maps.forEach(function(m){ m.dispose(); }); }); gateBands=null; }
+    function gbKey(){ return GB_BANDS.map(function(d){ return [params[d.liftKey],params[d.sizeKey],params[d.segKey],!!params[d.flipKey]].join(','); }).join('|')+'|'+params.gateH2Alt; }
     function gbBuild(){
       if(!mwMono) return;
       gbDispose(); _gbBuiltKey=gbKey();
-      var h=mwMono.radius/Math.sqrt(3), lift0=h*(params.gateLift/100), bandH=2*h*(params.gateBandH/100);   // h = the cube's half-side in monogram units (its bounding sphere is the cube's circumsphere)
+      var h=mwMono.radius/Math.sqrt(3);   // the cube's half-side in monogram units (its bounding sphere is the cube's circumsphere)
       var group=new THREE.Group(); group.matrixAutoUpdate=false; group.visible=false;
       var box=new THREE.Mesh(new THREE.BoxGeometry(2*h,2*h,2*h), new THREE.MeshBasicMaterial({colorWrite:false, depthWrite:true, transparent:true, fog:false})); box.renderOrder=40; box.frustumCulled=false; group.add(box);
       var bands=GB_BANDS.map(function(def){
-        var lift=lift0+def.extra*bandH*.7, a=h+lift, rc=Math.max(lift*2,bandH*.5), samples=gbLoop(a,rc,Math.max(.05,h*.05));
+        var lift=h*(params[def.liftKey]/100), N=Math.max(3,Math.round(params[def.segKey]||4)), hReq=2*h*(params[def.sizeKey]/100);
+        // apothem: the smallest N-gon that clears the cube's edges (the square's corners in the loop plane) by `lift`; for N = 4 that is exactly the face offset h + lift, for more segments it grows toward the circle through the corners
+        var rho=0; for(var k=0;k<N;k++){ var th=2*Math.PI*k/N; for(var cx=-1;cx<=1;cx+=2) for(var cy=-1;cy<=1;cy+=2) rho=Math.max(rho,h*(cx*Math.cos(th)+cy*Math.sin(th))); } rho+=lift;
+        var samples=gbPoly(N,rho,Math.max(.05,h*.05)), Ltot=2*N*rho*Math.tan(Math.PI/N);
         var ax=new THREE.Vector3(def.axis==='x'?1:0,def.axis==='y'?1:0,def.axis==='z'?1:0);
         // 2D (u,v) -> 3D in the plane normal to the axis
         function to3(u,v){ return def.axis==='x'?new THREE.Vector3(0,u,v):def.axis==='y'?new THREE.Vector3(v,0,u):new THREE.Vector3(u,v,0); }
-        var P=samples.map(function(s){ return to3(s.p[0],s.p[1]); }), N=samples.map(function(s){ return to3(s.n[0],s.n[1]); }), n=P.length;
+        var P=samples.map(function(sm){ return to3(sm.p[0],sm.p[1]); }), Nn=samples.map(function(sm){ return to3(sm.n[0],sm.n[1]); }), n=P.length;
         // text must read left->right for a viewer outside the face with the band axis as "up": the travel direction t has to be axis x normal. Reverse the loop if it runs the other way.
-        var t0=P[1].clone().sub(P[0]);
-        if(t0.dot(new THREE.Vector3().crossVectors(ax,N[0]))<0){ P.reverse(); N.reverse(); }
+        if(P[1].clone().sub(P[0]).dot(new THREE.Vector3().crossVectors(ax,Nn[0]))<0){ P.reverse(); Nn.reverse(); }
         var cum=[0]; for(var i=1;i<=n;i++) cum.push(cum[i-1]+P[i%n].distanceTo(P[i-1]));
-        var Ltot=cum[n];
-        // each text is one tile repeated an integer number of times round the loop (so the marquee wraps seamlessly); the band height follows the tile aspect (smallest wins, so every line fits)
-        var tiles=def.texts.map(function(tx){ return gbTile(tx,def.font,def.track); }), asp=tiles.map(function(t){ return t.w/t.h; });
-        var reps=asp.map(function(r){ return Math.max(1,Math.round(Ltot/(r*bandH))); });
-        var hBand=Math.min.apply(null,asp.map(function(r,i){ return Ltot/(reps[i]*r); }));
+        Ltot=cum[n];
+        // The text size is the ribbon height (hReq), capped so the longest line fits the loop once. Each line is one tile repeated an integer number of times round the loop so the marquee wraps with no seam;
+        // leftover loop length goes into the gap after the text (the glyphs keep their size).
+        var asp=def.texts.map(function(tx){ var t=gbTile(tx,def.font,def.track,0); return t.w/t.h; });
+        var hBand=Math.min(hReq,Math.min.apply(null,asp.map(function(r){ return Ltot/r; })));
+        var reps=asp.map(function(r){ return Math.max(1,Math.floor(Ltot/(r*hBand))); });
+        var tiles=def.texts.map(function(tx,i){ var H=Math.round(72*1.5); return gbTile(tx,def.font,def.track,(Ltot/reps[i]/hBand-asp[i])*H); });
+        var flip=!!params[def.flipKey];   // baseline flip: the text turned 180 degrees (upside down), still reading outward
         var pos=[], uv=[], idx=[];
-        for(var j=0;j<=n;j++){ var p=P[j%n], sU=cum[j]/Ltot;
-          pos.push(p.x-ax.x*hBand/2,p.y-ax.y*hBand/2,p.z-ax.z*hBand/2, p.x+ax.x*hBand/2,p.y+ax.y*hBand/2,p.z+ax.z*hBand/2); uv.push(sU,0,sU,1); }
+        for(var j=0;j<=n;j++){ var pp=P[j%n], sU=cum[j]/Ltot;
+          pos.push(pp.x-ax.x*hBand/2,pp.y-ax.y*hBand/2,pp.z-ax.z*hBand/2, pp.x+ax.x*hBand/2,pp.y+ax.y*hBand/2,pp.z+ax.z*hBand/2); if(flip) uv.push(-sU,1,-sU,0); else uv.push(sU,0,sU,1); }
         for(var q=0;q<n;q++){ var b0=q*2; idx.push(b0,b0+2,b0+1, b0+2,b0+3,b0+1); }   // counter-clockwise seen from outside (t x axis = outward normal)
         var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); geo.setIndex(idx);
         var maps=tiles.map(function(t,i){ var tx=new THREE.CanvasTexture(t.canvas); tx.wrapS=THREE.RepeatWrapping; tx.wrapT=THREE.ClampToEdgeWrapping; tx.repeat.set(reps[i],1); tx.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); return tx; });
         var mat=new THREE.MeshBasicMaterial({map:maps[0], color:_gbColor, transparent:true, opacity:0, depthWrite:false, side:THREE.FrontSide, fog:false, toneMapped:false});
         var mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=41; mesh.frustumCulled=false; group.add(mesh);
-        return { def:def, mesh:mesh, mat:mat, maps:maps, reps:reps, cur:0, scroll:0, loops:0, alpha:def.alpha };
+        return { def:def, mesh:mesh, mat:mat, maps:maps, reps:reps, cur:0, scroll:0, loops:0, colStr:'', flip:flip };
       });
       scene.add(group); gateBands={ group:group, box:box, bands:bands };
     }
-    // Per frame in the entry phase (end of mwUpdate): build lazily (needs the monogram + the fonts), ride the cube's matrix, fade, scroll.
+    // Per frame in the entry phase (end of mwUpdate): build lazily (needs the monogram + the fonts), ride the cube's matrix, fade, scroll, tint.
     function gateBandsFrame(M){
       var nowMs=performance.now(), dt=Math.min(.1,Math.max(0,(nowMs-_gbT)/1000)); _gbT=nowMs;
       if(!gateBands||window.__gateRebuild||_gbBuiltKey!==gbKey()){
         if(_gbBuilding) return; window.__gateRebuild=false; _gbBuilding=true;
-        var f=document.fonts&&document.fonts.load?Promise.all([document.fonts.load('600 96px "Chakra Petch"','MUNDANE'),document.fonts.load('500 96px "Space Grotesk"','Jason')]):Promise.resolve();
+        var f=document.fonts&&document.fonts.load?Promise.all([document.fonts.load('600 72px "Chakra Petch"','MUNDANE'),document.fonts.load('500 72px "Space Grotesk"','Jason')]):Promise.resolve();
         f.catch(function(){}).then(function(){ _gbBuilding=false; try{ gbBuild(); }catch(e){ console.error('[gate bands] build failed',e); gateBands=null; _gbBuiltKey=gbKey(); } });
         return;
       }
@@ -9603,8 +9620,9 @@ f 2469//2469 2470//2470 2434//2434
         var a=0;
         if(_gOutAt) a=Math.max(0,1-(nowMs-_gOutAt)/outMs);
         else if(_gShown){ var u=(nowMs-_gOnAt-(params[bd.def.delayKey]||0))/inMs; u=Math.max(0,Math.min(1,u)); a=u*u*(3-2*u); }
-        bd.mat.opacity=a*bd.alpha;
-        var step=rate*dt*bd.def.dir; bd.loops+=Math.abs(step);
+        bd.mat.opacity=a;
+        var col=params[bd.def.colorKey]||_gbColor; if(bd.colStr!==col){ bd.colStr=col; bd.mat.color.set(col); }   // '' = follow the theme's --holo
+        var step=rate*dt*bd.def.dir*(params[bd.def.revKey]?-1:1)*(bd.flip?-1:1);   // reverse toggle = the marquee runs the other way on screen, whatever the baseline flip bd.loops+=Math.abs(step);
         bd.scroll=(bd.scroll+step*bd.reps[bd.cur])%1e4; bd.maps[bd.cur].offset.x=bd.scroll;
         if(bd.maps.length>1&&params.gateH2Alt!==false&&!GB_REDUCED&&bd.loops>=1){ bd.loops-=1; bd.cur=(bd.cur+1)%bd.maps.length; bd.mat.map=bd.maps[bd.cur]; bd.mat.needsUpdate=true; bd.maps[bd.cur].offset.x=bd.scroll; }
       });
@@ -13862,16 +13880,20 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateLift:18,gateBandH:16,gateSpeed:6,gateH2Alt:true,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateH1Lift:18,gateH1Size:16,gateH1Seg:4,gateH1Color:'',gateH2Lift:40,gateH2Size:16,gateH2Seg:4,gateH2Color:'',gateH1Flip:false,gateH1Rev:false,gateH2Flip:false,gateH2Rev:false,gateSpeed:6,gateH2Alt:true,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     Object.assign(DEFAULTS,GX_DEFAULTS);   // glyph-decode params reset / export-diff like everything else
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     // Entry gate band tunables: sync the sliders; lift / height rebuild the band geometry (gateBandsFrame), the rest are read live
-    var GATE_CTLS=['gateLift','gateBandH','gateSpeed','gateIn','gateFade','gateH1Delay','gateH2Delay'];
+    var GATE_CTLS=['gateH1Seg','gateH1Size','gateH1Lift','gateH2Seg','gateH2Size','gateH2Lift','gateSpeed','gateIn','gateFade','gateH1Delay','gateH2Delay'];
     function applyGate(){
       GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1), el=document.getElementById('c'+K); if(el){ el.value=params[k]; document.getElementById('v'+K).textContent=params[k]; } });
-      var ha=document.getElementById('cGateH2Alt'); if(ha) ha.checked=params.gateH2Alt!==false;
-      window.__gateRebuild=true; }
-    GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1); bind('c'+K,'v'+K,function(v){ params[k]=v; applyGate(); },0); });
+      ['H1','H2'].forEach(function(r){ var c=params['gate'+r+'Color']||'', pk=document.getElementById('cGate'+r+'Color'), hx=document.getElementById('cGate'+r+'ColorHex'); if(pk) pk.value=c||(window.__gateThemeColor?window.__gateThemeColor():'#AAF5EE'); if(hx) hx.value=c; });
+      ['H1','H2'].forEach(function(r){ ['Flip','Rev'].forEach(function(t){ var el=document.getElementById('cGate'+r+t); if(el) el.checked=!!params['gate'+r+t]; }); });
+      var ha=document.getElementById('cGateH2Alt'); if(ha) ha.checked=params.gateH2Alt!==false; }
+    GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1); bind('c'+K,'v'+K,function(v){ params[k]=v; },0); });   // geometry keys are watched by gbKey(), so the bands rebuild on their own
+    ['H1','H2'].forEach(function(r){ var key='gate'+r+'Color'; colorCtl('cGate'+r+'Color','cGate'+r+'ColorHex',function(v){ params[key]=v; });
+      ['Flip','Rev'].forEach(function(t){ var el=document.getElementById('cGate'+r+t); if(el) el.addEventListener('change',function(){ params['gate'+r+t]=this.checked; }); });
+      var rb=document.getElementById('cGate'+r+'ColorReset'); if(rb) rb.addEventListener('click',function(){ params[key]=''; applyGate(); }); });
     (function(){ var ha=document.getElementById('cGateH2Alt'); if(ha) ha.addEventListener('change',function(){ params.gateH2Alt=this.checked; }); })();
     function applyGxCtls(){ ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K, on=document.getElementById('cGx'+K+'On'); if(on) on.checked=!!params[pre+'On'];
         ['Dur','Delay','Tick','Scatter'].forEach(function(sp){ var el=document.getElementById('cGx'+K+sp); if(!el) return; var v=params[pre+sp]; el.value=v; document.getElementById('vGx'+K+sp).textContent=(sp==='Scatter'?(+v).toFixed(2):v); }); });
