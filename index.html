@@ -10000,7 +10000,7 @@ f 2469//2469 2470//2470 2434//2434
       if(editMode && meshSelectMode){ ray.setFromCamera(mouse,camera);   // EDIT MODE + mesh select: click SELECTS (no zoom); panel edits galaxy mesh; "Open kit box" for faces
         var tgts=focused?editHits.concat(focused.userData.moons):editHits;   // moons selectable while focused
         var eh=ray.intersectObjects(tgts,false);
-        if(!eh.length){ if(moonSel){ moonSel=null; refreshEditPanel(); } else if(focused){ goHome(); } else { clearSel(); refreshEditPanel(); } return; }
+        if(!eh.length){ if(moonSel){ moonSel=null; refreshEditPanel(); } else if(focused){ goHomeV(); } else { clearSel(); refreshEditPanel(); } return; }
         var o=eh[0].object, oid=o.userData.editId||(o.parent&&o.parent.userData&&o.parent.userData.id);
         if(oid) editSelectAt(oid);
         return; }
@@ -10011,20 +10011,40 @@ f 2469//2469 2470//2470 2434//2434
         // click the kit box face (when hover affordance is active) → enter case study
         if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
           clearBoxHover(); openProjectCta(); return; }
-        emptyClick(); goHome(); return; }
+        emptyClick(); goHomeV(); return; }
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length){ emptyClick(); return; } activate(ph[0].object.parent.userData); });
 
+    // View veil: opening a project / the CV / Contact (and backing out) swaps whole assets in one frame (planet
+    // -> kit box, hologram -> CV route, galaxy hidden). Those swaps are hard cuts, so dip the canvas to the scene
+    // colour, swap at the bottom, then bring the new view up while the camera eases in.
+    var _veil=null, _veilBusy=false;
+    function veilThen(fn){
+      if(_veilBusy || reduceMotionQ.matches || mwPhase!=='docked'){ fn(); return; }
+      var host=document.getElementById('scene'); if(!host){ fn(); return; }
+      if(!_veil){ _veil=document.createElement('div'); _veil.id='viewVeil'; _veil.style.cssText='position:absolute;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:2;will-change:opacity'; host.appendChild(_veil); }
+      _veilBusy=true;
+      _veil.style.transition='opacity 260ms cubic-bezier(.4,0,.8,.4)'; _veil.style.opacity='1';
+      setTimeout(function(){
+        try{ fn(); }finally{
+          requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            _veil.style.transition='opacity 620ms cubic-bezier(.3,0,.2,1)'; _veil.style.opacity='0';
+            setTimeout(function(){ _veilBusy=false; },620);
+          }); });
+        }
+      },270);
+    }
+    function goHomeV(){ veilThen(goHome); }
     function activate(ud){
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
-      if(ud.id==='cv'){ openCV(ud.id); return; }            // bespoke focus views — not kit boxes
-      if(ud.id==='contact'){ openContact(ud.id); return; }
+      if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
+      if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
       if(ud.id==='arcade'){ openArcade(ud.id); return; }
-      if(ud.locked){ openLockedPanel(ud.id); return; }
-      openCase(ud.id); }
+      if(ud.locked){ veilThen(function(){ openLockedPanel(ud.id); }); return; }
+      veilThen(function(){ openCase(ud.id); }); }
     function planetById(id){ return planets.find(function(p){return p.userData.id===id;}); }
 
     function setFocusCam(){ focusRadius=focusBaseR*params.focusZoom; }
@@ -11549,7 +11569,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     var toastT; function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200); }
 
-    document.getElementById('homeBtn').addEventListener('click',function(){ if(editMode) return; goHome(); });   // in Edit Mode the root is click-to-edit, not navigate
+    document.getElementById('homeBtn').addEventListener('click',function(){ if(editMode) return; goHomeV(); });   // in Edit Mode the root is click-to-edit, not navigate
     document.getElementById('cpBack').addEventListener('click',goHome);
     document.getElementById('cpEnter').addEventListener('click',enterCaseStudy);
     document.getElementById('csExit').addEventListener('click',exitCaseStudy);
@@ -12055,7 +12075,7 @@ f 2469//2469 2470//2470 2434//2434
       var pid=csPid;
       csExit();
       var g=pid&&planetById(pid);
-      if(g) activate(g.userData); else goHome();
+      if(g) activate(g.userData); else goHomeV();
     }
     function csExit(){ return csScene.exit(); }   // teardown lives in the scene's onExit
 
@@ -13990,7 +14010,7 @@ f 2469//2469 2470//2470 2434//2434
     function applyRouteFromLocation(){
       try{
         var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
-        if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
+        if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHomeV(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
         if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData); return; }
