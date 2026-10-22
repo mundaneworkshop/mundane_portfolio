@@ -96,7 +96,12 @@
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
   /* game-over + leaderboard card: design-system tokens, 8px grid, tabular numerals, every column shares one right edge */
   #arcadeResult{position:fixed;inset:0;z-index:80;display:flex;padding:var(--bric-space-3-stud);background:var(--bric-surface-overlay);backdrop-filter:blur(6px);overflow-y:auto}
-  #arcadeResult .ar-card{width:min(520px,100%);margin:auto;padding:var(--bric-space-4-stud);background:var(--bric-surface-raised);border:1px solid var(--bric-border-default);clip-path:var(--clip-step,none);display:flex;flex-direction:column;gap:var(--bric-space-3-stud);font-family:var(--display,sans-serif);color:var(--bric-content-primary)}
+  #arcadeResult .ar-card{width:min(520px,100%);margin:auto;padding:var(--bric-space-4-stud);position:relative;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--bric-border-subtle) 1px,transparent 1px);background-size:16px 16px;display:flex;flex-direction:column;gap:var(--bric-space-3-stud);font-family:var(--display,sans-serif);color:var(--bric-content-primary)}   /* the manual's look: BRIC dot matrix + corner brackets (.mb-corner), no outline */
+  #arcadeResult .ar-card .mb-corner{position:absolute;width:26px;height:26px;pointer-events:none;border:0 solid var(--bric-schematic-line-dim)}
+  #arcadeResult .ar-card .mb-corner.tl{top:0;left:0;border-top-width:1.5px;border-left-width:1.5px}
+  #arcadeResult .ar-card .mb-corner.tr{top:0;right:0;border-top-width:1.5px;border-right-width:1.5px}
+  #arcadeResult .ar-card .mb-corner.bl{bottom:0;left:0;border-bottom-width:1.5px;border-left-width:1.5px}
+  #arcadeResult .ar-card .mb-corner.br{bottom:0;right:0;border-bottom-width:1.5px;border-right-width:1.5px}
   #arcadeResult .ar-head{display:flex;flex-direction:column;align-items:center;gap:var(--bric-space-stud);text-align:center}
   #arcadeResult .ar-k{font:600 11px/1 var(--grotesk);letter-spacing:.34em;text-transform:uppercase;color:var(--bric-content-secondary)}
   #arcadeResult .ar-n{font-family:var(--mono);font-size:88px;line-height:1;font-variant-numeric:tabular-nums;color:var(--bric-content-brand);text-shadow:0 0 18px color-mix(in srgb,var(--bric-content-brand) 40%,transparent)}
@@ -9982,6 +9987,7 @@ f 2469//2469 2470//2470 2434//2434
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
     var camUpV=new THREE.Vector3(0,1,0);
     var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
+    var _arcFoc=new THREE.Vector3();
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
@@ -10490,7 +10496,7 @@ f 2469//2469 2470//2470 2434//2434
     function showArcadeResult(sum){
       closeArcadeResult();
       var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label',sum?'Game over':'Leaderboard');
-      var scored=!!(sum&&sum.score>0), html='<div class="ar-card">';
+      var scored=!!(sum&&sum.score>0), html='<div class="ar-card"><div class="mb-corner tl"></div><div class="mb-corner tr"></div><div class="mb-corner bl"></div><div class="mb-corner br"></div>';
       if(sum){
         var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2), w=sum.weights||{fighter:1,support:3,capital:7};
         var rowsB=[['Fighters',sum.fighters,w.fighter],['Support ships',sum.support,w.support],['Capital ships',sum.capital,w.capital]].map(function(r){
@@ -14008,18 +14014,21 @@ f 2469//2469 2470//2470 2434//2434
         var _rib=focused.userData.hit.userData.marqRibbon, _mqc=curMarquee();
         if(_rib.material && _rib.material.map){ var _sgn=_mqc.reverse?-1:1; _rib.material.map.offset.x=((_rib.material.map.offset.x + _sgn*(_mqc.speed||0)*0.01)%1 + 1)%1; }
       }
+      var _ca=null; if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getCamAssist){ _ca=MWBattle.getCamAssist();   // battle.js camera assist: auto-snap yaw, dynamic zoom, death close-up
+        if(_ca.yaw!=null){ var _yd=Math.atan2(Math.sin(_ca.yaw-manualRot),Math.cos(_ca.yaw-manualRot)); manualRot+=_yd*0.05; } }
       if(autoRotate&&!(arcadeActive&&arcadeStage==='play')) manualRot+=0.0011*params.spin*params.camRotDir;   /* no auto-revolve while the hero flies; hero select and the galaxy still drift */ galaxy.rotation.y=manualRot;
       if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it
       else if(msgFocusActive){ msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
       else if(!focused){ var _bp=(mwPhase==='entry')?ENTRY_POS:HOME_POS, _bl=(mwPhase==='entry')?ENTRY_LOOK:HOME_LOOK;
-        var oy=(_bp.y-_bl.y)*camZoom, oz=(_bp.z-_bl.z)*camZoom;
+        var _az=_ca?_ca.zoom:1, oy=(_bp.y-_bl.y)*camZoom*_az, oz=(_bp.z-_bl.z)*camZoom*_az;
         if(arcReturn){ var _k=0.09; camZoom+=(arcEntryZoom-camZoom)*_k; camElev+=(0-camElev)*_k; arcPitch+=(0-arcPitch)*_k;   // back on the hero-select view: ease the camera home
           if(Math.abs(camZoom-arcEntryZoom)<0.003&&Math.abs(camElev)<0.01&&Math.abs(arcPitch)<0.003){ camZoom=arcEntryZoom; camElev=0; arcPitch=0; arcReturn=false; } }
         arcPitchS+=(arcPitch-arcPitchS)*0.2; if(!arcadeActive&&!arcReturn){ arcPitch=0; }
         var _pa=-arcPitchS, _pc=Math.cos(_pa), _ps=Math.sin(_pa);   // orbit the offset about the X axis through the look point; camera.up rolls with it so there is no pole flip
         camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps);
         if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getPan){ var _pn=MWBattle.getPan();   // edge-dwell pan (battle.js): a true pan: only the look point moves along the camera's right / up, the camera stays put and turns (no dolly)
-          if(_pn&&(_pn.x||_pn.y)){ camLook.x+=_pn.x; camLook.addScaledVector(camUpV,_pn.y); } } }
+          if(_pn&&(_pn.x||_pn.y)){ camLook.x+=_pn.x; camLook.addScaledVector(camUpV,_pn.y); } }
+        if(_ca&&_ca.fk>0.001&&_ca.focus){ _arcFoc.copy(_ca.focus).sub(_bl); camPos.addScaledVector(_arcFoc,_ca.fk); camLook.lerp(_ca.focus,_ca.fk); } }   // hero death: the camera pivots onto the dying ship and dives in
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
