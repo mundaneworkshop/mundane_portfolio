@@ -99,12 +99,12 @@ var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
 var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
-/* Edge orbit: keep the cursor in the outer ~38% of the screen (each side) for EDGE_DWELL seconds and the camera turns that way, a full 360 and over the top, so the
+/* Edge orbit: keep the cursor in the outer ~30% of the screen (each side) for EDGE_DWELL seconds and the camera turns that way, a full 360 and over the top, so the
    player can swing round to the rest of the field. index.html adds MWBattle.getPan() (camera-plane world units) to the camera's LOOK point (the camera turns in place, it does not move). Easing back to the middle
    does not recentre it: the pan stays where the player left it until they pan back, change hero or restart. */
-var EDGE_ZONE=.24, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
+var EDGE_ZONE=.4, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
 var pan={x:0,y:0,vx:0,vy:0,dwell:0}, _panW={x:0,y:0}, orbit={yaw:0,pitch:0}, _orb={yaw:0,pitch:0};
-var ORBIT_SPEED=1.5;   // rad/s at full edge pressure (a full turn in ~4 s)
+var ORBIT_SPEED=1.2;   // rad/s at full edge pressure (a full turn in ~4 s)
 var keys={}, fireHeld=false;
 var uiEl=null, hudEl=null, vigEl=null, panelEl=null, styleEl=null, listeners=[];
 var BOLT_COL=[0x39ff5a /*imp green*/, 0xff2a2a /*reb red*/, 0xffe14a /*hero yellow*/];
