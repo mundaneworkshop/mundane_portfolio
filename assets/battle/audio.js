@@ -56,7 +56,7 @@ var HERO={
     fire1:['slave-fire-1','slave-fire-3'], fireN:['slave-fire-dbl'] }
 };
 var HERO_SHARED={
-  hitLaser:['exp-10'],
+  hitLaser:['tie-exp-01','tie-exp-02','tie-exp-03','tie-exp-04'],   // hero hit by a laser (review page: "Hit by laser", Oct 22 2026: the four tie_explosion clips; same files as the starfighter destruction pool). Burning fighters use this pool too (hitLaserAt)
   collide:['impact-01','impact-02','impact-03','impact-04','impact-05','impact-06','impact-07','impact-08'],
   destroyed:['exp-01','exp-02','exp-03'],
   lowHealth:['lowhealth-chime'],
