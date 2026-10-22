@@ -976,7 +976,6 @@
     <div class="menudiv"></div>
       <div class="ctl sec"><label>Entry gate · both ribbons</label></div>
       <div class="ctl"><label>Scroll speed (% of a loop per second) <b id="vGateSpeed">6</b></label><input type="range" id="cGateSpeed" min="0" max="40" step="1" value="6"></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Alt" checked> H2 ribbon alternates its two lines each loop</label></div>
       <div class="ctl"><label>Fade-in (ms) <b id="vGateIn">2000</b></label><input type="range" id="cGateIn" min="100" max="6000" step="50" value="2000"></div>
       <div class="ctl"><label>Fade-out on dock (ms) <b id="vGateFade">380</b></label><input type="range" id="cGateFade" min="50" max="3000" step="10" value="380"></div>
       <div class="menudiv"></div>
@@ -991,8 +990,7 @@
       <div class="ctl"><label>Fade-in delay after the camera settles (ms) <b id="vGateH1Delay">0</b></label><input type="range" id="cGateH1Delay" min="0" max="5000" step="50" value="0"></div>
       <div class="menudiv"></div>
       <div class="ctl sec"><label>Entry gate · H2 ribbon</label></div>
-      <div class="ctl"><label>Text, line 1</label><input type="text" id="cGateH2TextA" style="width:100%"></div>
-      <div class="ctl"><label>Text, line 2 (blank = single line)</label><input type="text" id="cGateH2TextB" style="width:100%"></div>
+      <div class="ctl"><label>Text</label><input type="text" id="cGateH2Text" style="width:100%"></div>
       <div class="ctl"><label>Angular segments (4 = square, more = rounder) <b id="vGateH2Seg">4</b></label><input type="range" id="cGateH2Seg" min="3" max="64" step="1" value="4"></div>
       <div class="ctl"><label>Text size (% of cube side, capped to fit one loop) <b id="vGateH2Size">16</b></label><input type="range" id="cGateH2Size" min="4" max="40" step="1" value="16"></div>
       <div class="ctl"><label>Height off the monogram (% of cube half-side) <b id="vGateH2Lift">40</b></label><input type="range" id="cGateH2Lift" min="0" max="120" step="1" value="40"></div>
@@ -1535,7 +1533,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateH1Lift:18,gateH1Size:16,gateH1Seg:4,gateH1Color:'',gateH2Lift:40,gateH2Size:16,gateH2Seg:4,gateH2Color:'',gateH1Flip:false,gateH1Rev:false,gateH2Flip:false,gateH2Rev:false,gateSpeed:6,gateH2Alt:true,gateH1Text:'MUNDANE WORKSHOP',gateH2TextA:'The creative practice of product designer Jason Hsin',gateH2TextB:'Building delightful digital consumer experiences', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateH1Lift:18,gateH1Size:16,gateH1Seg:4,gateH1Color:'',gateH2Lift:40,gateH2Size:16,gateH2Seg:4,gateH2Color:'',gateH1Flip:false,gateH1Rev:false,gateH2Flip:false,gateH2Rev:false,gateSpeed:6,gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     // ══════ GLYPH DECODE (Aurebesh → Latin) ══════
     // One shared engine, three surfaces: the Latin marquee ring (canvas, on load + hover), planet labels (DOM, hover),
@@ -9543,11 +9541,11 @@ f 2469//2469 2470//2470 2434//2434
     // Click: startDock fades them out (params.gateFade) while the monogram HOLDS for params.dockHold seconds; only then does the dock itself (beginDock, params.dockDur) run.
     var _gP=new THREE.Vector3(), _gShown=false, _gSince=0, _gFirst=0, _gSnap=null, _gOnAt=0, _gOutAt=0, _gDbg=null, GATE_SETTLE_MS=150, GATE_MAX_WAIT_MS=4000, GATE_STILL_PX=1.5, GATE_BOX_K=1, _dockAt=null;
     var gateBands=null, _gbBuilding=false, _gbBuiltKey='', _gbT=0, GB_REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
-    var GB_BANDS=[   // axis = the loop's rotation axis in monogram space; texts alternate per loop when params.gateH2Alt; dir = scroll direction; the *Key fields name this ribbon's params
+    var GB_BANDS=[   // axis = the loop's rotation axis in monogram space; dir = scroll direction; the *Key fields name this ribbon's params
       { axis:'y', textKeys:['gateH1Text'], font:'600 {S}px "Chakra Petch"', track:.34, dir:1, delayKey:'gateH1Delay', liftKey:'gateH1Lift', sizeKey:'gateH1Size', segKey:'gateH1Seg', colorKey:'gateH1Color', flipKey:'gateH1Flip', revKey:'gateH1Rev' },
-      { axis:'x', textKeys:['gateH2TextA','gateH2TextB'], font:'500 {S}px "Space Grotesk"', track:.14, dir:-1, delayKey:'gateH2Delay', liftKey:'gateH2Lift', sizeKey:'gateH2Size', segKey:'gateH2Seg', colorKey:'gateH2Color', flipKey:'gateH2Flip', revKey:'gateH2Rev' }
+      { axis:'x', textKeys:['gateH2Text'], font:'500 {S}px "Space Grotesk"', track:.14, dir:-1, delayKey:'gateH2Delay', liftKey:'gateH2Lift', sizeKey:'gateH2Size', segKey:'gateH2Seg', colorKey:'gateH2Color', flipKey:'gateH2Flip', revKey:'gateH2Rev' }
     ];
-    var GB_TEXT_DEFAULTS={gateH1Text:'MUNDANE WORKSHOP',gateH2TextA:'The creative practice of product designer Jason Hsin',gateH2TextB:'Building delightful digital consumer experiences'};
+    var GB_TEXT_DEFAULTS={gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin'};
     function gbTexts(def){ var t=def.textKeys.map(function(k){ return (params[k]!=null?String(params[k]):GB_TEXT_DEFAULTS[k]).trim(); }).filter(Boolean); return t.length?t:[GB_TEXT_DEFAULTS[def.textKeys[0]]]; }   // blank fields are skipped; all blank falls back to the default line
     var _gbColor='#AAF5EE';
     function gbHolo(){ var c=getComputedStyle(document.documentElement).getPropertyValue('--holo').trim(); return c||'#AAF5EE'; }
@@ -9577,7 +9575,7 @@ f 2469//2469 2470//2470 2434//2434
       return pts;
     }
     function gbDispose(){ if(!gateBands) return; scene.remove(gateBands.group); gateBands.group.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); gateBands.bands.forEach(function(bd){ bd.maps.forEach(function(m){ m.dispose(); }); }); gateBands=null; }
-    function gbKey(){ return GB_BANDS.map(function(d){ return [params[d.liftKey],params[d.sizeKey],params[d.segKey],!!params[d.flipKey]].join(','); }).join('|')+'|'+params.gateH2Alt+'|'+GB_BANDS.map(function(d){ return gbTexts(d).join('\u0001'); }).join('|'); }
+    function gbKey(){ return GB_BANDS.map(function(d){ return [params[d.liftKey],params[d.sizeKey],params[d.segKey],!!params[d.flipKey]].join(','); }).join('|')+'|'+GB_BANDS.map(function(d){ return gbTexts(d).join('\u0001'); }).join('|'); }
     function gbBuild(){
       if(!mwMono) return;
       gbDispose(); _gbBuiltKey=gbKey();
@@ -9611,7 +9609,7 @@ f 2469//2469 2470//2470 2434//2434
         var maps=tiles.map(function(t,i){ var tx=new THREE.CanvasTexture(t.canvas); tx.wrapS=THREE.RepeatWrapping; tx.wrapT=THREE.ClampToEdgeWrapping; tx.repeat.set(reps[i],1); tx.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); return tx; });
         var mat=new THREE.MeshBasicMaterial({map:maps[0], color:_gbColor, transparent:true, opacity:0, depthWrite:false, side:THREE.FrontSide, fog:false, toneMapped:false});
         var mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=41; mesh.frustumCulled=false; group.add(mesh);
-        return { def:def, mesh:mesh, mat:mat, maps:maps, reps:reps, cur:0, scroll:0, loops:0, colStr:'', flip:flip };
+        return { def:def, mesh:mesh, mat:mat, maps:maps, reps:reps, cur:0, scroll:0, colStr:'', flip:flip };
       });
       scene.add(group); gateBands={ group:group, box:box, bands:bands };
     }
@@ -9633,9 +9631,8 @@ f 2469//2469 2470//2470 2434//2434
         else if(_gShown){ var u=(nowMs-_gOnAt-(params[bd.def.delayKey]||0))/inMs; u=Math.max(0,Math.min(1,u)); a=u*u*(3-2*u); }
         bd.mat.opacity=a;
         var col=params[bd.def.colorKey]||_gbColor; if(bd.colStr!==col){ bd.colStr=col; bd.mat.color.set(col); }   // '' = follow the theme's --holo
-        var step=rate*dt*bd.def.dir*(params[bd.def.revKey]?-1:1)*(bd.flip?-1:1);   // reverse toggle = the marquee runs the other way on screen, whatever the baseline flip bd.loops+=Math.abs(step);
+        var step=rate*dt*bd.def.dir*(params[bd.def.revKey]?-1:1)*(bd.flip?-1:1);   // reverse toggle = the marquee runs the other way on screen, whatever the baseline flip
         bd.scroll=(bd.scroll+step*bd.reps[bd.cur])%1e4; bd.maps[bd.cur].offset.x=bd.scroll;
-        if(bd.maps.length>1&&params.gateH2Alt!==false&&!GB_REDUCED&&bd.loops>=1){ bd.loops-=1; bd.cur=(bd.cur+1)%bd.maps.length; bd.mat.map=bd.maps[bd.cur]; bd.mat.needsUpdate=true; bd.maps[bd.cur].offset.x=bd.scroll; }
       });
     }
     // The entry monogram's hover + click area: a circle around the mark (its projected centre and radius, set every frame by gateLayout), not the quad's box (whose empty corners used to count).
@@ -13891,7 +13888,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateH1Lift:18,gateH1Size:16,gateH1Seg:4,gateH1Color:'',gateH2Lift:40,gateH2Size:16,gateH2Seg:4,gateH2Color:'',gateH1Flip:false,gateH1Rev:false,gateH2Flip:false,gateH2Rev:false,gateSpeed:6,gateH2Alt:true,gateH1Text:'MUNDANE WORKSHOP',gateH2TextA:'The creative practice of product designer Jason Hsin',gateH2TextB:'Building delightful digital consumer experiences',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateH1Lift:18,gateH1Size:16,gateH1Seg:4,gateH1Color:'',gateH2Lift:40,gateH2Size:16,gateH2Seg:4,gateH2Color:'',gateH1Flip:false,gateH1Rev:false,gateH2Flip:false,gateH2Rev:false,gateSpeed:6,gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     Object.assign(DEFAULTS,GX_DEFAULTS);   // glyph-decode params reset / export-diff like everything else
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     // Entry gate band tunables: sync the sliders; lift / height rebuild the band geometry (gateBandsFrame), the rest are read live
@@ -13900,14 +13897,12 @@ f 2469//2469 2470//2470 2434//2434
       GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1), el=document.getElementById('c'+K); if(el){ el.value=params[k]; document.getElementById('v'+K).textContent=params[k]; } });
       ['H1','H2'].forEach(function(r){ var c=params['gate'+r+'Color']||'', pk=document.getElementById('cGate'+r+'Color'), hx=document.getElementById('cGate'+r+'ColorHex'); if(pk) pk.value=c||(window.__gateThemeColor?window.__gateThemeColor():'#AAF5EE'); if(hx) hx.value=c; });
       ['H1','H2'].forEach(function(r){ ['Flip','Rev'].forEach(function(t){ var el=document.getElementById('cGate'+r+t); if(el) el.checked=!!params['gate'+r+t]; }); });
-      ['gateH1Text','gateH2TextA','gateH2TextB'].forEach(function(k){ var el=document.getElementById('c'+k.charAt(0).toUpperCase()+k.slice(1)); if(el) el.value=params[k]!=null?params[k]:''; });
-      var ha=document.getElementById('cGateH2Alt'); if(ha) ha.checked=params.gateH2Alt!==false; }
+      ['gateH1Text','gateH2Text'].forEach(function(k){ var el=document.getElementById('c'+k.charAt(0).toUpperCase()+k.slice(1)); if(el) el.value=params[k]!=null?params[k]:''; }); }
     GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1); bind('c'+K,'v'+K,function(v){ params[k]=v; },0); });   // geometry keys are watched by gbKey(), so the bands rebuild on their own
     ['H1','H2'].forEach(function(r){ var key='gate'+r+'Color'; colorCtl('cGate'+r+'Color','cGate'+r+'ColorHex',function(v){ params[key]=v; });
       ['Flip','Rev'].forEach(function(t){ var el=document.getElementById('cGate'+r+t); if(el) el.addEventListener('change',function(){ params['gate'+r+t]=this.checked; }); });
       var rb=document.getElementById('cGate'+r+'ColorReset'); if(rb) rb.addEventListener('click',function(){ params[key]=''; applyGate(); }); });
-    ['gateH1Text','gateH2TextA','gateH2TextB'].forEach(function(k){ var el=document.getElementById('c'+k.charAt(0).toUpperCase()+k.slice(1)); if(el) el.addEventListener('change',function(){ params[k]=this.value; }); });   // gbKey() watches the text, so the ribbons rebuild
-    (function(){ var ha=document.getElementById('cGateH2Alt'); if(ha) ha.addEventListener('change',function(){ params.gateH2Alt=this.checked; }); })();
+    ['gateH1Text','gateH2Text'].forEach(function(k){ var el=document.getElementById('c'+k.charAt(0).toUpperCase()+k.slice(1)); if(el) el.addEventListener('change',function(){ params[k]=this.value; }); });   // gbKey() watches the text, so the ribbons rebuild
     function applyGxCtls(){ ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K, on=document.getElementById('cGx'+K+'On'); if(on) on.checked=!!params[pre+'On'];
         ['Dur','Delay','Tick','Scatter'].forEach(function(sp){ var el=document.getElementById('cGx'+K+sp); if(!el) return; var v=params[pre+sp]; el.value=v; document.getElementById('vGx'+K+sp).textContent=(sp==='Scatter'?(+v).toFixed(2):v); }); });
       var h=document.getElementById('cGxRingHover'); if(h) h.checked=params.gxRingHover!==false; }
