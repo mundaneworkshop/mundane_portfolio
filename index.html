@@ -999,6 +999,12 @@
       <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Rev" checked> Reverse scroll direction</label></div>
       <div class="ctl"><label>Fade-in delay after the camera settles (ms) <b id="vGateH2Delay">600</b></label><input type="range" id="cGateH2Delay" min="0" max="6000" step="50" value="600"></div>
 
+      <div class="menudiv"></div>
+      <div class="ctl sec"><label>Entry gate · monogram hover</label></div>
+      <div class="ctl"><label>Monogram hover: scale-up <b id="vMwHoverScale">0.06</b></label><input type="range" id="cMwHoverScale" min="0" max="0.3" step="0.01" value="0.06"></div>
+      <div class="ctl"><label>Monogram hover: spin slowdown <b id="vMwHoverSpin">0.30</b></label><input type="range" id="cMwHoverSpin" min="0" max="1" step="0.05" value="0.3"></div>
+      <div class="ctl"><label>Monogram hover: glow intensity <b id="vMwHoverGlow">1.50</b></label><input type="range" id="cMwHoverGlow" min="0" max="6" step="0.05" value="1.5"></div>
+      <div class="ctl"><label>Monogram hover: flicker <b id="vMwHoverFlicker">0.08</b></label><input type="range" id="cMwHoverFlicker" min="0" max="0.4" step="0.01" value="0.08"></div>
     <!-- ── Galaxy view ── -->
     <div class="dbg-ctx" id="dbg-galaxy">
       <div class="menudiv"></div>
@@ -1045,10 +1051,6 @@
       <div class="ctl"><label>Dock duration (the move itself) <b id="vDockDur">0.30</b></label><input type="range" id="cDockDur" min="0.2" max="8" step="0.05" value="0.30"></div>
       <div class="ctl"><label>Hold before the dock (s): entry text leaves first <b id="vDockHold">0.70</b></label><input type="range" id="cDockHold" min="0" max="3" step="0.05" value="0.70"></div>
       <div class="ctl"><label>Monogram intro: grow + fade in (s) <b id="vMwIntroDur">0.70</b></label><input type="range" id="cMwIntroDur" min="0" max="3" step="0.05" value="0.70"></div>
-      <div class="ctl"><label>Monogram hover: scale-up <b id="vMwHoverScale">0.06</b></label><input type="range" id="cMwHoverScale" min="0" max="0.3" step="0.01" value="0.06"></div>
-      <div class="ctl"><label>Monogram hover: spin slowdown <b id="vMwHoverSpin">0.30</b></label><input type="range" id="cMwHoverSpin" min="0" max="1" step="0.05" value="0.3"></div>
-      <div class="ctl"><label>Monogram hover: glow intensity <b id="vMwHoverGlow">1.50</b></label><input type="range" id="cMwHoverGlow" min="0" max="6" step="0.05" value="1.5"></div>
-      <div class="ctl"><label>Monogram hover: flicker <b id="vMwHoverFlicker">0.08</b></label><input type="range" id="cMwHoverFlicker" min="0" max="0.4" step="0.01" value="0.08"></div>
       <div class="ctl"><label>Cascade stage gap <b id="vBootGap">0.08</b></label><input type="range" id="cBootGap" min="0" max="1" step="0.02" value="0.08"></div>
       <div class="ctl"><label>Cascade stage flicker-in <b id="vBootStageDur">0.21</b></label><input type="range" id="cBootStageDur" min="0.05" max="1.2" step="0.02" value="0.21"></div>
       <div class="ctl"><label>Cascade planet stagger <b id="vBootPlanetStagger">0.03</b></label><input type="range" id="cBootPlanetStagger" min="0" max="0.2" step="0.005" value="0.03"></div>
