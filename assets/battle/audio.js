@@ -448,6 +448,9 @@ var MWAudio={
      the dock click fades the loop out (gateStop). Browsers keep audio locked until that first gesture, so a visitor who goes straight for the monogram hears neither. */
   gateStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} if(amb.gate) return; startGate(); MWAudio.site('gateLoad'); },
   gateStop:function(){ stopGroup('gate'); },
+  /* try to start sound on page load, with no gesture: resolves true only when the browser lets the audio context run by itself (e.g. Chrome for a visitor it trusts; Safari and Firefox almost never do).
+     The state is checked after a beat instead of awaiting resume(), because a refused resume() stays pending and would resolve later, on the first press. */
+  autoStart:function(){ return new Promise(function(res){ if(!ensure()) return res(false); setTimeout(function(){ res(!!ctx&&ctx.state==='running'); },400); }); },
   /* the hologram boot has begun (or a deep link landed on a booted galaxy): start the idle hum. Needs a gesture like siteStart; ignored in the arcade. */
   idleStart:function(){ idleWanted=true; if(!ensure()||!started||window.__mwArcade) return; startIdle(); },
   /* hero select: the ship on the carousel idles quietly under the ambience; cycling swaps it. battle.js calls this every frame (cheap: deduped by id). */
