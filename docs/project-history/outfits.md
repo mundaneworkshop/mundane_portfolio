@@ -1,6 +1,6 @@
 # Minifigure outfits (hologram figure)
 
-> Replaces the sig-fig head in the hologram beam with a full minifigure, with outfit cycling. Scaffolding landed Oct 22 2026; no outfit GLBs are committed yet, so the original head still shows.
+> Replaces the sig-fig head in the hologram beam with a full minifigure, with outfit cycling. Scaffolding landed Oct 22 2026; no outfit GLBs are committed yet, so the original head still shows. The carousel / About-me / unlock layer (below) is the product vision from the same day.
 
 **Storage / delivery.** Same pattern as every other GLB on the site: committed files under `assets/models/outfits/<id>/`, served statically by Vercel, listed in `assets/outfits.json` (cycle order = list order). An outfit is one or more GLBs loaded together and fitted as ONE figure (scaled so the combined height = `OUTFIT_NOMINAL_H` 2.9, centred on the old head position), so export all parts of an outfit from the same scene (shared origin/scale). Rendered through `buildHoloGLB(root, FX_LOGO, …)`, i.e. the same unlit holo FX pipeline and sliders as the head.
 
@@ -12,3 +12,15 @@
 **Runtime.** `ocTick()` runs every frame (after the arcade block): fades the new outfit in/old out (600 ms, instant under reduced motion), hides `holoHead`/`glowShell`/`logo.userData.glbGroup`, hides the figure while `arcadeActive`, and auto-cycles when docked, unfocused, tab visible, not reduced-motion. Clicking the figure cycles to the next outfit unless a planet's hit proxy is nearer on the ray. If every outfit is disabled/removed/fails to load, the head is handed back. Failed outfits are skipped silently (console warning).
 
 **Known limits / next.** Replacing a GLB inside an existing repo outfit = delete+recreate a draft with the same name and re-export (repo outfits are read-only for parts). Draft binaries are not synced (same as other BRICStore uploads). Not built: per-outfit scale/offset, outfit name caption in the scene, arcade "unlock outfit" reward hook (`MWBattle.onUnlock`) — the arcade doc says minikits should unlock outfits.
+
+## Carousel, About-me focus view and arcade unlocks (Oct 22 2026)
+
+**Product vision (Jason):** the hologram is an outfit carousel; clicking the central figure zooms into a focus view that reuses the project template, whose manual is an "About me" that changes copy with the selected outfit; locked outfits point visitors at the Space Arcade, which unlocks them.
+
+- **Outfit record additions** (repo manifest or overlay in `copyOvr['outfitMeta']`, or a draft): `unlockAt` (minikits; the FIRST ENABLED outfit in order is always the free default; new drafts default to 3) and `about: {kicker,title,body,teaser}`. Edited in the manager under "unlock + about copy"; exported in `outfits.json`.
+- **Unlock state:** `localStorage['mw_kits_total']` = lifetime minikits (+1 per `mw:minikit` window event from `assets/battle/battle.js`; no battle.js changes needed). Outfit is locked iff total < `unlockAt` (default outfit exempt). `mw_outfits_new` = just-unlocked ids (shows "· new", toast "Outfit unlocked: …"). Manager has `+1` / `reset` for testing.
+- **Carousel HUD** (`#outfitHud`): `◄ name ►` + status under the cone; locked outfit renders as a 28% ghost (`OUTFIT_LOCKED_ALPHA`) with "Collect N more minikits…" and a PLAY THE SPACE ARCADE button. Auto-cycle is now OFF by default (it fights a visitor reading; the arrows are the carousel).
+- **About-me focus view:** `aboutGrp` is a stand-in "planet" (child of `logo`, `userData.hit = outfitStage`) so `focusPlanet`, `stageFit`, the booklet manual (`CS.showBooklet`) and `goHome` all work unchanged — the figure already sits at `FOCUSFRAME.anchorY`. Click figure = `ocClickFigure` (locked → nudge HUD instead). Route `/about/<outfit-id>` (vercel rewrite already covers it; local python server 404s deep links). While focused, the figure eases to face the camera, "Hologram zoom" focus mode never hides it, and the HUD moves into the free stage rect (`MWStage`) above the manual. Switching outfit in the focus view re-fills the manual; a locked outfit shows the teaser + arcade CTA instead.
+- **Gotcha fixed:** the `addFx` holo shader overwrote alpha (`gl_FragColor.a = mix(…, holoA, uHolo)`), so `material.opacity` was ignored in holo mode. It now multiplies by a `uOc` uniform (default 1, so nothing else changes) — that is what drives the outfit fade and the locked ghost.
+
+**Not built:** snapshot rows/tags in the About manual (booklet supports them; manager has no editor yet), in-page inline editing of About copy (use the manager), arcade-side "outfit unlocked" celebration, per-outfit tint.
