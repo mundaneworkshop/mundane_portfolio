@@ -1,4 +1,4 @@
-/*! BRIC targeting reticle cursor, v1.4
+/*! BRIC targeting reticle cursor, v1.5
  *
  * ONE source file, used by both the Vercel site (<script src="assets/bric-reticle.js">) and Framer
  * (framer-code/sync-reticle.js in the bric-ds folder pastes this file verbatim into the ReticleCursor.tsx code component).
@@ -26,6 +26,7 @@
  *      shows no label. Per-element geometry comes from CSS custom properties on the element (plain numbers in px):
  *      --bric-ret-arm, --bric-ret-weight, --bric-ret-outset (negative = inside the element, e.g. onto a hero's corner
  *      marks), --bric-ret-glow (1 = amber glow), --bric-ret-label: none (no label). Missing ones fall back to the options below.
+ *   (v1.5) data-bric-label-at / a virtual target's labelAt can be 'above' (default), 'below' or 'center' (the label is printed in the middle of the frame). A virtual target may also give labelSize (px) to enlarge the label.
  *   2. Virtual: things that are not DOM (a WebGL planet). Pass `targets: function (x, y, el) {}` returning
  *      { key, rect: function () { return { left, top, right, bottom }; }, label?, n?, N?, labelAt?, arm?, weight?, outset?, glow? } or null. `rect` is read every
  *      frame, so the brackets follow a moving object. api.setTargets(fn) swaps the resolver after start.
@@ -102,18 +103,19 @@ function bricReticle(options) {
   function syncMotion() { root.classList.toggle('rm', rmq.matches); }
   syncMotion();
 
-  var cur = null, lx = -999, ly = -999, scrollTimer = 0, raf = 0, syncRaf = 0, lastCheck = 0, lastFrame = '', below = false, geoKey = '';
+  var cur = null, lx = -999, ly = -999, scrollTimer = 0, raf = 0, syncRaf = 0, lastCheck = 0, lastFrame = '', labAt = 'above', geoKey = '';
 
   function put(el, x, y) { el.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; }
   function place(b) {
-    var key = b.l + '|' + b.t + '|' + b.r + '|' + b.b + '|' + below;
+    var key = b.l + '|' + b.t + '|' + b.r + '|' + b.b + '|' + labAt;
     if (key === lastFrame) return;
     lastFrame = key;
     put(tl, b.l, b.t);
     put(tr, b.r - o.armMax, b.t);
     put(bl, b.l, b.b - o.armMax);
     put(br, b.r - o.armMax, b.b - o.armMax);
-    put(lab, b.l, below ? b.b + 4 : b.t - o.labelOffset);
+    if (labAt === 'center') lab.style.transform = 'translate3d(' + (b.l + b.r) / 2 + 'px,' + (b.t + b.b) / 2 + 'px,0) translate(-50%,-50%)';
+    else put(lab, b.l, labAt === 'below' ? b.b + 4 : b.t - o.labelOffset);
   }
   function around(x, y) { var h = o.idle / 2; return { l: x - h, t: y - h, r: x + h, b: y + h }; }
   function idleGeo() { applyGeo({ arm: o.arm, weight: o.weight, glow: false }); }
@@ -206,7 +208,11 @@ function bricReticle(options) {
     if (!b) return;
     cur = d;
     d.g = geoOf(d);
-    below = d.virt ? d.virt.labelAt === 'below' : d.el.getAttribute('data-bric-label-at') === 'below';
+    labAt = d.virt ? d.virt.labelAt : d.el.getAttribute('data-bric-label-at');
+    if (labAt !== 'below' && labAt !== 'center') labAt = 'above';
+    lab.style.fontSize = d.virt && d.virt.labelSize ? d.virt.labelSize + 'px' : '';
+    lab.style.textShadow = labAt === 'center' ? '0 0 6px rgba(0,0,0,.85), 0 0 14px rgba(0,0,0,.6)' : ''; // a centred label sits over the target itself: keep it readable
+    lab.style.textIndent = labAt === 'center' ? o.tracking : ''; // the trailing letter-spacing would otherwise push a centred label off-centre
     lab.textContent = labelOf(d);
     show();
     applyGeo(d.g); // after show(): a first appearance starts from the idle geometry, then grows to the target's
