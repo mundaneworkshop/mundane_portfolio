@@ -697,6 +697,12 @@
 
   #status{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;padding:12px 22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none}
   #hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:1}
+  /* Entry gate instruction, top centre: same type as #hint. Only while the gate is up (body.mw-entrygate); fades in a beat after the monogram, out as soon as it is clicked (mw-gate-out). */
+  #gateHint{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:15;max-width:calc(100vw - 44px);text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:0;transition:opacity .3s ease}
+  body.mw-entrygate #gateHint{opacity:1;transition:opacity 1.2s ease 1.2s}
+  body.author-mode #gateHint{top:64px}   /* the author toolbar occupies the top row */
+  body.mw-entrygate.mw-gate-out #gateHint{opacity:0;transition:opacity .3s ease}
+  @media (prefers-reduced-motion:reduce){ body.mw-entrygate #gateHint{transition:none} }
 
   /* ── DEBUG PANEL ── */
   #debug{position:absolute;left:22px;bottom:50px;z-index:28;width:242px;background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:0;padding:12px 14px 14px;display:none}
@@ -1379,6 +1385,7 @@
   <!-- EDIT MODE: the global "Mesh Slots" panel was removed. Overrides are per-object
        now (✎ edit → click an object). Geometry builders/slot vars remain in JS. -->
   <div id="box-hover-label"></div>
+  <div id="gateHint">click anywhere for sound • click holocron to enter</div>
   <div id="hint">drag to rotate · click a planet to travel</div>
   <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
   <div id="soundToggle" class="sw mw-sound-switch on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
@@ -9663,7 +9670,7 @@ f 2469//2469 2470//2470 2434//2434
     window.__mwGate=function(){ return { hover:mwHover, hk:+mwHoverK.toFixed(2), hit:_mwHit&&{cx:Math.round(_mwHit.cx),cy:Math.round(_mwHit.cy),R:Math.round(_mwHit.R)}, qo:(mwQuad&&mwQuad.material?+mwQuad.material.opacity.toFixed(2):null), dbg:_gDbg, shown:_gShown, stillForMs:Math.round(performance.now()-_gSince), onAtMs:Math.round(_gOnAt), bands:!!gateBands, phase:mwPhase, quadVisible:!!(mwQuad&&mwQuad.visible), dockAt:_dockAt }; };   // dev/test helper
     function startDock(){
       if(mwPhase!=='entry'||_dockAt!=null) return;
-      _gShown=true; _gOutAt=performance.now();   // the gate bands fade out (params.gateFade) while the monogram holds
+      document.body.classList.add('mw-gate-out'); _gShown=true; _gOutAt=performance.now();   // the gate bands fade out (params.gateFade) while the monogram holds
       if(window.MWAudio){ MWAudio.uiReady(); if(!MWAudio.site('gateClick')) MWAudio.ui('click'); MWAudio.site('dockClick'); MWAudio.gateStop(); }   // the monogram click plays SITE_EVENTS.gateClick clips, or the site's default UI 'click' when there are none; dockClick is an extra layer; the gate's idle loop fades out as the dock starts
       _dockAt=clock.getElapsedTime()+(params.dockHold!=null?params.dockHold:0.7);   // the monogram holds (still spinning) until the text has gone, then beginDock runs from mwUpdate
     }

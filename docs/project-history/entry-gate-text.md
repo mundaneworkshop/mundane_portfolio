@@ -48,3 +48,6 @@ The old hover framed the monogram with the targeting reticle snapped to its boun
 ## Gotchas
 - Deep links and the skip-entry path never show it: `#gate` is `display:none` unless `body.mw-entrygate`.
 - Copy lives in the markup, not in `copyOvr`; make it editable if the CMS needs it.
+
+## Gate instruction (Oct 22 2026)
+`#gateHint` ("click anywhere for sound • click holocron to enter"), top centre, same type as the bottom `#hint` (11px, 2px tracking, caps, `--muted`). Only while `body.mw-entrygate`; fades in 1.2 s after the gate appears (1.2 s fade) and out in 0.3 s as soon as the monogram is clicked (`startDock` adds `mw-gate-out`). In author mode (`body.author-mode`) it moves to `top:64px` so it clears the author toolbar. Copy is plain markup, not in `copyOvr`.
