@@ -164,3 +164,7 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 
 - `MWAudio.arrive(loc,cls,late)`: the capital-ship hyperspace-exit clip (`cap-arrive`) now plays for **every** support/capital ship that spawns after the opening fly-in (respawns after a kill, ships added later; `s.lateSpawn` in `battle.js`), with a 120 ms floor between cues. The opening wave (~40 ships jumping in over ~3 s) keeps its budget (`arriveLeft` 3-4, 35-75% chance) so it doesn't become a wall of sound.
 - `hsExit` (the jump's exit sound as the arcade is revealed) raised from 0.8 to 1.3 in `LEVEL`. Both it and `capArrive` now play through `shot()`, which waits for the clip to decode instead of silently dropping the sound when it isn't loaded yet (the case on a first load).
+
+## Hero "hit by laser" pool (Oct 22 2026)
+
+- `HERO_SHARED.hitLaser` in `audio.js` is now `tie-exp-01` to `tie-exp-04` (the four `tie_explosion_01-04.m4a` clips dropped on the review page's "Hit by laser" slot; byte-identical to the starfighter destruction clips already in `assets/audio/`, so no new files). It replaces the single `exp-10`. The same pool is used by burning fighters (`hitLaserAt`). Level is `LEVEL.hitLaser` (0.6). Note the clips are 1.0-3.7 s long, so rapid laser hits will overlap.
