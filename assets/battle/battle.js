@@ -84,10 +84,10 @@ var DEFAULTS={
   scaleFighter:.5, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1.6, scaleKit:1,
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
-  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:null, sunEl:null, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
+  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:20, sunEl:10, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
   kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
-  planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:.4, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
-  counts:{}, ver:10
+  planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:1.5, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
+  counts:{}, ver:11
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
 
@@ -99,10 +99,10 @@ var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
 var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
-/* Edge pan: keep the cursor in the outer ~19% of the screen for EDGE_DWELL seconds and the camera glides that way (up to PAN_REACH of the arena), so the
+/* Edge pan: keep the cursor in the outer ~38% of the screen (each side) for EDGE_DWELL seconds and the camera glides that way (up to PAN_REACH of the arena), so the
    player can fly out into the rest of the field. index.html adds MWBattle.getPan() (camera-plane world units) to the camera's LOOK point (the camera turns in place, it does not move). Easing back to the middle
    does not recentre it: the pan stays where the player left it until they pan back, change hero or restart. */
-var EDGE_ZONE=.62, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
+var EDGE_ZONE=.24, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
 var pan={x:0,y:0,vx:0,vy:0,dwell:0}, _panW={x:0,y:0};
 var keys={}, fireHeld=false;
 var uiEl=null, hudEl=null, vigEl=null, panelEl=null, styleEl=null, listeners=[];
@@ -121,7 +121,7 @@ function capName(c){ return c.charAt(0).toUpperCase()+c.slice(1); }
 function loadCfg(){
   var o=JSON.parse(JSON.stringify(DEFAULTS));
   try{ var s=JSON.parse(localStorage.getItem(LS_KEY)||'null');
-    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','scale','scaleFighter','speedFighter','fogK','scaleHero','kitRate','dsDim','arena'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
+    if(s&&s.ver!==DEFAULTS.ver){ delete s.counts; ['lightFill','lightKey','lightRim','lightScene','matBright','matEmissive','matFighter','darkLift','exposure','envInt','rough','sunAz','sunEl','planetSpin','scale','scaleFighter','speedFighter','fogK','scaleHero','kitRate','dsDim','arena'].forEach(function(k){ delete s[k]; }); }   // defaults changed — drop stale saved values
     if(s){ Object.keys(s).forEach(function(k){ if(k==='counts'){ Object.keys(s.counts||{}).forEach(function(i){ o.counts[i]=s.counts[i]; }); } else if(k in o&&k!=='ver') o[k]=s[k]; }); }
   }catch(e){}
   return o;
@@ -584,7 +584,7 @@ function updFighterBurn(s,dt){
   if(B.t>=B.dur){ s.burnDeath=null; burst(s.pos,0xffe08a,18,2,.7); killShip(s); }   // then the usual explosion + break-up
 }
 // ── capital / support destruction: a long chain of explosions along the hull, then it breaks apart
-var debris=[], shardGeo=null, shardMat=null;
+var debris=[], shardGeo=null, shardMat=null, tagHeroDebris=false;   // tagHeroDebris: pieces added while true belong to the hero's break-up (the game-over card waits for them)
 function startDying(s){
   if(s.dying||!s.hasA) return;
   s.alive=false; s.target=null; s.hpShow=0; if(s.barEl) s.barEl.style.display='none';
@@ -611,7 +611,7 @@ function updDying(s,dt){
   if(D.t>=D.dur) breakApart(s);
 }
 function addDebris(g,v,spin,life,drag){
-  debris.push({g:g,v:v,spin:spin,t:0,life:life,drag:drag==null?.25:drag});
+  debris.push({g:g,v:v,spin:spin,t:0,life:life,drag:drag==null?.25:drag,hero:tagHeroDebris});
   while(debris.length>700){ var o=debris.shift(); G.remove(o.g); }
 }
 // pieces fly off a destroyed ship: its hull layers (one mesh per material) plus shards. small:true = fighter-sized cloud.
@@ -687,7 +687,8 @@ function pieceGeo(M,tris,cx,cy,cz){   // non-indexed geometry of the given trian
   if(col) geo.setAttribute('color',new T.BufferAttribute(col,3)); if(uv) geo.setAttribute('uv',new T.BufferAttribute(uv,2));
   return geo;
 }
-function fragment(s){
+function fragment(s,vk,lk){
+  vk=vk||1; lk=lk||1;   // vk = throw speed multiplier, lk = piece lifetime multiplier (the hero's break-up is a close-up: faster, shorter)
   var A=buildAtoms(s); if(!A.list.length) return false;
   var sz=Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x, big=s.cls==='capital', q=s.root.quaternion, sc=s.root.scale;
   var list=A.list.slice(), nFree=Math.min(list.length>>1,big?160:80), free=[];
@@ -701,8 +702,8 @@ function fragment(s){
     var b=blasts[0], bd=1e9; blasts.forEach(function(B){ var d=(B.x-cx)*(B.x-cx)+(B.y-cy)*(B.y-cy)+(B.z-cz)*(B.z-cz); if(d<bd){ bd=d; b=B; } });
     var dir=new T.Vector3(cx-b.x,cy-b.y,cz-b.z); if(dir.lengthSq()<1e-8) dir.set(rnd(-1,1),rnd(-1,1),rnd(-1,1));
     dir.normalize().multiplyScalar(rnd(.4,1)).add(new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(smallPiece?.9:.5)).normalize().applyQuaternion(q);
-    var sp=smallPiece?sz*rnd(.1,.8):sz*rnd(.04,.22), spin=smallPiece?rnd(1.2,4.5):rnd(.15,.7);
-    addDebris(g,dir.multiplyScalar(sp),new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(spin),smallPiece?rnd(2.2,7):rnd(5.5,9.5),smallPiece?rnd(.05,.35):rnd(.1,.3));
+    var sp=(smallPiece?sz*rnd(.1,.8):sz*rnd(.04,.22))*vk, spin=smallPiece?rnd(1.2,4.5):rnd(.15,.7);
+    addDebris(g,dir.multiplyScalar(sp),new T.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).multiplyScalar(spin),(smallPiece?rnd(2.2,7):rnd(5.5,9.5))*lk,smallPiece?rnd(.05,.35):rnd(.1,.3));
   }
   free.forEach(function(a){ launch([{mi:a.mi,tris:a.tris}],a.x,a.y,a.z,true); });
   // the rest: grouped on a randomly offset coarse grid into a handful of large sub-constructions
@@ -921,7 +922,7 @@ function setStage(st){ if(stage===st) return; stage=st; if(st==='play'&&ctx&&ctx
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
-  ejectHero(true);
+  ejectHero(true); cam.death=false; cam.breakup=false; cam.snap=false;
   var m=BYID[id]; if(!m) return;
   if(!cache[id]){ requestModel(id); pumpLoads(); pendingHero=id; return; }
   var s=makeShip(m); heroShip=s; s.hero=true; s.hp=heroMax;
@@ -1002,12 +1003,61 @@ function heroFx(s,dt){
 }
 function heroFxReset(s){ if(!s) return; s.hurtT=0; s.shake=0; s.root.traverse(function(m){ if(!m.isMesh||!m.material||!m.material.userData.hurt0) return; var mt=m.material; mt.emissive.copy(mt.userData.hurt0.e); mt.emissiveIntensity=mt.userData.hurt0.i; mt.userData.hurt1=false; }); }
 function hudHurt(){ if(!hudEl) return; hudEl.classList.add('hurt'); setTimeout(function(){ if(hudEl) hudEl.classList.remove('hurt'); },320); }
-// The hero doesn't just vanish at 0 hull: it catches fire, tumbles and zooms erratically in loops for ~3.4 s, then explodes and the game-over card appears.
+/* ── camera assist ──
+   index.html reads MWBattle.getCamAssist() each frame: zoom (multiplies the camera's distance from the look point), yaw (a galaxy rotation to ease toward, or null),
+   focus + fk (the death close-up: the camera swings its pivot onto the dying ship by fk 0..1).
+   • dynamic zoom: the further the hero is from the camera (toward the back of the play volume) the closer the camera comes in; it relaxes back as the hero returns.
+   • auto snap: a hero flying at the camera that reaches the screen before the volume's edge keeps its heading, and the camera swings round to face that way.
+   • death: zooms right in on the burning ship, then holds on the break-up. */
+var cam={z:1,zT:1,snap:false,snapT:0,aligned:0,cool:0,yaw:null,fk:0,death:false,breakup:false,focusL:null,focusW:null,out:{zoom:1,yaw:null,fk:0,focus:null}};
+var _camL=null, _camRef=null, _cen=null, _hd=null;
+function camReset(){ cam.z=cam.zT=1; cam.snap=false; cam.snapT=0; cam.cool=0; cam.yaw=null; cam.fk=0; cam.death=false; cam.breakup=false; }
+function smooth01(x){ x=clamp(x,0,1); return x*x*(3-2*x); }
+function updHeroSnap(s,dt){   // returns true while the hero is held on its heading by the snap
+  cam.cool=Math.max(0,cam.cool-dt); cam.yaw=null; cam.zT=1;
+  if(reduceMotion()||stage!=='play'||quiet()||s.burning){ cam.snap=false; return false; }
+  if(!_camL){ _camL=new T.Vector3(); _camRef=new T.Vector3(); _cen=new T.Vector3(); _hd=new T.Vector3(); }
+  _cen.set(CX,CY,CZ); G.worldToLocal(_camL.copy(ctx.camera.position));
+  _camRef.copy(_camL).sub(_cen).divideScalar(cam.z).add(_cen);                 // where the camera sits WITHOUT the auto zoom, so the zoom doesn't feed back into its own trigger
+  var dCen=_camRef.distanceTo(_cen)||1, dShip=_camRef.distanceTo(s.pos), r=dShip/dCen;
+  cam.zT=1-.4*smooth01((r-1.12)/.5);                                           // far toward the back of the volume: come in
+  var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
+  var atEdge=s.pos.z>=az*.9-.06||Math.abs(s.pos.x)>=ax-.06||Math.abs(s.pos.y-CY)>=ay-.06;
+  _hd.copy(_camRef).sub(s.pos).normalize(); var toward=s.dir.dot(_hd);
+  _v4.copy(s.dir).applyQuaternion(G.quaternion); var hz=Math.hypot(_v4.x,_v4.z);   // heading in WORLD space; the camera looks down -z
+  var err=Math.abs(Math.atan2(Math.sin(Math.PI-Math.atan2(_v4.x,_v4.z)),Math.cos(Math.PI-Math.atan2(_v4.x,_v4.z))));   // how far the camera still has to swing
+  if(!cam.snap){ if(cam.cool<=0&&toward>.4&&dShip<.6*dCen&&!atEdge&&hz>.25){ cam.snap=true; cam.snapT=0; cam.aligned=0; } }
+  else {   // hold the heading until the camera has swung round (the swing itself moves the camera, so don't judge "toward" mid-turn), then give control back
+    cam.snapT+=dt; cam.aligned=err<.08?cam.aligned+dt:0;
+    if(cam.aligned>.5||atEdge||cam.snapT>3||hz<.2){ cam.snap=false; cam.cool=2; } }
+  if(cam.snap){ cam.yaw=(ctx.getRot?ctx.getRot():0)+(Math.PI-Math.atan2(_v4.x,_v4.z)); }   // rotate the battle so the heading points straight away from the camera
+  return cam.snap;
+}
+function updCamAssist(dt){
+  var s=heroShip;
+  if(s&&s.alive&&!s.burning&&!cam.death) { /* zT / yaw are set by updHeroSnap during updHero */ }
+  else if(!cam.death){ cam.snap=false; cam.yaw=null; cam.zT=1; }
+  if(cam.death){ cam.zT=cam.breakup?.45:.3; cam.yaw=null; if(s&&s.burning) cam.focusL.copy(s.pos); }
+  var rm=reduceMotion();
+  if(cam.death&&rm){ cam.z=.6; cam.fk=1; }
+  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:1.6))); cam.fk+=((cam.death?1:0)-cam.fk)*(1-Math.exp(-dt*2.2)); }
+  cam.out.zoom=cam.z; cam.out.yaw=cam.yaw; cam.out.fk=cam.fk;
+  if(cam.focusL){ if(!cam.focusW) cam.focusW=new T.Vector3(); cam.focusW.copy(cam.focusL); G.localToWorld(cam.focusW); cam.out.focus=cam.focusW; } else cam.out.focus=null;
+}
+function waitHeroDebris(t){   // the game-over card waits for the hero's pieces to finish flying (capped)
+  for(var i=0;i<debris.length;i++) if(debris[i].hero&&t<5) { later(.25,function(){ waitHeroDebris(t+.25); }); return; }
+  later(.5,function(){
+    if(dead||!active) return;
+    if(window.MWAudio&&MWAudio.gameOver) MWAudio.gameOver(); if(ctx.onGameOver) ctx.onGameOver();
+  });
+}
+// The hero doesn't just vanish at 0 hull: it catches fire, tumbles and zooms erratically in loops for ~3.4 s while the camera dives in on it, then it explodes and breaks into pieces; the game-over card appears once they have flown.
 function heroDeath(s){
   if(s.burning) return;
   s.burning={t:0,dur:3.4,ph:[rnd(0,6.3),rnd(0,6.3),rnd(0,6.3)],nextHit:.35}; s.inv=1e9; s.hp=0; fireHeld=false; updHud(false);
   if(window.MWAudio){ MWAudio.heroFireUp(); MWAudio.heroDying(); }
   burst(s.pos,0xff8030,40,2,.9); flash(s.pos,.9,0xffb060);
+  cam.death=true; cam.breakup=false; cam.snap=false; cam.focusL=cam.focusL||new T.Vector3(); cam.focusL.copy(s.pos);   // death close-up
 }
 function updHeroBurn(s,dt){
   var B=s.burning, k=Math.min(1,B.t/B.dur); B.t+=dt;
@@ -1032,22 +1082,32 @@ function updHeroBurn(s,dt){
 }
 function finishHeroDeath(s){
   if(window.MWAudio) MWAudio.heroDestroyed();
-  burst(s.pos,0xffa040,110,3.4,1.6); burst(s.pos,0xffffff,40,4.4,.9); flash(s.pos,2.4,0xfff0c0);
+  var pos=s.pos.clone();
+  burst(pos,0xffa040,110,3.4,1.6); burst(pos,0xffffff,40,4.4,.9); flash(pos,2.4,0xfff0c0);
+  later(.2,function(){ flash(pos,1.6,0xffe2a0); burst(pos,0xffa040,70,2.6,1.3); });
+  later(.45,function(){ flash(pos,1.1,0xff9040); burst(pos,0xff7020,50,2,1.2); });
+  var okF=false; tagHeroDebris=true;   // the hull comes apart into its real pieces (same fragmenting as the big ships), thrown harder and shorter-lived for the close-up
+  try{ okF=fragment(s,2.4,.7); }catch(e){ if(window.console) console.warn('hero fragment failed',e); }
+  if(!okF) shatter(s,{});
+  tagHeroDebris=false;
+  cam.breakup=true; cam.focusL.copy(pos);
   ejectHero(true); fireHeld=false; session.died=true; updHud(false);
-  if(ctx.onGameOver) later(.5,function(){ if(window.MWAudio&&MWAudio.gameOver) MWAudio.gameOver(); ctx.onGameOver(); });   // let the explosion read before the card; the game over sting lands as the card pops up
+  waitHeroDebris(0);   // let the whole explosion + break-up play out before the game over card and sting
 }
 function updHero(s,dt){
   if(s.burning){ updHeroBurn(s,dt); return; }
+  var hold=updHeroSnap(s,dt);   // auto camera snap: while held the hero ignores the pointer and flies on along its heading
   var o=pickAt(ptr.nx,ptr.ny,_hT);
   if(!ptr.in) _hT.copy(s.pos).addScaledVector(s.dir,1);               // pointer off the canvas: coast on
   var to=_v2.copy(_hT).sub(s.pos), d=to.length();
   if(!o) to.z-=s.pos.z*.5;                                              // the cursor can't say how deep: drift back toward mid-depth unless pointing at something
   s.prev.copy(s.dir);
-  if(d>.15){ to.normalize(); var ang=s.dir.angleTo(to);   // true rotation toward the target, so a target directly behind still turns the ship around (a straight lerp stalls near 180°)
+  if(d>.15&&!hold){ to.normalize(); var ang=s.dir.angleTo(to);   // true rotation toward the target, so a target directly behind still turns the ship around (a straight lerp stalls near 180°)
     if(ang>1e-4){ var tax=_v3.crossVectors(s.dir,to); if(tax.lengthSq()<1e-6) tax.crossVectors(s.dir,_up); if(tax.lengthSq()<1e-6) tax.set(1,0,0); tax.normalize();
       var rate=3.6*(ang>2?1.6:1); s.dir.applyAxisAngle(tax,Math.min(ang,rate*dt)).normalize(); } }
   var HSPD=.5;   // hero speed: half of the original, easier to control
   var want=d<.2?0:clamp(d*1.6,.3,3.2)*P.speed*HSPD; if(o&&d<.9) want=Math.min(want,.4*HSPD);   // hovering an object: ease in, don't ram it
+  if(hold) want=Math.max(want,s.spd,.5);
   s.spd=lerp(s.spd,want,Math.min(1,dt*3));
   s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
   var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();   // same volume the fighters fly in (fighters' soft bound sits just inside)
@@ -1273,7 +1333,7 @@ function update(t){
     if(s.jump) updHyper(s,dt);
     continue;
   }
-  sepLarge(); updDebris(dt); updTimers(dt); updPlanet(dt);
+  sepLarge(); updDebris(dt); updTimers(dt); updPlanet(dt); updCamAssist(dt);
   updKits(dt); updCarousel(dt); updBars(dt);
   updBolts(dt); updSparks(dt); updFlashes(dt);
   if(hyper){
@@ -1466,7 +1526,7 @@ function makeBolts(){
 function resetState(){
   ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; failed={}; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
-  debris=[]; timers=[]; introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; PL=null; planet=null; sunObj=null; envQ=envPrev=null; envIdle=0; planetMats=[]; planetState=0; sess++;
+  debris=[]; timers=[]; camReset(); introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; PL=null; planet=null; sunObj=null; envQ=envPrev=null; envIdle=0; planetMats=[]; planetState=0; sess++;
 }
 var MWBattle={
   init:function(c){
@@ -1505,6 +1565,8 @@ var MWBattle={
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
+  _camState:function(){ return cam; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
+  getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
   getPan:function(){ _panW.x=pan.x*S; _panW.y=pan.y*S; return _panW; },   // {x,y}: edge-pan camera offset in WORLD units (battle units x G's scale), along the camera's right / up
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
   assetsReady:function(){ return active&&(planetState!==1)&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
