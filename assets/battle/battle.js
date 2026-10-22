@@ -1034,7 +1034,7 @@ function finishHeroDeath(s){
   if(window.MWAudio) MWAudio.heroDestroyed();
   burst(s.pos,0xffa040,110,3.4,1.6); burst(s.pos,0xffffff,40,4.4,.9); flash(s.pos,2.4,0xfff0c0);
   ejectHero(true); fireHeld=false; session.died=true; updHud(false);
-  if(ctx.onGameOver) later(.5,function(){ ctx.onGameOver(); });   // let the explosion read before the card
+  if(ctx.onGameOver) later(.5,function(){ if(window.MWAudio&&MWAudio.gameOver) MWAudio.gameOver(); ctx.onGameOver(); });   // let the explosion read before the card; the game over sting lands as the card pops up
 }
 function updHero(s,dt){
   if(s.burning){ updHeroBurn(s,dt); return; }
