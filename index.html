@@ -10128,6 +10128,9 @@ f 2469//2469 2470//2470 2434//2434
     // A click on nothing (empty canvas, empty page): the soft "release" thud from the UI sounds. Controls and planets have their own sounds.
     document.documentElement.addEventListener('mouseleave',function(){ mwHover=false; });   // the pointer left the window: drop the entry monogram's hover
     function emptyClick(){ if(window.MWAudio&&!window.__mwArcade&&!arcadeActive){ MWAudio.uiReady(); MWAudio.ui('release'); } }
+    // the monogram at the entry gate starts the dock (and plays its click sound) on the PRESS, not on the release that becomes the click: ~100 ms sooner. The click handler below still covers
+    // keyboard / synthetic clicks; startDock ignores a second call. (A touch press only unlocks audio on release, so touch gets no earlier sound, but the dock starts sooner.)
+    renderer.domElement.addEventListener('pointerdown',function(e){ if(e.button!==0||arcadeActive||mwPhase!=='entry'||!mwQuad||!mwQuad.visible) return; if(overMonogram(e)) startDock(); });
     renderer.domElement.addEventListener('click',function(){ if(dragMoved)return;
       if(arcadeActive) return;   // arcade: the battle's own capture-phase handler owns clicks (minikits, hero fire)
       if(mwPhase!=='docked'){   // entry gate / mid-dock: the only click target is the monogram itself
