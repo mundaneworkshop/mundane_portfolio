@@ -9574,7 +9574,7 @@ f 2469//2469 2470//2470 2434//2434
       }
       return pts;
     }
-    function gbDispose(){ if(!gateBands) return; scene.remove(gateBands.group); gateBands.group.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); gateBands.bands.forEach(function(bd){ bd.maps.forEach(function(m){ m.dispose(); }); }); gateBands=null; }
+    function gbDispose(){ if(!gateBands) return; scene.remove(gateBands.group); gateBands.group.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); gateBands.bands.forEach(function(bd){ bd.maps.concat(bd.mapsB).forEach(function(m){ m.dispose(); }); }); gateBands=null; }
     function gbKey(){ return GB_BANDS.map(function(d){ return [params[d.liftKey],params[d.sizeKey],params[d.segKey],!!params[d.flipKey]].join(','); }).join('|')+'|'+GB_BANDS.map(function(d){ return gbTexts(d).join('\u0001'); }).join('|'); }
     function gbBuild(){
       if(!mwMono) return;
@@ -9601,15 +9601,20 @@ f 2469//2469 2470//2470 2434//2434
         var hBand=Math.min.apply(null,[hReq].concat(asp.map(function(r,i){ return Ltot/reps[i]/r; })));   // a tile that would be too long shrinks the type a little (every line fits)
         var tiles=texts.map(function(tx,i){ var H=Math.round(72*1.5); return gbTile(tx,def.font,def.track,Ltot/reps[i]/hBand*H); });
         var flip=!!params[def.flipKey];   // baseline flip: the text turned 180 degrees (upside down), still reading outward
-        var pos=[], uv=[], idx=[];
+        var pos=[], uv=[], uvB=[], idx=[];
         for(var j=0;j<=n;j++){ var pp=P[j%n], sU=cum[j]/Ltot;
-          pos.push(pp.x-ax.x*hBand/2,pp.y-ax.y*hBand/2,pp.z-ax.z*hBand/2, pp.x+ax.x*hBand/2,pp.y+ax.y*hBand/2,pp.z+ax.z*hBand/2); if(flip) uv.push(-sU,1,-sU,0); else uv.push(sU,0,sU,1); }
+          pos.push(pp.x-ax.x*hBand/2,pp.y-ax.y*hBand/2,pp.z-ax.z*hBand/2, pp.x+ax.x*hBand/2,pp.y+ax.y*hBand/2,pp.z+ax.z*hBand/2); if(flip){ uv.push(-sU,1,-sU,0); uvB.push(sU,1,sU,0); } else { uv.push(sU,0,sU,1); uvB.push(-sU,0,-sU,1); } }   // uvB: the inner face, u reversed so the text reads correctly (not mirrored) from inside the loop
         for(var q=0;q<n;q++){ var b0=q*2; idx.push(b0,b0+2,b0+1, b0+2,b0+3,b0+1); }   // counter-clockwise seen from outside (t x axis = outward normal)
         var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); geo.setIndex(idx);
         var maps=tiles.map(function(t,i){ var tx=new THREE.CanvasTexture(t.canvas); tx.wrapS=THREE.RepeatWrapping; tx.wrapT=THREE.ClampToEdgeWrapping; tx.repeat.set(reps[i],1); tx.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); return tx; });
         var mat=new THREE.MeshBasicMaterial({map:maps[0], color:_gbColor, transparent:true, opacity:0, depthWrite:false, side:THREE.FrontSide, fog:false, toneMapped:false});
         var mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=41; mesh.frustumCulled=false; group.add(mesh);
-        return { def:def, mesh:mesh, mat:mat, maps:maps, reps:reps, cur:0, scroll:0, colStr:'', flip:flip };
+        // inner face: the same ribbon seen from inside the loop (the far side of the ring, beyond the cube's silhouette), so the text is visible from every angle
+        var geoB=geo.clone(); geoB.setAttribute('uv',new THREE.Float32BufferAttribute(uvB,2));
+        var mapsB=maps.map(function(m){ var c=m.clone(); c.needsUpdate=true; return c; });
+        var matB=new THREE.MeshBasicMaterial({map:mapsB[0], color:_gbColor, transparent:true, opacity:0, depthWrite:false, side:THREE.BackSide, fog:false, toneMapped:false});
+        var meshB=new THREE.Mesh(geoB,matB); meshB.renderOrder=41; meshB.frustumCulled=false; group.add(meshB);
+        return { def:def, mesh:mesh, mat:mat, matB:matB, mapsB:mapsB, maps:maps, reps:reps, cur:0, scroll:0, colStr:'', flip:flip };
       });
       scene.add(group); gateBands={ group:group, box:box, bands:bands };
     }
@@ -9629,10 +9634,10 @@ f 2469//2469 2470//2470 2434//2434
         var a=0;
         if(_gOutAt) a=Math.max(0,1-(nowMs-_gOutAt)/outMs);
         else if(_gShown){ var u=(nowMs-_gOnAt-(params[bd.def.delayKey]||0))/inMs; u=Math.max(0,Math.min(1,u)); a=u*u*(3-2*u); }
-        bd.mat.opacity=a;
-        var col=params[bd.def.colorKey]||_gbColor; if(bd.colStr!==col){ bd.colStr=col; bd.mat.color.set(col); }   // '' = follow the theme's --holo
+        bd.mat.opacity=a; bd.matB.opacity=a;
+        var col=params[bd.def.colorKey]||_gbColor; if(bd.colStr!==col){ bd.colStr=col; bd.mat.color.set(col); bd.matB.color.set(col); }   // '' = follow the theme's --holo
         var step=rate*dt*bd.def.dir*(params[bd.def.revKey]?-1:1)*(bd.flip?-1:1);   // reverse toggle = the marquee runs the other way on screen, whatever the baseline flip
-        bd.scroll=(bd.scroll+step*bd.reps[bd.cur])%1e4; bd.maps[bd.cur].offset.x=bd.scroll;
+        bd.scroll=(bd.scroll+step*bd.reps[bd.cur])%1e4; bd.maps[bd.cur].offset.x=bd.scroll; bd.mapsB[bd.cur].offset.x=-bd.scroll;   // the inner face runs the other way in u, so the marquee moves the same way round the loop
       });
     }
     // The entry monogram's hover + click area: a circle around the mark (its projected centre and radius, set every frame by gateLayout), not the quad's box (whose empty corners used to count).
