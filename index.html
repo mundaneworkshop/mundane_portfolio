@@ -562,36 +562,7 @@
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
   body.mw-entrygate #labels, body.mw-entrygate #hint,
   body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
-  /* Entry gate text. Only transform + opacity animate (plus a mask on exit). Tunables (debug panel "Entry gate · text") arrive as custom properties on #gate:
-     --gate-tilt, --gate-persp, --gate-h1-y, --gate-crawl-b, --gate-in, --gate-out, --gate-rise, --gate-h1-delay, --gate-h2-delay, --gate-stagger, --gate-exit, --gate-h2-color, --gate-case, --gate-track.
-     Fonts: H1 = Chakra Petch (--display), H2 = Space Grotesk (--grotesk). */
-  #gate{position:absolute;inset:0;z-index:14;pointer-events:none;display:none;--gate-tilt:34deg;--gate-persp:520px;--gate-in:2000ms;--gate-out:600ms;--gate-fade:380ms;--gate-rise:46px;--gate-h1-y:23%;--gate-crawl-b:8%;--gate-h1-delay:0ms;--gate-h2-delay:1000ms;--gate-stagger:500ms;--gate-exit:240px;--gate-h2-color:var(--holo);--gate-case:uppercase;--gate-track:.14em}
-  body.mw-entrygate #gate{display:block}
-  /* The text is anchored to the WINDOW (--gate-h1-y / --gate-crawl-b, percentages of its height), not to the monogram; the camera can pan or zoom the mark under it. This soft circular mask
-     (the mark's projected centre and radius, set every frame by gateLayout) hides whatever the mark covers, so text passes BEHIND it: always on, and also what hides the exit crawl. */
-  #gate{-webkit-mask-image:radial-gradient(ellipse var(--gate-rx,160px) var(--gate-ry,160px) at var(--gate-cx,50%) var(--gate-cy,50%),transparent 0,transparent 72%,#000 100%);mask-image:radial-gradient(ellipse var(--gate-rx,160px) var(--gate-ry,160px) at var(--gate-cx,50%) var(--gate-cy,50%),transparent 0,transparent 72%,#000 100%)}
-  #gateTop{position:absolute;left:0;right:0;top:var(--gate-h1-y);transform:translateY(-100%);display:flex;justify-content:center;perspective:var(--gate-persp);perspective-origin:50% 100%}   /* the H1's exit crawl is on its own tilted plane, vanishing toward the monogram below it */
-  #gateTitle{display:flex;justify-content:center;transform-origin:50% 100%;font-family:var(--display);font-weight:600;font-size:clamp(18px,min(3.2vw,5.4vh),46px);line-height:1.1;letter-spacing:.34em;margin-right:-.34em;text-transform:uppercase;white-space:nowrap;color:var(--holo);text-shadow:0 0 18px var(--holo-edge);opacity:0;transform:translateY(calc(var(--gate-rise) * .4))}
-  #gateCrawl{position:absolute;left:0;right:0;bottom:var(--gate-crawl-b);display:flex;justify-content:center;perspective:var(--gate-persp);perspective-origin:50% 0}
-  .gate-plane{width:94vw;transform-origin:50% 0;transform:rotateX(var(--gate-tilt));display:flex;flex-direction:column;gap:.9em;text-align:center}
-  .gate-h2{font-family:var(--grotesk);font-weight:500;font-size:clamp(11px,min(2.2vw,3.4vh),31px);line-height:1.25;letter-spacing:var(--gate-track);text-transform:var(--gate-case);white-space:nowrap;color:var(--gate-h2-color);opacity:0;transform:translateY(var(--gate-rise))}
-  /* responsive: type scales with the smaller of the window's width and height (above); on a phone (< 700px wide) the H2 lines cannot fit one line at a readable size, so they wrap and get larger, and the H1 is sized to the width */
-  @media (max-width:699px){ .gate-h2{white-space:normal;text-wrap:balance;font-size:clamp(13px,3.8vw,20px)} #gateTitle{font-size:clamp(16px,5.4vw,30px)} }
-  @media (max-height:520px) and (orientation:landscape){ #gate{--gate-h1-y:20%;--gate-crawl-b:5%} }   /* a short landscape window (a phone on its side): tuck the text toward the edges */
-  /* fade up and in, staggered: H1 first (a beat after the camera settles on the monogram), then the H2 layer, its second line after its first */
-  body.mw-gate-on #gateTitle,body.mw-gate-on .gate-h2{opacity:1;transform:none;transition:opacity var(--gate-in) cubic-bezier(.45,0,.15,1) var(--gate-d,0ms),transform var(--gate-in) cubic-bezier(.16,1,.3,1) var(--gate-d,0ms)}   /* opacity: a gentle in-out S-curve (a slow, soft fade); the rise: expo-out (a long soft landing) */
-  body.mw-gate-on #gateTitle{--gate-d:var(--gate-h1-delay)}
-  body.mw-gate-on .gate-h2:nth-child(1){--gate-d:var(--gate-h2-delay)}
-  body.mw-gate-on .gate-h2:nth-child(2){--gate-d:calc(var(--gate-h2-delay) + var(--gate-stagger))}
-  /* click the monogram: everything fades up and out; the H2 lines travel far enough to pass BEHIND the monogram (a soft elliptical mask around it hides them there) */
-  /* click: both the H1 and the H2 lines crawl BEHIND the monogram on angled planes (the H2 up its plane, the H1 down a mirrored one, both receding toward the mark), with
-     opacity finishing in --gate-fade, well before they reach the middle of the mark; the transform runs the full --gate-out. */
-  body.mw-gate-out #gateTitle{opacity:0;transform:rotateX(calc(var(--gate-tilt) * -1)) translateY(var(--gate-h1-fly,120px));transition:opacity var(--gate-fade) cubic-bezier(.3,0,.6,1),transform var(--gate-out) cubic-bezier(.5,0,.85,.45)}
-  body.mw-gate-out .gate-h2{opacity:0;transform:translateY(calc(var(--gate-exit) * -1));transition:opacity var(--gate-fade) cubic-bezier(.3,0,.6,1),transform var(--gate-out) cubic-bezier(.5,0,.85,.45)}
-  @media (prefers-reduced-motion:reduce){
-    #gateTitle,.gate-h2,body.mw-gate-on #gateTitle,body.mw-gate-on .gate-h2,body.mw-gate-out #gateTitle,body.mw-gate-out .gate-h2{transform:none}   /* fade only, no travel */
-    body.mw-gate-on #gateTitle,body.mw-gate-on .gate-h2{--gate-d:0ms!important}
-  }
+  /* Entry gate text is no longer DOM: two 3D marquee bands float around the monogram cube (see "Entry gate bands" in the monogram script). */
 
   /* ── TOAST ── */
   #toast{position:absolute;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:30;opacity:0;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--holo);transition:.35s}
@@ -1003,21 +974,15 @@
       <div class="ctl"><label>Scatter <b id="vGxZoneScatter">0</b></label><input type="range" id="cGxZoneScatter" min="0" max="1" step="0.05"></div>
     <button class="resetbtn" id="gxZonePlay">▶ Replay section names</button>
     <div class="menudiv"></div>
-      <div class="ctl sec"><label>Entry gate · text (H1 above, H2 crawl below)</label></div>
-      <div class="ctl"><label>Crawl tilt (deg) <b id="vGateTilt">34</b></label><input type="range" id="cGateTilt" min="0" max="80" step="1" value="34"></div>
-      <div class="ctl"><label>Crawl perspective (px, lower = stronger) <b id="vGatePersp">520</b></label><input type="range" id="cGatePersp" min="120" max="1200" step="10" value="520"></div>
-      <div class="ctl"><label>H1 position: bottom edge, % of window height <b id="vGateH1Y">23</b></label><input type="range" id="cGateH1Y" min="5" max="45" step="1" value="23"></div>
-      <div class="ctl"><label>H2 crawl: distance from the bottom, % of window height <b id="vGateCrawlB">8</b></label><input type="range" id="cGateCrawlB" min="2" max="40" step="1" value="8"></div>
+      <div class="ctl sec"><label>Entry gate · text bands (H1 band + perpendicular H2 band, floating around the cube)</label></div>
+      <div class="ctl"><label>Float height above the cube faces (% of half-side) <b id="vGateLift">18</b></label><input type="range" id="cGateLift" min="4" max="60" step="1" value="18"></div>
+      <div class="ctl"><label>Band height (% of cube side) <b id="vGateBandH">16</b></label><input type="range" id="cGateBandH" min="6" max="40" step="1" value="16"></div>
+      <div class="ctl"><label>Scroll speed (% of a loop per second) <b id="vGateSpeed">6</b></label><input type="range" id="cGateSpeed" min="0" max="40" step="1" value="6"></div>
+      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateH2Alt" checked> H2 band alternates its two lines each loop</label></div>
       <div class="ctl"><label>Fade-in (ms) <b id="vGateIn">2000</b></label><input type="range" id="cGateIn" min="100" max="6000" step="50" value="2000"></div>
-      <div class="ctl"><label>Crawl-out travel on dock (ms) <b id="vGateOut">600</b></label><input type="range" id="cGateOut" min="100" max="3000" step="50" value="600"></div>
-      <div class="ctl"><label>Fade-out on dock (ms, finishes before the text reaches the mark) <b id="vGateFade">380</b></label><input type="range" id="cGateFade" min="50" max="3000" step="10" value="380"></div>
-      <div class="ctl"><label>Rise / exit travel (px) <b id="vGateRise">46</b></label><input type="range" id="cGateRise" min="0" max="160" step="2" value="46"></div>
-      <div class="ctl"><label>H1 delay after the camera settles (ms) <b id="vGateH1Delay">0</b></label><input type="range" id="cGateH1Delay" min="0" max="5000" step="50" value="0"></div>
-      <div class="ctl"><label>H2 layer delay after the settle (ms) <b id="vGateH2Delay">1000</b></label><input type="range" id="cGateH2Delay" min="0" max="6000" step="50" value="1000"></div>
-      <div class="ctl"><label>Second H2 line stagger (ms) <b id="vGateStagger">500</b></label><input type="range" id="cGateStagger" min="0" max="3000" step="50" value="500"></div>
-      <div class="ctl"><label>H2 colour <select id="cGateColor"><option value="white">white</option><option value="teal">teal</option><option value="amber">amber</option></select></label></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cGateCaps" checked> H2 all caps</label></div>
-      <div class="ctl"><label>H2 letter-spacing (0.01em) <b id="vGateTrack">14</b></label><input type="range" id="cGateTrack" min="0" max="40" step="1" value="14"></div>
+      <div class="ctl"><label>Fade-out on dock (ms) <b id="vGateFade">380</b></label><input type="range" id="cGateFade" min="50" max="3000" step="10" value="380"></div>
+      <div class="ctl"><label>H1 band delay after the camera settles (ms) <b id="vGateH1Delay">0</b></label><input type="range" id="cGateH1Delay" min="0" max="5000" step="50" value="0"></div>
+      <div class="ctl"><label>H2 band delay after the settle (ms) <b id="vGateH2Delay">1000</b></label><input type="range" id="cGateH2Delay" min="0" max="6000" step="50" value="1000"></div>
 
     <!-- ── Galaxy view ── -->
     <div class="dbg-ctx" id="dbg-galaxy">
@@ -1395,15 +1360,6 @@
   <!-- EDIT MODE: the global "Mesh Slots" panel was removed. Overrides are per-object
        now (✎ edit → click an object). Geometry builders/slot vars remain in JS. -->
   <div id="box-hover-label"></div>
-  <!-- Entry gate text: the H1 sits above the monogram (decodes Aurebesh → Latin on hover); two H2 lines sit below it on a tilted plane, the Star Wars crawl perspective.
-       Positioned from the monogram's on-screen box (gateLayout), faded in when the monogram appears, faded up and out when the dock starts. -->
-  <div id="gate">
-    <div id="gateTop"><h1 id="gateTitle">MUNDANE WORKSHOP</h1></div>
-    <div id="gateCrawl"><div class="gate-plane">
-      <h2 class="gate-h2">The creative practice of product designer Jason Hsin</h2>
-      <h2 class="gate-h2">Building delightful digital consumer experiences</h2>
-    </div></div>
-  </div>
   <div id="hint">drag to rotate · click a planet to travel</div>
   <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
   <div id="soundToggle" class="sw mw-sound-switch on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
@@ -1562,7 +1518,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateTilt:34,gatePersp:520,gateH1Y:23,gateCrawlB:8,gateIn:2000,gateOut:600,gateFade:380,gateRise:46,gateH1Delay:0,gateH2Delay:1000,gateStagger:500,gateTrack:14,gateCaps:true,gateColor:'teal', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateLift:18,gateBandH:16,gateSpeed:6,gateH2Alt:true, bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     // ══════ GLYPH DECODE (Aurebesh → Latin) ══════
     // One shared engine, three surfaces: the Latin marquee ring (canvas, on load + hover), planet labels (DOM, hover),
@@ -9562,45 +9518,117 @@ f 2469//2469 2470//2470 2434//2434
     // mwQuad. mwUpdate drives mwMount from the beam spot down to the emitter over DOCK_DUR — sliding its
     // orientation from spinning-on-a-corner down to a flat, grid-aligned rest (see mwUpdate) — then the
     // boot reveal cascades the rest of the galaxy in and hands the beam to the gatekeeper.
-    // Entry gate text layout: the H1 sits above the monogram's on-screen box and the H2 crawl below it, so they follow it at any viewport size or zoom.
-    // The text fades in (class mw-gate-on, staggered by CSS delays) once the camera has SETTLED on the monogram, i.e. its on-screen box has not moved for GATE_SETTLE frames.
-    // Click: startDock fades the text up and out (mw-gate-out; the H2 lines travel behind the monogram, hidden by an elliptical mask around it) while the monogram HOLDS for
-    // params.dockHold seconds; only then does the dock itself (beginDock, params.dockDur) run.
-    var _gP=new THREE.Vector3(), _gKey='', _gShown=false, _gSince=0, _gFirst=0, _gSnap=null, _gOnAt=0, _gDbg=null, GATE_SETTLE_MS=150, GATE_MAX_WAIT_MS=4000, GATE_STILL_PX=1.5, GATE_BOX_K=1, _dockAt=null;
-    // Called every frame the monogram renders in the entry phase (end of mwUpdate), with its world scale, camera distance and world centre. The layout and the settle test use the
-    // monogram's projected CENTRE and RADIUS, which only move with the camera and the intro; the quad's own screen box wobbles every frame as the mark spins on its corner,
-    // so it never looked "still" (the text then waited out the fallback timer, about 3 s, instead of following the settle by 1 s).
+    // Entry gate text = two 3D marquee BANDS that float around the monogram cube (replaces the old DOM H1 + two H2 crawl lines). Each band is a ribbon on a rounded-square loop in a plane through
+    // the cube's centre, standing off the four faces it crosses by params.gateLift, with scrolling text on the outside. The H1 band loops around the cube's Y axis, the H2 band around its X axis
+    // (perpendicular loops). The group rides _mwM (the same monogram-space -> world matrix the studio impostor uses), so the bands spin and tilt rigidly with the cube. The monogram is a flat
+    // impostor, so a colour-less box the size of the cube writes depth after it: the far half of each band is hidden behind the cube, the near half passes in front.
+    // The bands fade in once the camera has SETTLED on the monogram (the projected centre and radius have drifted < GATE_STILL_PX in GATE_SETTLE_MS); the H2 band starts params.gateH2Delay later.
+    // Click: startDock fades them out (params.gateFade) while the monogram HOLDS for params.dockHold seconds; only then does the dock itself (beginDock, params.dockDur) run.
+    var _gP=new THREE.Vector3(), _gShown=false, _gSince=0, _gFirst=0, _gSnap=null, _gOnAt=0, _gOutAt=0, _gDbg=null, GATE_SETTLE_MS=150, GATE_MAX_WAIT_MS=4000, GATE_STILL_PX=1.5, GATE_BOX_K=1, _dockAt=null;
+    var gateBands=null, _gbBuilding=false, _gbBuiltKey='', _gbT=0, GB_REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    var GB_BANDS=[   // axis = the loop's rotation axis in monogram space; texts alternate per loop when params.gateH2Alt; dir = scroll direction; delay/size key into params
+      { axis:'y', texts:['MUNDANE WORKSHOP'], font:'600 {S}px "Chakra Petch"', track:.34, dir:1, delayKey:'gateH1Delay', alpha:1, extra:0 },
+      { axis:'x', texts:['The creative practice of product designer Jason Hsin','Building delightful digital consumer experiences'], font:'500 {S}px "Space Grotesk"', track:.14, dir:-1, delayKey:'gateH2Delay', alpha:.92, extra:1 }
+    ];
+    var _gbColor='#AAF5EE';
+    function gbHolo(){ var c=getComputedStyle(document.documentElement).getPropertyValue('--holo').trim(); return c||'#AAF5EE'; }
+    _gbColor=gbHolo();
+    new MutationObserver(function(){ _gbColor=gbHolo(); if(gateBands) gateBands.bands.forEach(function(bd){ bd.mat.color.set(_gbColor); }); }).observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme','style']});   // theme switch re-tints the bands (the text is drawn white and tinted by the material colour)
+    // One marquee tile: the text, a gap, a small square separator, a gap. Returns {canvas, w, h} (px).
+    function gbTile(text,fontTpl,track){
+      var S=96, H=Math.round(S*1.5), cv=document.createElement('canvas'), x=cv.getContext('2d'), font=fontTpl.replace('{S}',S);
+      x.font=font; if('letterSpacing' in x) x.letterSpacing=(track*S)+'px';
+      text=text.toUpperCase(); var tw=Math.ceil(x.measureText(text).width), gap=Math.round(S*1.1), sq=Math.round(S*.26), W=tw+gap*2+sq;
+      cv.width=W; cv.height=H; x=cv.getContext('2d'); x.font=font; if('letterSpacing' in x) x.letterSpacing=(track*S)+'px';
+      x.fillStyle='#fff'; x.textBaseline='middle'; x.shadowColor='#fff'; x.shadowBlur=S*.12;
+      x.fillText(text,0,H/2+S*.04); x.shadowBlur=0; x.fillRect(tw+gap,(H-sq)/2,sq,sq);
+      return {canvas:cv,w:W,h:H};
+    }
+    // Rounded-square loop of half-side a and corner radius rc, as samples {p:[u,v], n:[nu,nv]} (n = outward normal), counter-clockwise, ~ds apart.
+    function gbLoop(a,rc,ds){
+      var st=a-rc, pts=[];
+      function line(x0,y0,x1,y1,nx,ny){ var n=Math.max(1,Math.round(Math.hypot(x1-x0,y1-y0)/ds)); for(var i=0;i<n;i++){ var t=i/n; pts.push({p:[x0+(x1-x0)*t,y0+(y1-y0)*t],n:[nx,ny]}); } }
+      function arc(cx,cy,a0){ var n=Math.max(2,Math.round(rc*Math.PI/2/ds)); for(var i=0;i<n;i++){ var an=a0+Math.PI/2*i/n; pts.push({p:[cx+Math.cos(an)*rc,cy+Math.sin(an)*rc],n:[Math.cos(an),Math.sin(an)]}); } }
+      line(a,-st,a,st,1,0); arc(st,st,0); line(st,a,-st,a,0,1); arc(-st,st,Math.PI/2); line(-a,st,-a,-st,-1,0); arc(-st,-st,Math.PI); line(-st,-a,st,-a,0,-1); arc(st,-st,Math.PI*1.5);
+      return pts;
+    }
+    function gbDispose(){ if(!gateBands) return; scene.remove(gateBands.group); gateBands.group.traverse(function(o){ if(o.geometry) o.geometry.dispose(); if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); } }); gateBands.bands.forEach(function(bd){ bd.maps.forEach(function(m){ m.dispose(); }); }); gateBands=null; }
+    function gbKey(){ return [params.gateLift,params.gateBandH,params.gateH2Alt].join('|'); }
+    function gbBuild(){
+      if(!mwMono) return;
+      gbDispose(); _gbBuiltKey=gbKey();
+      var h=mwMono.radius/Math.sqrt(3), lift0=h*(params.gateLift/100), bandH=2*h*(params.gateBandH/100);   // h = the cube's half-side in monogram units (its bounding sphere is the cube's circumsphere)
+      var group=new THREE.Group(); group.matrixAutoUpdate=false; group.visible=false;
+      var box=new THREE.Mesh(new THREE.BoxGeometry(2*h,2*h,2*h), new THREE.MeshBasicMaterial({colorWrite:false, depthWrite:true, transparent:true, fog:false})); box.renderOrder=40; box.frustumCulled=false; group.add(box);
+      var bands=GB_BANDS.map(function(def){
+        var lift=lift0+def.extra*bandH*.7, a=h+lift, rc=Math.max(lift*2,bandH*.5), samples=gbLoop(a,rc,Math.max(.05,h*.05));
+        var ax=new THREE.Vector3(def.axis==='x'?1:0,def.axis==='y'?1:0,def.axis==='z'?1:0);
+        // 2D (u,v) -> 3D in the plane normal to the axis
+        function to3(u,v){ return def.axis==='x'?new THREE.Vector3(0,u,v):def.axis==='y'?new THREE.Vector3(v,0,u):new THREE.Vector3(u,v,0); }
+        var P=samples.map(function(s){ return to3(s.p[0],s.p[1]); }), N=samples.map(function(s){ return to3(s.n[0],s.n[1]); }), n=P.length;
+        // text must read left->right for a viewer outside the face with the band axis as "up": the travel direction t has to be axis x normal. Reverse the loop if it runs the other way.
+        var t0=P[1].clone().sub(P[0]);
+        if(t0.dot(new THREE.Vector3().crossVectors(ax,N[0]))<0){ P.reverse(); N.reverse(); }
+        var cum=[0]; for(var i=1;i<=n;i++) cum.push(cum[i-1]+P[i%n].distanceTo(P[i-1]));
+        var Ltot=cum[n];
+        // each text is one tile repeated an integer number of times round the loop (so the marquee wraps seamlessly); the band height follows the tile aspect (smallest wins, so every line fits)
+        var tiles=def.texts.map(function(tx){ return gbTile(tx,def.font,def.track); }), asp=tiles.map(function(t){ return t.w/t.h; });
+        var reps=asp.map(function(r){ return Math.max(1,Math.round(Ltot/(r*bandH))); });
+        var hBand=Math.min.apply(null,asp.map(function(r,i){ return Ltot/(reps[i]*r); }));
+        var pos=[], uv=[], idx=[];
+        for(var j=0;j<=n;j++){ var p=P[j%n], sU=cum[j]/Ltot;
+          pos.push(p.x-ax.x*hBand/2,p.y-ax.y*hBand/2,p.z-ax.z*hBand/2, p.x+ax.x*hBand/2,p.y+ax.y*hBand/2,p.z+ax.z*hBand/2); uv.push(sU,0,sU,1); }
+        for(var q=0;q<n;q++){ var b0=q*2; idx.push(b0,b0+2,b0+1, b0+2,b0+3,b0+1); }   // counter-clockwise seen from outside (t x axis = outward normal)
+        var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); geo.setIndex(idx);
+        var maps=tiles.map(function(t,i){ var tx=new THREE.CanvasTexture(t.canvas); tx.wrapS=THREE.RepeatWrapping; tx.wrapT=THREE.ClampToEdgeWrapping; tx.repeat.set(reps[i],1); tx.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); return tx; });
+        var mat=new THREE.MeshBasicMaterial({map:maps[0], color:_gbColor, transparent:true, opacity:0, depthWrite:false, side:THREE.FrontSide, fog:false, toneMapped:false});
+        var mesh=new THREE.Mesh(geo,mat); mesh.renderOrder=41; mesh.frustumCulled=false; group.add(mesh);
+        return { def:def, mesh:mesh, mat:mat, maps:maps, reps:reps, cur:0, scroll:0, loops:0, alpha:def.alpha };
+      });
+      scene.add(group); gateBands={ group:group, box:box, bands:bands };
+    }
+    // Per frame in the entry phase (end of mwUpdate): build lazily (needs the monogram + the fonts), ride the cube's matrix, fade, scroll.
+    function gateBandsFrame(M){
+      var nowMs=performance.now(), dt=Math.min(.1,Math.max(0,(nowMs-_gbT)/1000)); _gbT=nowMs;
+      if(!gateBands||window.__gateRebuild||_gbBuiltKey!==gbKey()){
+        if(_gbBuilding) return; window.__gateRebuild=false; _gbBuilding=true;
+        var f=document.fonts&&document.fonts.load?Promise.all([document.fonts.load('600 96px "Chakra Petch"','MUNDANE'),document.fonts.load('500 96px "Space Grotesk"','Jason')]):Promise.resolve();
+        f.catch(function(){}).then(function(){ _gbBuilding=false; try{ gbBuild(); }catch(e){ console.error('[gate bands] build failed',e); gateBands=null; _gbBuiltKey=gbKey(); } });
+        return;
+      }
+      gateBands.group.matrix.copy(M); gateBands.group.matrixWorldNeedsUpdate=true; gateBands.group.visible=true;
+      var inMs=Math.max(1,params.gateIn!=null?params.gateIn:2000), outMs=Math.max(1,params.gateFade!=null?params.gateFade:380);
+      var rate=GB_REDUCED?0:(params.gateSpeed!=null?params.gateSpeed:6)/100;   // loops per second
+      gateBands.bands.forEach(function(bd){
+        var a=0;
+        if(_gOutAt) a=Math.max(0,1-(nowMs-_gOutAt)/outMs);
+        else if(_gShown){ var u=(nowMs-_gOnAt-(params[bd.def.delayKey]||0))/inMs; u=Math.max(0,Math.min(1,u)); a=u*u*(3-2*u); }
+        bd.mat.opacity=a*bd.alpha;
+        var step=rate*dt*bd.def.dir; bd.loops+=Math.abs(step);
+        bd.scroll=(bd.scroll+step*bd.reps[bd.cur])%1e4; bd.maps[bd.cur].offset.x=bd.scroll;
+        if(bd.maps.length>1&&params.gateH2Alt!==false&&!GB_REDUCED&&bd.loops>=1){ bd.loops-=1; bd.cur=(bd.cur+1)%bd.maps.length; bd.mat.map=bd.maps[bd.cur]; bd.mat.needsUpdate=true; bd.maps[bd.cur].offset.x=bd.scroll; }
+      });
+    }
     // The entry monogram's hover + click area: a circle around the mark (its projected centre and radius, set every frame by gateLayout), not the quad's box (whose empty corners used to count).
     function overMonogram(e){ if(!_mwHit) return false; var mx=(e?e.clientX:(mouse.x+1)/2*W)-_mwHit.cx, my=(e?e.clientY:(1-mouse.y)/2*H)-_mwHit.cy, r=_mwHit.R*.92; return mx*mx+my*my<=r*r; }   // e (a pointer event) when given: the canvas handler runs before the window handler that updates `mouse`
-    window.addEventListener('resize',function(){ window.__gateDirty=true; });   // recompute the exit distances for the new window size
+    // Called every frame the monogram renders in the entry phase (end of mwUpdate), with its world scale, camera distance and world centre. The hit circle and the settle test use the
+    // monogram's projected CENTRE and RADIUS, which only move with the camera and the intro; the quad's own screen box wobbles every frame as the mark spins on its corner,
+    // so it never looked "still" (the bands then waited out the fallback timer, about 3 s, instead of following the settle by ~0.15 s).
     function gateLayout(sW,dist,c){
       if(mwPhase!=='entry') return;
-      var g=document.getElementById('gate'); if(!g) return;
       _gP.copy(c).project(camera); if(_gP.z>1) return;
       var cx=(_gP.x+1)/2*W, cy=(1-_gP.y)/2*H, R=(mwMono.radius*sW/dist)/Math.tan(camera.fov*Math.PI/360)*(H/2)*GATE_BOX_K, nowMs=performance.now();
       _gDbg={cx:Math.round(cx),cy:Math.round(cy),R:Math.round(R),W:W,H:H}; _mwHit={cx:cx,cy:cy,R:R};
       if(!(R>20)){ _gSince=nowMs; return; }   // not a real size yet
       if(!_gFirst) _gFirst=nowMs;
-      var t=cy-R, b=cy+R, l=cx-R, r=cx+R;
-      var k=Math.round(t)+'|'+Math.round(b)+'|'+Math.round(l)+'|'+Math.round(r);
-      if(k!==_gKey||window.__gateDirty){ _gKey=k; window.__gateDirty=false;
-        var tilt=(params.gateTilt||34)*Math.PI/180, st=g.style.setProperty.bind(g.style);
-        st('--gate-cx',Math.round(cx)+'px'); st('--gate-cy',Math.round(cy)+'px'); st('--gate-rx',Math.round(R*.95)+'px'); st('--gate-ry',Math.round(R*.95)+'px');   // the mask the text slides behind
-        // exit distances come from the REAL layout (the text is anchored to the window, so they depend on where the mark is relative to it): the H1 flies down from its centre to the
-        // mark's centre, the H2 lines crawl up from the top of the crawl to it; each is divided by cos(tilt) because the plane is foreshortened
-        var gt=document.getElementById('gateTop'), gcr=document.getElementById('gateCrawl'), h1=document.getElementById('gateTitle'), cosT=Math.max(.25,Math.cos(tilt));
-        var h1c=(gt?gt.offsetTop:0)-(h1?h1.offsetHeight:40)/2, crawlTop=gcr?gcr.offsetTop:H*.77;   // #gateTop sits with its bottom edge at its CSS top; the crawl is bottom-anchored
-        st('--gate-h1-fly',Math.round(Math.max(0,cy-h1c)/cosT)+'px');
-        st('--gate-exit',Math.round(Math.max(0,crawlTop+24-cy)/cosT)+'px');
-      }
       // settle: the centre and radius have drifted less than GATE_STILL_PX from where they were GATE_SETTLE_MS ago (a slow easing tail counts as still)
       if(!_gSnap||Math.abs(cx-_gSnap.cx)>=GATE_STILL_PX||Math.abs(cy-_gSnap.cy)>=GATE_STILL_PX||Math.abs(R-_gSnap.R)>=GATE_STILL_PX){ _gSnap={cx:cx,cy:cy,R:R}; _gSince=nowMs; }
-      if(!_gShown&&(nowMs-_gSince>=GATE_SETTLE_MS||nowMs-_gFirst>=GATE_MAX_WAIT_MS)){ _gShown=true; document.body.classList.add('mw-gate-on'); _gOnAt=nowMs; }
+      if(!_gShown&&(nowMs-_gSince>=GATE_SETTLE_MS||nowMs-_gFirst>=GATE_MAX_WAIT_MS)){ _gShown=true; _gOnAt=nowMs; }
     }
-    window.__mwGate=function(){ return { hover:mwHover, hk:+mwHoverK.toFixed(2), hit:_mwHit&&{cx:Math.round(_mwHit.cx),cy:Math.round(_mwHit.cy),R:Math.round(_mwHit.R)}, qo:(mwQuad&&mwQuad.material?+mwQuad.material.opacity.toFixed(2):null), dbg:_gDbg, shown:_gShown, stillForMs:Math.round(performance.now()-_gSince), onAtMs:Math.round(_gOnAt), key:_gKey, phase:mwPhase, quadVisible:!!(mwQuad&&mwQuad.visible), dockAt:_dockAt }; };   // dev/test helper
+    window.__mwGate=function(){ return { hover:mwHover, hk:+mwHoverK.toFixed(2), hit:_mwHit&&{cx:Math.round(_mwHit.cx),cy:Math.round(_mwHit.cy),R:Math.round(_mwHit.R)}, qo:(mwQuad&&mwQuad.material?+mwQuad.material.opacity.toFixed(2):null), dbg:_gDbg, shown:_gShown, stillForMs:Math.round(performance.now()-_gSince), onAtMs:Math.round(_gOnAt), bands:!!gateBands, phase:mwPhase, quadVisible:!!(mwQuad&&mwQuad.visible), dockAt:_dockAt }; };   // dev/test helper
     function startDock(){
       if(mwPhase!=='entry'||_dockAt!=null) return;
-      _gShown=true; document.body.classList.remove('mw-gate-on'); document.body.classList.add('mw-gate-out');   // all gate text fades up and out (CSS, --gate-out)
+      _gShown=true; _gOutAt=performance.now();   // the gate bands fade out (params.gateFade) while the monogram holds
       if(window.MWAudio){ MWAudio.uiReady(); if(!MWAudio.site('gateClick')) MWAudio.ui('click'); MWAudio.site('dockClick'); MWAudio.gateStop(); }   // the monogram click plays SITE_EVENTS.gateClick clips, or the site's default UI 'click' when there are none; dockClick is an extra layer; the gate's idle loop fades out as the dock starts
       _dockAt=clock.getElapsedTime()+(params.dockHold!=null?params.dockHold:0.7);   // the monogram holds (still spinning) until the text has gone, then beginDock runs from mwUpdate
     }
@@ -9655,6 +9683,7 @@ f 2469//2469 2470//2470 2434//2434
       // its bounding cube used to clip through it. (Skipping the render also saves the studio pass.)
       if(mwQuad) mwQuad.visible=live && galaxy.visible && fadeK>0.03;
       emitter.visible=docked && !live; spark.visible=docked && !live;   // plain teal base = fallback when the monogram is off/loading
+      if(gateBands&&(mwPhase!=='entry'||!mwQuad||!mwQuad.visible)) gateBands.group.visible=false;
       if(!mwQuad || !mwQuad.visible) return;
       // monogram units → mount-local → world
       var k=MW_DIAM/(2*mwMono.radius)*(params.mwScale!=null?params.mwScale:1.4)*sizeMul;
@@ -9705,7 +9734,7 @@ f 2469//2469 2470//2470 2434//2434
       mwQuad.up.set(worldUpX,worldUpY,worldUpZ); mwQuad.lookAt(_mwCam);
       if(!docked) mwQuad.material.opacity=fadeK*introK*(1-mwHoverK*_hf*(.5+.5*Math.sin(_tNow*61)*Math.sin(_tNow*23)));   // faint holo flicker while hovered
       mwGlowU.value=(mwPhase==='entry')?mwHoverK*_hg*(.85+.15*Math.sin(_tNow*7)):0;
-      if(mwPhase==='entry') gateLayout(sW,dist,_mwC);
+      if(mwPhase==='entry'){ gateLayout(sW,dist,_mwC); gateBandsFrame(_mwM); }
     }
 
     // ---------- emitter on plate + beam ----------
@@ -13833,21 +13862,17 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateTilt:34,gatePersp:520,gateH1Y:23,gateCrawlB:8,gateIn:2000,gateOut:600,gateFade:380,gateRise:46,gateH1Delay:0,gateH2Delay:1000,gateStagger:500,gateTrack:14,gateCaps:true,gateColor:'teal',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:0.45,mwHoverFlicker:0.08,gateIn:2000,gateFade:380,gateH1Delay:0,gateH2Delay:1000,gateLift:18,gateBandH:16,gateSpeed:6,gateH2Alt:true,bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     Object.assign(DEFAULTS,GX_DEFAULTS);   // glyph-decode params reset / export-diff like everything else
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
-    // Entry gate text tunables -> custom properties on #gate (CSS reads them)
-    var GATE_CTLS=[['gateTilt','Tilt',0,'deg'],['gatePersp','Persp',0,'px'],['gateH1Y','H1Y',0,'%'],['gateCrawlB','CrawlB',0,'%'],['gateIn','In',0,'ms'],['gateOut','Out',0,'ms'],['gateFade','Fade',0,'ms'],['gateRise','Rise',0,'px'],['gateH1Delay','H1Delay',0,'ms'],['gateH2Delay','H2Delay',0,'ms'],['gateStagger','Stagger',0,'ms'],['gateTrack','Track',0,'']];
-    function applyGate(){ var g=document.getElementById('gate'); if(!g) return; var sv=function(n,v){ g.style.setProperty(n,v); };
-      sv('--gate-tilt',params.gateTilt+'deg'); sv('--gate-persp',params.gatePersp+'px'); sv('--gate-h1-y',params.gateH1Y+'%'); sv('--gate-crawl-b',params.gateCrawlB+'%'); sv('--gate-in',params.gateIn+'ms'); sv('--gate-out',params.gateOut+'ms'); sv('--gate-fade',params.gateFade+'ms'); sv('--gate-rise',params.gateRise+'px');
-      sv('--gate-h1-delay',params.gateH1Delay+'ms'); sv('--gate-h2-delay',params.gateH2Delay+'ms'); sv('--gate-stagger',params.gateStagger+'ms');
-      sv('--gate-track',(params.gateTrack/100)+'em'); sv('--gate-case',params.gateCaps===false?'none':'uppercase'); sv('--gate-h2-color',params.gateColor==='white'?'var(--text)':params.gateColor==='amber'?'var(--amber)':'var(--holo)');
-      var gcSel=document.getElementById('cGateColor'); if(gcSel) gcSel.value=params.gateColor||'teal'; var gcCap=document.getElementById('cGateCaps'); if(gcCap) gcCap.checked=params.gateCaps!==false;
-      window.__gateDirty=true;   // the exit travel depends on tilt and gap: recompute on the next frame
-      GATE_CTLS.forEach(function(c){ var el=document.getElementById('c'+c[0].charAt(0).toUpperCase()+c[0].slice(1)); if(el){ el.value=params[c[0]]; document.getElementById('v'+c[0].charAt(0).toUpperCase()+c[0].slice(1)).textContent=params[c[0]]; } }); }
-    GATE_CTLS.forEach(function(c){ var id='c'+c[0].charAt(0).toUpperCase()+c[0].slice(1); bind(id,'v'+c[0].charAt(0).toUpperCase()+c[0].slice(1),function(v){ params[c[0]]=v; applyGate(); },0); });
-    (function(){ var gc=document.getElementById('cGateColor'); if(gc) gc.addEventListener('change',function(){ params.gateColor=this.value; applyGate(); });
-      var gk=document.getElementById('cGateCaps'); if(gk) gk.addEventListener('change',function(){ params.gateCaps=this.checked; applyGate(); }); })();
+    // Entry gate band tunables: sync the sliders; lift / height rebuild the band geometry (gateBandsFrame), the rest are read live
+    var GATE_CTLS=['gateLift','gateBandH','gateSpeed','gateIn','gateFade','gateH1Delay','gateH2Delay'];
+    function applyGate(){
+      GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1), el=document.getElementById('c'+K); if(el){ el.value=params[k]; document.getElementById('v'+K).textContent=params[k]; } });
+      var ha=document.getElementById('cGateH2Alt'); if(ha) ha.checked=params.gateH2Alt!==false;
+      window.__gateRebuild=true; }
+    GATE_CTLS.forEach(function(k){ var K=k.charAt(0).toUpperCase()+k.slice(1); bind('c'+K,'v'+K,function(v){ params[k]=v; applyGate(); },0); });
+    (function(){ var ha=document.getElementById('cGateH2Alt'); if(ha) ha.addEventListener('change',function(){ params.gateH2Alt=this.checked; }); })();
     function applyGxCtls(){ ['Ring','Lbl','Btn','Zone'].forEach(function(K){ var pre='gx'+K, on=document.getElementById('cGx'+K+'On'); if(on) on.checked=!!params[pre+'On'];
         ['Dur','Delay','Tick','Scatter'].forEach(function(sp){ var el=document.getElementById('cGx'+K+sp); if(!el) return; var v=params[pre+sp]; el.value=v; document.getElementById('vGx'+K+sp).textContent=(sp==='Scatter'?(+v).toFixed(2):v); }); });
       var h=document.getElementById('cGxRingHover'); if(h) h.checked=params.gxRingHover!==false; }
