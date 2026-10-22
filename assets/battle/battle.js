@@ -84,9 +84,9 @@ var DEFAULTS={
   scaleFighter:.5, scaleSupport:1, scaleCapital:1, scaleBase:1, scaleHero:1.6, scaleKit:1,
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
-  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, dsDim:.45, clear:1, darkLift:.6,
+  lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:-35, sunEl:35, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
   kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
-  planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:.4, sunAuto:true,   /* backdrop planet: radius (battle units), direction from the planet's centre to the Death Star (screen angle, tilt toward the camera), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunAuto = the sun sits opposite the planet */
+  planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:.4, dsAng:70, dsTilt:-40, sunStar:true, sunAuto:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAuto = the light sits opposite the planet */
   counts:{}, ver:10
 };
 MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
@@ -108,7 +108,7 @@ var keys={}, fireHeld=false;
 var uiEl=null, hudEl=null, vigEl=null, panelEl=null, styleEl=null, listeners=[];
 var BOLT_COL=[0x39ff5a /*imp green*/, 0xff2a2a /*reb red*/, 0xffe14a /*hero yellow*/];
 var CX=0, CY=0, CZ=0;   // battle centre in G's local frame = the monogram's entry spot (G sits there, oriented to the entry camera: +x right, +y up, +z toward the viewer)
-var baseQ=null, _ryQ=null;
+var baseQ=null, _ryQ=null, rot0=0, rot0T=0;   // rot0 = the galaxy rotation the battle is measured from: the angle when the arcade opened, re-zeroed (eased) when a game starts, so each game opens on the designed framing
 var L=4.3;              // entry-camera distance to the centre
 
 var _v1, _v2, _v3, _v4, _ray, _plane, _q, _zero, _up;
@@ -408,15 +408,35 @@ var PLANETS=['desert_tan','ice_white','jungle_craters','ocean_blue','swamp_green
 var PL=null, planet=null, planetMats=[], planetState=0;   // PL = layout; planetState 0 = not requested, 1 = loading, 2 = ready, 3 = failed
 function layoutPlanet(){
   var cp=new T.Vector3(0,0,L), a=anchorWorld(-.42,.36,-11,new T.Vector3()), v=a.clone().sub(cp), d0=v.length(); v.normalize();
-  var Dn=80, D0=cp.clone().addScaledVector(v,Dn), dsK=Dn/d0, dsR=1.4*P.scale*P.scaleBase*dsK;   // the Death Star's classic spot, its scale factor and (model size 2.8 / 2) its radius
-  var ang=P.planetAng*Math.PI/180, tl=P.planetTilt*Math.PI/180, R=P.planetR;
-  var u=new T.Vector3(Math.cos(ang)*Math.cos(tl),Math.sin(ang)*Math.cos(tl),Math.sin(tl));   // planet centre → Death Star
-  var Pc=D0.clone().addScaledVector(u,-(R+dsR*(1+P.planetAlt)));
-  // sun: opposite the planet. Its azimuth mirrors the planet's (at least 40° off the camera axis so there is real shading), its elevation lifts above the battle.
+  var Dn=80, D0=cp.clone().addScaledVector(v,Dn), dsK0=Dn/d0;   // the Death Star's classic spot and its scale factor (apparent size = model size / d0 at any distance)
+  var R=P.planetR, alt=1+P.planetAlt, dsR0=1.4*P.scale*P.scaleBase*dsK0;   // model size 2.8 / 2 = radius 1.4
+  // planet: placed relative to the classic spot (planetAng = screen direction from the planet's centre to that spot, planetTilt = toward the camera)
+  var ang=P.planetAng*Math.PI/180, tl=P.planetTilt*Math.PI/180;
+  var u=new T.Vector3(Math.cos(ang)*Math.cos(tl),Math.sin(ang)*Math.cos(tl),Math.sin(tl));
+  var Pc=D0.clone().addScaledVector(u,-(R+dsR0*alt));
+  // Death Star: in low orbit round the planet, BEHIND it from the camera (dsTilt < 0), so its dish (which faces the planet) turns toward us: a 3/4 front view.
+  // It is farther from the camera than the classic spot, so it is rescaled by the distance ratio to keep the same apparent size (a few passes: orbit height depends on its size).
+  var da=P.dsAng*Math.PI/180, dt=P.dsTilt*Math.PI/180, w=new T.Vector3(Math.cos(da)*Math.cos(dt),Math.sin(da)*Math.cos(dt),Math.sin(dt));
+  var dsK=dsK0, D=D0.clone(), dsR=dsR0;
+  for(var i=0;i<4;i++){ dsR=1.4*P.scale*P.scaleBase*dsK; D.copy(Pc).addScaledVector(w,R+dsR*alt); dsK=D.distanceTo(cp)/d0; }
+  // sun: opposite the planet. Light: azimuth mirrors the planet's (at least 40° off the camera axis so there is real shading), elevation lifts above the battle.
   var dp=Pc.clone().sub(new T.Vector3(CX,CY,CZ)).normalize(), azP=Math.atan2(dp.x,dp.z), elP=Math.asin(clamp(dp.y,-1,1));
   var az=azP+Math.PI; if(az>Math.PI) az-=2*Math.PI; var sg=az<0?-1:1; az=sg*Math.max(Math.abs(az),40*Math.PI/180);
   var el=clamp(-elP+20*Math.PI/180,30*Math.PI/180,55*Math.PI/180);
-  PL={ D0:D0, dsK:dsK, dsR:dsR, Pc:Pc, R:R, sunAz:az*180/Math.PI, sunEl:el*180/Math.PI };
+  // the visible star: on the far side of the sky from the planet (opposite it through the middle of the frame), far behind the battle, in the battle's own frame
+  var hz=Pc.z>-1?1:halfW(Pc.z), hv=Pc.z>-1?1:halfH(Pc.z), nx=clamp(-(Pc.x/hz)*.8,-.7,.7), ny=clamp(-((Pc.y-CY)/hv)*.6,-.5,.5);
+  if(Math.abs(nx)<.35) nx=nx<0?-.35:.35;
+  PL={ D0:D, dsK:dsK, dsR:dsR, Pc:Pc, R:R, sunAz:az*180/Math.PI, sunEl:el*180/Math.PI, starPos:anchorWorld(nx,ny,-SUN_DIST,new T.Vector3()) };
+}
+var SUN_DIST=150;   // how far behind the battle the visible star sits (battle units; camera.far is raised to reach it)
+var sunObj=null;
+function makeSun(){   // a hot white core with a warm glow and a faint halo: additive sprites, no fog, far behind everything
+  var c=document.createElement('canvas'); c.width=c.height=128; var g=c.getContext('2d'), gr=g.createRadialGradient(64,64,0,64,64,64);
+  gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(.12,'rgba(255,252,235,1)'); gr.addColorStop(.28,'rgba(255,226,160,.55)'); gr.addColorStop(.6,'rgba(255,190,110,.14)'); gr.addColorStop(1,'rgba(255,170,90,0)');
+  g.fillStyle=gr; g.fillRect(0,0,128,128);
+  var tex=new T.CanvasTexture(c); sunObj=new T.Group(); sunObj.name='mw-sun';
+  [[26,1],[56,.2]].forEach(function(r){ var sp=new T.Sprite(new T.SpriteMaterial({map:tex,blending:T.AdditiveBlending,depthWrite:false,fog:false,transparent:true,opacity:r[1]})); sp.scale.set(r[0],r[0],1); sunObj.add(sp); });
+  sunObj.position.copy(PL.starPos); sunObj.visible=P.sunStar; G.add(sunObj);
 }
 function pickPlanet(){
   var last=null; try{ last=sessionStorage.getItem('mw_planet'); }catch(e){}
@@ -440,7 +460,7 @@ function loadPlanet(){
 }
 function updPlanet(dt){ if(!planet) return; planet.visible=P.planetOn; planet.userData.spin.rotation.y+=dt*P.planetSpin*Math.PI/180; }
 function relayoutPlanet(){   // debug sliders: move the planet, re-seat the Death Star in its orbit, re-aim the sun
-  layoutPlanet(); if(planet){ planet.position.copy(PL.Pc); planet.scale.setScalar(PL.R); }
+  layoutPlanet(); if(planet){ planet.position.copy(PL.Pc); planet.scale.setScalar(PL.R); } if(sunObj){ sunObj.position.copy(PL.starPos); sunObj.visible=P.sunStar; }
   ships.forEach(function(s){ if(s.cls==='base'&&s.hasA){ s.pos.copy(PL.D0); s.dsK=PL.dsK; } });
   applyLook();
 }
@@ -886,7 +906,7 @@ var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
 function reticleDom(playing){ if(!ctx||!ctx.dom) return; if(playing&&window.MWReticle){ ctx.dom.setAttribute('data-mw-reticle','arcade'); ctx.dom.style.cursor='none'; } else { ctx.dom.removeAttribute('data-mw-reticle'); ctx.dom.style.cursor=''; } }   // data-mw-reticle: the site-wide reticle (index.html) steps aside over the canvas while the arcade reticle is up
-function setStage(st){ if(stage===st) return; stage=st; reticleDom(st==='play'); if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
+function setStage(st){ if(stage===st) return; stage=st; if(st==='play'&&ctx&&ctx.getRot) rot0T=ctx.getRot(); reticleDom(st==='play'); if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
 function playHero(){ spawnHero(HEROES[carIdx]); }
 function spawnHero(id){
@@ -1196,7 +1216,8 @@ function update(t){
   if(window.MWAudio&&active&&stage==='play'&&ctx&&ctx.getRot) MWAudio.setYaw(ctx.getRot()-audioRot0);   // camera orbit swings the gameplay ambience's soundstage
   if(!active||dead) return;
   var dt=lastT==null?0.016:Math.min(.05,Math.max(0,t-lastT)); lastT=t; clockT+=dt;
-  if(ctx.getRot){ if(!_ryQ) _ryQ=new T.Quaternion(); _ryQ.setFromAxisAngle(_up,ctx.getRot()); G.quaternion.copy(_ryQ).multiply(baseQ); }   // the whole battle turns with the horizontal drag-orbit
+  if(rot0!==rot0T){ rot0+=(rot0T-rot0)*(1-Math.exp(-dt*3.5)); if(Math.abs(rot0T-rot0)<.002) rot0=rot0T; }   // ease the re-zero
+  if(ctx.getRot){ if(!_ryQ) _ryQ=new T.Quaternion(); _ryQ.setFromAxisAngle(_up,ctx.getRot()-rot0); G.quaternion.copy(_ryQ).multiply(baseQ); }   // the whole battle turns with the horizontal drag-orbit, relative to the angle the galaxy had when the arcade opened, so every game starts on the designed framing (planet, Death Star and sun in place)
   G.updateMatrixWorld(true);
   G.visible=P.on;
   if(!P.on&&!hyper) return;
@@ -1393,8 +1414,9 @@ function buildPanel(){
   });
   var pd=document.createElement('details'); pd.innerHTML='<summary>Planet · Death Star orbit · sun</summary>'; panelEl.appendChild(pd);
   check(pd,'Backdrop planet',function(){ return P.planetOn; },function(x){ P.planetOn=x; if(x&&!planetState) loadPlanet(); if(planet) planet.visible=x; });
-  check(pd,'Sun opposite the planet (off = use the sun sliders above)',function(){ return P.sunAuto; },function(x){ P.sunAuto=x; applyLook(); envSoon(); });
-  [['planetR','Planet radius',8,60,1,0,1],['planetAng','Death Star direction from planet centre \u00b0 (0 right, 90 up)',-180,180,5,0,1],['planetTilt','...tilt toward the camera \u00b0',-45,80,5,0,1],['planetAlt','Orbit height (Death Star radii above the surface)',0,4,.1,1,1],['planetBright','Planet brightness',.2,2,.05,2,0],['planetSpin','Planet spin \u00b0/s',0,6,.1,1,0]].forEach(function(r){
+  check(pd,'Visible sun (a star far off, opposite the planet)',function(){ return P.sunStar; },function(x){ P.sunStar=x; if(sunObj) sunObj.visible=x; });
+  check(pd,'Light the scene from opposite the planet (off = use the sun sliders above)',function(){ return P.sunAuto; },function(x){ P.sunAuto=x; applyLook(); envSoon(); });
+  [['planetR','Planet radius',8,60,1,0,1],['planetAng','Death Star direction from planet centre \u00b0 (0 right, 90 up)',-180,180,5,0,1],['planetTilt','...tilt toward the camera \u00b0',-45,80,5,0,1],['dsAng','Death Star: direction from the planet \u00b0 (0 right, 90 up)',-180,180,5,0,1],['dsTilt','...tilt \u00b0 (negative = behind the planet, dish faces us)',-80,60,5,0,1],['planetAlt','Orbit height (Death Star radii above the surface)',0,4,.1,1,1],['planetBright','Planet brightness',.2,2,.05,2,0],['planetSpin','Planet spin \u00b0/s',0,6,.1,1,0]].forEach(function(r){
     slider(pd,r[1],function(){ return P[r[0]]; },function(x){ P[r[0]]=x; if(r[6]){ relayoutPlanet(); envSoon(); } else applyLook(); },r[2],r[3],r[4],r[5]);
   });
   check(panelEl,'Death Star (only ever one)',function(){ return P.deathStar; },function(x){ P.deathStar=x; reconT=0; });
@@ -1431,7 +1453,7 @@ function makeBolts(){
 function resetState(){
   ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; failed={}; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
-  debris=[]; timers=[]; introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; PL=null; planet=null; planetMats=[]; planetState=0; sess++;
+  debris=[]; timers=[]; introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; PL=null; planet=null; sunObj=null; planetMats=[]; planetState=0; sess++;
 }
 var MWBattle={
   init:function(c){
@@ -1443,13 +1465,13 @@ var MWBattle={
     var ctr=new T.Vector3().fromArray(c.center), eye=c.pose.pos.clone();
     S=eye.distanceTo(ctr)/LREF; L=LREF; G.position.copy(ctr); G.scale.setScalar(S);
     var m=new T.Matrix4().lookAt(eye,ctr,new T.Vector3(0,1,0)); G.quaternion.setFromRotationMatrix(m);
-    baseQ=G.quaternion.clone(); G.updateMatrixWorld(true); layoutPlanet();
+    baseQ=G.quaternion.clone(); G.updateMatrixWorld(true); rot0=rot0T=c.getRot?c.getRot():0; layoutPlanet(); makeSun();
     var hemi=new T.HemisphereLight(0xcfeeea,0x24403e,P.lightFill), key=new T.DirectionalLight(0xfff4e0,P.lightKey);
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
     kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
-    camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
+    camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(Math.max(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R,PL.starPos.distanceTo(_v1)+60)+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     audioRot0=c.getRot?c.getRot():0; if(window.MWAudio){ MWAudio.arcadeStart(); MWAudio.warm(); }
