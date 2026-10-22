@@ -1025,8 +1025,8 @@ function updHeroSnap(s,dt){   // returns true while the hero is held on its head
   _cen.set(CX,CY,CZ); G.worldToLocal(_camL.copy(ctx.camera.position));
   _camRef.copy(_camL).sub(_cen).divideScalar(cam.z).add(_cen);                 // where the camera sits WITHOUT the auto zoom, so the zoom doesn't feed back into its own trigger
   var dCen=_camRef.distanceTo(_cen)||1, dShip=_camRef.distanceTo(s.pos), r=dShip/dCen;
-  var dp=clamp((dShip-dCen)/(arenaAz()*.8),-1,1);                              // signed depth through the play volume: +1 far side, -1 right up at the camera (reachable, unlike a ratio of distances)
-  cam.zT=dp>0?1-.4*smooth01(dp):1+.25*smooth01(-dp);                           // far: come all the way in; near: pull back out so the ship stays framed
+  var dFar=clamp((dShip-dCen)/(arenaAz()*.5),0,1), dNear=clamp((dCen-dShip)/(dCen*.55),0,1);   // how far into the back of the volume / how close to the lens (the camera is only L from the centre, so "near" is measured against that, not the arena depth)
+  cam.zT=1-.6*smooth01(dFar)+.8*smooth01(dNear);                               // far: come all the way in (.4x); near: pull back out (1.8x) so the ship stays framed
   var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
   var atEdge=s.pos.z>=az*.9-.06||Math.abs(s.pos.x)>=ax-.06||Math.abs(s.pos.y-CY)>=ay-.06;
   _hd.copy(_camRef).sub(s.pos).normalize(); var toward=s.dir.dot(_hd);
@@ -1049,7 +1049,7 @@ function updCamAssist(dt){
   if(cam.death){ cam.zT=cam.breakup?.45:.3; cam.yaw=null; if(s&&s.burning) cam.focusL.copy(s.pos); }
   var rm=reduceMotion();
   if(cam.death&&rm){ cam.z=.6; cam.fk=1; }
-  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:1.6))); cam.fk+=(fkT-cam.fk)*(1-Math.exp(-dt*(cam.death?2.2:3))); }
+  else { cam.z+=(cam.zT-cam.z)*(1-Math.exp(-dt*(cam.death?2.4:2.6))); cam.fk+=(fkT-cam.fk)*(1-Math.exp(-dt*(cam.death?2.2:3))); }
   cam.out.zoom=cam.z; cam.out.yaw=cam.yaw; cam.out.fk=cam.fk;
   if(cam.focusL){ if(!cam.focusW) cam.focusW=new T.Vector3(); cam.focusW.copy(cam.focusL); G.localToWorld(cam.focusW); cam.out.focus=cam.focusW; } else cam.out.focus=null;
 }
