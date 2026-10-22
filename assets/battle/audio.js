@@ -73,7 +73,7 @@ var SITE_EVENTS={
   planetLoad:[],    // each planet appears (staggered, so a pool: one clip per planet)
   planetsDone:[]    // the last planet is in: the galaxy is live
 };
-var LEVEL={ site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:.8, capArrive:.5, r2:.5,
+var LEVEL={ site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
    page's "Death sequence" slot on each fighter card. Key = model id (battle.js MODELS[].id), value = clip names in assets/audio without the extension. Empty until clips are added. */
@@ -145,6 +145,9 @@ function setPannerPos(pn,p,glide){
 
 /* ── one-shots ── */
 function num(v,d){ return (typeof v==='number'&&isFinite(v))?v:d; }
+/* oneShot that does not drop the sound when its clip is not decoded yet (first use / first load): it waits for the clip, then plays */
+function shot(key,o){ if(bufs[key]) return oneShot(key,o); if(!ensure()) return; load(key).then(function(b){ if(b) oneShot(key,o); }); }
+var lastArrive=-1;
 function oneShot(key,o){ try{ return oneShot_(key,o); }catch(e){ if(window.console) console.warn('MWAudio: sound skipped',key,e); return null; } }   // audio must never be able to break the game's frame loop
 function oneShot_(key,o){
   o=o||{}; if(!ensure()||muted&&!o.force) return null;
@@ -383,7 +386,8 @@ var MWAudio={
     load('hsLoop').then(function(){ if(jump&&!jump.loop){ jump.loop=loopSource('hsLoop',duck,LEVEL.hsLoop,1.2); } });
   },
   jumpReveal:function(){
-    if(!jump) return; var j=jump; jump=null; endLoop(j.loop,.9); oneShot('hsExit',{gain:LEVEL.hsExit}); if(!amb.sel&&!amb.play&&stageName==='select'&&started) startSelect();
+    if(!jump) return; var j=jump; jump=null; endLoop(j.loop,.9); shot('hsExit',{gain:LEVEL.hsExit});   // shot(): still plays on a first load, when the clip may not have finished downloading yet
+     if(!amb.sel&&!amb.play&&stageName==='select'&&started) startSelect();
   },
   jumpCancel:function(){ if(!jump) return; var j=jump; jump=null; endLoop(j.loop,.4); },
 
@@ -410,9 +414,13 @@ var MWAudio={
   },
 
   /* a Star Destroyer-style hyperspace exit for a handful of intro arrivals, staggered and slightly detuned */
-  arrive:function(loc,cls){
-    if(!ctx||arriveLeft<=0||Math.random()>(cls==='capital'?.75:.35)) return;
-    arriveLeft--; oneShot('capArrive',{loc:loc,gain:LEVEL.capArrive*rr(.7,1.1),rate:rr(.9,1.1),delay:Math.random()*.9});
+  /* late = a ship that spawns after the opening fly-in (a respawn, or one added later): it always gets the cue, so every new support/capital arrival is heard.
+     The opening wave (a few dozen ships jumping in within ~3 s) stays budgeted (arriveLeft) so it does not become a wall of sound. */
+  arrive:function(loc,cls,late){
+    if(!ctx) return;
+    if(late){ var t=now(); if(t-lastArrive<.12) return; lastArrive=t; shot('capArrive',{loc:loc,gain:LEVEL.capArrive*rr(.8,1.1),rate:rr(.9,1.1),delay:Math.random()*.2}); return; }
+    if(arriveLeft<=0||Math.random()>(cls==='capital'?.75:.35)) return;
+    arriveLeft--; shot('capArrive',{loc:loc,gain:LEVEL.capArrive*rr(.7,1.1),rate:rr(.9,1.1),delay:Math.random()*.9});
   },
 
   /* fighter destruction. rebel: the ship was on the rebel side → 1 in 10 also screams. */

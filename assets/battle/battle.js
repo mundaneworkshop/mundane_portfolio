@@ -307,7 +307,7 @@ function initShip(s){
     else { spawnFighterPos(s,s.pos); s.dir.set(-s.side,rnd(-.3,.3),rnd(-.3,.3)).normalize(); s.spd=1.5; s.mT=rnd(.5,2); s.mode='wander'; pickWp(s); s.arriveAt=clockT+(session.played?rnd(.2,2.4):.3); }
   }
   else if(s.cls==='base'){ s.spin=.035; }
-  else if(s.cls==='support'||s.cls==='capital'){ s.arriveAt=introScheduled?clockT:1e9; }   // held back until the intro schedules the staggered hyperspace arrivals
+  else if(s.cls==='support'||s.cls==='capital'){ s.arriveAt=introScheduled?clockT:1e9; s.lateSpawn=introScheduled; }   // held back until the intro schedules the staggered hyperspace arrivals
 }
 // ── intro: one V-formation of 3 per side zig-zags around the hologram until the player picks a hero ──
 function setupFormation(s){
@@ -356,7 +356,7 @@ function tryScheduleIntro(){
   introScheduled=true;
 }
 function startArrive(s){
-  var au=audioAt(s); if(au&&(s.cls==='capital'||s.cls==='support')) MWAudio.arrive(au,s.cls);
+  var au=audioAt(s); if(au&&(s.cls==='capital'||s.cls==='support')) MWAudio.arrive(au,s.cls,s.lateSpawn);   // lateSpawn: after the opening fly-in, so always cued
   s.arr=0; flash(s.pos,Math.max(s.c.hx,s.c.hy,s.c.hz)*s.root.scale.x*(s.cls==='capital'?2.6:2)+.25,0xcff8ff);
 }
 function updArrive(s,dt){
@@ -1258,7 +1258,7 @@ function update(t){
     if(s.dying){ updDying(s,dt); continue; }
     if(!s.alive){
       if(!hyper&&!outroOn){ s.respawn-=dt;
-        if(s.respawn<=0&&(s.cls==='support'||s.cls==='capital')){ s.hasA=false; placeLarge(s); s.alive=true; s.arrived=false; s.arriveAt=clockT; s.target=null; }
+        if(s.respawn<=0&&(s.cls==='support'||s.cls==='capital')){ s.hasA=false; placeLarge(s); s.alive=true; s.arrived=false; s.arriveAt=clockT; s.lateSpawn=true; s.target=null; }
         if(s.respawn<=0&&s.cls==='fighter'){ s.alive=true; s.hp=CLS.fighter.hp; spawnFighterPos(s,s.pos); s.arrived=false; s.arriveAt=clockT; s.target=null; s.mode='wander'; s.mT=1; pickWp(s); s.vel.set(0,0,0); } }
       continue;
     }

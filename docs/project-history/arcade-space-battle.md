@@ -159,3 +159,8 @@ The normal galaxy orbit camera is used (left-drag yaw via `manualRot`, up/down v
 - Planet materials: `fog:false`, no env reflections, same filmic curve as the hulls, dimmed with the fleet on the hero-select page (`planetMats` in `applyLook`). `camera.far` grows if the planet would be beyond 450.
 - Tunables (debug panel, "Planet · Death Star orbit · sun"): `planetOn`, `planetR` (22), `planetAng` (55), `planetTilt` (-15), `planetAlt` (.5 Death Star radii above the surface), `planetBright` (.8), `planetSpin` (.4 deg/s), `dsAng` (70), `dsTilt` (-40), `sunStar`, `sunFollow`; `sunAz`/`sunEl` null = opposite the planet. `dsDim` default raised .45 to .7 (the Death Star is now the featured object).
 - Testing tip: after a played game ESC opens the results scoreboard and the exit only finishes when it is closed (by design). The hero-select camera is zoomed in, so the planet only partly shows there.
+
+## Arrival cue for new support/capital ships; louder jump exit (Oct 22 2026)
+
+- `MWAudio.arrive(loc,cls,late)`: the capital-ship hyperspace-exit clip (`cap-arrive`) now plays for **every** support/capital ship that spawns after the opening fly-in (respawns after a kill, ships added later; `s.lateSpawn` in `battle.js`), with a 120 ms floor between cues. The opening wave (~40 ships jumping in over ~3 s) keeps its budget (`arriveLeft` 3-4, 35-75% chance) so it doesn't become a wall of sound.
+- `hsExit` (the jump's exit sound as the arcade is revealed) raised from 0.8 to 1.3 in `LEVEL`. Both it and `capArrive` now play through `shot()`, which waits for the clip to decode instead of silently dropping the sound when it isn't loaded yet (the case on a first load).
