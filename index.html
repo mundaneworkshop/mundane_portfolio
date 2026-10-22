@@ -10015,24 +10015,17 @@ f 2469//2469 2470//2470 2434//2434
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length){ emptyClick(); return; } activate(ph[0].object.parent.userData); });
 
-    // View veil: opening a project / the CV / Contact (and backing out) swaps whole assets in one frame (planet
-    // -> kit box, hologram -> CV route, galaxy hidden). Those swaps are hard cuts, so dip the canvas to the scene
-    // colour, swap at the bottom, then bring the new view up while the camera eases in.
-    var _veil=null, _veilBusy=false;
+    // View change wipe: opening a project / the CV / Contact (and backing out) swaps whole assets in one frame
+    // (planet -> kit box, hologram -> CV route, galaxy hidden). Those hard cuts are hidden under the site's
+    // Star Wars screen wipe (assets/bric-wipe.js, random variant); the swap runs while the panel fully covers
+    // the page, then the camera eases in as it uncovers. Same pattern as the arcade exit.
+    var _veilBusy=false;
     function veilThen(fn){
-      if(_veilBusy || reduceMotionQ.matches || mwPhase!=='docked'){ fn(); return; }
-      var host=document.getElementById('scene'); if(!host){ fn(); return; }
-      if(!_veil){ _veil=document.createElement('div'); _veil.id='viewVeil'; _veil.style.cssText='position:absolute;inset:0;background:var(--bg);opacity:0;pointer-events:none;z-index:2;will-change:opacity'; host.appendChild(_veil); }
+      if(_veilBusy || !window.bricWipe || mwPhase!=='docked'){ fn(); return; }
       _veilBusy=true;
-      _veil.style.transition='opacity 260ms cubic-bezier(.4,0,.8,.4)'; _veil.style.opacity='1';
-      setTimeout(function(){
-        try{ fn(); }finally{
-          requestAnimationFrame(function(){ requestAnimationFrame(function(){
-            _veil.style.transition='opacity 620ms cubic-bezier(.3,0,.2,1)'; _veil.style.opacity='0';
-            setTimeout(function(){ _veilBusy=false; },620);
-          }); });
-        }
-      },270);
+      var v=window.bricWipe.play(null,function(){ fn(); });
+      if(v==null){ _veilBusy=false; return; }   // reduced motion / no mask support: fn already ran, no wipe
+      setTimeout(function(){ _veilBusy=false; },2500);
     }
     function goHomeV(){ veilThen(goHome); }
     function activate(ud){
