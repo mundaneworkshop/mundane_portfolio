@@ -131,6 +131,7 @@
   #arcadeResult .ar-board td.ar-h{width:34%;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--bric-content-secondary);padding-left:var(--bric-space-1-5-stud)}
   #arcadeResult .ar-board th.ar-h{padding-left:var(--bric-space-1-5-stud)}
   #arcadeResult .ar-board td.n{width:64px}
+  #arcadeResult .ar-board tr.ar-gap td{padding:0;text-align:center;line-height:10px;letter-spacing:.4em;color:var(--bric-content-tertiary);border-bottom:0}
   #arcadeResult .ar-board tr.mine td{color:var(--bric-content-brand);box-shadow:inset 0 1px 0 var(--bric-content-brand),inset 0 -1px 0 var(--bric-content-brand)}
   #arcadeResult .ar-board tr.mine td:first-child{box-shadow:inset 1px 1px 0 var(--bric-content-brand),inset 0 -1px 0 var(--bric-content-brand);padding-left:var(--bric-space-stud)}
   #arcadeResult .ar-board tr.mine td:last-child{box-shadow:inset -1px 1px 0 var(--bric-content-brand),inset 0 -1px 0 var(--bric-content-brand);padding-right:var(--bric-space-stud)}
@@ -10468,6 +10469,36 @@ f 2469//2469 2470//2470 2434//2434
         .then(function(r){ if(r.error){ if(next&&/country/i.test(r.error.message||'')) q(next); else cb(null,r.error.message||'error'); } else cb(r.data||[]); },function(e){ cb(null,'offline'); }); }
       q('id,name,kills,hero,country,created_at','id,name,kills,hero,created_at');   // the country column may not exist yet (leaderboard-schema.sql)
     }
+    // Rows [a..b] (inclusive, 0-based) of the ranked list.
+    function arcFetchRange(a,b,cb){
+      if(!_sb){ cb(null,'offline'); return; }
+      function q(cols,next){ _sb.from('leaderboard').select(cols).order('kills',{ascending:false}).order('created_at',{ascending:true}).range(a,b)
+        .then(function(r){ if(r.error){ if(next&&/country/i.test(r.error.message||'')) q(next); else cb(null,r.error.message||'error'); } else cb(r.data||[]); },function(e){ cb(null,'offline'); }); }
+      q('id,name,kills,hero,country,created_at','id,name,kills,hero,created_at');
+    }
+    // The board in context. With no score it is the plain top 10. With a score that makes the top 10 the player's row is slotted in (pre-submit, a "You" row) or
+    // highlighted (post-submit). Below the cutoff it becomes: top 3, a gap, then the player's row with the scores round it, each carrying its true rank.
+    // rank: the server's rank once submitted (rows already include the player); null before (rank is counted here and a "You" row is inserted).
+    function arcFetchBoard(sum,rank,mineId,cb){
+      if(!sum||!(sum.score>0)||!_sb){ arcFetchTop(cb); return; }
+      var you={you:true,id:'__you',name:'You',kills:sum.score,hero:(sum.hero&&sum.hero.id)||''};
+      function build(R,pre){   // R = the player's rank
+        if(R<=10){ arcFetchTop(function(rows,err){ if(!rows){ cb(null,err); return; }
+          rows=rows.map(function(r,i){ r.rank=i+1; return r; });
+          if(pre){ you.rank=R; rows.splice(R-1,0,you); rows=rows.slice(0,10).map(function(r,i){ r.rank=i+1; return r; }); }
+          cb(rows); }); return; }
+        arcFetchRange(0,2,function(top,e1){ if(!top){ cb(null,e1); return; }
+          var from=Math.max(3,R-3), to=pre?R:R+1;
+          arcFetchRange(from,to,function(mid,e2){ if(!mid){ cb(null,e2); return; }
+            var out=top.map(function(r,i){ r.rank=i+1; return r; });
+            if(from>3) out.push({gap:true});
+            mid.forEach(function(r,i){ var idx=from+i;
+              if(pre&&idx>=R-1){ if(idx===R-1){ you.rank=R; out.push(you); } r.rank=idx+2; } else r.rank=idx+1; out.push(r); });
+            if(pre&&!out.some(function(r){ return r.you; })){ you.rank=R; out.push(you); }
+            cb(out); }); }); }
+      if(rank){ build(rank,false); return; }
+      _sb.from('leaderboard').select('id',{count:'exact',head:true}).gt('kills',sum.score).then(function(r){ if(r.error||r.count==null){ arcFetchTop(cb); return; } build(r.count+1,true); },function(){ arcFetchTop(cb); });
+    }
     // Country flag from an ISO alpha-2 code: regional-indicator letters render as a flag emoji (Windows shows the letters instead)
     function arcFlag(cc){ return /^[A-Z]{2}$/.test(cc||'')?String.fromCodePoint(0x1F1E6+cc.charCodeAt(0)-65,0x1F1E6+cc.charCodeAt(1)-65):''; }
     function arcCountry(cc){ try{ return new Intl.DisplayNames(['en'],{type:'region'}).of(cc)||cc; }catch(e){ return cc; } }
@@ -10485,8 +10516,10 @@ f 2469//2469 2470//2470 2434//2434
       var tb=document.createElement('table'); tb.className='ar-board';
       tb.innerHTML='<thead><tr><th class="ar-r">#</th><th class="ar-f"></th><th>Pilot</th><th class="ar-h">Ship</th><th class="n">Score</th></tr></thead><tbody></tbody>';
       var body=tb.querySelector('tbody');
-      rows.forEach(function(r,i){ var tr=document.createElement('tr'); if(r.id===mineId) tr.className='mine';
-        [['ar-r',String(i+1)],['ar-f',arcFlag(r.country)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; if(c[0]==='ar-f'&&c[1]){ td.title=arcCountry(r.country); td.setAttribute('role','img'); td.setAttribute('aria-label',arcCountry(r.country)); } tr.appendChild(td); });
+      rows.forEach(function(r,i){ var tr=document.createElement('tr');
+        if(r.gap){ tr.className='ar-gap'; var gd=document.createElement('td'); gd.colSpan=5; gd.textContent='\u2026'; gd.setAttribute('aria-label','scores omitted'); tr.appendChild(gd); body.appendChild(tr); return; }
+        if(r.id===mineId||r.you) tr.className='mine';
+        [['ar-r',String(r.rank||i+1)],['ar-f',arcFlag(r.country)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; if(c[0]==='ar-f'&&c[1]){ td.title=arcCountry(r.country); td.setAttribute('role','img'); td.setAttribute('aria-label',arcCountry(r.country)); } tr.appendChild(td); });
         body.appendChild(tr); });
       listEl.appendChild(tb);
       if(animate) arcDecode(tb,0);
@@ -10510,7 +10543,7 @@ f 2469//2469 2470//2470 2434//2434
       } else html+='<div class="ar-head"><div class="ar-k">Leaderboard</div></div>';
       html+='<div class="ar-sec">'+(sum?'<div class="ar-st">Top scores</div>':'')+'<div class="ar-list" aria-label="Top scores"></div></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">'+(sum?'Exit game':'Close')+'</button></div></div>';
       el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
-      var listEl=el.querySelector('.ar-list'); arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,null,true); });
+      var listEl=el.querySelector('.ar-list'); arcFetchBoard(sum,null,null,function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,null,true); });
       arcDecode(el.querySelector('.ar-card'),60);   // (the leaderboard rows decode when they arrive)
       el.addEventListener('click',function(e){ if(e.target===el&&!sum) closeArcadeResult(); });   // game-over modal: the backdrop never dismisses (rapid clicking while playing would close it)
       var armed=function(){ return !sum||performance.now()-arcadeResultT>1200; };   // ...and the buttons ignore clicks for the first 1.2 s
@@ -10528,7 +10561,7 @@ f 2469//2469 2470//2470 2434//2434
             .then(function(o){
               if(!o.ok||!o.j.ok){ msg.textContent=(o.j&&o.j.error)||'Could not save your score'; btn.disabled=false; return; }
               msg.textContent=o.j.duplicate?'Already on the board':'Saved \u2014 rank #'+o.j.rank; form.style.display='none';
-              arcFetchTop(function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
+              arcFetchBoard(o.j.rank?sum:null,o.j.rank,o.j.id,function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
             },function(){ msg.textContent='Could not reach the leaderboard'; btn.disabled=false; });
         });
       } else { var af=el.querySelector('#arAgain')||el.querySelector('#arClose'); if(af) af.focus(); }
@@ -14015,6 +14048,7 @@ f 2469//2469 2470//2470 2434//2434
         if(_rib.material && _rib.material.map){ var _sgn=_mqc.reverse?-1:1; _rib.material.map.offset.x=((_rib.material.map.offset.x + _sgn*(_mqc.speed||0)*0.01)%1 + 1)%1; }
       }
       var _ca=null; if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getCamAssist){ _ca=MWBattle.getCamAssist();   // battle.js camera assist: auto-snap yaw, dynamic zoom, death close-up
+        if(MWBattle.getOrbit){ var _ob=MWBattle.getOrbit(); manualRot+=_ob.yaw; arcPitch+=_ob.pitch; }   // edge-dwell orbit (unbounded 360)
         if(_ca.yaw!=null){ var _yd=Math.atan2(Math.sin(_ca.yaw-manualRot),Math.cos(_ca.yaw-manualRot)); manualRot+=_yd*0.05; } }
       if(autoRotate&&!(arcadeActive&&arcadeStage==='play')) manualRot+=0.0011*params.spin*params.camRotDir;   /* no auto-revolve while the hero flies; hero select and the galaxy still drift */ galaxy.rotation.y=manualRot;
       if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it

@@ -99,11 +99,12 @@ var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
 var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
-/* Edge pan: keep the cursor in the outer ~38% of the screen (each side) for EDGE_DWELL seconds and the camera glides that way (up to PAN_REACH of the arena), so the
-   player can fly out into the rest of the field. index.html adds MWBattle.getPan() (camera-plane world units) to the camera's LOOK point (the camera turns in place, it does not move). Easing back to the middle
+/* Edge orbit: keep the cursor in the outer ~38% of the screen (each side) for EDGE_DWELL seconds and the camera turns that way, a full 360 and over the top, so the
+   player can swing round to the rest of the field. index.html adds MWBattle.getPan() (camera-plane world units) to the camera's LOOK point (the camera turns in place, it does not move). Easing back to the middle
    does not recentre it: the pan stays where the player left it until they pan back, change hero or restart. */
 var EDGE_ZONE=.24, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
-var pan={x:0,y:0,vx:0,vy:0,dwell:0}, _panW={x:0,y:0};
+var pan={x:0,y:0,vx:0,vy:0,dwell:0}, _panW={x:0,y:0}, orbit={yaw:0,pitch:0}, _orb={yaw:0,pitch:0};
+var ORBIT_SPEED=1.5;   // rad/s at full edge pressure (a full turn in ~4 s)
 var keys={}, fireHeld=false;
 var uiEl=null, hudEl=null, vigEl=null, panelEl=null, styleEl=null, listeners=[];
 var BOLT_COL=[0x39ff5a /*imp green*/, 0xff2a2a /*reb red*/, 0xffe14a /*hero yellow*/];
@@ -1276,19 +1277,18 @@ function updLeave(s,dt){
 }
 
 function reduceMotion(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }   // the pan is a camera glide: off under reduced motion (right-drag still orbits)
-function updPan(dt){
+function updPan(dt){   // edge dwell: the camera ORBITS the battle without limit (yaw round, pitch over/under) toward the edge the cursor sits in; index.html reads getOrbit()
   var on_=!reduceMotion()&&stage==='play'&&!quiet()&&heroShip&&heroShip.alive&&!heroShip.burning&&ptr.in&&!ptr.out;
   var dx=0,dy=0;
   if(on_){ dx=clamp((Math.abs(ptr.nx)-EDGE_ZONE)/(1-EDGE_ZONE),0,1); dy=clamp((Math.abs(ptr.ny)-EDGE_ZONE)/(1-EDGE_ZONE),0,1); }
   if(dx>0||dy>0) pan.dwell+=dt; else pan.dwell=Math.max(0,pan.dwell-dt*3);   // a quick graze of the edge fades out instead of counting
-  var k=clamp((pan.dwell-EDGE_DWELL)/EDGE_RAMP,0,1); k=k*k*(3-2*k);           // smoothstep: nothing for the first second, then eases up to full speed
+  var k=clamp((pan.dwell-EDGE_DWELL)/EDGE_RAMP,0,1); k=k*k*(3-2*k);           // smoothstep: nothing for the first half second, then eases up to full speed
   var tx=ptr.nx<0?-dx:dx, ty=ptr.ny<0?-dy:dy;
-  var sx=halfW(0)*PAN_SPEED*k*tx, sy=halfH(0)*PAN_SPEED*k*ty;
-  var a=Math.min(1,dt*2.5); pan.vx+=(sx-pan.vx)*a; pan.vy+=(sy-pan.vy)*a;
-  var mx=arenaAx()*PAN_REACH, my=arenaAy()*PAN_REACH;
-  pan.x=clamp(pan.x+pan.vx*dt,-mx,mx); pan.y=clamp(pan.y+pan.vy*dt,-my,my);
-  if(stage!=='play'){ pan.x*=1-Math.min(1,dt*3); pan.y*=1-Math.min(1,dt*3); pan.vx=pan.vy=pan.dwell=0; }   // hero select: back to the home framing
+  var a=Math.min(1,dt*2.5); pan.vx+=(k*tx*ORBIT_SPEED-pan.vx)*a; pan.vy+=(k*ty*ORBIT_SPEED-pan.vy)*a;   // angular velocity, rad/s
+  orbit.yaw+=pan.vx*dt; orbit.pitch-=pan.vy*dt;
+  if(stage!=='play'){ pan.vx=pan.vy=pan.dwell=0; }
 }
+function takeOrbit(){ _orb.yaw=orbit.yaw; _orb.pitch=orbit.pitch; orbit.yaw=orbit.pitch=0; return _orb; }
 
 /* ───────────────────────────── frame ───────────────────────────── */
 function update(t){
@@ -1576,6 +1576,7 @@ var MWBattle={
   isActive:function(){ return active; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
+  getOrbit:function(){ return takeOrbit(); },   // {yaw,pitch} radians accumulated since the last call: the edge-dwell orbit, unbounded (right edge turns the view right, top edge looks up)
   getPan:function(){ _panW.x=pan.x*S; _panW.y=pan.y*S; return _panW; },   // {x,y}: edge-pan camera offset in WORLD units (battle units x G's scale), along the camera's right / up
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
   assetsReady:function(){ return active&&(planetState!==1)&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
