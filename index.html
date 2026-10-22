@@ -1649,6 +1649,7 @@
     var HOME_POS=new THREE.Vector3(0,6.6,11.8), HOME_LOOK=new THREE.Vector3(0,1.6,0);
     camera.position.copy(HOME_POS);
     var camPos=HOME_POS.clone(), camLook=HOME_LOOK.clone(), lookNow=HOME_LOOK.clone();
+    var _camViewKey=null, _camEaseT=0, reduceMotionQ=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};   // eased camera chase on view changes
 
     // ── Entry gate: the page opens on just the MW monogram (tilted on its corner, spinning) over the
     // starfield — nothing else in the galaxy boots until it's clicked (see startDock/mwUpdate). mwPhase
@@ -10129,7 +10130,7 @@ f 2469//2469 2470//2470 2434//2434
       if(editMode && meshSelectMode){ ray.setFromCamera(mouse,camera);   // EDIT MODE + mesh select: click SELECTS (no zoom); panel edits galaxy mesh; "Open kit box" for faces
         var tgts=focused?editHits.concat(focused.userData.moons):editHits;   // moons selectable while focused
         var eh=ray.intersectObjects(tgts,false);
-        if(!eh.length){ if(moonSel){ moonSel=null; refreshEditPanel(); } else if(focused){ goHome(); } else { clearSel(); refreshEditPanel(); } return; }
+        if(!eh.length){ if(moonSel){ moonSel=null; refreshEditPanel(); } else if(focused){ goHomeV(); } else { clearSel(); refreshEditPanel(); } return; }
         var o=eh[0].object, oid=o.userData.editId||(o.parent&&o.parent.userData&&o.parent.userData.id);
         if(oid) editSelectAt(oid);
         return; }
@@ -10140,20 +10141,33 @@ f 2469//2469 2470//2470 2434//2434
         // click the kit box face (when hover affordance is active) → enter case study
         if(boxHoverFace>=0 && !editMode && !document.body.classList.contains('mw-altfocus')){
           clearBoxHover(); openProjectCta(); return; }
-        emptyClick(); goHome(); return; }
+        emptyClick(); goHomeV(); return; }
       ray.setFromCamera(mouse,camera);
       var ph=ray.intersectObjects(planetHits,false); if(!ph.length){ emptyClick(); return; } activate(ph[0].object.parent.userData); });
 
+    // View change wipe: opening a project / the CV / Contact (and backing out) swaps whole assets in one frame
+    // (planet -> kit box, hologram -> CV route, galaxy hidden). Those hard cuts are hidden under the site's
+    // Star Wars screen wipe (assets/bric-wipe.js, random variant); the swap runs while the panel fully covers
+    // the page, then the camera eases in as it uncovers. Same pattern as the arcade exit.
+    var _veilBusy=false;
+    function veilThen(fn){
+      if(_veilBusy || !window.bricWipe || mwPhase!=='docked'){ fn(); return; }
+      _veilBusy=true;
+      var v=window.bricWipe.play(null,function(){ fn(); });
+      if(v==null){ _veilBusy=false; return; }   // reduced motion / no mask support: fn already ran, no wipe
+      setTimeout(function(){ _veilBusy=false; },2500);
+    }
+    function goHomeV(){ veilThen(goHome); }
     function activate(ud){
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
-      if(ud.id==='cv'){ openCV(ud.id); return; }            // bespoke focus views — not kit boxes
-      if(ud.id==='contact'){ openContact(ud.id); return; }
-      if(ud.id==='arcade'){ openArcade(ud.id); return; }
-      if(ud.locked){ openLockedPanel(ud.id); return; }
-      openCase(ud.id); }
+      if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
+      if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
+      if(ud.id==='arcade'){ if(window.MWAudio) MWAudio.unlock();   /* keep the click's user gesture: the wipe delays the open */ veilThen(function(){ openArcade(ud.id); }); return; }
+      if(ud.locked){ veilThen(function(){ openLockedPanel(ud.id); }); return; }
+      veilThen(function(){ openCase(ud.id); }); }
     function planetById(id){ return planets.find(function(p){return p.userData.id===id;}); }
 
     function setFocusCam(){ focusRadius=focusBaseR*params.focusZoom; }
@@ -11678,7 +11692,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     var toastT; function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200); }
 
-    document.getElementById('homeBtn').addEventListener('click',function(){ if(editMode) return; goHome(); });   // in Edit Mode the root is click-to-edit, not navigate
+    document.getElementById('homeBtn').addEventListener('click',function(){ if(editMode) return; goHomeV(); });   // in Edit Mode the root is click-to-edit, not navigate
     document.getElementById('cpBack').addEventListener('click',goHome);
     document.getElementById('cpEnter').addEventListener('click',enterCaseStudy);
     document.getElementById('csExit').addEventListener('click',exitCaseStudy);
@@ -12184,7 +12198,7 @@ f 2469//2469 2470//2470 2434//2434
       var pid=csPid;
       csExit();
       var g=pid&&planetById(pid);
-      if(g) activate(g.userData); else goHome();
+      if(g) activate(g.userData); else goHomeV();
     }
     function csExit(){ return csScene.exit(); }   // teardown lives in the scene's onExit
 
@@ -14050,7 +14064,15 @@ f 2469//2469 2470//2470 2434//2434
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
       if(focused||MWSub.active||msgFocusActive) camUpV.set(0,1,0);
-      camera.up.copy(camUpV); camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
+      camera.up.copy(camUpV);
+      // Eased jump: the camera chases its target with a per-frame lerp, which is fastest on the first frame
+      // (a jolt). When the view changes (project / artifact focus, CV or other sub-scene, back out), start the
+      // chase slow and ramp it up (ease-in), then settle at the normal 0.06 so dragging stays responsive.
+      var _vk=(focused||MWSub.active||null), _now=performance.now();
+      if(_vk!==_camViewKey){ _camViewKey=_vk; _camEaseT=_now; }
+      var _ce=(_now-_camEaseT)/1000, _ck=0.06;
+      if(!reduceMotionQ.matches && _ce<2.6){ var _cs=Math.min(1,_ce/1.3); _cs=_cs*_cs*(3-2*_cs); _ck=_ce<1.3 ? 0.010+(0.048-0.010)*_cs : 0.048+(0.06-0.048)*Math.min(1,(_ce-1.3)/1.3); }
+      camera.position.lerp(camPos,_ck); lookNow.lerp(camLook,_ck); camera.lookAt(lookNow);
       stageLens();
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
@@ -14140,7 +14162,7 @@ f 2469//2469 2470//2470 2434//2434
     function applyRouteFromLocation(){
       try{
         var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
-        if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHome(); return; }
+        if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHomeV(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
         if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData); return; }
