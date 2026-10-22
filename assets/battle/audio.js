@@ -75,6 +75,7 @@ var SITE_EVENTS={
 };
 /* Game over: a sting that plays once, as the game over modal pops up after the hero's death (battle.js finishHeroDeath → MWAudio.gameOver). One of these at random (shuffle bag).
    Filled from the Site Sound Review's "Game over" card (Oct 22 2026: four Squadrons soundtrack bites, trimmed and faded). */
+var GAMEOVER_DUCK=.12;   // how far everything else drops under the sting (1 = no duck)
 var GAME_OVER=['game-over-1','game-over-2','game-over-3','game-over-4'];
 var LEVEL={ gameOver:.85, site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.2, active:.5, fire1:.55, fireN:.5 };
@@ -361,11 +362,12 @@ var MWAudio={
   ui:function(kind,force,opt){ uiPlay(kind,force,opt); },
   uiTune:function(o){ if(o) Object.keys(TUNE).forEach(function(k){ if(typeof o[k]==='number'&&isFinite(o[k])) TUNE[k]=Math.max(.2,Math.min(3,o[k])); }); return Object.assign({},TUNE); },
   uiReady:function(){ return ensure(); },
-  /* the game over sting: once, as the game over modal appears. Everything else ducks under it while it plays. */
+  /* the game over sting: once, as the game over modal appears. It goes straight to the master (NOT through the duck bus, which would duck the sting along with the
+     battle ambience it is meant to cut through), and the whole duck bus (battle ambience, hero engine, UI) drops to GAMEOVER_DUCK for its length, then eases back. */
   gameOver:function(){
     if(!ctx||muted||!GAME_OVER.length) return;
     var k=draw('gameOver',GAME_OVER); stopGameOver(.2);
-    load(k).then(function(b){ if(!b) return; var h=oneShot(k,{gain:LEVEL.gameOver,vip:true}); if(h){ goSnd=h; duckFor(Math.max(1,b.duration-.5),.4); } });
+    load(k).then(function(b){ if(!b) return; var h=oneShot(k,{gain:LEVEL.gameOver,vip:true,dest:master}); if(h){ goSnd=h; duckFor(Math.max(1.5,b.duration),GAMEOVER_DUCK); } });
   },
   /* a site event from SITE_EVENTS (dock / boot). Loads its clip on first use, so it also plays on the very first gesture; o = {gain,rate,delay}. */
   site:function(name,o){
