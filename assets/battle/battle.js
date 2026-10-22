@@ -1025,7 +1025,8 @@ function updHeroSnap(s,dt){   // returns true while the hero is held on its head
   _cen.set(CX,CY,CZ); G.worldToLocal(_camL.copy(ctx.camera.position));
   _camRef.copy(_camL).sub(_cen).divideScalar(cam.z).add(_cen);                 // where the camera sits WITHOUT the auto zoom, so the zoom doesn't feed back into its own trigger
   var dCen=_camRef.distanceTo(_cen)||1, dShip=_camRef.distanceTo(s.pos), r=dShip/dCen;
-  cam.zT=1-.4*smooth01((r-1.12)/.5);                                           // far toward the back of the volume: come in
+  var dp=clamp((dShip-dCen)/(arenaAz()*.8),-1,1);                              // signed depth through the play volume: +1 far side, -1 right up at the camera (reachable, unlike a ratio of distances)
+  cam.zT=dp>0?1-.4*smooth01(dp):1+.25*smooth01(-dp);                           // far: come all the way in; near: pull back out so the ship stays framed
   var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz();
   var atEdge=s.pos.z>=az*.9-.06||Math.abs(s.pos.x)>=ax-.06||Math.abs(s.pos.y-CY)>=ay-.06;
   _hd.copy(_camRef).sub(s.pos).normalize(); var toward=s.dir.dot(_hd);
