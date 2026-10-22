@@ -1590,6 +1590,7 @@
     var HOME_POS=new THREE.Vector3(0,6.6,11.8), HOME_LOOK=new THREE.Vector3(0,1.6,0);
     camera.position.copy(HOME_POS);
     var camPos=HOME_POS.clone(), camLook=HOME_LOOK.clone(), lookNow=HOME_LOOK.clone();
+    var _camViewKey=null, _camEaseT=0, reduceMotionQ=window.matchMedia?window.matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};   // eased camera chase on view changes
 
     // ── Entry gate: the page opens on just the MW monogram (tilted on its corner, spinning) over the
     // starfield — nothing else in the galaxy boots until it's clicked (see startDock/mwUpdate). mwPhase
@@ -13891,7 +13892,15 @@ f 2469//2469 2470//2470 2434//2434
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
       if(focused||MWSub.active||msgFocusActive) camUpV.set(0,1,0);
-      camera.up.copy(camUpV); camera.position.lerp(camPos,0.06); lookNow.lerp(camLook,0.06); camera.lookAt(lookNow);
+      camera.up.copy(camUpV);
+      // Eased jump: the camera chases its target with a per-frame lerp, which is fastest on the first frame
+      // (a jolt). When the view changes (project / artifact focus, CV or other sub-scene, back out), start the
+      // chase slow and ramp it up (ease-in), then settle at the normal 0.06 so dragging stays responsive.
+      var _vk=(focused||MWSub.active||null), _now=performance.now();
+      if(_vk!==_camViewKey){ _camViewKey=_vk; _camEaseT=_now; }
+      var _ce=(_now-_camEaseT)/1000, _ck=0.06;
+      if(!reduceMotionQ.matches && _ce<2.6){ var _cs=Math.min(1,_ce/1.3); _cs=_cs*_cs*(3-2*_cs); _ck=_ce<1.3 ? 0.010+(0.048-0.010)*_cs : 0.048+(0.06-0.048)*Math.min(1,(_ce-1.3)/1.3); }
+      camera.position.lerp(camPos,_ck); lookNow.lerp(camLook,_ck); camera.lookAt(lookNow);
       stageLens();
 
       if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
