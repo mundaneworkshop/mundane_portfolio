@@ -10035,7 +10035,7 @@ f 2469//2469 2470//2470 2434//2434
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
-      if(ud.id==='arcade'){ openArcade(ud.id); return; }
+      if(ud.id==='arcade'){ if(window.MWAudio) MWAudio.unlock();   /* keep the click's user gesture: the wipe delays the open */ veilThen(function(){ openArcade(ud.id); }); return; }
       if(ud.locked){ veilThen(function(){ openLockedPanel(ud.id); }); return; }
       veilThen(function(){ openCase(ud.id); }); }
     function planetById(id){ return planets.find(function(p){return p.userData.id===id;}); }
