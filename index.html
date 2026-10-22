@@ -9457,6 +9457,7 @@ f 2469//2469 2470//2470 2434//2434
       // sound: each stage's event fires once, the first frame it switches on (MWAudio.site, clips assigned in audio.js SITE_EVENTS)
       function bootSnd(k,on,o){ if(on&&!bootSndDone[k]){ bootSndDone[k]=1; if(window.MWAudio) MWAudio.site(k,o); } }
       bootSnd('bootBeam',vBeam>0.3); bootSnd('bootHead',vHead>0.3);
+      if(vBeam>0.3&&!bootSndDone['idleHum']){ bootSndDone['idleHum']=1; if(window.MWAudio) MWAudio.idleStart(); }   // the idle hum fades in (2.5 s) under the tail of the beam clip
       // The grid is one big surface — a single short on/off blip (the same window every other stage
       // gets) reads as one pop, not a flicker; there's nothing else on screen at that scale to make it
       // read as "flickering" the way several small staggered planets do. Give it its own longer window
@@ -9472,7 +9473,7 @@ f 2469//2469 2470//2470 2434//2434
       var allDone=(vBeam>=1 && vRing>=1 && vHead>=1 && vGrid>=1);
       var planetsDelay=gridDelay+gridDur;   // start right after the grid's own extended flicker settles
       planets.forEach(function(p,i){ var v=bootWinVal(planetsDelay+i*bootPlanetStagger()); bootPlanetGate[i]=v>0.3; bootPlanetVal[i]=v; if(v<1) allDone=false;
-        if(v>0.3&&!bootSndDone['p'+i]){ bootSndDone['p'+i]=1; if(window.MWAudio) MWAudio.site('planetLoad',{rate:.94+Math.random()*.12,gain:.8+Math.random()*.2}); } });
+        if(v>0.3&&!bootSndDone['p'+i]){ bootSndDone['p'+i]=1; if(window.MWAudio) MWAudio.site('planetLoad',{rate:.94+Math.random()*.12,gain:.8+Math.random()*.2,delay:i*.12+Math.random()*.03}); } });   // the planets flicker in ~30 ms apart but each ping lasts ~0.2 s, so they were one blur: space the sounds ~120 ms apart (i = planet order)
       if(allDone){
         bootSnd('planetsDone',true);
         BOOT_DONE=true; setSiteVisible(true);   // catch-all for anything not explicitly staged above
@@ -9600,7 +9601,7 @@ f 2469//2469 2470//2470 2434//2434
     function startDock(){
       if(mwPhase!=='entry'||_dockAt!=null) return;
       _gShown=true; document.body.classList.remove('mw-gate-on'); document.body.classList.add('mw-gate-out');   // all gate text fades up and out (CSS, --gate-out)
-      if(window.MWAudio) MWAudio.site('dockClick');
+      if(window.MWAudio){ MWAudio.uiReady(); if(!MWAudio.site('gateClick')) MWAudio.ui('click'); MWAudio.site('dockClick'); MWAudio.gateStop(); }   // the monogram click plays SITE_EVENTS.gateClick clips, or the site's default UI 'click' when there are none; dockClick is an extra layer; the gate's idle loop fades out as the dock starts
       _dockAt=clock.getElapsedTime()+(params.dockHold!=null?params.dockHold:0.7);   // the monogram holds (still spinning) until the text has gone, then beginDock runs from mwUpdate
     }
     function beginDock(){
@@ -10098,7 +10099,9 @@ f 2469//2469 2470//2470 2434//2434
     renderer.domElement.addEventListener('pointermove',function(e){
       if(arcadeActive){ renderer.domElement.style.cursor='default'; return; }   // arcade: no planet/zone hover
       if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
-        mwHover=(mwPhase==='entry' && mwQuad && mwQuad.visible && overMonogram(e));   // the mark itself shows the hover (glow, scale, slower spin, flicker)
+        var _wasMwHover=mwHover;
+        mwHover=(mwPhase==='entry' && mwQuad && mwQuad.visible && overMonogram(e));
+        if(mwHover&&!_wasMwHover&&window.MWAudio){ MWAudio.uiReady(); if(!MWAudio.site('gateHover')) MWAudio.ui('hover'); }   // once as the pointer enters the monogram: SITE_EVENTS.gateHover clips, or the site's default UI hover tick when there are none
         if(renderer&&renderer.domElement) renderer.domElement.style.cursor='default';   // the idle reticle keeps following the pointer: no pointer hand, no box
         return;
       }
@@ -10597,7 +10600,7 @@ f 2469//2469 2470//2470 2434//2434
     var _axe=document.getElementById('arcadeEscBtn'); if(_axe) _axe.addEventListener('click',exitArcade);
     // site-wide ambient background (assets/battle/audio.js → MWAudio.siteStart): browsers keep audio locked until a gesture, so it starts on the first press or key anywhere
     // (the entry gate's click counts) and plays under the whole site outside the arcade. The sound switch mutes it with everything else.
-    (function(){ var done=false; function go(){ if(done) return; done=true; ['pointerdown','keydown'].forEach(function(t){ document.removeEventListener(t,go,true); }); if(window.MWAudio&&!window.__mwArcade) MWAudio.siteStart(); }
+    (function(){ var done=false; function go(e){ if(done) return; done=true; ['pointerdown','keydown'].forEach(function(t){ document.removeEventListener(t,go,true); }); if(window.MWAudio&&!window.__mwArcade){ MWAudio.siteStart(); if(typeof BOOT_DONE!=='undefined'&&BOOT_DONE) MWAudio.idleStart(); else if(typeof mwPhase!=='undefined'&&mwPhase==='entry'&&!(e&&e.type==='pointerdown'&&typeof overMonogram==='function'&&typeof mwQuad!=='undefined'&&mwQuad&&mwQuad.visible&&overMonogram(e))) MWAudio.gateStart(); } }
       ['pointerdown','keydown'].forEach(function(t){ document.addEventListener(t,go,true); }); })();
     // sound switches (.mw-sound-switch: the galaxy-view one and the arcade hero-select one) and the M key share one persisted setting (localStorage['mw_sound'])
     // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover

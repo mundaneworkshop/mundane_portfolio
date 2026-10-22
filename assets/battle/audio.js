@@ -25,6 +25,8 @@ var FILES={
   ambSelA:'amb-select-a', ambSelB:'amb-select-b', ambPlay:'amb-play',
   hsEnter:'hs-enter', hsLoop:'hs-loop', hsExit:'hs-exit', capArrive:'cap-arrive', r2:'r2-scream',
   kitOpen:'minikit-open',   // minikit opening reward sound (review page: "Minikit opens")
+  gateIdle:'gate-idle',     // entry-gate idle loop (review page: "Monogram at the entry gate" / Idle)
+  holoIdle:'holo-idle',     // hologram idle hum (review page: "Hologram idle"): loops under the galaxy view once the boot has started
   ambSite:'site-ambient'   // site-wide ambient background (Battle Sound Review: "Site-wide ambient background"), plays outside the arcade
 };
 /* fighter destruction: one at random; rebel ships also get the astromech scream 1 time in 10 */
@@ -65,19 +67,25 @@ var HERO_SHARED={
 /* Site events: the entry-gate dock and the hologram boot that follows it (index.html calls MWAudio.site(name)). Value = clip names in assets/audio without the
    extension; several clips = one drawn at random (shuffle bag). Filled from the Battle Sound Review page's "Dock and boot" cards; an empty list is silent. */
 var SITE_EVENTS={
+  gateLoad:['gate-load-1','gate-load-2'],   // the monogram's initial-load sound: plays once, when audio first unlocks at the gate (see MWAudio.gateStart)
+  gateHover:['gate-hover-1','gate-hover-2','gate-hover-3','gate-hover-4','gate-hover-5','gate-hover-6'],   // pointer enters the monogram. EMPTY = the site's default UI 'hover' tick; clips here replace it
+  gateClick:['gate-click-1','gate-click-2'],   // monogram clicked. EMPTY = the site's default UI 'click'; clips here replace it
   dockClick:[],     // monogram clicked: it starts descending to the emitter
   dockLand:[],      // monogram lands on the emitter, the boot begins
-  bootBeam:[],      // beam and rings power on
+  bootBeam:['holo-beam'],   // beam and rings power on (3 s, the opening of the hologram boot-up; the idle hum fades in under its tail)
   bootHead:[],      // gatekeeper (head / logo) appears in the beam
   bootGrid:[],      // grid plate flickers on
-  planetLoad:[],    // each planet appears (staggered, so a pool: one clip per planet)
+  planetLoad:['holo-planet-1','holo-planet-2','holo-planet-3','holo-planet-4','holo-planet-5','holo-planet-6'],   // each planet appears: six short pings (0.06-0.25 s, 10 ms attack) so eight at 30 ms spacing stay distinct
   planetsDone:[]    // the last planet is in: the galaxy is live
 };
 /* Game over: a sting that plays once, as the game over modal pops up after the hero's death (battle.js finishHeroDeath → MWAudio.gameOver). One of these at random (shuffle bag).
    Filled from the Site Sound Review's "Game over" card (Oct 22 2026: four Squadrons soundtrack bites, trimmed and faded). */
 var GAMEOVER_DUCK=.12;   // how far everything else drops under the sting (1 = no duck)
 var GAME_OVER=['game-over-1','game-over-2','game-over-3','game-over-4'];
-var LEVEL={ gameOver:.85, site:.7, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
+/* per-event trim on top of LEVEL.site, to balance the boot: the beam clip is a long, loud sweep (peaks 0 dBFS) that buried the short planet pings (peak -6 dBFS) */
+var IDLE_HOLD=4, IDLE_SETTLE=4;   // idle hum: seconds at full level after it starts, then seconds to ease down to LEVEL.holoIdleRest
+var SITE_GAIN={ bootBeam:.2, planetLoad:1.4, gateLoad:.6, gateHover:.5, gateClick:.6 };
+var LEVEL={ gameOver:.85, site:.7, gateIdle:.4, holoIdle:.5, holoIdleRest:.1, kitOpen:.8, ambSite:.4, ambSelA:.5, ambSelB:.34, ambPlay:.38, hsLoop:.55, hsEnter:.8, hsExit:1.3, capArrive:.5, r2:.5,
   fighter:.42, seq:.8, small:.4, final:.85, hitLaser:.6, fdeath:.8, collide:.8, destroyed:.9, lowHealth:2.6, deathSeq:.8, rattle:.55, ui:.55, chain:.5, idle:.32, selIdle:.7, active:.5, fire1:.55, fireN:.5 };
 /* Per-fighter death sequence sounds: the ship's own signature, played the moment it is destroyed (before the shared explosion). Filled from the Battle Sound Review
    page's "Death sequence" slot on each fighter card. Key = model id (battle.js MODELS[].id), value = clip names in assets/audio without the extension. Empty until clips are added. */
@@ -92,7 +100,8 @@ function loud(loc){ return Math.max(MIN_LOUD,num(loc.gain,1)); }
 var SPEAKER_AZ=56*Math.PI/180, SPEAKER_DIST=4;   // virtual speakers: ±56° from the battle's centre line
 
 var ctx=null, master=null, duck=null, comp=null, bufs={}, loading={}, muted=false, started=false, stageName='select', yaw=0;
-var amb={sel:null,play:null,site:null}, selShip=null, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastHitAt=0, lastDeathSnd=0, lastLayer=0, wired=false, heroSnd=null;
+var idleWanted=false;   // the hologram has booted: the idle hum belongs under the galaxy view (comes back when the site ambience does)
+var amb={sel:null,play:null,site:null,idle:null,gate:null}, selShip=null, jump=null, voices=0, arriveLeft=0, lastFighter=0, lastHitAt=0, lastDeathSnd=0, lastLayer=0, wired=false, heroSnd=null;
 try{ muted=localStorage.getItem('mw_sound')==='off'; }catch(e){}
 
 function now(){ return ctx?ctx.currentTime:0; }
@@ -249,6 +258,21 @@ function startSite(){
   var bus=gainNode(1); bus.connect(duck);
   amb.site={ bus:bus, h:loopSource('ambSite',bus,LEVEL.ambSite,3) };
 }
+/* hologram idle hum: a seamless loop under the galaxy view once the boot has started (index.html → MWAudio.idleStart). Steps aside with the site ambience in the arcade. */
+function startIdle(){
+  if(amb.idle) return;
+  var bus=gainNode(1); bus.connect(duck);
+  var h=loopSource('holoIdle',bus,LEVEL.holoIdle,2.5);
+  amb.idle={ bus:bus, h:h };
+  /* the hum announces itself, then settles back to a level that is barely perceptible */
+  setTimeout(function(){ if(!h.dead) fade(h.g,LEVEL.holoIdleRest,IDLE_SETTLE); },IDLE_HOLD*1000);
+}
+/* entry-gate idle loop: under the waiting monogram until the dock click fades it out (index.html → MWAudio.gateStart / gateStop) */
+function startGate(){
+  if(amb.gate) return;
+  var bus=gainNode(1); bus.connect(duck);
+  amb.gate={ bus:bus, h:loopSource('gateIdle',bus,LEVEL.gateIdle,2.5) };
+}
 function makePanner(az){
   var n=ctx.createPanner(); n.panningModel='HRTF'; n.distanceModel='inverse'; n.refDistance=SPEAKER_DIST; n.rolloffFactor=0; n.coneInnerAngle=360;
   return {node:n,az:az};
@@ -376,9 +400,11 @@ var MWAudio={
   },
   /* a site event from SITE_EVENTS (dock / boot). Loads its clip on first use, so it also plays on the very first gesture; o = {gain,rate,delay}. */
   site:function(name,o){
-    var list=SITE_EVENTS[name]; if(!list||!list.length||!ensure()||muted) return; o=o||{};
+    var list=SITE_EVENTS[name]; if(!list||!list.length) return false; if(!ensure()||muted) return true; o=o||{};   // returns true when the event has clips of its own (so a caller can fall back to a default sound when it returns false)
     var k=draw('site:'+name,list);
-    load(k).then(function(b){ if(b) oneShot(k,{gain:LEVEL.site*num(o.gain,1),rate:o.rate,delay:o.delay}); });
+    var t0=now();   // anchor the delay to the event, not to when the clip finishes decoding (first use), or staggered cues play out of order
+    load(k).then(function(b){ if(b) oneShot(k,{gain:LEVEL.site*num(SITE_GAIN[name],1)*num(o.gain,1),rate:o.rate,delay:Math.max(0,num(o.delay,0)-(now()-t0))}); });
+    return true;
   },
   uiKinds:function(){ return Object.keys(UI); },
   /* call from any user gesture; safe to call repeatedly */
@@ -416,8 +442,14 @@ var MWAudio={
   },
   /* site-wide ambient background. siteStart needs a user gesture (browsers keep audio locked until one): index.html calls it on the first press or key anywhere,
      and again when the arcade closes; siteStop fades it out as the arcade opens. Both are safe to call repeatedly; the sound switch mutes it with everything else. */
-  siteStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} startSite(); },
-  siteStop:function(){ stopGroup('site'); },
+  siteStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} startSite(); if(idleWanted) startIdle(); },
+  siteStop:function(){ stopGroup('site'); stopGroup('idle'); stopGroup('gate'); },
+  /* the entry gate: the first press (not on the monogram itself) or key at the gate unlocks audio, so the monogram's initial-load sound plays and its idle loop starts;
+     the dock click fades the loop out (gateStop). Browsers keep audio locked until that first gesture, so a visitor who goes straight for the monogram hears neither. */
+  gateStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} if(amb.gate) return; startGate(); MWAudio.site('gateLoad'); },
+  gateStop:function(){ stopGroup('gate'); },
+  /* the hologram boot has begun (or a deep link landed on a booted galaxy): start the idle hum. Needs a gesture like siteStart; ignored in the arcade. */
+  idleStart:function(){ idleWanted=true; if(!ensure()||!started||window.__mwArcade) return; startIdle(); },
   /* hero select: the ship on the carousel idles quietly under the ambience; cycling swaps it. battle.js calls this every frame (cheap: deduped by id). */
   carouselShip:function(id){
     if(!ctx||stageName!=='select'||!id||!amb.sel||(selShip&&selShip.id===id)) return;
