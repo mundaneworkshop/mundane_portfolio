@@ -86,7 +86,8 @@
 
   /* ── TOPBAR ── */
   #topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;pointer-events:none}
-  #breadcrumb{pointer-events:auto}
+  #breadcrumb{pointer-events:auto;transition:opacity .5s ease}
+  body.mw-entrygate #breadcrumb{opacity:0;pointer-events:none}   /* the entry gate shows no nav: it comes in once the dock completes and mw-entrygate is removed */
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
   /* ARCADE mode: the exit button takes the breadcrumb's place, with the ESC hint right beside it */
   #arcadeExit{display:none;flex-direction:row;align-items:center;gap:8px;pointer-events:auto;transition:opacity .25s ease}
@@ -555,13 +556,10 @@
      actually watching the entry gate, instead of only after it's already been skipped or docked. ── */
   body.mw-entrygate #labels, body.mw-entrygate #hint,
   body.mw-entrygate #msgStars, body.mw-entrygate #msgCanvas{opacity:0;pointer-events:none;transition:opacity .5s ease}
-  #entryHint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6b8a85;pointer-events:none;opacity:0;transition:opacity .4s ease}
-  body.mw-entrygate #entryHint{opacity:1}
-  body.mw-gate-out #entryHint{opacity:0;transition:opacity var(--gate-out,600ms) cubic-bezier(.4,0,.2,1)}   /* the bottom hint leaves with the rest of the gate text when the dock starts */
   /* Entry gate text. Only transform + opacity animate (plus a mask on exit). Tunables (debug panel "Entry gate · text") arrive as custom properties on #gate:
      --gate-tilt, --gate-persp, --gate-gap, --gate-in, --gate-out, --gate-rise, --gate-h1-delay, --gate-h2-delay, --gate-stagger, --gate-exit, --gate-h2-color, --gate-case, --gate-track.
      Fonts: H1 = Chakra Petch (--display), H2 = Space Grotesk (--grotesk). */
-  #gate{position:absolute;inset:0;z-index:14;pointer-events:none;display:none;--gate-tilt:34deg;--gate-persp:520px;--gate-in:1000ms;--gate-out:600ms;--gate-rise:46px;--gate-gap:22px;--gate-h1-delay:1000ms;--gate-h2-delay:1400ms;--gate-stagger:500ms;--gate-exit:240px;--gate-h2-color:var(--holo);--gate-case:uppercase;--gate-track:.14em}
+  #gate{position:absolute;inset:0;z-index:14;pointer-events:none;display:none;--gate-tilt:34deg;--gate-persp:520px;--gate-in:2000ms;--gate-out:600ms;--gate-rise:46px;--gate-gap:22px;--gate-h1-delay:1000ms;--gate-h2-delay:1400ms;--gate-stagger:500ms;--gate-exit:240px;--gate-h2-color:var(--holo);--gate-case:uppercase;--gate-track:.14em}
   body.mw-entrygate #gate{display:block}
   #gateTop{position:absolute;left:0;right:0;top:calc(var(--gate-top,20vh) - var(--gate-gap));transform:translateY(-100%);display:flex;justify-content:center}
   #gateTitle{display:flex;justify-content:center;transform-origin:50% 50%;font-family:var(--display);font-weight:600;font-size:clamp(20px,3.2vw,44px);line-height:1.1;letter-spacing:.34em;margin-right:-.34em;text-transform:uppercase;white-space:nowrap;color:var(--holo);text-shadow:0 0 18px var(--holo-edge);opacity:0;transform:translateY(calc(var(--gate-rise) * .4))}
@@ -570,7 +568,7 @@
   .gate-h2{font-family:var(--grotesk);font-weight:500;font-size:clamp(13px,2.2vw,31px);line-height:1.25;letter-spacing:var(--gate-track);text-transform:var(--gate-case);white-space:nowrap;color:var(--gate-h2-color);opacity:0;transform:translateY(var(--gate-rise))}
   @media (max-width:699px){ .gate-h2{white-space:normal;text-wrap:balance} }   /* two lines on desktop; a phone cannot fit them at a readable size */
   /* fade up and in, staggered: H1 first (a beat after the camera settles on the monogram), then the H2 layer, its second line after its first */
-  body.mw-gate-on #gateTitle,body.mw-gate-on .gate-h2{opacity:1;transform:none;transition:opacity var(--gate-in) cubic-bezier(.22,1,.36,1) var(--gate-d,0ms),transform var(--gate-in) cubic-bezier(.22,1,.36,1) var(--gate-d,0ms)}
+  body.mw-gate-on #gateTitle,body.mw-gate-on .gate-h2{opacity:1;transform:none;transition:opacity var(--gate-in) cubic-bezier(.45,0,.15,1) var(--gate-d,0ms),transform var(--gate-in) cubic-bezier(.16,1,.3,1) var(--gate-d,0ms)}   /* opacity: a gentle in-out S-curve (a slow, soft fade); the rise: expo-out (a long soft landing) */
   body.mw-gate-on #gateTitle{--gate-d:var(--gate-h1-delay)}
   body.mw-gate-on .gate-h2:nth-child(1){--gate-d:var(--gate-h2-delay)}
   body.mw-gate-on .gate-h2:nth-child(2){--gate-d:calc(var(--gate-h2-delay) + var(--gate-stagger))}
@@ -998,7 +996,7 @@
       <div class="ctl"><label>Crawl tilt (deg) <b id="vGateTilt">34</b></label><input type="range" id="cGateTilt" min="0" max="80" step="1" value="34"></div>
       <div class="ctl"><label>Crawl perspective (px, lower = stronger) <b id="vGatePersp">520</b></label><input type="range" id="cGatePersp" min="120" max="1200" step="10" value="520"></div>
       <div class="ctl"><label>Gap to the monogram (px) <b id="vGateGap">22</b></label><input type="range" id="cGateGap" min="0" max="120" step="2" value="22"></div>
-      <div class="ctl"><label>Fade-in (ms) <b id="vGateIn">1000</b></label><input type="range" id="cGateIn" min="100" max="4000" step="50" value="1000"></div>
+      <div class="ctl"><label>Fade-in (ms) <b id="vGateIn">2000</b></label><input type="range" id="cGateIn" min="100" max="6000" step="50" value="2000"></div>
       <div class="ctl"><label>Fade-out on dock (ms) <b id="vGateOut">600</b></label><input type="range" id="cGateOut" min="100" max="3000" step="50" value="600"></div>
       <div class="ctl"><label>Rise / exit travel (px) <b id="vGateRise">46</b></label><input type="range" id="cGateRise" min="0" max="160" step="2" value="46"></div>
       <div class="ctl"><label>H1 delay after the camera settles (ms) <b id="vGateH1Delay">1000</b></label><input type="range" id="cGateH1Delay" min="0" max="5000" step="50" value="1000"></div>
@@ -1053,6 +1051,7 @@
       <div class="ctl"><label>Beam intensity · focus view <b id="vBeamFocusMul">0.40</b></label><input type="range" id="cBeamFocusMul" min="0" max="1" step="0.02" value="0.40"></div>
       <div class="ctl"><label>Dock duration (the move itself) <b id="vDockDur">0.30</b></label><input type="range" id="cDockDur" min="0.2" max="8" step="0.05" value="0.30"></div>
       <div class="ctl"><label>Hold before the dock (s): entry text leaves first <b id="vDockHold">0.70</b></label><input type="range" id="cDockHold" min="0" max="3" step="0.05" value="0.70"></div>
+      <div class="ctl"><label>Monogram intro: grow + fade in (s) <b id="vMwIntroDur">0.70</b></label><input type="range" id="cMwIntroDur" min="0" max="3" step="0.05" value="0.70"></div>
       <div class="ctl"><label>Cascade stage gap <b id="vBootGap">0.08</b></label><input type="range" id="cBootGap" min="0" max="1" step="0.02" value="0.08"></div>
       <div class="ctl"><label>Cascade stage flicker-in <b id="vBootStageDur">0.21</b></label><input type="range" id="cBootStageDur" min="0.05" max="1.2" step="0.02" value="0.21"></div>
       <div class="ctl"><label>Cascade planet stagger <b id="vBootPlanetStagger">0.03</b></label><input type="range" id="cBootPlanetStagger" min="0" max="0.2" step="0.005" value="0.03"></div>
@@ -1379,7 +1378,6 @@
   <!-- EDIT MODE: the global "Mesh Slots" panel was removed. Overrides are per-object
        now (✎ edit → click an object). Geometry builders/slot vars remain in JS. -->
   <div id="box-hover-label"></div>
-  <div id="entryHint">drag to orbit · scroll to zoom · click the mark to enter</div>
   <!-- Entry gate text: the H1 sits above the monogram (decodes Aurebesh → Latin on hover); two H2 lines sit below it on a tilted plane, the Star Wars crawl perspective.
        Positioned from the monogram's on-screen box (gateLayout), faded in when the monogram appears, faded up and out when the dock starts. -->
   <div id="gate">
@@ -1547,7 +1545,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,gateTilt:34,gatePersp:520,gateGap:22,gateIn:1000,gateOut:600,gateRise:46,gateH1Delay:1000,gateH2Delay:1400,gateStagger:500,gateTrack:14,gateCaps:true,gateColor:'teal', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,gateTilt:34,gatePersp:520,gateGap:22,gateIn:2000,gateOut:600,gateRise:46,gateH1Delay:1000,gateH2Delay:1400,gateStagger:500,gateTrack:14,gateCaps:true,gateColor:'teal', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     // ══════ GLYPH DECODE (Aurebesh → Latin) ══════
     // One shared engine, three surfaces: the Latin marquee ring (canvas, on load + hover), planet labels (DOM, hover),
@@ -9392,7 +9390,7 @@ f 2469//2469 2470//2470 2434//2434
     // the logo spot instead, once docked — see the visibility split below.
     var MW_DIR='assets/mw-monogram/';
     var MW_DIAM=0.775*2;           // logo-local diameter the mark's bounding sphere fills (= the .glb head's)
-    var mwMono=null, mwQuad=null, mwTex=null, mwState='idle';
+    var mwMono=null, mwQuad=null, mwTex=null, mwState='idle', _mwIntroT0=null;   // _mwIntroT0: when the monogram first appeared (entry intro: it grows from 55% and fades in over params.mwIntroDur)
     var mwMount=new THREE.Group(); galaxy.add(mwMount);
     function setSiteVisible(v){ galaxy.children.forEach(function(c){ if(c!==starPoints && c!==mwMount) c.visible=v; }); }
     var MW_ENTRY_Y=1.9, MW_DOCK_Y=-0.40, MW_ENTRY_MUL=0.95, MW_DOCK_MUL=0.62;   // fallback defaults — live values come from params.mwEntryMul/mwDockY (debug panel), these are only used if those are unset
@@ -9548,7 +9546,7 @@ f 2469//2469 2470//2470 2434//2434
       // show once the box has been still for GATE_SETTLE_MS (the camera has settled on the monogram), or after GATE_MAX_WAIT_MS regardless
       if(!_gShown&&(nowMs-_gSince>=GATE_SETTLE_MS||nowMs-_gFirst>=GATE_MAX_WAIT_MS)){ _gShown=true; document.body.classList.add('mw-gate-on'); }
     }
-    window.__mwGate=function(){ return { dbg:_gDbg, shown:_gShown, stillForMs:Math.round(performance.now()-_gSince), key:_gKey, phase:mwPhase, quadVisible:!!(mwQuad&&mwQuad.visible), dockAt:_dockAt }; };   // dev/test helper
+    window.__mwGate=function(){ return { qo:(mwQuad&&mwQuad.material?+mwQuad.material.opacity.toFixed(2):null), dbg:_gDbg, shown:_gShown, stillForMs:Math.round(performance.now()-_gSince), key:_gKey, phase:mwPhase, quadVisible:!!(mwQuad&&mwQuad.visible), dockAt:_dockAt }; };   // dev/test helper
     function startDock(){
       if(mwPhase!=='entry'||_dockAt!=null) return;
       _gShown=true; document.body.classList.remove('mw-gate-on'); document.body.classList.add('mw-gate-out');   // all gate text fades up and out (CSS, --gate-out)
@@ -9569,6 +9567,8 @@ f 2469//2469 2470//2470 2434//2434
     function mwUpdate(fadeK){
       if(mwPhase==='entry'){ gateLayout(); if(_dockAt!=null&&clock.getElapsedTime()>=_dockAt){ _dockAt=null; beginDock(); } }
       var on=params.mwMono!==false;
+      var introK=1;   // 0..1 entry intro of the monogram: quick ease-out grow + fade the moment it first renders (instead of popping in)
+      if(mwPhase==='entry'&&on&&mwState==='ready'){ var _tn=clock.getElapsedTime(); if(_mwIntroT0==null) _mwIntroT0=_tn; var _ti=(_tn-_mwIntroT0)/(params.mwIntroDur!=null?params.mwIntroDur:0.7); introK=_ti>=1?1:1-Math.pow(1-Math.max(0,_ti),3); }
       if(on && mwState==='idle') mwLoad();
       if(mwPhase==='docking'){
         mwDockT=Math.min(1,(clock.getElapsedTime()-mwDockStart)/(params.dockDur!=null?params.dockDur:DOCK_DUR));
@@ -9584,7 +9584,7 @@ f 2469//2469 2470//2470 2434//2434
       else mwMount.quaternion.copy(_mwDockStartQ).slerp(_mwIdentQ,ease);
       mwMount.position.set(0,(mwPhase==='entry')?MW_ENTRY_Y:THREE.MathUtils.lerp(MW_ENTRY_Y,dockY,ease),0);
       mwMount.updateMatrixWorld(true);
-      var sizeMul=(mwPhase==='entry')?entryMul:THREE.MathUtils.lerp(entryMul,MW_DOCK_MUL,ease);
+      var sizeMul=(mwPhase==='entry')?entryMul*(.55+.45*introK):THREE.MathUtils.lerp(entryMul,MW_DOCK_MUL,ease);
 
       // Beam occupant (gatekeeper): the head, or any uploaded custom logo — always at the logo spot,
       // staggered in via bootLogoGate once docked. No longer tied to the mwMono toggle, which now only
@@ -9649,7 +9649,7 @@ f 2469//2469 2470//2470 2434//2434
       mwQuad.position.copy(_mwC);
       mwQuad.scale.setScalar(2*fr.halfSize*sW);
       mwQuad.up.set(worldUpX,worldUpY,worldUpZ); mwQuad.lookAt(_mwCam);
-      if(!docked) mwQuad.material.opacity=fadeK;
+      if(!docked) mwQuad.material.opacity=fadeK*introK;
     }
 
     // ---------- emitter on plate + beam ----------
@@ -13341,6 +13341,7 @@ f 2469//2469 2470//2470 2434//2434
     bind('cMwDockY','vMwDockY',function(v){ params.mwDockY=v; },2);
     bind('cDockDur','vDockDur',function(v){ params.dockDur=v; },2);
     bind('cDockHold','vDockHold',function(v){ params.dockHold=v; },2);
+    bind('cMwIntroDur','vMwIntroDur',function(v){ params.mwIntroDur=v; },2);
     bind('cBootGap','vBootGap',function(v){ params.bootGap=v; },2);
     bind('cBootStageDur','vBootStageDur',function(v){ params.bootStageDur=v; },2);
     bind('cBootPlanetStagger','vBootPlanetStagger',function(v){ params.bootPlanetStagger=v; },3);
@@ -13723,7 +13724,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,gateTilt:34,gatePersp:520,gateGap:22,gateIn:1000,gateOut:600,gateRise:46,gateH1Delay:1000,gateH2Delay:1400,gateStagger:500,gateTrack:14,gateCaps:true,gateColor:'teal',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,gateTilt:34,gatePersp:520,gateGap:22,gateIn:2000,gateOut:600,gateRise:46,gateH1Delay:1000,gateH2Delay:1400,gateStagger:500,gateTrack:14,gateCaps:true,gateColor:'teal',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     Object.assign(DEFAULTS,GX_DEFAULTS);   // glyph-decode params reset / export-diff like everything else
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     // Entry gate text tunables -> custom properties on #gate (CSS reads them)
@@ -13746,7 +13747,7 @@ f 2469//2469 2470//2470 2434//2434
       document.getElementById('cMwMono').checked=params.mwMono!==false; document.getElementById('cMwPose').checked=params.mwPose!==false; setCtl('cMwScale','vMwScale',(params.mwScale!=null?params.mwScale:1.4).toFixed(2));
       setCtl('cMwEntryMul','vMwEntryMul',(params.mwEntryMul!=null?params.mwEntryMul:0.95).toFixed(2));
       setCtl('cMwDockY','vMwDockY',(params.mwDockY!=null?params.mwDockY:-0.40).toFixed(2));
-      setCtl('cDockDur','vDockDur',(params.dockDur!=null?params.dockDur:0.30).toFixed(2)); setCtl('cDockHold','vDockHold',(params.dockHold!=null?params.dockHold:0.70).toFixed(2));
+      setCtl('cDockDur','vDockDur',(params.dockDur!=null?params.dockDur:0.30).toFixed(2)); setCtl('cDockHold','vDockHold',(params.dockHold!=null?params.dockHold:0.70).toFixed(2)); setCtl('cMwIntroDur','vMwIntroDur',(params.mwIntroDur!=null?params.mwIntroDur:0.70).toFixed(2));
       setCtl('cBootGap','vBootGap',(params.bootGap!=null?params.bootGap:0.08).toFixed(2));
       setCtl('cBootStageDur','vBootStageDur',(params.bootStageDur!=null?params.bootStageDur:0.21).toFixed(2));
       setCtl('cBootPlanetStagger','vBootPlanetStagger',(params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03).toFixed(3));
@@ -13853,6 +13854,8 @@ f 2469//2469 2470//2470 2434//2434
         if(savedV<6){ params.dockDur=DEFAULTS.dockDur; params.dockHold=DEFAULTS.dockHold; params.cfgV=6; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
         // migration v7: gentler crawl tilt, teal H2, tighter H1 -> H2 stagger; reset saved copies of those gate values
         if(savedV<7){ ['gateTilt','gatePersp','gateH2Delay','gateColor'].forEach(function(k){ params[k]=DEFAULTS[k]; }); params.cfgV=7; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
+        // migration v8: slower (2 s) soft fade-in for the gate text
+        if(savedV<8){ params.gateIn=DEFAULTS.gateIn; params.cfgV=8; try{ localStorage.setItem('bric_params',JSON.stringify(params)); }catch(e){} }
       }
       applyParams();  // always sync debug-panel DOM to the live params (fresh defaults or restored+migrated), never leaves it on stale baked-in HTML values
       var SS=localStorage.getItem('bric_slots');
