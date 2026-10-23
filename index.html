@@ -805,6 +805,10 @@
   #outfitHud[data-locked="1"] .oh-name{color:#E9A73E}
   #outfitHud .oh-sub{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(240,237,232,.7);line-height:1.6;max-width:360px}
   body.mw-planet #outfitHud .oh-go{display:none!important}   /* in the focus view the manual carries the same CTA */
+  #outfitHud .oh-lock{display:none;align-items:center;gap:8px}
+  #outfitHud[data-locked="1"] .oh-lock{display:flex}
+  #outfitHud .oh-kit{width:46px;height:46px}
+  #outfitHud .oh-kitx{font-size:18px;letter-spacing:2px;color:#E9A73E}
   #outfitHud .oh-go{display:none;pointer-events:auto}
   #outfitHud[data-locked="1"] .oh-go{display:inline-flex}
   #outfitHud.oh-nudge .oh-sub{color:#E9A73E}
@@ -995,6 +999,7 @@
   <!-- OUTFIT CAROUSEL HUD: shown under the hologram while an outfit is on it (see the OUTFITS block in the script) -->
   <div id="outfitHud" role="group" aria-label="Outfit carousel">
     <div class="oh-row"><button type="button" class="oh-arrow" id="ohPrev" aria-label="Previous outfit">◄</button><div class="oh-name" id="ohName"></div><button type="button" class="oh-arrow" id="ohNext" aria-label="Next outfit">►</button></div>
+    <div class="oh-lock" id="ohLock"><div class="oh-kit" id="ohKit" aria-hidden="true"></div><span class="oh-kitx" id="ohKitX"></span></div>
     <div class="oh-sub" id="ohSub" role="status" aria-live="polite"></div>
     <button type="button" class="oh-go" id="ohGo">Play the Space Arcade →</button>
   </div>
@@ -13953,7 +13958,7 @@ f 2469//2469 2470//2470 2434//2434
     function ocHit(){ if(!outfitCur||!outfitStage.visible) return null; var h=ray.intersectObject(outfitCur.group,true); return h.length?h[0]:null; }
     // Per frame (called from animate): fade, head hand-off, tunables, auto-cycle.
     function ocTick(){
-      if(!outfitCur&&!outfitHeadHidden){ if(outfitHudOn){ outfitHudOn=false; document.body.classList.remove('oh-show'); } return; }
+      if(!outfitCur&&!outfitHeadHidden){ if(outfitHudOn){ outfitHudOn=false; document.body.classList.remove('oh-show'); ocSyncKit(false); } return; }
       if(outfitCur){
         var now=performance.now(), k=outfitCur.dur?Math.min(1,(now-outfitCur.t0)/outfitCur.dur):1;
         ocSetAlpha(outfitCur.group,k); if(outfitPrev) ocSetAlpha(outfitPrev.group,1-k);
@@ -13962,7 +13967,7 @@ f 2469//2469 2470//2470 2434//2434
         holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false;   // the figure replaces the head
         outfitStage.visible=!arcadeActive&&mwPhase==='docked'&&bootLogoGate; outfitHeadHidden=true;   // same gate the head uses (hidden on the entry gate, staggered in by the boot cascade)
         var _want=ocCycleList().length>0&&mwPhase==='docked'&&!arcadeActive&&(!focused||focused===aboutGrp)&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden');
-        if(_want!==outfitHudOn){ outfitHudOn=_want; document.body.classList.toggle('oh-show',_want); }
+        if(_want!==outfitHudOn){ outfitHudOn=_want; document.body.classList.toggle('oh-show',_want); ocHudUpdate(); }
         if(_want){   // in the About focus view the HUD sits in the free stage rectangle the manual layout publishes (centred, just above the manual); otherwise the CSS default
           var _st=(focused===aboutGrp)?window.MWStage:null, _hu=document.getElementById('outfitHud'), _pos=_st?(((_st.l+_st.r)/2)+'|'+(_st.H-_st.b+10)):'';
           if(_hu&&_hu._ocPos!==_pos){ _hu._ocPos=_pos; if(_st){ _hu.style.left=((_st.l+_st.r)/2)+'px'; _hu.style.bottom=(_st.H-_st.b+10)+'px'; } else { _hu.style.left=''; _hu.style.bottom=''; } } }
@@ -14044,7 +14049,7 @@ f 2469//2469 2470//2470 2434//2434
         fld('Kicker','a-kicker','text',(o.about&&o.about.kicker)||'','About me');
         fld('Title','a-title','text',(o.about&&o.about.title)||'',o.name);
         fld('About copy (shown in the manual for this outfit)','a-body','area',(o.about&&o.about.body)||'');
-        fld('Locked teaser (optional)','a-teaser','area',(o.about&&o.about.teaser)||'','Collect N minikits in the Space Arcade to unlock…');
+        fld('Locked teaser (optional)','a-teaser','area',(o.about&&o.about.teaser)||'','Shoot N minikits in the Space Arcade to unlock…');
         card.appendChild(det);
         var ul=ocEl('ul','pm-planets'); o.parts.forEach(function(p,pi){ var li=ocEl('li','pm-planet'), row=ocEl('div','pm-row'); var t=ocEl('span','pm-psub',(p.name||(p.file||'').split('/').pop())+(p.size?'  '+Math.round(p.size/1024)+' KB':'')); t.style.flex='1'; row.appendChild(t); if(o.src==='draft') row.appendChild(ocBtn('✕','rm-part',o.id,'Remove this GLB',null,pi)); li.appendChild(row); ul.appendChild(li); });
         if(!o.parts.length) ul.appendChild(ocEl('li','pm-empty','no GLBs yet')); card.appendChild(ul);
@@ -14114,8 +14119,10 @@ f 2469//2469 2470//2470 2434//2434
     function ocSetNew(a){ try{ localStorage.setItem('mw_outfits_new',JSON.stringify(a)); }catch(e){} }
     function ocMarkSeen(id){ var a=ocNewList(), i=a.indexOf(id); var o=ocFind(id); if(i>=0&&o&&!ocLocked(o)){ a.splice(i,1); ocSetNew(a); } }
     function ocRelock(){ if(!outfitCur) return; var o=ocFind(outfitCur.id); if(!o) return; outfitCur.group.userData.ocCap=ocLocked(o)?OUTFIT_LOCKED_ALPHA:1; outfitCur.group.userData.ocA=null; }
-    window.addEventListener('mw:minikit',function(){   // the arcade fires this per minikit opened (assets/battle/battle.js)
-      var before=ocKits(), now=before+1; ocSetKits(now);
+    window.addEventListener('mw:minikit',function(e){   // the arcade fires this per minikit opened (assets/battle/battle.js)
+      var d=e&&e.detail, before, now;
+      if(d&&d.lifetime!=null){ now=d.lifetime|0; before=now-1; }   // newer arcade owns the lifetime counter ('mw_kits_total') and sends it — don't double count
+      else { before=ocKits(); now=before+1; ocSetKits(now); }
       var fresh=ocAll().filter(function(o){ return o.enabled&&!ocIsDefault(o)&&(o.unlockAt||0)>before&&(o.unlockAt||0)<=now; });
       if(fresh.length){ var nw=ocNewList(); fresh.forEach(function(o){ if(nw.indexOf(o.id)<0) nw.push(o.id); }); ocSetNew(nw);
         if(typeof toast==='function') toast('Outfit unlocked: '+fresh.map(function(o){ return o.name; }).join(', ')); }
@@ -14130,9 +14137,22 @@ f 2469//2469 2470//2470 2434//2434
       el.setAttribute('data-locked',locked?'1':'0');
       document.getElementById('ohName').textContent=(locked?'Locked · ':'')+o.name;
       document.getElementById('ohSub').textContent=locked
-        ? ('Collect '+need+' more minikit'+(need===1?'':'s')+' in the Space Arcade to unlock ('+kits+'/'+o.unlockAt+')')
+        ? ('Shoot '+need+' more minikit'+(need===1?'':'s')+' in the Space Arcade to unlock ('+kits+'/'+o.unlockAt+')')
         : ('Outfit '+(i+1)+' / '+l.length+(isNew?' · new':'')+(focused===aboutGrp?'':' · click the figure to learn more'));
+      document.getElementById('ohKitX').textContent=locked?'\u00d7'+need:'';
       document.getElementById('ohPrev').disabled=document.getElementById('ohNext').disabled=l.length<2;
+      ocSyncKit(locked);
+    }
+    // The minikit symbol is the real GLB, spun in the site's mini viewer (a second WebGL context, so it only exists while a locked outfit is on show).
+    var ocKitBuf=null, ocKitLoading=false;
+    function ocSyncKit(locked){
+      var slot=document.getElementById('ohKit'); if(!slot) return;
+      var want=!!locked&&outfitHudOn;
+      if(!want){ if(slot._glbStop) slot._glbStop(); return; }
+      if(slot._glbStop) return;
+      if(ocKitBuf){ requestAnimationFrame(function(){ if(!slot._glbStop&&outfitHudOn) mountGLBViewer(slot,ocKitBuf.slice(0)); }); return; }
+      if(ocKitLoading) return; ocKitLoading=true;
+      fetch('assets/battle/models/minikit.glb').then(function(r){ return r.ok?r.arrayBuffer():null; }).then(function(b){ ocKitLoading=false; if(b){ ocKitBuf=b; ocHudUpdate(); } }).catch(function(){ ocKitLoading=false; });
     }
     function ocHudNudge(){ var el=document.getElementById('outfitHud'); if(!el) return; el.classList.remove('oh-nudge'); void el.offsetWidth; el.classList.add('oh-nudge'); setTimeout(function(){ el.classList.remove('oh-nudge'); },900); }
     (function wireHud(){
@@ -14146,7 +14166,7 @@ f 2469//2469 2470//2470 2434//2434
     function aboutData(o){
       var a=o.about||{}, kits=ocKits(), base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){}};
       if(ocLocked(o)) return Object.assign(base,{kicker:'Outfit locked',title:o.name,
-        framing:a.teaser||('Collect '+o.unlockAt+' minikits in the Space Arcade to unlock this outfit, and what it says about me. You have '+kits+' so far.'),
+        framing:a.teaser||('Shoot '+o.unlockAt+' minikits in the Space Arcade to unlock this outfit, and what it says about me. You have '+kits+' so far.'),
         cta:'PLAY THE SPACE ARCADE →',ctaUrl:'#',ctaHidden:false,ctaActive:true,onCta:function(){ ocGoArcade(); }});
       return Object.assign(base,{kicker:a.kicker||'About me',title:a.title||o.name,framing:a.body||'',cta:'',ctaUrl:'#',ctaHidden:true,ctaActive:false});
     }
