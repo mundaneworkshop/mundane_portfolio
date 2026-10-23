@@ -102,6 +102,15 @@
   #arcadeResult .ar-card .mb-corner.tr{top:0;right:0;border-top-width:1.5px;border-right-width:1.5px}
   #arcadeResult .ar-card .mb-corner.bl{bottom:0;left:0;border-bottom-width:1.5px;border-left-width:1.5px}
   #arcadeResult .ar-card .mb-corner.br{bottom:0;right:0;border-bottom-width:1.5px;border-right-width:1.5px}
+  /* two columns when the single column would be taller than the window (arcFit): everything (score, flown, breakdown, submit | top scores) fits without scrolling */
+  #arcadeResult .ar-cols{display:flex;flex-direction:column;gap:var(--bric-space-3-stud)}
+  #arcadeResult .ar-c1,#arcadeResult .ar-c2{display:flex;flex-direction:column;gap:var(--bric-space-3-stud);min-width:0}
+  #arcadeResult .ar-card.ar-two{width:min(960px,100%)}
+  #arcadeResult .ar-card.ar-two{padding:var(--bric-space-3-stud);gap:var(--bric-space-2-stud,16px)}   /* a bit tighter than the single column so it clears short windows */
+  #arcadeResult .ar-card.ar-two .ar-n{font-size:64px}
+  #arcadeResult .ar-card.ar-two td{padding-top:var(--bric-space-stud);padding-bottom:var(--bric-space-stud)}
+  #arcadeResult .ar-card.ar-two .ar-c1,#arcadeResult .ar-card.ar-two .ar-c2{gap:var(--bric-space-2-stud,16px)}
+  #arcadeResult .ar-card.ar-two .ar-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--bric-space-4-stud);align-items:start}
   #arcadeResult .ar-head{display:flex;flex-direction:column;align-items:center;gap:var(--bric-space-stud);text-align:center}
   #arcadeResult .ar-k{font:600 11px/1 var(--grotesk);letter-spacing:.34em;text-transform:uppercase;color:var(--bric-content-secondary)}
   #arcadeResult .ar-n{font-family:var(--mono);font-size:88px;line-height:1;font-variant-numeric:tabular-nums;color:var(--bric-content-brand);text-shadow:0 0 18px color-mix(in srgb,var(--bric-content-brand) 40%,transparent)}
@@ -10550,7 +10559,7 @@ f 2469//2469 2470//2470 2434//2434
     // ── results modal / leaderboard. Shown when you leave a game you actually played (name + submit when you scored), and from the carousel's Leaderboard button.
     // Scores go through /api/leaderboard-submit (light protection, see that file); the top list is read directly with the publishable key (RLS + column grants).
     var arcadeResultEl=null, arcadeResultT=0, ARC_HERO_NAMES={'mil-falcon':'Millennial Hawk',n1:"Bounty Hunter’s M-1",razorcrest:"Razor’s Edge",'slave-1':'Indentured Servant 1'};
-    function closeArcadeResult(again){ if(arcadeResultEl){ arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(again); } }   // closing the game-over modal is what actually ends the exit; again=true → straight back to hero select (no wipe)
+    function closeArcadeResult(again){ if(arcadeResultEl){ if(arcadeResultEl._rs) window.removeEventListener('resize',arcadeResultEl._rs); arcadeResultEl.remove(); arcadeResultEl=null; if(arcadeActive&&arcadeExiting) finishArcadeAfterOutro(again); } }   // closing the game-over modal is what actually ends the exit; again=true → straight back to hero select (no wipe)
     function arcadeAgain(){ closeArcadeResult(true); var go=function(){ if(!arcadeActive) openArcade('arcade',true); else setTimeout(go,150); }; go(); }
     function arcFetchTop(cb){
       if(!_sb){ cb(null,'offline'); return; }
@@ -10613,6 +10622,13 @@ f 2469//2469 2470//2470 2434//2434
       listEl.appendChild(tb);
       if(animate) arcDecode(tb,0);
     }
+    // Fit: if the single-column card is taller than the window (it would scroll), switch to two columns; only on windows wide enough for them. Re-run when the leaderboard rows arrive or the window resizes.
+    function arcFit(el){
+      var card=el&&el.querySelector('.ar-card'); if(!card||!el.querySelector('.ar-meta')) return;   // game-over view only (the plain leaderboard view stays one column)
+      card.classList.remove('ar-two');
+      var pad=parseFloat(getComputedStyle(el).paddingTop)||0;
+      if(card.offsetHeight>window.innerHeight-2*pad&&window.innerWidth>=800) card.classList.add('ar-two');
+    }
     function arcEsc(v){ return String(v).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
     // Game-over modal: the hero ships this run unlocked, each as an inline icon (the GLB rendered once to a still, MWBattle.shipIcon) + its name. Nothing is shown when none unlocked.
     function arcUnlockedRows(list){
@@ -10629,7 +10645,7 @@ f 2469//2469 2470//2470 2434//2434
     function showArcadeResult(sum){
       closeArcadeResult();
       var el=document.createElement('div'); el.id='arcadeResult'; el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label',sum?'Game over':'Leaderboard');
-      var scored=!!(sum&&sum.score>0), html='<div class="ar-card"><div class="mb-corner tl"></div><div class="mb-corner tr"></div><div class="mb-corner bl"></div><div class="mb-corner br"></div>';
+      var scored=!!(sum&&sum.score>0), html='<div class="ar-card"><div class="mb-corner tl"></div><div class="mb-corner tr"></div><div class="mb-corner bl"></div><div class="mb-corner br"></div><div class="ar-cols"><div class="ar-c1">';
       if(sum){
         var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2), w=sum.weights||{fighter:1,support:3,capital:7};
         var rowsB=[['Fighters',sum.fighters,w.fighter],['Support ships',sum.support,w.support],['Capital ships',sum.capital,w.capital]].map(function(r){
@@ -10643,9 +10659,10 @@ f 2469//2469 2470//2470 2434//2434
           arcUnlockedRows(sum.unlocked)+'</tbody></table></div>';
         if(scored) html+='<div class="ar-sec"><form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div></div>';
       } else html+='<div class="ar-head"><div class="ar-k">Leaderboard</div></div>';
-      html+='<div class="ar-sec">'+(sum?'<div class="ar-st">Top scores</div>':'')+'<div class="ar-list" aria-label="Top scores"></div></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">'+(sum?'Exit game':'Close')+'</button></div></div>';
+      html+='</div><div class="ar-c2"><div class="ar-sec">'+(sum?'<div class="ar-st">Top scores</div>':'')+'<div class="ar-list" aria-label="Top scores"></div></div></div></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">'+(sum?'Exit game':'Close')+'</button></div></div>';
       el.innerHTML=html; document.body.appendChild(el); arcadeResultEl=el; arcadeResultT=performance.now();
-      var listEl=el.querySelector('.ar-list'); arcFetchBoard(sum,null,null,function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,null,true); });
+      arcFit(el); el._rs=function(){ arcFit(el); }; window.addEventListener('resize',el._rs);   // two columns if one column would scroll
+      var listEl=el.querySelector('.ar-list'); arcFetchBoard(sum,null,null,function(rows,err){ if(arcadeResultEl===el){ arcRenderTop(listEl,rows,err,null,true); arcFit(el); } });
       arcDecode(el.querySelector('.ar-card'),60);   // (the leaderboard rows decode when they arrive)
       el.addEventListener('click',function(e){ if(e.target===el&&!sum) closeArcadeResult(); });   // game-over modal: the backdrop never dismisses (rapid clicking while playing would close it)
       var armed=function(){ return !sum||performance.now()-arcadeResultT>1200; };   // ...and the buttons ignore clicks for the first 1.2 s
@@ -10663,8 +10680,8 @@ f 2469//2469 2470//2470 2434//2434
             .then(function(o){
               if(!o.ok||!o.j.ok){ msg.textContent=(o.j&&o.j.error)||'Could not save your score'; btn.disabled=false; return; }
               msg.textContent=o.j.duplicate?'Already on the board':'Saved \u2014 rank #'+o.j.rank; form.style.display='none';
-              if(o.j.rank&&window.MWBattle&&MWBattle.noteRank){ try{ arcAppendUnlocked(el,MWBattle.noteRank(o.j.rank)); }catch(e){} }   // a leaderboard-rank unlock: add it to the modal now
-              arcFetchBoard(o.j.rank?sum:null,o.j.rank,o.j.id,function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
+              if(o.j.rank&&window.MWBattle&&MWBattle.noteRank){ try{ arcAppendUnlocked(el,MWBattle.noteRank(o.j.rank)); arcFit(el); }catch(e){} }   // a leaderboard-rank unlock: add it to the modal now
+              arcFetchBoard(o.j.rank?sum:null,o.j.rank,o.j.id,function(rows,err){ if(arcadeResultEl===el){ arcRenderTop(listEl,rows,err,o.j.id); arcFit(el); } });
             },function(){ msg.textContent='Could not reach the leaderboard'; btn.disabled=false; });
         });
       } else { var af=el.querySelector('#arAgain')||el.querySelector('#arClose'); if(af) af.focus(); }
