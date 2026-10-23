@@ -21,3 +21,6 @@ One cursor for the whole site and for the Framer case-study pages: amber corner 
 - Anything else can opt in with `data-bric-target` (or `data-bric-media` for a lightbox image). Chapter-ring labels (`.cschlbl`) and the like still use the native pointer; add the attribute if they should be framed too.
 
 **Testing:** `window.__bricReticle` is the live instance; `<html data-bric-ret="hot">` is set while the native cursor is hidden; `<html data-bric-reticle>` is set while the module runs.
+
+## Entry monogram hover (Oct 22 2026)
+While the pointer is over the entry monogram (the `mwHover` circle) the resolver in `index.html` returns a target whose rect is the mark's hit circle's bounding square (`_mwHit`, x0.92, read every frame), so the idle 44 px bracket box expands to frame the whole mark (28 px arms, 3 px, glow) with the usual `ENTER` label at its top-left corner. Moving off the mark contracts it back to the idle box. This replaces the earlier "no reticle lock on the entry monogram" rule. Debug panel ("Entry gate · monogram hover"): corner arm length and gap round the mark (`mwRetArm`, `mwRetOutset`; they apply on the next hover). A centred ENTER label was tried (a `labelAt:'center'` option in the reticle) and rejected: it looked bad over the glowing mark, so it was removed again and `assets/bric-reticle.js` is unchanged (v1.4, no Framer re-sync needed).
