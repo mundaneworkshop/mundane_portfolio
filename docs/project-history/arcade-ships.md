@@ -37,7 +37,7 @@ One condition per hero, edited on the Fleet Lab's Ships tab ("Unlock when") and 
 | `rank` | place in the top N on the leaderboard | best rank; set by `MWBattle.noteRank(rank)` after a score submit |
 | `score` | reach N points in one run | best single run |
 
-Progress is plain numbers in localStorage (`mw_ark_stats`, `mw_kits_total`, `mw_planets_visited`), so a condition is simply met or not from them: changing a condition in the Lab re-evaluates everyone's existing progress (raising a bar can re-lock a ship someone had unlocked).
+Progress is plain numbers in localStorage (`mw_ark_stats`, `mw_kits_total`), so a condition is simply met or not from them: changing a condition in the Lab re-evaluates everyone's existing progress (raising a bar can re-lock a ship someone had unlocked).
 
 **Telling the player.** `checkUnlocks()` runs after every stat change and banners (top centre) any ship that just became available. The game-over modal lists the ships that became available during that run, each with the reason (`condDone`: "Survived 2:00", "Placed in the top 3"); a rank unlock appears once the score is submitted (`arcAppendUnlocked`). The locked ship's select page shows the condition with progress (`condText`), e.g. "destroy 10 × X-wing · 4/10"; the minikit icon appears only for the minikit condition.
 
