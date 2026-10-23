@@ -74,6 +74,7 @@ var UNLOCK_TYPES={minikits:1,destroy:1,hunters:1,planets:1,survive:1,plays:1,ran
 function cleanUnlock(u){   // {type, n, target?}: n = count (seconds for 'survive', rank for 'rank'); n 0 = free
   if(!u||!UNLOCK_TYPES[u.type]) return null; var n=Math.floor(+u.n); if(!(n>=0&&n<=1000000)) return null; var c={type:u.type,n:n};
   if(u.type==='destroy'){ var t=String(u.target||'fighter'); c.target=(/^(any|fighter|support|capital)$/.test(t)||/^[a-z0-9][a-z0-9_-]{0,40}$/i.test(t))?t:'fighter'; }
+  if(c.type==='planets') c.n=Math.min(c.n,PLANETS.length);   // there are only this many backdrop planets
   return c;
 }
 function applyShips(){
@@ -512,7 +513,7 @@ function loadPlanet(){
       patchMaterial(m); planetMats.push(m); });
     var spin=new T.Group(), tilt=new T.Group(); spin.add(g.scene); tilt.add(spin); tilt.rotation.set(.22,0,.35);   // axial tilt
     planet=new T.Group(); planet.name='mw-planet'; planet.add(tilt); planet.userData.spin=spin;
-    planet.position.copy(PL.Pc); planet.scale.setScalar(PL.R); G.add(planet); planetState=2; applyLook();
+    planet.position.copy(PL.Pc); planet.scale.setScalar(PL.R); G.add(planet); planetState=2; applyLook(); noteSeenPlanet(name);   // counts toward the 'visit N different planets' ship unlock
   },undefined,function(e){ if(mySess!==sess) return; planetState=3; console.warn('[battle] failed to load planet',name,e); });
 }
 function updPlanet(dt){ if(!planet) return; planet.visible=P.planetOn; planet.userData.spin.rotation.y+=dt*P.planetSpin*Math.PI/180; }
@@ -969,17 +970,18 @@ function kitsBump(){ var n=kitsTotal()+1; try{ localStorage.setItem(LS_KITS,Stri
 
 /* ── Unlock conditions (heroes). One condition per ship, from the built-in table or ships.json `unlock`:
    minikits  shoot N minikits (lifetime)            destroy   destroy N ships: target any | fighter | support | capital | a specific ship id (lifetime)
-   hunters   destroy N fighters that were targeting you (lifetime)   planets   visit N different planets on the site (index.html keeps mw_planets_visited)
+   hunters   destroy N fighters that were targeting you (lifetime)   planets   see N different backdrop planets in the arcade (the arcade picks 1 of 7 at random per visit; kept in mw_ark_stats.planets)
    survive   stay alive N seconds in one life (best)   plays     start N runs (lifetime)
    rank      place in the top N on the leaderboard (best)   score     score N in one run (best)
-   Progress is kept in localStorage `mw_ark_stats` (+ mw_kits_total, mw_planets_visited), so a condition is simply "met" or not from those numbers. The FIRST hero is always free. */
-var LS_STATS='mw_ark_stats', LS_PLANETS='mw_planets_visited', ST=null, metMap={}, heroLife=0, lifeSec=0;
+   Progress is kept in localStorage `mw_ark_stats` (+ mw_kits_total), so a condition is simply "met" or not from those numbers. The FIRST hero is always free. */
+var LS_STATS='mw_ark_stats', ST=null, metMap={}, heroLife=0, lifeSec=0;
 function stats(){
   if(ST) return ST; try{ ST=JSON.parse(localStorage.getItem(LS_STATS)||'null'); }catch(e){ ST=null; } if(!ST||typeof ST!=='object') ST={};
-  ST.kills=(ST.kills&&typeof ST.kills==='object')?ST.kills:{}; ['hunters','plays','bestSurvive','bestScore','bestRank'].forEach(function(k){ ST[k]=ST[k]|0; }); return ST;
+  ST.kills=(ST.kills&&typeof ST.kills==='object')?ST.kills:{}; ST.planets=Array.isArray(ST.planets)?ST.planets:[]; ['hunters','plays','bestSurvive','bestScore','bestRank'].forEach(function(k){ ST[k]=ST[k]|0; }); return ST;
 }
 function saveStats(){ try{ localStorage.setItem(LS_STATS,JSON.stringify(ST)); }catch(e){} }
-function planetsVisited(){ try{ var a=JSON.parse(localStorage.getItem(LS_PLANETS)||'[]'); return Array.isArray(a)?a.length:0; }catch(e){ return 0; } }
+function planetsVisited(){ return stats().planets.length; }   // different backdrop planets seen in the arcade (PLANETS: one is picked at random per visit)
+function noteSeenPlanet(name){ var st=stats(); if(st.planets.indexOf(name)>=0) return; st.planets.push(name); saveStats(); checkUnlocks(); }
 function shipName(id){ var m=BYID[id]; return (m&&m.label)||id; }
 function heroCond(id){ if(id===HEROES[0]) return null; var m=BYID[id]; if(!m) return null; var c=m.unlock||(m.unlockAt?{type:'minikits',n:m.unlockAt|0}:null); return c&&c.n>0?c:null; }
 function condProg(c){
@@ -1125,7 +1127,7 @@ function spawnHero(id){
   var s=makeShip(m); heroShip=s; s.hero=true; s.hp=heroMax;
   s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=1; s.cd=0; s.gun=0; s.hp=heroMax; s.maxhp=heroMax; s.inv=0;
   burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false; if(window.MWAudio) MWAudio.heroStart(id);
-  if(!session.played){ session.played=true; session.t0=performance.now(); session.met0=snapshotMet(); var st0=stats(); st0.plays++; saveStats(); checkUnlocks(); }   // a run started: snapshot what was unlocked before it, count the play
+  if(!session.played){ session.played=true; session.t0=performance.now(); var st0=stats(); st0.plays++; saveStats(); checkUnlocks(); }   // a run started: count the play (what was already unlocked was snapshotted when the arcade opened)
   heroLife=0; lifeSec=0;
   session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label); if(session.heroIds.indexOf(m.id)<0) session.heroIds.push(m.id);
   setStage('play');
@@ -1763,7 +1765,7 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null; wireCache={};
+    kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false,met0:snapshotMet()}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null; wireCache={};
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(Math.max(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R,SUN_DIST+L+60)+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');

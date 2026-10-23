@@ -31,7 +31,7 @@ One condition per hero, edited on the Fleet Lab's Ships tab ("Unlock when") and 
 | `minikits` | shoot N minikits | lifetime, `mw_kits_total` |
 | `destroy` | destroy N ships; `target` = `any` / `fighter` / `support` / `capital` / a specific ship id (x-wing, tie-fighter…) | lifetime, per ship id and per class, `mw_ark_stats.kills` |
 | `hunters` | destroy N fighters that were targeting you when they died | lifetime (`s.target===heroShip` at the kill) |
-| `planets` | visit N different planets on the site | `index.html` `activate()` appends each opened planet id to `mw_planets_visited` (socials and the arcade itself don't count) |
+| `planets` | see N different BACKDROP planets in the arcade (it picks 1 of 7 at random each visit; max 7, larger values are clamped) | lifetime set of planet names, `mw_ark_stats.planets`, recorded when the planet model finishes loading (`noteSeenPlanet`) |
 | `survive` | stay alive N seconds in one life | best single life |
 | `plays` | start N runs | lifetime; counted at a run's first spawn, so the Nth start unlocks it immediately |
 | `rank` | place in the top N on the leaderboard | best rank; set by `MWBattle.noteRank(rank)` after a score submit |
@@ -41,4 +41,4 @@ Progress is plain numbers in localStorage (`mw_ark_stats`, `mw_kits_total`, `mw_
 
 **Telling the player.** `checkUnlocks()` runs after every stat change and banners (top centre) any ship that just became available. The game-over modal lists the ships that became available during that run, each with the reason (`condDone`: "Survived 2:00", "Placed in the top 3"); a rank unlock appears once the score is submitted (`arcAppendUnlocked`). The locked ship's select page shows the condition with progress (`condText`), e.g. "destroy 10 × X-wing · 4/10"; the minikit icon appears only for the minikit condition.
 
-**Not built / known.** A ship unlocked outside the arcade (planets) isn't announced on the next arcade entry; it simply shows unlocked. Real kills call `noteKill` from the two hero-kill sites in `hitShip` (verified through the `MWBattle._noteKill` test hook, not by shooting). Only one condition per ship (no AND/OR combinations). Rank counts the submit response, so it needs the leaderboard API to be reachable.
+**Not built / known.** Real kills call `noteKill` from the two hero-kill sites in `hitShip` (verified through the `MWBattle._noteKill` test hook, not by shooting). Only one condition per ship (no AND/OR combinations). Rank counts the submit response, so it needs the leaderboard API to be reachable.
