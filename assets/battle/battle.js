@@ -85,7 +85,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:20, sunEl:10, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
+  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unN1:1, unRazor:5, unSlave:10, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
   planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:1.5, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
   counts:{}, ver:11
 };
@@ -96,6 +96,7 @@ var G=null, lights=[], clockT=0, lastT=null, hyper=null, glowTex=null, sess=0, S
 var LREF=4.3;   // the battle is authored for a camera 4.3 units from its centre; G is scaled by (real distance / 4.3) so it reads the same from any camera
 var cache={}, loading={}, loadQ=[], inflight=0, failed={};
 var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
+var carLocked=false, noteEl=null, noteT=0;
 var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
@@ -918,12 +919,81 @@ function updBase(s,dt){
 // stage 'select': the hologram's head is replaced by a carousel of the playable hero ships (◄ PLAY ► under the cone).
 // stage 'play'  : every hologram artifact hides (ctx.onStage) and the chosen hero flies — it travels toward the mouse, fires where you click.
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
+var SEL_SHIP_Y=.32;   // the carousel ship sits this far above the hologram's centre (battle units, in world scale) so there is room for the name + unlock row under it
+// Ship gate: the Falcon is free; the others unlock once LIFETIME minikits shot (localStorage 'mw_kits_total', shared with the site's outfit unlocks) reaches a threshold (debug panel → Minikits · hero).
+var LS_KITS='mw_kits_total', HERO_UN_KEY={'n1':'unN1','razorcrest':'unRazor','slave-1':'unSlave'};
+function kitsTotal(){ try{ return Math.max(0,parseInt(localStorage.getItem(LS_KITS)||'0',10)||0); }catch(e){ return 0; } }
+function kitsBump(){ var n=kitsTotal()+1; try{ localStorage.setItem(LS_KITS,String(n)); }catch(e){} return n; }
+function heroNeed(id){ var k=HERO_UN_KEY[id]; return k&&P?Math.max(0,P[k]|0):0; }
+function heroLocked(id){ return kitsTotal()<heroNeed(id); }
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
 function reticleDom(playing){ if(!ctx||!ctx.dom) return; if(playing&&window.MWReticle){ ctx.dom.setAttribute('data-mw-reticle','arcade'); ctx.dom.style.cursor='none'; } else { ctx.dom.removeAttribute('data-mw-reticle'); ctx.dom.style.cursor=''; } }   // data-mw-reticle: the site-wide reticle (index.html) steps aside over the canvas while the arcade reticle is up
 function setStage(st){ if(stage===st) return; stage=st; if(st==='play'&&ctx&&ctx.getRot) rot0T=ctx.getRot(); reticleDom(st==='play'); if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
-function playHero(){ spawnHero(HEROES[carIdx]); }
+function playHero(){
+  if(heroLocked(HEROES[carIdx])){ if(window.MWAudio) MWAudio.ui('release'); if(carUi){ var lk=carUi.querySelector('.bt-lock'); if(lk){ lk.classList.remove('bt-shake'); void lk.offsetWidth; lk.classList.add('bt-shake'); } } return; }   // locked: nudge the lock line instead
+  spawnHero(HEROES[carIdx]);
+}
+// Select-page lock UI: a locked ship becomes a holographic WIREFRAME (hard edges + a faint fill, like the planet meshes on the galaxy view), PLAY → LOCKED (design-system inactive state),
+// and the requirement is one UI row: [minikit icon] ×(still needed) "shoot N minikits to unlock · have/N" in the feedback-warning colour so it stands out from the rest of the text.
+var kitIconSrc=null, carWireMat=null, carFillMat=null;
+function carKitIcon(){   // the minikit GLB rendered ONCE to a small still image (a UI icon, not a 3D object in the ship's volume)
+  if(kitIconSrc!==null) return kitIconSrc;
+  var c=cache.minikit; if(!c||!T) return '';
+  kitIconSrc='';
+  try{
+    var rn=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true}); rn.setPixelRatio(1); rn.setSize(96,96,false);
+    var sc=new T.Scene(), cam=new T.PerspectiveCamera(28,1,.01,100); sc.add(new T.AmbientLight(0xffffff,1.25)); var dl=new T.DirectionalLight(0xffffff,.8); dl.position.set(2,3,4); sc.add(dl);
+    var m=c.proto.clone(true); m.traverse(function(o){ if(!o.isMesh||!o.material) return; var src=o.material; var c0=src.color?src.color.clone():new T.Color(1,1,1); c0.setRGB(Math.pow(c0.r,1/2.2),Math.pow(c0.g,1/2.2),Math.pow(c0.b,1/2.2)); o.material=new T.MeshLambertMaterial({color:c0,transparent:!!src.transparent,opacity:src.opacity!=null?src.opacity:1}); });   // same linear→display lift the site applies to GLB colours
+    var box=new T.Box3().setFromObject(m), size=box.getSize(new T.Vector3()), ctr=box.getCenter(new T.Vector3()); m.position.sub(ctr);
+    var g=new T.Group(); g.add(m); g.rotation.set(.5,-.65,0); sc.add(g); var md=Math.max(size.x,size.y,size.z)||1; cam.position.set(0,0,md*2.5); cam.lookAt(0,0,0);
+    rn.render(sc,cam); kitIconSrc=rn.domElement.toDataURL('image/png');
+    try{ var lc=rn.getContext().getExtension('WEBGL_lose_context'); rn.dispose(); if(lc) lc.loseContext(); }catch(e){}
+  }catch(e){ kitIconSrc=''; }
+  return kitIconSrc;
+}
+// ONE merged outline per ship (cached): every mesh is baked into the model's space and welded into a single geometry, outlined once, and then short edges (studs, brick seams, small
+// detail; shorter than P.wireMin of the ship's size) are dropped, so the parts aren't individually outlined and only the main hull lines remain.
+var wireCache={};
+function carWireGeo(id,meshes){
+  if(wireCache[id]) return wireCache[id];
+  carModel.updateMatrixWorld(true); var inv=new T.Matrix4().copy(carModel.matrixWorld).invert(), m=new T.Matrix4(), v=new T.Vector3(), pos=[];
+  meshes.forEach(function(o){ var g=o.geometry.index?o.geometry.toNonIndexed():o.geometry, pa=g.attributes.position; m.multiplyMatrices(inv,o.matrixWorld);
+    for(var i=0;i<pa.count;i++){ v.fromBufferAttribute(pa,i).applyMatrix4(m); pos.push(v.x,v.y,v.z); } });
+  var mg=new T.BufferGeometry(); mg.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+  var ea=new T.EdgesGeometry(mg,48).attributes.position.array, diag=new T.Box3().setFromBufferAttribute(mg.attributes.position).getSize(v).length(), minL=diag*Math.max(0,P.wireMin||0), keep=[];
+  for(var j=0;j<ea.length;j+=6){ var dx=ea[j]-ea[j+3], dy=ea[j+1]-ea[j+4], dz=ea[j+2]-ea[j+5]; if(Math.sqrt(dx*dx+dy*dy+dz*dz)>=minL) for(var k=0;k<6;k++) keep.push(ea[j+k]); }
+  mg.dispose(); var out=new T.BufferGeometry(); out.setAttribute('position',new T.Float32BufferAttribute(keep,3)); wireCache[id]=out; return out;
+}
+function carWire(on,id){
+  if(!carModel) return;
+  if(!carWireMat){ carWireMat=new T.LineBasicMaterial({color:0x78E0D6,transparent:true,opacity:.7,blending:T.AdditiveBlending,depthWrite:false,fog:false}); carFillMat=new T.ShaderMaterial({transparent:true,depthWrite:true,side:T.FrontSide,   /* normal blending + depth write: ONE translucent front shell that also hides the back edges, so dense LEGO detail can't pile up into a white blob */
+    uniforms:{col:{value:new T.Color(0x78E0D6)},k:{value:1}},   // fresnel rim fill: the same look as the logo head's holo material, so the silhouette reads and the detail doesn't
+    vertexShader:'varying vec3 vN; varying vec3 vV; void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz; gl_Position=projectionMatrix*mv; }',
+    fragmentShader:'uniform vec3 col; uniform float k; varying vec3 vN; varying vec3 vV; void main(){ float fr=pow(1.0-abs(dot(normalize(vV),normalize(vN))),1.6); gl_FragColor=vec4(col,(fr*.55+.1)*k); }'}); }   // the site's holo teals (DARK.line / holoColor)
+
+  var meshes=[]; carModel.traverse(function(o){ if(o.isMesh&&o.geometry&&o.material&&!o.userData.isHolo) meshes.push(o); });   // collect first: adding children while traversing would recurse forever
+  var mu=carModel.userData;
+  if(on&&!mu.holoWireObj){ mu.holoWireObj=new T.LineSegments(carWireGeo(id,meshes),carWireMat); mu.holoWireObj.userData.isHolo=true; mu.holoWireObj.renderOrder=2; carModel.add(mu.holoWireObj); }
+  if(mu.holoWireObj) mu.holoWireObj.visible=on;
+  meshes.forEach(function(o){ var u=o.userData;
+    if(on&&!u.holoFill){ u.holoFill=new T.Mesh(o.geometry,carFillMat); u.holoFill.userData.isHolo=true; u.holoFill.renderOrder=1; o.add(u.holoFill); }
+    if(u.holoFill) u.holoFill.visible=on;
+    o.material.visible=!on; });   // hide only the solid shading; the child outline/fill still draw
+}
+function carLockUi(id){
+  var need=heroNeed(id), have=kitsTotal(), locked=have<need; carLocked=locked;
+  if(carUi){ var lk=carUi.querySelector('.bt-lock'), pb=carUi.querySelector('.bt-play');
+    if(lk){ lk.style.visibility=locked?'visible':'hidden';   // always takes its space, so nothing below it shifts as you tab through ships
+      if(locked){ var ic=lk.querySelector('.bt-kiticon'); if(ic&&!ic.getAttribute('src')){ var src=carKitIcon(); if(src) ic.setAttribute('src',src); } ic.style.display=ic.getAttribute('src')?'':'none';
+        lk.querySelector('.bt-locktxt').textContent='shoot '+need+' minikit'+(need===1?'':'s')+' to unlock · '+have+'/'+need; } }
+    if(pb){ pb.textContent=locked?'LOCKED':'PLAY'; pb.setAttribute('aria-disabled',locked?'true':'false'); }   // inactive look = the design system's [aria-disabled="true"] state (no custom colour)
+  }
+  carWire(locked,id);
+}
+// Brief banner (top centre) — a ship just unlocked.
+function noteShow(txt){ if(!noteEl) return; noteEl.textContent=txt; noteEl.style.opacity=1; clearTimeout(noteT); noteT=setTimeout(function(){ noteEl.style.opacity=0; },4200); }
 function spawnHero(id){
   ejectHero(true); cam.death=false; cam.breakup=false; cam.snap=false;
   var m=BYID[id]; if(!m) return;
@@ -1152,11 +1222,13 @@ function updCarousel(dt){
     if(carWrap) carGroup.remove(carWrap);
     carWrap=new T.Group(); carModel=cache[id].proto.clone(true);   /* proto materials are currently dimmed: undo it on the carousel copies */ carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var mm=o.material.clone(); mm.userData=Object.assign({},o.material.userData,{btPatched:false}); mm.envMap=envTex; var un=stage==='select'?1/SELDIM:1; mm.color.multiplyScalar(un); mm.envMapIntensity*=un; if(mm.emissiveIntensity!=null) mm.emissiveIntensity*=un; patchMaterial(mm); o.material=mm; }); carWrap.add(carModel); carGroup.add(carWrap); carModelId=id; carK=0;
     if(carUi){ var nm=carUi.querySelector('.bt-name'); if(nm) nm.textContent=BYID[id].label; }
+    carLockUi(id);
   }
   if(!carWrap) return;
   carK=Math.min(1,carK+dt*3.2); var pop=1-Math.pow(1-carK,3);
   carWrap.scale.setScalar((1.45/S)/BYID[id].size*(.2+.8*pop)*(P.scaleHero>0?1:1));
-  carWrap.rotation.y+=dt*.9; carWrap.rotation.x=.22; carGroup.position.y=Math.sin(clockT*1.3)*.05/S;
+  carWrap.rotation.y+=dt*.9; carWrap.rotation.x=.22; carGroup.position.y=SEL_SHIP_Y/S+Math.sin(clockT*1.3)*.05/S;
+  if(carLocked&&carWireMat){ var fl=1+.12*Math.sin(clockT*31)+.06*Math.sin(clockT*11); carWireMat.opacity=.7*Math.min(1.15,fl); carFillMat.uniforms.k.value=fl; }   // hologram flicker (same feel as the site's holo materials)
   if(carUi){   // sit the ◄ PLAY ► row just under the hologram's emitter
     _hF.set(0,(.8-ctx.center[1])/S,0); G.localToWorld(_hF); _hF.project(ctx.camera);
     var r=ctx.dom.getBoundingClientRect(); var cl=Math.round((_hF.x+1)/2*r.width+r.left), ct=Math.round((1-_hF.y)/2*r.height+r.top);   // whole pixels, written only on change: the row used to creep a fraction of a pixel every frame under the cursor
@@ -1166,6 +1238,7 @@ function updCarousel(dt){
 function syncUi(){
   var sel=stage==='select'&&!quiet(), pl=stage==='play'&&!quiet();
   if(carUi) carUi.style.display=sel?'flex':'none';
+  if(sel) carLockUi(HEROES[carIdx]);
   if(hintEl) hintEl.style.display=(sel||pl)?'flex':'none';
   if(hudEl) hudEl.style.opacity=pl?1:0;
   updCritical();
@@ -1191,8 +1264,10 @@ function openKit(k,via){
   burst(k.pos,0xffe14a,30,2,.9); burst(k.pos,0xffffff,12,2.6,.5);
   var au=audioAt(k); if(au&&window.MWAudio&&MWAudio.kitOpen) MWAudio.kitOpen(au);   // the reward cue (Battle Sound Review: Minikit opens)
   kitCount++; updHud(true);
-  try{ window.dispatchEvent(new CustomEvent('mw:minikit',{detail:{total:kitCount,via:via,reward:null}})); }catch(e){}
-  if(typeof MWBattle.onUnlock==='function'){ try{ MWBattle.onUnlock({total:kitCount,via:via,reward:null}); }catch(e){} }
+  var life=kitsBump();   // lifetime total (localStorage) — the site's outfit unlocks read the same number (detail.lifetime)
+  HEROES.forEach(function(id){ if(heroNeed(id)===life&&life>0) noteShow('Ship unlocked \u00b7 '+BYID[id].label); });
+  try{ window.dispatchEvent(new CustomEvent('mw:minikit',{detail:{total:kitCount,lifetime:life,via:via,reward:null}})); }catch(e){}
+  if(typeof MWBattle.onUnlock==='function'){ try{ MWBattle.onUnlock({total:kitCount,lifetime:life,via:via,reward:null}); }catch(e){} }
 }
 function updKits(dt){
   kitTimer-=dt;
@@ -1390,16 +1465,20 @@ function updHud(pulse){
 }
 function injectCss(){
   styleEl=document.createElement('style'); styleEl.textContent=[
-    'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints, body:not(.mw-arcade) #bt-bars{display:none!important}',
+    'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-note, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints, body:not(.mw-arcade) #bt-bars{display:none!important}',
     'body.mw-arcade #dbg-battle{display:block}',
     '#bt-car .bric-btn,#arcadeExit .bric-btn,#arcadeResult .bric-btn{touch-action:manipulation}',
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
-    '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
-    '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
-    '#bt-car .mw-sound-switch{margin-top:var(--bric-space-3-stud,24px)}',
+    '#bt-car .bt-name{margin-bottom:2px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
+    '#bt-car .bt-row{display:flex;gap:34px;align-items:center;margin-top:16px}',
+    '#bt-car .bt-play{min-width:104px;justify-content:center}',
+    /* Inactive PLAY (LOCKED): the design system's disabled look (fill/disabled tint + text/disabled) assumes an OPAQUE surface; over the busy scene the 14% tint vanished. Seat it on surface/scene, tokens unchanged (docs/project-history/interactive-states.md "Disabled over imagery"). */
+    '#bt-car .bt-play[aria-disabled="true"]{background:linear-gradient(var(--bric-interactive-fill-disabled),var(--bric-interactive-fill-disabled)),var(--bric-surface-scene,#070C0C)}',   /* PLAY and LOCKED are the same width, so the ◄ ► arrows don't shift as you tab through ships */
+    '#bt-car .bt-lock{display:flex;align-items:center;gap:8px;min-height:26px;margin-top:0;padding:0 10px;background:var(--bric-surface-overlay,rgba(7,12,12,.72));font-family:var(--mono,monospace);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bric-feedback-warning-fg,#F0892A);white-space:nowrap}',   /* feedback-warning token: stands out from the holo-teal text around it, and isn't the interactive amber */
+    '#bt-car .bt-kiticon{width:24px;height:24px;object-fit:contain;flex:none}',
+    '#bt-note{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:17;opacity:0;pointer-events:none;font-family:var(--display,sans-serif);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);text-shadow:0 0 14px rgba(170,245,238,.4);white-space:nowrap}',
+    '@media (prefers-reduced-motion:no-preference){#bt-note{transition:opacity .4s}#bt-car .bt-lock.bt-shake{animation:btShake .4s}@keyframes btShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}',
     '#bt-car .bt-lb{margin-top:26px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
-    '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
-    '#bt-car .bt-sub b{font-weight:400;color:var(--holo,#AAF5EE)}',
     '#bt-hints{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;display:flex;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap}',
     '#bt-hints .bt-h{display:flex;align-items:center;gap:11px}',
     '#bt-hints svg{color:var(--holo,#AAF5EE);flex:none}',
@@ -1429,12 +1508,12 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button><div class="sw mw-sound-switch mw-sound-switch--lg on" role="switch" aria-checked="true" tabindex="0" title="Sound on or off (M)"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>';
-  if(window.__mwSyncSound) window.__mwSyncSound();
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="visibility:hidden" role="status"><img class="bt-kiticon" alt="" width="24" height="24"><span class="bt-locktxt"></span></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
   document.body.appendChild(carUi);
+  noteEl=document.createElement('div'); noteEl.id='bt-note'; noteEl.setAttribute('role','status'); document.body.appendChild(noteEl);
   hintEl=document.createElement('div'); hintEl.id='bt-hints'; hintEl.style.display='none';
   hintEl.innerHTML='<div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 20 m-3 0 h6 M12 17 v6" stroke="currentColor" stroke-width="1.4" fill="none"/></svg><span>Move + aim</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 0 3 11 L3 13 L12 13 Z" fill="currentColor"/></svg><span>Click to fire</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 1 21 11 L21 13 L12 13 Z" fill="currentColor"/></svg><span>Right-click + drag · pan</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><rect x="10.4" y="4.6" width="3.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M9 16.5 l3 -2.6 l3 2.6 M9 22 l3 2.6 l3 -2.6" stroke="currentColor" stroke-width="1.3" fill="none"/></svg><span>Scroll · zoom</span></div><div class="bt-h"><svg viewBox="0 0 56 24" width="58" height="26" aria-hidden="true"><rect x="1.5" y="3" width="53" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 12.5 v3 h28 v-3" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Spacebar · change ship</span></div><div class="bt-h"><svg viewBox="0 0 40 24" width="42" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="37" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="20" y="16" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="currentColor">ESC</text></svg><span>Esc \u00b7 exit game</span></div>';
   document.body.appendChild(hintEl);
@@ -1508,6 +1587,11 @@ function buildPanel(){
   check(panelEl,'Death Star (only ever one)',function(){ return P.deathStar; },function(x){ P.deathStar=x; reconT=0; });
   var kd=document.createElement('details'); kd.innerHTML='<summary>Minikits · hero</summary>'; panelEl.appendChild(kd);
   slider(kd,'Minikit spawn rate',function(){ return P.kitRate; },function(x){ P.kitRate=x; },0,4,.05,2);
+  slider(kd,'Hero-select camera zoom (smaller = closer)',function(){ return P.selZoom; },function(x){ P.selZoom=x; try{ window.dispatchEvent(new CustomEvent('mw:arcselzoom')); }catch(e){} },.35,1.1,.01,2);
+  slider(kd,'Locked ship outline detail (drop edges shorter than this fraction of the ship)',function(){ return P.wireMin; },function(x){ P.wireMin=x; wireCache={}; if(carModel&&carModel.userData.holoWireObj){ carModel.remove(carModel.userData.holoWireObj); carModel.userData.holoWireObj=null; } if(carLocked) carLockUi(HEROES[carIdx]); },0,.15,.005,3);
+  slider(kd,'Unlock N-1 starfighter (minikits)',function(){ return P.unN1; },function(x){ P.unN1=x; },0,60,1,0);
+  slider(kd,'Unlock Razor Crest (minikits)',function(){ return P.unRazor; },function(x){ P.unRazor=x; },0,60,1,0);
+  slider(kd,'Unlock Slave I (minikits)',function(){ return P.unSlave; },function(x){ P.unSlave=x; },0,60,1,0);
   slider(kd,'Minikits at once',function(){ return P.kitMax; },function(x){ P.kitMax=x; },0,8,1,0);
   slider(kd,'Minikit size',function(){ return P.scaleKit; },function(x){ P.scaleKit=x; },.4,4,.05,2);
   var b=document.createElement('button'); b.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; b.textContent='↺ Reset battle sliders';
@@ -1556,7 +1640,7 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null; wireCache={};
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(Math.max(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R,SUN_DIST+L+60)+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
@@ -1574,11 +1658,12 @@ var MWBattle={
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
     if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.near=camNear; ctx.camera.updateProjectionMatrix(); }
-    [carUi,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
+    [carUi,noteEl,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
+  getSelZoom:function(){ return P?P.selZoom:.62; },   // hero-select camera zoom factor (index.html applies it; <1 = closer)
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
   setInverted:function(v){ camInverted=!!v; },   // index.html: the arcade camera is upside down (rolled upright)
   getOrbit:function(){ return takeOrbit(); },   // {yaw,pitch} radians accumulated since the last call: the edge-dwell orbit, unbounded (right edge turns the view right, top edge looks up)
