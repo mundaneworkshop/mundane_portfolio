@@ -193,7 +193,7 @@ Clips come from the Site Sound Review page's "Site events" cards; originals, cut
 
 The hyperjump "what is the arcade" interstitial was dropped; the same job is done by cues on the hero-select page.
 
-- **Gate:** the Millennial Hawk is free; N-1, Razor Crest and Slave I unlock at `P.unN1` / `P.unRazor` / `P.unSlave` minikits (defaults 1 / 5 / 10; debug panel → Minikits · hero). The count is LIFETIME minikits shot, `localStorage['mw_kits_total']` (`kitsTotal()`/`kitsBump()`), bumped in `openKit` and sent as `detail.lifetime` on the `mw:minikit` event. The site's outfit unlocks read the same number, so one currency gates both.
+- **Gate (superseded Oct 23 by unlock conditions, see arcade-ships.md):** the Millennial Hawk is free; N-1, Razor Crest and Slave I unlock at `P.unN1` / `P.unRazor` / `P.unSlave` minikits (defaults 1 / 5 / 10; debug panel → Minikits · hero). The count is LIFETIME minikits shot, `localStorage['mw_kits_total']` (`kitsTotal()`/`kitsBump()`), bumped in `openKit` and sent as `detail.lifetime` on the `mw:minikit` event. The site's outfit unlocks read the same number, so one currency gates both.
 - **Minikit spawning is UNCHANGED (random timer, `kitRate` / `kitMax`).** A score-gated spawn (1 per 10 points) was built first and then reverted on the user's call; don't re-add it without asking.
 - **Hero-select view:**
   - *Camera:* eases in on entry (`P.selZoom`, default .62, applied by index.html `openArcade` through `MWBattle.getSelZoom()`; the debug slider fires `mw:arcselzoom` to apply live) so the hologram nearly fills the window height. The carousel ship sits `SEL_SHIP_Y` higher in the hologram, leaving room for the name + unlock row under it.

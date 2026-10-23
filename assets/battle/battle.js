@@ -60,14 +60,22 @@ var MODELS=[
   // pickup
   {id:'minikit',           file:'minikit',                     team:-1,  cls:'minikit', size:.20, n:0}
 ];
+var NAMES={'a-wing':'A-wing','b-wing':'B-wing','x-wing':'X-wing','y-wing':'Y-wing','u-wing':'U-wing','tie-interceptor':'TIE interceptor','tie-fighter':'TIE fighter','tie-defender':'TIE defender','tie-dagger':'TIE dagger','lambda-shuttle':'Lambda shuttle','blockade-runner':'Blockade runner','nebulon-b':'Nebulon-B frigate','acclamator':'Acclamator','imperial-light-cruiser':'Imperial light cruiser','mc80':'Mon Calamari MC80','mc80a':'MC80A','mc85':'MC85','star-destroyer':'Star Destroyer','death-star':'Death Star'};
+MODELS.forEach(function(m){ if(!m.label&&NAMES[m.id]) m.label=NAMES[m.id]; });
 var BYID={}; MODELS.forEach(function(m){ BYID[m.id]=m; });
 var BASE_MODELS=MODELS.slice();
 
 // ── assets/battle/ships.json: optional overlay on the table above, written by the Arcade Fleet Lab artifact ("Export bundle"). It starts loading with this script, so it is ready long before the arcade opens;
 //    if it isn't (or doesn't exist) the built-in table is used unchanged. Each entry: {id, name, cls:'hero'|'fighter'|'support'|'capital', side:'rebel'|'imperial', file (a .glb in assets/battle/models/),
-//    size, n (count at density 1), unlockAt (heroes: lifetime minikits), flip (turn the nose 180°), removed}. Manifest order = hero carousel order; built-ins it doesn't mention are appended. See docs/project-history/arcade-ships.md.
+//    size, n (count at density 1), unlock (heroes: {type:'minikits'|'destroy'|'hunters'|'planets'|'survive'|'plays'|'rank'|'score', n, target?}; legacy unlockAt = minikits), flip (turn the nose 180°), removed}. Manifest order = hero carousel order; built-ins it doesn't mention are appended. See docs/project-history/arcade-ships.md.
 var SHIPS_URL='assets/battle/ships.json', shipsMan=null;
 try{ fetch(SHIPS_URL,{cache:'no-cache'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ shipsMan=j; }).catch(function(){}); }catch(e){}
+var UNLOCK_TYPES={minikits:1,destroy:1,hunters:1,planets:1,survive:1,plays:1,rank:1,score:1};
+function cleanUnlock(u){   // {type, n, target?}: n = count (seconds for 'survive', rank for 'rank'); n 0 = free
+  if(!u||!UNLOCK_TYPES[u.type]) return null; var n=Math.floor(+u.n); if(!(n>=0&&n<=1000000)) return null; var c={type:u.type,n:n};
+  if(u.type==='destroy'){ var t=String(u.target||'fighter'); c.target=(/^(any|fighter|support|capital)$/.test(t)||/^[a-z0-9][a-z0-9_-]{0,40}$/i.test(t))?t:'fighter'; }
+  return c;
+}
 function applyShips(){
   var man=shipsMan&&Array.isArray(shipsMan.ships)?shipsMan.ships:null; if(!man) return;
   var OKID=/^[a-z0-9][a-z0-9_-]{0,40}$/i, SIDE={imperial:IMP,rebel:REB}, DEF={hero:{size:.3,n:0},fighter:{size:.33,n:2},support:{size:1.3,n:3},capital:{size:2.8,n:2}}, base={}, out=[], seen={};
@@ -83,7 +91,8 @@ function applyShips(){
     if(typeof s.name==='string'&&s.name.trim()) m.label=s.name.trim().slice(0,40);
     if(s.size>0&&s.size<10) m.size=+s.size;
     if(!fixed&&cls!=='hero'&&s.n>=0&&s.n<60) m.n=s.n|0; if(cls==='hero') m.n=0;
-    if(cls==='hero'){ m.unlockAt=Math.max(0,s.unlockAt|0); } else delete m.unlockAt;
+    if(cls==='hero'){ if(s.unlock!==undefined){ var cu=cleanUnlock(s.unlock); if(cu){ m.unlock=cu; delete m.unlockAt; } else { delete m.unlock; m.unlockAt=0; } } else if(s.unlockAt!=null){ m.unlockAt=Math.max(0,s.unlockAt|0); delete m.unlock; } }
+    else { delete m.unlockAt; delete m.unlock; }
     if(s.flip!=null){ if(s.flip) m.rot=[0,Math.PI,0]; else delete m.rot; }
     out.push(m);
   });
@@ -118,7 +127,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:20, sunEl:10, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unlock:{}, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
+  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unlockAll:false, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
   planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:1.5, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
   counts:{}, ver:11
 };
@@ -163,7 +172,7 @@ function loadCfg(){
   }catch(e){}
   return o;
 }
-function saveCfg(){ try{ var o=Object.assign({},P); delete o.unlock; localStorage.setItem(LS_KEY,JSON.stringify(o)); }catch(e){} }   // unlock overrides are session-only: the manager's thresholds (ships.json) must stay authoritative
+function saveCfg(){ try{ var o=Object.assign({},P); delete o.unlockAll; localStorage.setItem(LS_KEY,JSON.stringify(o)); }catch(e){} }   // unlock overrides are session-only: the manager's thresholds (ships.json) must stay authoritative
 function on(target,ev,fn,opt){ target.addEventListener(ev,fn,opt); listeners.push([target,ev,fn,opt]); }
 
 // world geometry of the visible battlefield, from the ENTRY camera (so layout is responsive but doesn't chase user orbit/zoom)
@@ -785,10 +794,10 @@ function hitShip(s,b){
   if(s.hero){ if(b.team===HERO||s.inv>0) return; s.hp-=LASER_DMG; if(window.MWAudio){ MWAudio.heroHitLaser(); if(s.hp<=1+1e-6&&s.hp>1e-6) MWAudio.heroLowHealth(); } flash(s.pos,.25,0xffd090); heroHit(s,false); updHud(false); hudHurt(); if(s.hp<=1e-6) heroDeath(s); return; }
   if(s.form&&b.team!==HERO) return;   // the intro formations can't be shot down by the AI
   if(b.team===HERO&&window.MWReticle) MWReticle.hit();   // a hero laser landed: hit marker in the reticle
-  if(s.cls==='fighter'){ s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ fighterDown(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills+=SCORE.fighter; tally.fighter++; updHud(true); } } }
+  if(s.cls==='fighter'){ var hunted=!!(heroShip&&s.target===heroShip); s.hp--; if(b.team===HERO) s.hpShow=2.4; if(s.hp<=0){ fighterDown(s); s.hpShow=0; if(s.barEl) s.barEl.style.display='none'; if(b.team===HERO){ kills+=SCORE.fighter; tally.fighter++; updHud(true); noteKill(s,hunted); } } }
   else if((s.cls==='support'||s.cls==='capital')&&b.team===HERO){
     s.hp--; s.hpShow=3.2; s.provT=clockT+RETAL.sec;   // the hero is shooting at us: shoot back for a few seconds
-    if(s.hp<=0){ startDying(s); kills+=SCORE[s.cls]; tally[s.cls]++; updHud(true); }
+    if(s.hp<=0){ startDying(s); kills+=SCORE[s.cls]; tally[s.cls]++; updHud(true); noteKill(s,false); }
   }
 }
 // ── floating health bars (DOM) over large ships that have just been hit by the hero
@@ -957,9 +966,79 @@ var SEL_SHIP_Y=.32;   // the carousel ship sits this far above the hologram's ce
 var LS_KITS='mw_kits_total';
 function kitsTotal(){ try{ return Math.max(0,parseInt(localStorage.getItem(LS_KITS)||'0',10)||0); }catch(e){ return 0; } }
 function kitsBump(){ var n=kitsTotal()+1; try{ localStorage.setItem(LS_KITS,String(n)); }catch(e){} return n; }
-// threshold = debug-panel override (session only, never saved) → the ship's unlockAt (built-in table / ships.json); the FIRST hero in the carousel is always free so the select page can never be fully locked
-function heroNeed(id){ if(id===HEROES[0]) return 0; var u=P&&P.unlock&&P.unlock[id]; if(u!=null) return Math.max(0,u|0); var m=BYID[id]; return m&&m.unlockAt?Math.max(0,m.unlockAt|0):0; }
-function heroLocked(id){ return kitsTotal()<heroNeed(id); }
+
+/* ── Unlock conditions (heroes). One condition per ship, from the built-in table or ships.json `unlock`:
+   minikits  shoot N minikits (lifetime)            destroy   destroy N ships: target any | fighter | support | capital | a specific ship id (lifetime)
+   hunters   destroy N fighters that were targeting you (lifetime)   planets   visit N different planets on the site (index.html keeps mw_planets_visited)
+   survive   stay alive N seconds in one life (best)   plays     start N runs (lifetime)
+   rank      place in the top N on the leaderboard (best)   score     score N in one run (best)
+   Progress is kept in localStorage `mw_ark_stats` (+ mw_kits_total, mw_planets_visited), so a condition is simply "met" or not from those numbers. The FIRST hero is always free. */
+var LS_STATS='mw_ark_stats', LS_PLANETS='mw_planets_visited', ST=null, metMap={}, heroLife=0, lifeSec=0;
+function stats(){
+  if(ST) return ST; try{ ST=JSON.parse(localStorage.getItem(LS_STATS)||'null'); }catch(e){ ST=null; } if(!ST||typeof ST!=='object') ST={};
+  ST.kills=(ST.kills&&typeof ST.kills==='object')?ST.kills:{}; ['hunters','plays','bestSurvive','bestScore','bestRank'].forEach(function(k){ ST[k]=ST[k]|0; }); return ST;
+}
+function saveStats(){ try{ localStorage.setItem(LS_STATS,JSON.stringify(ST)); }catch(e){} }
+function planetsVisited(){ try{ var a=JSON.parse(localStorage.getItem(LS_PLANETS)||'[]'); return Array.isArray(a)?a.length:0; }catch(e){ return 0; } }
+function shipName(id){ var m=BYID[id]; return (m&&m.label)||id; }
+function heroCond(id){ if(id===HEROES[0]) return null; var m=BYID[id]; if(!m) return null; var c=m.unlock||(m.unlockAt?{type:'minikits',n:m.unlockAt|0}:null); return c&&c.n>0?c:null; }
+function condProg(c){
+  var st=stats();
+  switch(c.type){
+    case 'minikits': return {have:kitsTotal()};
+    case 'destroy': { var t=c.target||'fighter'; return {have:t==='any'?(st.kills.fighter|0)+(st.kills.support|0)+(st.kills.capital|0):(st.kills[t]|0)}; }
+    case 'hunters': return {have:st.hunters};
+    case 'planets': return {have:planetsVisited()};
+    case 'survive': return {have:st.bestSurvive};
+    case 'plays': return {have:st.plays};
+    case 'score': return {have:st.bestScore};
+    case 'rank': return {have:st.bestRank,rank:true};
+  } return {have:0};
+}
+function condMet(c){ var p=condProg(c); return p.rank?(p.have>0&&p.have<=c.n):p.have>=c.n; }
+function fmtT(sec){ sec=Math.max(0,sec|0); return Math.floor(sec/60)+':'+('0'+(sec%60)).slice(-2); }
+function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+function destroyWhat(c){ var t=c.target||'fighter', n=c.n; if(t==='any') return plural(n,'ship'); if(t==='fighter') return plural(n,'fighter'); if(t==='support') return plural(n,'support ship'); if(t==='capital') return plural(n,'capital ship'); return n+' × '+shipName(t); }
+// present tense + progress: the locked ship's line on the select page
+function condText(c){
+  var p=condProg(c), n=c.n, h=Math.min(p.have,n);
+  switch(c.type){
+    case 'minikits': return 'shoot '+plural(n,'minikit')+' to unlock · '+h+'/'+n;
+    case 'destroy': return 'destroy '+destroyWhat(c)+' to unlock · '+h+'/'+n;
+    case 'hunters': return 'destroy '+plural(n,'fighter')+' that are targeting you · '+h+'/'+n;
+    case 'planets': return 'visit '+n+' different planet'+(n===1?'':'s')+' · '+h+'/'+n;
+    case 'survive': return 'survive '+fmtT(n)+' in a single run · best '+fmtT(p.have);
+    case 'plays': return 'play '+plural(n,'time')+' · '+h+'/'+n;
+    case 'rank': return 'place in the top '+n+' on the leaderboard · '+(p.have?'best #'+p.have:'not ranked yet');
+    case 'score': return 'score '+n+' in a single run · best '+p.have;
+  } return '';
+}
+// past tense: the game-over modal's reason line
+function condDone(c){
+  var n=c.n;
+  switch(c.type){
+    case 'minikits': return 'Shot '+plural(n,'minikit');
+    case 'destroy': return 'Destroyed '+destroyWhat(c);
+    case 'hunters': return 'Destroyed '+plural(n,'fighter')+' that targeted you';
+    case 'planets': return 'Visited '+n+' different planet'+(n===1?'':'s');
+    case 'survive': return 'Survived '+fmtT(n);
+    case 'plays': return 'Played '+plural(n,'time');
+    case 'rank': return 'Placed in the top '+n;
+    case 'score': return 'Scored '+n;
+  } return '';
+}
+function heroLocked(id){ if(P&&P.unlockAll) return false; var c=heroCond(id); return !!c&&!condMet(c); }
+function snapshotMet(){ var o={}; HEROES.forEach(function(id){ var c=heroCond(id); o[id]=!c||condMet(c); }); return o; }
+function checkUnlocks(){   // call after any stat changes: banners (top centre) any ship that just became available
+  HEROES.forEach(function(id){ var c=heroCond(id), ok=!c||condMet(c); if(ok&&metMap[id]===false) noteShow('Ship unlocked · '+shipName(id)); metMap[id]=ok; });
+}
+function noteKill(s,hunted){   // the hero just destroyed `s`
+  var st=stats(); st.kills[s.id]=(st.kills[s.id]|0)+1; st.kills[s.cls]=(st.kills[s.cls]|0)+1; if(hunted) st.hunters++; if(kills>st.bestScore) st.bestScore=kills; saveStats(); checkUnlocks();
+}
+function trackLife(dt){   // seconds the hero has stayed alive this life
+  if(!(stage==='play'&&heroShip&&heroShip.alive&&!quiet())) return; heroLife+=dt; var sec=Math.floor(heroLife);
+  if(sec>lifeSec){ lifeSec=sec; var st=stats(); if(sec>st.bestSurvive){ st.bestSurvive=sec; saveStats(); checkUnlocks(); } }
+}
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
 function reticleDom(playing){ if(!ctx||!ctx.dom) return; if(playing&&window.MWReticle){ ctx.dom.setAttribute('data-mw-reticle','arcade'); ctx.dom.style.cursor='none'; } else { ctx.dom.removeAttribute('data-mw-reticle'); ctx.dom.style.cursor=''; } }   // data-mw-reticle: the site-wide reticle (index.html) steps aside over the canvas while the arcade reticle is up
@@ -993,11 +1072,10 @@ function carKitIcon(){
 }
 var shipIcons={};
 function shipIcon(id){ if(shipIcons[id]!==undefined) return shipIcons[id]; var c=cache[id]; if(!c||!T) return ''; shipIcons[id]=modelIcon(c.proto,{rx:.62,ry:2.45,dist:2.1}); return shipIcons[id]; }
-// Hero ships whose unlock threshold was crossed during THIS run (lifetime minikits at the first spawn → now). Shown on the game-over modal.
+// Hero ships that became available during THIS run (by any condition), vs the snapshot taken at the run's first spawn. Shown on the game-over modal, each with the reason it unlocked.
 function unlockedShips(){
-  if(!session.played||session.kits0==null) return [];
-  var now=kitsTotal();
-  return HEROES.filter(function(id){ var need=heroNeed(id); return need>session.kits0&&need<=now; }).map(function(id){ return {id:id,name:BYID[id].label,icon:shipIcon(id)}; });
+  if(!session.played||!session.met0) return [];
+  return HEROES.filter(function(id){ var c=heroCond(id); return c&&session.met0[id]===false&&condMet(c); }).map(function(id){ return {id:id,name:shipName(id),icon:shipIcon(id),why:condDone(heroCond(id))}; });
 }
 // ONE merged outline per ship (cached): every mesh is baked into the model's space and welded into a single geometry, outlined once, and then short edges (studs, brick seams, small
 // detail; shorter than P.wireMin of the ship's size) are dropped, so the parts aren't individually outlined and only the main hull lines remain.
@@ -1029,11 +1107,11 @@ function carWire(on,id){
     o.material.visible=!on; });   // hide only the solid shading; the child outline/fill still draw
 }
 function carLockUi(id){
-  var need=heroNeed(id), have=kitsTotal(), locked=have<need; carLocked=locked;
+  var c=heroCond(id), locked=heroLocked(id); carLocked=locked;
   if(carUi){ var lk=carUi.querySelector('.bt-lock'), pb=carUi.querySelector('.bt-play');
     if(lk){ lk.style.visibility=locked?'visible':'hidden';   // always takes its space, so nothing below it shifts as you tab through ships
-      if(locked){ var ic=lk.querySelector('.bt-kiticon'); if(ic&&!ic.getAttribute('src')){ var src=carKitIcon(); if(src) ic.setAttribute('src',src); } ic.style.display=ic.getAttribute('src')?'':'none';
-        lk.querySelector('.bt-locktxt').textContent='shoot '+need+' minikit'+(need===1?'':'s')+' to unlock · '+have+'/'+need; } }
+      if(locked&&c){ var ic=lk.querySelector('.bt-kiticon'), kit=c.type==='minikits'; if(kit&&ic&&!ic.getAttribute('src')){ var src=carKitIcon(); if(src) ic.setAttribute('src',src); } ic.style.display=(kit&&ic.getAttribute('src'))?'':'none';   // the minikit icon only for the minikit condition
+        lk.querySelector('.bt-locktxt').textContent=condText(c); } }
     if(pb){ pb.textContent=locked?'LOCKED':'PLAY'; pb.setAttribute('aria-disabled',locked?'true':'false'); }   // inactive look = the design system's [aria-disabled="true"] state (no custom colour)
   }
   carWire(locked,id);
@@ -1047,7 +1125,8 @@ function spawnHero(id){
   var s=makeShip(m); heroShip=s; s.hero=true; s.hp=heroMax;
   s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=1; s.cd=0; s.gun=0; s.hp=heroMax; s.maxhp=heroMax; s.inv=0;
   burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false; if(window.MWAudio) MWAudio.heroStart(id);
-  if(!session.played){ session.played=true; session.t0=performance.now(); session.kits0=kitsTotal(); }
+  if(!session.played){ session.played=true; session.t0=performance.now(); session.met0=snapshotMet(); var st0=stats(); st0.plays++; saveStats(); checkUnlocks(); }   // a run started: snapshot what was unlocked before it, count the play
+  heroLife=0; lifeSec=0;
   session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label); if(session.heroIds.indexOf(m.id)<0) session.heroIds.push(m.id);
   setStage('play');
 }
@@ -1311,7 +1390,7 @@ function openKit(k,via){
   var au=audioAt(k); if(au&&window.MWAudio&&MWAudio.kitOpen) MWAudio.kitOpen(au);   // the reward cue (Battle Sound Review: Minikit opens)
   kitCount++; updHud(true);
   var life=kitsBump();   // lifetime total (localStorage) — the site's outfit unlocks read the same number (detail.lifetime)
-  HEROES.forEach(function(id){ if(heroNeed(id)===life&&life>0) noteShow('Ship unlocked \u00b7 '+BYID[id].label); });
+  checkUnlocks();
   try{ window.dispatchEvent(new CustomEvent('mw:minikit',{detail:{total:kitCount,lifetime:life,via:via,reward:null}})); }catch(e){}
   if(typeof MWBattle.onUnlock==='function'){ try{ MWBattle.onUnlock({total:kitCount,lifetime:life,via:via,reward:null}); }catch(e){} }
 }
@@ -1433,7 +1512,7 @@ function update(t){
   if(anchorsDirty) assignAnchors();
   if(!introScheduled&&!hyper&&!introHold) tryScheduleIntro();
 
-  updPan(dt);
+  updPan(dt); trackLife(dt);
   if(window.MWReticle) MWReticle.setActive(stage==='play'&&!quiet()&&!!heroShip&&ptr.in&&!ptr.out);   // arcade reticle: only while the hero flies and the pointer is over the battle
   var allGone=true;
   for(var i=ships.length-1;i>=0;i--){
@@ -1635,7 +1714,7 @@ function buildPanel(){
   slider(kd,'Minikit spawn rate',function(){ return P.kitRate; },function(x){ P.kitRate=x; },0,4,.05,2);
   slider(kd,'Hero-select camera zoom (smaller = closer)',function(){ return P.selZoom; },function(x){ P.selZoom=x; try{ window.dispatchEvent(new CustomEvent('mw:arcselzoom')); }catch(e){} },.35,1.1,.01,2);
   slider(kd,'Locked ship outline detail (drop edges shorter than this fraction of the ship)',function(){ return P.wireMin; },function(x){ P.wireMin=x; wireCache={}; if(carModel&&carModel.userData.holoWireObj){ carModel.remove(carModel.userData.holoWireObj); carModel.userData.holoWireObj=null; } if(carLocked) carLockUi(HEROES[carIdx]); },0,.15,.005,3);
-  HEROES.forEach(function(id,i){ if(i===0) return; slider(kd,'Unlock '+BYID[id].label+' (minikits, this session)',function(){ return heroNeed(id); },function(x){ P.unlock=P.unlock||{}; P.unlock[id]=x|0; },0,60,1,0); });
+  check(kd,'Unlock every ship (this session only; never saved)',function(){ return !!P.unlockAll; },function(x){ P.unlockAll=!!x; if(carUi) carLockUi(HEROES[carIdx]); });
   slider(kd,'Minikits at once',function(){ return P.kitMax; },function(x){ P.kitMax=x; },0,8,1,0);
   slider(kd,'Minikit size',function(){ return P.scaleKit; },function(x){ P.scaleKit=x; },.4,4,.05,2);
   var b=document.createElement('button'); b.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; b.textContent='↺ Reset battle sliders';
@@ -1671,7 +1750,7 @@ function resetState(){
 }
 var MWBattle={
   init:function(c){
-    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; applyShips(); P=loadCfg(); if(window.MWReticle) MWReticle.init(); if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom); if(window.MWAudio&&MWAudio.setFighterDuck) MWAudio.setFighterDuck(P.fighterDuck);
+    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; applyShips(); P=loadCfg(); ST=null; metMap=snapshotMet(); if(window.MWReticle) MWReticle.init(); if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom); if(window.MWAudio&&MWAudio.setFighterDuck) MWAudio.setFighterDuck(P.fighterDuck);
     _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
@@ -1717,8 +1796,10 @@ var MWBattle={
   assetsReady:function(){ return active&&(planetState!==1)&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
   shipIcon:shipIcon,
+  noteRank:function(r){ r=r|0; if(!(r>0)) return []; var st=stats(); if(!st.bestRank||r<st.bestRank){ st.bestRank=r; saveStats(); } checkUnlocks(); return unlockedShips(); },   // index.html: the leaderboard rank a submitted score got → returns the ships this run has unlocked so far
   summary:function(){ return { unlocked:unlockedShips(), played:session.played, score:kills, kills:kills, minikits:kitCount, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
-  _explode:function(s){ startDying(s); }, _debris:function(){ return debris.length; },
+  _explode:function(s){ startDying(s); }, _noteKill:function(id,cls,hunted){ kills+=SCORE[cls]||1; if(tally[cls]!=null) tally[cls]++; noteKill({id:id,cls:cls},!!hunted); },   // test hook: count a hero kill without shooting
+ _debris:function(){ return debris.length; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },
   spawnHero:spawnHero, openKit:function(){ if(kits[0]) openKit(kits[0],'api'); },

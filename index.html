@@ -132,6 +132,8 @@
   #arcadeResult .ar-ships{display:flex;flex-wrap:wrap;gap:8px 18px}
   #arcadeResult .ar-ship{display:inline-flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.06em;color:var(--bric-content-primary)}
   #arcadeResult .ar-ico{width:28px;height:28px;object-fit:contain;flex:none}
+  #arcadeResult .ar-nm2{display:flex;flex-direction:column;gap:2px}
+  #arcadeResult .ar-why{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--bric-content-tertiary)}
   #arcadeResult .ar-board td.ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0}
   #arcadeResult .ar-board td.ar-h{width:34%;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--bric-content-secondary);padding-left:var(--bric-space-1-5-stud)}
   #arcadeResult .ar-board th.ar-h{padding-left:var(--bric-space-1-5-stud)}
@@ -10252,6 +10254,8 @@ f 2469//2469 2470//2470 2434//2434
     }
     function goHomeV(){ veilThen(goHome); }
     function activate(ud){
+      try{ if(ud&&ud.id&&ud.kind!=='social'&&ud.id!=='arcade'){   // 'visit N different planets' ship unlock (assets/battle/battle.js reads this): every planet opened, except the socials (deep links out) and the arcade itself
+        var _pv=JSON.parse(localStorage.getItem('mw_planets_visited')||'[]'); if(!Array.isArray(_pv)) _pv=[]; if(_pv.indexOf(ud.id)<0){ _pv.push(ud.id); localStorage.setItem('mw_planets_visited',JSON.stringify(_pv)); } } }catch(e){}
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
@@ -10617,7 +10621,12 @@ f 2469//2469 2470//2470 2434//2434
     function arcUnlockedRows(list){
       if(!list||!list.length) return '';
       return '<tr class="unl"><td colspan="4"><span class="ar-ul">'+(list.length===1?'Ship unlocked':'Ships unlocked')+'</span><span class="ar-ships">'+list.map(function(u){
-        return '<span class="ar-ship">'+(u.icon?'<img class="ar-ico" alt="" src="'+u.icon+'" width="28" height="28">':'')+'<span>'+arcEsc(u.name)+'</span></span>'; }).join('')+'</span></td></tr>';
+        return '<span class="ar-ship">'+(u.icon?'<img class="ar-ico" alt="" src="'+u.icon+'" width="28" height="28">':'')+'<span class="ar-nm2"><span>'+arcEsc(u.name)+'</span>'+(u.why?'<small class="ar-why">'+arcEsc(u.why)+'</small>':'')+'</span></span>'; }).join('')+'</span></td></tr>';
+    }
+    // a ship can also unlock AFTER the modal is up (placing on the leaderboard once the score is submitted): replace the row with the up-to-date list
+    function arcAppendUnlocked(el,list){
+      if(!list||!list.length) return; var tb=el.querySelector('.ar-break tbody'); if(!tb) return;
+      var old=tb.querySelector('.unl'); if(old) old.remove(); tb.insertAdjacentHTML('beforeend',arcUnlockedRows(list));
     }
     // sum: {score, fighters, support, capital, weights, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
     function showArcadeResult(sum){
@@ -10655,6 +10664,7 @@ f 2469//2469 2470//2470 2434//2434
             .then(function(o){
               if(!o.ok||!o.j.ok){ msg.textContent=(o.j&&o.j.error)||'Could not save your score'; btn.disabled=false; return; }
               msg.textContent=o.j.duplicate?'Already on the board':'Saved \u2014 rank #'+o.j.rank; form.style.display='none';
+              if(o.j.rank&&window.MWBattle&&MWBattle.noteRank){ try{ arcAppendUnlocked(el,MWBattle.noteRank(o.j.rank)); }catch(e){} }   // a leaderboard-rank unlock: add it to the modal now
               arcFetchBoard(o.j.rank?sum:null,o.j.rank,o.j.id,function(rows,err){ if(arcadeResultEl===el) arcRenderTop(listEl,rows,err,o.j.id); });
             },function(){ msg.textContent='Could not reach the leaderboard'; btn.disabled=false; });
         });
