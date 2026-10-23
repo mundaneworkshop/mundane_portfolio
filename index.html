@@ -118,6 +118,7 @@
   #arcadeResult .tot td{border-top:1px solid var(--bric-border-default);border-bottom:0;color:var(--bric-content-brand)}
   #arcadeResult .ar-meta td:first-child{color:var(--bric-content-tertiary);width:1%;white-space:nowrap;padding-right:var(--bric-space-3-stud)}
   #arcadeResult .ar-meta td:last-child{text-align:right}
+  #arcadeResult .ar-meta .ar-ships{justify-content:flex-end}
   #arcadeResult .ar-form{display:grid;grid-template-columns:1fr auto;gap:var(--bric-space-1-5-stud)}
   #arcadeResult .ar-in{min-width:0;height:40px;background:transparent;border:1px solid var(--bric-interactive-outline-default);color:var(--bric-content-primary);font:400 13px/1 var(--mono);letter-spacing:.06em;padding:0 var(--bric-space-1-5-stud);border-radius:0}
   #arcadeResult .ar-in::placeholder{color:var(--bric-content-tertiary)}
@@ -10633,11 +10634,13 @@ f 2469//2469 2470//2470 2434//2434
         var mins=Math.floor(sum.seconds/60), secs=('0'+(sum.seconds%60)).slice(-2), w=sum.weights||{fighter:1,support:3,capital:7};
         var rowsB=[['Fighters',sum.fighters,w.fighter],['Support ships',sum.support,w.support],['Capital ships',sum.capital,w.capital]].map(function(r){
           return '<tr class="'+(r[1]?'':'zero')+'"><td>'+r[0]+'</td><td class="n">'+r[1]+'</td><td class="n">\u00d7'+r[2]+'</td><td class="n">'+(r[1]*r[2])+'</td></tr>'; }).join('');
+        // Flown + Time sit right under the score; each ship flown shows a still of its model (MWBattle.shipIcon, the GLB rendered once) beside its name
+        var flown=(sum.heroIds||[]).map(function(id,i){ var ic=(window.MWBattle&&MWBattle.shipIcon)?MWBattle.shipIcon(id):''; return '<span class="ar-ship">'+(ic?'<img class="ar-ico" alt="" src="'+ic+'" width="28" height="28">':'')+'<span>'+arcEsc((sum.heroes&&sum.heroes[i])||id)+'</span></span>'; }).join('');
         html+='<div class="ar-head"><div class="ar-k">Game over</div><div class="ar-n">'+sum.score+'</div><div class="ar-l">Score</div></div>'+
+          '<table class="ar-meta"><tbody><tr><td>Flown</td><td>'+(flown?'<span class="ar-ships">'+flown+'</span>':'\u2014')+'</td></tr><tr><td>Time</td><td>'+mins+':'+secs+'</td></tr></tbody></table>'+
           '<div class="ar-sec"><div class="ar-st">Score breakdown</div><table class="ar-break"><thead><tr><th>Target</th><th class="n">Destroyed</th><th class="n">Value</th><th class="n">Points</th></tr></thead><tbody>'+rowsB+
           '<tr class="tot"><td colspan="3">Total</td><td class="n">'+sum.score+'</td></tr>'+
-          arcUnlockedRows(sum.unlocked)+'</tbody></table></div>'+
-          '<table class="ar-meta"><tbody><tr><td>Flown</td><td>'+arcEsc(sum.heroes.length?sum.heroes.join(' \u00b7 '):'\u2014')+'</td></tr><tr><td>Time</td><td>'+mins+':'+secs+'</td></tr></tbody></table>';
+          arcUnlockedRows(sum.unlocked)+'</tbody></table></div>';
         if(scored) html+='<div class="ar-sec"><form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div></div>';
       } else html+='<div class="ar-head"><div class="ar-k">Leaderboard</div></div>';
       html+='<div class="ar-sec">'+(sum?'<div class="ar-st">Top scores</div>':'')+'<div class="ar-list" aria-label="Top scores"></div></div><div class="ar-btns">'+(sum?'<button type="button" class="bric-btn bric-btn--primary" id="arAgain">Play again</button>':'')+'<button type="button" class="bric-btn bric-btn--secondary" id="arClose">'+(sum?'Exit game':'Close')+'</button></div></div>';
