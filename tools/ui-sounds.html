@@ -131,7 +131,7 @@
     'evt-boot.beam':['holo-beam'], 'evt-planets.each':N('holo-planet-',6), 'evt-idle.hum':['holo-idle'] };
   var AUDIO_DIR='../assets/audio/', LS_NOTES='mw_site_sound_notes', notes={};
   function loadNotes(){ try{ notes=JSON.parse(localStorage.getItem(LS_NOTES)||'{}')||{}; }catch(e){ notes={}; } }
-  function saveNotes(){ try{ localStorage.setItem(LS_NOTES,JSON.stringify(notes)); }catch(e){} }
+  function saveNotes(){ try{ localStorage.setItem(LS_NOTES,JSON.stringify(notes)); }catch(e){} if(window.__srSaved) window.__srSaved('notes',notes); }
   var LS='mw_site_sound_rows', rows={}, local={}, urls={}, idb=null, cur=null, layers=null, errs={}, picking=null;
   function $(s,r){ return (r||document).querySelector(s); }
   function el(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
@@ -141,7 +141,7 @@
   function slotKey(c,sl){ return c.id+'.'+sl[0]; }
   function fileId(sk,name,size){ return (sk+'--'+name.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_')+'-'+size).slice(0,190); }
   function loadRows(){ try{ rows=JSON.parse(localStorage.getItem(LS)||'{}')||{}; }catch(e){ rows={}; } }
-  function saveRows(){ try{ localStorage.setItem(LS,JSON.stringify(rows)); }catch(e){} }
+  function saveRows(){ try{ localStorage.setItem(LS,JSON.stringify(rows)); }catch(e){} if(window.__srSaved) window.__srSaved('rows',rows); }
   function openIdb(){ return new Promise(function(res){ try{ var r=indexedDB.open('site-sound-review',1); r.onupgradeneeded=function(){ r.result.createObjectStore('blobs'); }; r.onsuccess=function(){ idb=r.result; res(); }; r.onerror=function(){ res(); }; }catch(e){ res(); } }); }
   function idbPut(id,b){ if(!idb) return; try{ idb.transaction('blobs','readwrite').objectStore('blobs').put(b,id); }catch(e){} }
   function idbDel(id){ if(!idb) return; try{ idb.transaction('blobs','readwrite').objectStore('blobs').delete(id); }catch(e){} }
@@ -149,6 +149,12 @@
   function urlFor(id){ if(!local[id]) return null; return urls[id]||(urls[id]=URL.createObjectURL(local[id])); }
   function stopAll(){ if(layers){ layers.a.forEach(function(x){ x.pause(); }); layers.btn.textContent='Play layers together'; layers=null; } if(cur){ cur.a.pause(); cur.btn.textContent='▶'; cur=null; } }
   function play(id,btn,loop){ if(cur&&cur.id===id){ stopAll(); return; } stopAll(); var u=urlFor(id); if(!u) return; var a=new Audio(u); a.loop=!!loop; cur={id:id,a:a,btn:btn}; btn.textContent='■'; a.onended=function(){ if(cur&&cur.id===id) stopAll(); }; a.play().catch(stopAll); }
+  /* hosted build (tools/build-site-sound-review.py) embeds the clips as window.SR_EMBED[name] = base64; the local page serves them from ../assets/audio/ */
+  var embUrls={};
+  function clipUrl(nm){
+    if(window.SR_EMBED&&window.SR_EMBED[nm]){ if(!embUrls[nm]){ var bin=atob(window.SR_EMBED[nm]), u8=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); embUrls[nm]=URL.createObjectURL(new Blob([u8],{type:'audio/mp4'})); } return embUrls[nm]; }
+    return AUDIO_DIR+nm+'.m4a';
+  }
   function playSrc(id,src,btn,loop){ if(cur&&cur.id===id){ stopAll(); return; } stopAll(); var a=new Audio(src); a.loop=!!loop; cur={id:id,a:a,btn:btn}; btn.textContent='\u25A0'; a.onended=function(){ if(cur&&cur.id===id) stopAll(); }; a.onerror=function(){ stopAll(); btn.title='Could not load '+src+' (open this page through a local server so ../assets/audio resolves)'; }; a.play().catch(stopAll); }
   function playLayers(ids,btn){ if(layers&&layers.btn===btn){ stopAll(); return; } stopAll(); var a=ids.filter(function(i){ return local[i]; }).map(function(i){ var x=new Audio(urlFor(i)); x.loop=true; return x; }); if(!a.length) return; layers={a:a,btn:btn}; btn.textContent='Stop layers'; a.forEach(function(x){ x.play().catch(function(){}); }); }
   function readDur(blob){ return new Promise(function(res){ try{ var u=URL.createObjectURL(blob), a=new Audio(); a.preload='metadata'; var done=function(d){ URL.revokeObjectURL(u); res(d); }; a.onloadedmetadata=function(){ done(isFinite(a.duration)?a.duration:0); }; a.onerror=function(){ done(0); }; setTimeout(function(){ done(0); },4000); a.src=u; }catch(e){ res(0); } }); }
@@ -180,7 +186,7 @@
       var sl=el('ul','sr-files');
       ship.forEach(function(nm){
         var id='shipped:'+sk+':'+nm, li=el('li','sr-file'), b=el('button',null,'\u25B6'); b.type='button'; b.setAttribute('aria-label','Play '+nm+' (in the site)');
-        b.onclick=function(){ playSrc(id,AUDIO_DIR+nm+'.m4a',b,slot[2]==='loop'||slot[2]==='layer'); }; li.appendChild(b);
+        b.onclick=function(){ playSrc(id,clipUrl(nm),b,slot[2]==='loop'||slot[2]==='layer'); }; li.appendChild(b);
         var t=el('div'); t.appendChild(el('div','sr-fn',nm+'.m4a')); t.appendChild(el('div','sr-fm','in the site now \u00b7 assets/audio/')); li.appendChild(t);
         li.appendChild(el('span'));
         var n=el('textarea'); n.rows=1; n.value=notes[id]||''; n.placeholder='Notes on this clip'; n.setAttribute('aria-label','Notes for '+nm); n.oninput=function(){ notes[id]=n.value; saveNotes(); tally(); }; li.appendChild(n);
@@ -217,7 +223,10 @@
   };
   ['dragover','drop'].forEach(function(t){ window.addEventListener(t,function(e){ e.preventDefault(); }); });
   loadRows(); loadNotes(); render(); openIdb().then(idbAll).then(render);
-  window.__siteSoundReview={rows:function(){ return rows; },add:addFiles,cards:CARDS};
+  // optional shared store (the hosted build keeps notes + candidate list in the artifact database): hand it the state, take remote state back
+  window.__siteSoundReview={rows:function(){ return rows; },notes:function(){ return notes; },add:addFiles,cards:CARDS,
+    setState:function(k,v){ if(!v||typeof v!=='object') return; if(JSON.stringify(k==='rows'?rows:notes)===JSON.stringify(v)) return; if(document.activeElement&&document.activeElement.tagName==='TEXTAREA') return;   // never re-render under someone typing
+      if(k==='rows'){ rows=v; try{ localStorage.setItem(LS,JSON.stringify(rows)); }catch(e){} } else { notes=v; try{ localStorage.setItem(LS_NOTES,JSON.stringify(notes)); }catch(e){} } render(); }};
 })();
 </script>
 <script src="../assets/battle/audio.js"></script>
