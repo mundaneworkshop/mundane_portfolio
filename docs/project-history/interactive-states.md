@@ -153,6 +153,10 @@ Validated in a browser against the real token file in both themes. Roles: defaul
 @media (prefers-reduced-motion:reduce){.bric-btn::after{transition:none}}
 ```
 
+## Disabled over imagery (added Oct 23 2026)
+
+The disabled tokens assume a calm opaque surface: primary disabled = `interactive/fill/disabled` (`border/subtle`, a 14% translucent teal tint) + `interactive/text/disabled` (`content/disabled`, deliberately <3:1). Over the 3D scene (e.g. the arcade hero-select LOCKED button) the tint is invisible and the label disappears. Don't invent a new disabled colour and don't use the amber/teal hover registers (they read as interactive): keep the tokens and seat the control on the surface they were designed for, `surface/scene` (`background: linear-gradient(fill/disabled, fill/disabled), surface/scene`). Same principle as `#bt-hints` (panel over the scene) and "overlays separate via scrim + border".
+
 ## Known contrast notes
 
 `interactive/outline/tag` (`border/strong`) is 1.82:1 on the light surface — below 3:1, acceptable only because tags are static and the label carries the meaning. Disabled text is intentionally below 3:1 (WCAG exempts inactive controls). `border/default` and `content/tertiary` are also below 3:1 in light mode, which is why the secondary outline uses `content/primary`.

@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const SUPABASE_URL = 'https://ynfkjppwpcnxuvjqmsun.supabase.co';   // not a secret — same URL already embedded client-side
 const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_SECRET_KEY);
 
-const HEROES = new Set(['mil-falcon', 'n1', 'razorcrest', 'slave-1']);
+const HERO_RE = /^[a-z0-9][a-z0-9_-]{0,40}$/i;   // hero ship ids come from assets/battle/ships.json (the Arcade Fleet Lab), so validate the shape, not a fixed list
 const NAME_MAX = 20;
 const URL_RE = /(https?:\/\/|www\.|\.com\b|\.net\b|\.org\b)/i;
 const MAX_PER_WINDOW = 5, WINDOW_MIN = 10;     // submissions per IP per window
@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
 
     if (!name) { res.status(400).json({ error: 'name required' }); return; }
     if (URL_RE.test(name)) { res.status(400).json({ error: 'links are not allowed in names' }); return; }
-    if (!HEROES.has(hero)) { res.status(400).json({ error: 'unknown hero ship' }); return; }
+    if (!HERO_RE.test(hero)) { res.status(400).json({ error: 'unknown hero ship' }); return; }
     if (!(kills >= 1 && kills <= 5000)) { res.status(400).json({ error: 'invalid score' }); return; }
     if (!(seconds >= MIN_SECONDS && seconds <= MAX_SECONDS)) { res.status(400).json({ error: 'invalid play time' }); return; }
     if (kills > seconds * MAX_KILLS_PER_SEC + SLACK) { res.status(400).json({ error: 'score not plausible for the time played' }); return; }

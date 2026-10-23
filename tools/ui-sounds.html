@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Arcade UI sound lab</title>
+<title>Site Sound Review</title>
 <link rel="stylesheet" href="../assets/tokens/bric-tokens.css">
 <style>
-  /* Dev tool (not shipped to visitors): audition the synthesised arcade UI sounds in assets/battle/audio.js. */
+  /* Dev tool (not shipped to visitors): review the site-wide sounds (ambient bed, dock and boot events) and audition the synthesised UI sounds in assets/battle/audio.js. The ARCADE's sounds and ships are reviewed in the Arcade Fleet Lab artifact. */
   :root{--bg:#06100f;--panel:#0b1a19;--line:#1d3b38;--ink:#d7f6f2;--mute:#6f9a95;--holo:#aaf5ee;--amber:#f0d080}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 ui-monospace,Menlo,monospace;padding:32px max(16px,env(safe-area-inset-left))}
@@ -48,10 +48,38 @@
   .opt{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px;color:var(--ink);font-size:12px}
   .opt label{display:flex;gap:8px;align-items:flex-start;max-width:300px;cursor:pointer}
   .opt small{display:block;color:var(--mute)}
+  /* site sound review cards (same corner-mark language as the rest of the site: full outline + corner marks, no side stripes) */
+  .sr-top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:0 0 6px}
+  .sr-tally{color:var(--mute);font-size:12px;letter-spacing:.04em}
+  .sr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:16px}
+  .sr-card{position:relative;background:var(--panel);border:1px solid var(--line);padding:16px 16px 12px;min-width:0}
+  .sr-card::before,.sr-card::after{content:"";position:absolute;width:10px;height:10px;border:2px solid var(--holo)}
+  .sr-card::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .sr-card::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .sr-card h3{font-size:14px;letter-spacing:2px;text-transform:uppercase;font-weight:500;margin:0 0 6px;color:var(--holo)}
+  .sr-card .sr-note{color:var(--mute);font-size:12.5px;margin:0 0 4px;max-width:62ch}
+  .sr-slot{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+  .sr-sh{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;margin-bottom:6px}
+  .sr-sn{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink)}
+  .sr-sk{font-size:11px;color:var(--mute)}
+  .sr-drop{display:flex;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;border:1px dashed var(--line);padding:10px 12px;min-height:44px;color:var(--mute);font-size:12.5px;cursor:pointer}
+  .sr-drop:hover,.sr-drop.over{border-style:solid;border-color:var(--holo);color:var(--ink)}
+  .sr-drop b{font-weight:400;color:var(--holo);letter-spacing:1px;text-transform:uppercase;font-size:11px}
+  .sr-files{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+  .sr-file{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 10px;align-items:center;border:1px solid var(--line);padding:8px}
+  .sr-file button{min-width:0;padding:8px 10px}
+  .sr-file .sr-fn{overflow-wrap:anywhere}
+  .sr-file .sr-fm{font-size:11px;color:var(--mute)}
+  .sr-file textarea{grid-column:1 / -1;font:inherit;font-size:12px;color:var(--ink);background:transparent;border:1px solid var(--line);padding:7px 9px;border-radius:0;width:100%;resize:vertical;min-height:34px}
+  .sr-msg{color:#ff7a6b;font-size:11px;margin:6px 0 0}
 </style>
 </head>
 <body>
-<h1>Arcade UI sound lab</h1>
+<h1>Site Sound Review</h1>
+<p>The sounds that belong to the whole site, not the arcade: the site-wide ambient bed, the entry gate, dock, boot and planet-load events, and the interface sounds. Each card lists the clips the site plays today (served from assets/audio/, so open this page through a local server); drop new candidates onto it to audition them and write notes. Candidates and notes stay in this browser (this page has no database). The arcade's own sounds and ships live in the <b>Arcade Fleet Lab</b> artifact.</p>
+<div id="sr"></div>
+
+<h2>Interface sounds (synthesised)</h2>
 <p>Mechanical, modelled on measurements of two reference reels (switches, buttons, camera shutter, clicks). Click, hold, release and hover to hear each sound. They are synthesised live (no files), so every press varies slightly. Sounds start after your first click.</p>
 
 <h2>Every sound</h2>
@@ -83,6 +111,124 @@
 
 <p class="note">The recipes live in the <code>UI</code> table in <code>assets/battle/audio.js</code> (crack = the sharp edge, ring = the housing resonating, body = the low thump; shutter = 2–4 impacts with a faint blade swish). Tell me what to change, or paste the settings you land on.</p>
 
+
+<script>
+/* Site Sound Review: the site-wide (non-arcade) sound cards. Audio stays in this browser (IndexedDB), notes in localStorage; there is no shared database here. */
+(function(){
+  var CARDS=[
+    {sec:'Ambient background',note:'A long bed that loops under the site.',cards:[
+      {id:'amb-site',title:'Site-wide ambient background',note:'Plays under the whole site outside the arcade: the entry gate, the galaxy view and the pages you open from it. Not used in the arcade.',slots:[['bed','Ambient background','layer','Loops under the site. Add several clips and they play together on loop, layered.']]}]},
+    {sec:'Site events: dock and boot',note:'What a visitor sees first: they click the monogram, it docks onto the emitter, the hologram boots up and the planets load in. Short one-shots, each firing once in the order below, then the hologram settles into an idle hum.',cards:[
+      {id:'evt-gate',title:'Monogram at the entry gate',note:'The first thing a visitor sees: the monogram floating above the emitter, waiting to be clicked. Hover and click already have the site’s default UI sounds, which play unless you upload clips to replace them. Aim for an idle that is low, humming and mysterious, with a faint windchime-like shimmer, not radio static. Browsers keep audio locked until the first click or key press, so idle and hover can only be heard once the visitor has interacted with the page. There is no initial-load sound.',slots:[['idle','Idle','loop','Loops while the monogram waits to be clicked. Low humming with a soft windchime shimmer; needs a clean seam.'],['hover','Hover','pool','One shot when the pointer moves onto the monogram. Leave empty to keep the default UI hover tick; clips added here replace it, and the site picks one at random.'],['click','Click','pool','One shot the moment the monogram is clicked and starts to descend. Leave empty to keep the default UI click; clips added here replace it.']]},
+      {id:'evt-dock',title:'Monogram docks',note:'After the click, the monogram descends onto the emitter (about 0.6 seconds) and settles.',slots:[['land','Monogram lands','one','One shot as it settles on the emitter and the boot begins.']]},
+      {id:'evt-boot',title:'Hologram boots up',note:'Right after the dock, each part of the hologram flickers on one after another, about 80 milliseconds apart.',slots:[['beam','Beam and rings power on','one','One shot as the beam and the two rings switch on.'],['head','Gatekeeper appears','one','One shot as the head (or logo) appears in the beam.'],['grid','Grid flickers on','one','One shot as the grid plate stutters on, like a fluorescent tube. The flicker lasts about 0.6 seconds.']]},
+      {id:'evt-planets',title:'Planets load',note:'The planets flicker in one by one, about 30 milliseconds apart (eight of them), as soon as the grid settles.',slots:[['each','Each planet appears','pool','Plays once per planet, so it repeats fast. Keep it short and add several clips: the game picks one at random for each planet, with a little pitch variation.'],['done','All planets loaded','one','One shot when the last planet is in and the galaxy is live.']]},
+      {id:'evt-idle',title:'Hologram idle',note:'After the boot, the hologram sits there running: the beam, the grid and the planets turning. This is its ambient hum, for as long as the visitor stays on the galaxy view (it stops when they open something).',slots:[['hum','Idle hum','loop','Loops while the hologram is idle. Needs a clean seam: no click or gap where it wraps. Add several clips and they play on loop; keep it quiet, it sits under everything.']]}]}
+  ];
+  /* The clips the site plays TODAY for each slot (mirror of the tables at the top of assets/battle/audio.js: SITE_EVENTS, gateIdle, holoIdle, ambSite). Files live in assets/audio/. */
+  var N=function(p,n){ var a=[]; for(var i=1;i<=n;i++) a.push(p+i); return a; };
+  var SHIPPED={ 'amb-site.bed':['site-ambient'], 'evt-gate.idle':['gate-idle'], 'evt-gate.hover':N('gate-hover-',6), 'evt-gate.click':N('gate-click-',4),
+    'evt-boot.beam':['holo-beam'], 'evt-planets.each':N('holo-planet-',6), 'evt-idle.hum':['holo-idle'] };
+  var AUDIO_DIR='../assets/audio/', LS_NOTES='mw_site_sound_notes', notes={};
+  function loadNotes(){ try{ notes=JSON.parse(localStorage.getItem(LS_NOTES)||'{}')||{}; }catch(e){ notes={}; } }
+  function saveNotes(){ try{ localStorage.setItem(LS_NOTES,JSON.stringify(notes)); }catch(e){} if(window.__srSaved) window.__srSaved('notes',notes); }
+  var LS='mw_site_sound_rows', rows={}, local={}, urls={}, idb=null, cur=null, layers=null, errs={}, picking=null;
+  function $(s,r){ return (r||document).querySelector(s); }
+  function el(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+  function fmtSize(n){ return n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB'; }
+  function fmtDur(s){ return s>0?s.toFixed(s<10?2:1)+' s':''; }
+  function isAudio(f){ return /^audio\//.test(f.type)||/\.(wav|mp3|m4a|aac|ogg|oga|flac|aif|aiff|opus|weba)$/i.test(f.name); }
+  function slotKey(c,sl){ return c.id+'.'+sl[0]; }
+  function fileId(sk,name,size){ return (sk+'--'+name.replace(/\.[^.]+$/,'').replace(/[^A-Za-z0-9_-]+/g,'_')+'-'+size).slice(0,190); }
+  function loadRows(){ try{ rows=JSON.parse(localStorage.getItem(LS)||'{}')||{}; }catch(e){ rows={}; } }
+  function saveRows(){ try{ localStorage.setItem(LS,JSON.stringify(rows)); }catch(e){} if(window.__srSaved) window.__srSaved('rows',rows); }
+  function openIdb(){ return new Promise(function(res){ try{ var r=indexedDB.open('site-sound-review',1); r.onupgradeneeded=function(){ r.result.createObjectStore('blobs'); }; r.onsuccess=function(){ idb=r.result; res(); }; r.onerror=function(){ res(); }; }catch(e){ res(); } }); }
+  function idbPut(id,b){ if(!idb) return; try{ idb.transaction('blobs','readwrite').objectStore('blobs').put(b,id); }catch(e){} }
+  function idbDel(id){ if(!idb) return; try{ idb.transaction('blobs','readwrite').objectStore('blobs').delete(id); }catch(e){} }
+  function idbAll(){ return new Promise(function(res){ if(!idb) return res(); try{ var q=idb.transaction('blobs').objectStore('blobs').openCursor(); q.onsuccess=function(){ var c=q.result; if(c){ local[c.key]=c.value; c.continue(); } else res(); }; q.onerror=function(){ res(); }; }catch(e){ res(); } }); }
+  function urlFor(id){ if(!local[id]) return null; return urls[id]||(urls[id]=URL.createObjectURL(local[id])); }
+  function stopAll(){ if(layers){ layers.a.forEach(function(x){ x.pause(); }); layers.btn.textContent='Play layers together'; layers=null; } if(cur){ cur.a.pause(); cur.btn.textContent='▶'; cur=null; } }
+  function play(id,btn,loop){ if(cur&&cur.id===id){ stopAll(); return; } stopAll(); var u=urlFor(id); if(!u) return; var a=new Audio(u); a.loop=!!loop; cur={id:id,a:a,btn:btn}; btn.textContent='■'; a.onended=function(){ if(cur&&cur.id===id) stopAll(); }; a.play().catch(stopAll); }
+  /* hosted build (tools/build-site-sound-review.py) embeds the clips as window.SR_EMBED[name] = base64; the local page serves them from ../assets/audio/ */
+  var embUrls={};
+  function clipUrl(nm){
+    if(window.SR_EMBED&&window.SR_EMBED[nm]){ if(!embUrls[nm]){ var bin=atob(window.SR_EMBED[nm]), u8=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i); embUrls[nm]=URL.createObjectURL(new Blob([u8],{type:'audio/mp4'})); } return embUrls[nm]; }
+    return AUDIO_DIR+nm+'.m4a';
+  }
+  function playSrc(id,src,btn,loop){ if(cur&&cur.id===id){ stopAll(); return; } stopAll(); var a=new Audio(src); a.loop=!!loop; cur={id:id,a:a,btn:btn}; btn.textContent='\u25A0'; a.onended=function(){ if(cur&&cur.id===id) stopAll(); }; a.onerror=function(){ stopAll(); btn.title='Could not load '+src+' (open this page through a local server so ../assets/audio resolves)'; }; a.play().catch(stopAll); }
+  function playLayers(ids,btn){ if(layers&&layers.btn===btn){ stopAll(); return; } stopAll(); var a=ids.filter(function(i){ return local[i]; }).map(function(i){ var x=new Audio(urlFor(i)); x.loop=true; return x; }); if(!a.length) return; layers={a:a,btn:btn}; btn.textContent='Stop layers'; a.forEach(function(x){ x.play().catch(function(){}); }); }
+  function readDur(blob){ return new Promise(function(res){ try{ var u=URL.createObjectURL(blob), a=new Audio(); a.preload='metadata'; var done=function(d){ URL.revokeObjectURL(u); res(d); }; a.onloadedmetadata=function(){ done(isFinite(a.duration)?a.duration:0); }; a.onerror=function(){ done(0); }; setTimeout(function(){ done(0); },4000); a.src=u; }catch(e){ res(0); } }); }
+  function removeRow(id){ if(cur&&cur.id===id) stopAll(); delete rows[id]; delete local[id]; if(urls[id]){ URL.revokeObjectURL(urls[id]); delete urls[id]; } idbDel(id); saveRows(); }
+  function addFiles(card,slot,list){
+    var sk=slotKey(card,slot), files=[].slice.call(list), good=files.filter(isAudio); errs[sk]='';
+    if(!good.length){ errs[sk]=files.length?'Those files are not audio. Try WAV, MP3, M4A, OGG or FLAC.':''; render(); return; }
+    Promise.all(good.map(function(f){ var id=fileId(sk,f.name,f.size); return readDur(f).then(function(d){ local[id]=f; idbPut(id,f); var prev=rows[id]; rows[id]={slot:sk,name:f.name,size:f.size,dur:d,note:prev?prev.note:'',at:Date.now()}; }); })).then(function(){ saveRows(); render(); });
+  }
+  function tally(){ var ids=Object.keys(rows), noted=ids.filter(function(i){ return (rows[i].note||'').trim(); }).length+Object.keys(notes).filter(function(i){ return (notes[i]||'').trim(); }).length, nShip=0; Object.keys(SHIPPED).forEach(function(k){ nShip+=SHIPPED[k].length; }); $('#srTally').textContent=nShip+' clips in the site \u00b7 '+ids.length+' candidates \u00b7 '+noted+' with notes'; }
+  var saveT=0; function saveSoon(){ clearTimeout(saveT); saveT=setTimeout(saveRows,300); }
+  function fileRow(id,slot){
+    var r=rows[id], li=el('li','sr-file'), has=!!local[id];
+    var b=el('button',null,'▶'); b.type='button'; b.setAttribute('aria-label','Play '+r.name); if(has){ b.onclick=function(){ play(id,b,slot[2]==='loop'||slot[2]==='layer'); }; } else { b.disabled=true; b.title='This file is not stored in this browser'; }
+    li.appendChild(b);
+    var t=el('div'); t.appendChild(el('div','sr-fn',r.name)); t.appendChild(el('div','sr-fm',[fmtSize(r.size||0),fmtDur(r.dur||0)].filter(Boolean).join(' · ')+(has?'':' · not on this device, drop it again to play'))); li.appendChild(t);
+    var rm=el('button',null,'Remove'); rm.type='button'; rm.onclick=function(){ if(rm.dataset.armed==='1'){ removeRow(id); render(); } else { rm.dataset.armed='1'; rm.textContent='Confirm'; setTimeout(function(){ if(rm.isConnected){ rm.dataset.armed=''; rm.textContent='Remove'; } },3000); } };
+    var n=el('textarea'); n.rows=1; n.value=r.note||''; n.placeholder='What is this good for?'; n.setAttribute('aria-label','Notes for '+r.name); n.oninput=function(){ if(rows[id]){ rows[id].note=n.value; saveSoon(); tally(); } };
+    li.appendChild(rm); li.appendChild(n); li.insertBefore(rm,n); return li;
+  }
+  function slotBlock(card,slot){
+    var sk=slotKey(card,slot), s=el('div','sr-slot'), h=el('div','sr-sh'); h.appendChild(el('span','sr-sn',slot[1]));
+    var ids=Object.keys(rows).filter(function(i){ return rows[i].slot===sk; }).sort(function(a,b){ return (rows[a].at||0)-(rows[b].at||0); });
+    h.appendChild(el('span','sr-sk',slot[3]+(ids.length?' '+ids.length+' of yours loaded here.':'')));
+    if(slot[2]==='layer'&&ids.filter(function(i){ return local[i]; }).length>1){ var lb=el('button',null,'Play layers together'); lb.type='button'; lb.onclick=function(){ playLayers(ids,lb); }; h.appendChild(lb); }
+    var ship=SHIPPED[sk]||[];
+    h.appendChild(el('span','sr-sk',ship.length?ship.length+' in the site now.':'Nothing in the site yet: silent.')); s.appendChild(h);
+    if(ship.length){
+      var sl=el('ul','sr-files');
+      ship.forEach(function(nm){
+        var id='shipped:'+sk+':'+nm, li=el('li','sr-file'), b=el('button',null,'\u25B6'); b.type='button'; b.setAttribute('aria-label','Play '+nm+' (in the site)');
+        b.onclick=function(){ playSrc(id,clipUrl(nm),b,slot[2]==='loop'||slot[2]==='layer'); }; li.appendChild(b);
+        var t=el('div'); t.appendChild(el('div','sr-fn',nm+'.m4a')); t.appendChild(el('div','sr-fm','in the site now \u00b7 assets/audio/')); li.appendChild(t);
+        li.appendChild(el('span'));
+        var n=el('textarea'); n.rows=1; n.value=notes[id]||''; n.placeholder='Notes on this clip'; n.setAttribute('aria-label','Notes for '+nm); n.oninput=function(){ notes[id]=n.value; saveNotes(); tally(); }; li.appendChild(n);
+        sl.appendChild(li); });
+      s.appendChild(sl);
+    }
+    var d=el('div','sr-drop'); d.tabIndex=0; d.setAttribute('role','button'); d.setAttribute('aria-label','Drop one or more audio files for '+card.title+', '+slot[1]); var sp=el('span',null,ship.length?'Drop new candidates to audition':'Drop one or more audio files'); d.appendChild(sp); var bw=el('b',null,'Browse'); d.appendChild(bw);
+    d.onclick=function(){ picking={card:card,slot:slot}; $('#srPicker').click(); };
+    d.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); d.click(); } };
+    d.ondragenter=d.ondragover=function(e){ e.preventDefault(); e.stopPropagation(); d.classList.add('over'); };
+    d.ondragleave=function(){ d.classList.remove('over'); };
+    d.ondrop=function(e){ e.preventDefault(); e.stopPropagation(); d.classList.remove('over'); if(e.dataTransfer&&e.dataTransfer.files.length) addFiles(card,slot,e.dataTransfer.files); };
+    s.appendChild(d);
+    if(errs[sk]) s.appendChild(el('p','sr-msg',errs[sk]));
+    if(ids.length){ var ul=el('ul','sr-files'); ids.forEach(function(id){ ul.appendChild(fileRow(id,slot)); }); s.appendChild(ul); }
+    return s;
+  }
+  function render(){
+    var root=$('#srMain'); root.textContent='';
+    CARDS.forEach(function(sec){
+      root.appendChild(el('h2',null,sec.sec)); root.appendChild(el('p','sr-note',sec.note));
+      var g=el('div','sr-grid'); sec.cards.forEach(function(c){ var a=el('article','sr-card'); a.appendChild(el('h3',null,c.title)); if(c.note) a.appendChild(el('p','sr-note',c.note)); c.slots.forEach(function(sl){ a.appendChild(slotBlock(c,sl)); }); g.appendChild(a); }); root.appendChild(g);
+    });
+    tally();
+  }
+  var host=$('#sr');
+  host.innerHTML='<div class="sr-top"><span class="sr-tally" id="srTally"></span><button type="button" id="srCopy">Copy notes</button><button type="button" id="srStop">Stop sound</button><span class="sr-tally" id="srSync" aria-live="polite"></span></div><div id="srMain"></div><input type="file" id="srPicker" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.flac" multiple hidden>';
+  $('#srPicker').onchange=function(e){ var p=picking; picking=null; if(p&&e.target.files.length) addFiles(p.card,p.slot,e.target.files); e.target.value=''; };
+  $('#srStop').onclick=stopAll;
+  $('#srCopy').onclick=function(){
+    var lines=[]; CARDS.forEach(function(sec){ sec.cards.forEach(function(c){ c.slots.forEach(function(sl){ var sk=slotKey(c,sl); (SHIPPED[sk]||[]).forEach(function(nm){ var nt=notes['shipped:'+sk+':'+nm]; lines.push(c.title+' / '+sl[1]+' / '+nm+' (in the site)'+(nt?': '+nt:': (no note)')); }); Object.keys(rows).filter(function(i){ return rows[i].slot===sk; }).forEach(function(i){ var r=rows[i]; lines.push(c.title+' / '+sl[1]+' / '+r.name+(r.note?': '+r.note:': (no note)')); }); }); }); });
+    var txt=lines.join('\n')||'No files yet.';
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(function(){ $('#srSync').textContent='copied'; },function(){ $('#srSync').textContent='copy blocked'; });
+  };
+  ['dragover','drop'].forEach(function(t){ window.addEventListener(t,function(e){ e.preventDefault(); }); });
+  loadRows(); loadNotes(); render(); openIdb().then(idbAll).then(render);
+  // optional shared store (the hosted build keeps notes + candidate list in the artifact database): hand it the state, take remote state back
+  window.__siteSoundReview={rows:function(){ return rows; },notes:function(){ return notes; },add:addFiles,cards:CARDS,
+    setState:function(k,v){ if(!v||typeof v!=='object') return; if(JSON.stringify(k==='rows'?rows:notes)===JSON.stringify(v)) return; if(document.activeElement&&document.activeElement.tagName==='TEXTAREA') return;   // never re-render under someone typing
+      if(k==='rows'){ rows=v; try{ localStorage.setItem(LS,JSON.stringify(rows)); }catch(e){} } else { notes=v; try{ localStorage.setItem(LS_NOTES,JSON.stringify(notes)); }catch(e){} } render(); }};
+})();
+</script>
 <script src="../assets/battle/audio.js"></script>
 <script>
 (function(){
