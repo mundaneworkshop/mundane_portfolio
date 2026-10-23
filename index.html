@@ -140,7 +140,7 @@
   #arcadeResult .ar-btns .bric-btn{min-width:144px;justify-content:center}
   @media (max-width:480px){ #arcadeResult .ar-card{padding:var(--bric-space-3-stud)} #arcadeResult .ar-n{font-size:72px} #arcadeResult .ar-board th.ar-h,#arcadeResult .ar-board td.ar-h{display:none} #arcadeResult .ar-btns .bric-btn{min-width:0;flex:1} }
   #arcadeExit .ax-esc{letter-spacing:2px;font-family:var(--mono,monospace)}
-  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #soundToggle, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
+  body.mw-arcade #labels, body.mw-arcade #hint, body.mw-arcade #msgStars, body.mw-arcade #msgCanvas, body.mw-arcade #msgHover, body.mw-arcade #msgModal{display:none!important}
   /* Topbar buttons — Chakra Petch, amber register, 0 radius */
   /* Save = primary action — lit amber fill */
   /* Active-toggle state for admin toolbar buttons (editBtn, meshModeBtn) — previously editBtn's own
@@ -586,7 +586,7 @@
   html:not([data-bric-ret="hot"]) body.mw-altfocus canvas{cursor:default!important}   /* (not while the reticle is up: its cursor:none!important must win, or the system arrow shows beside it) CV route, HoloNet etc.: the galaxy's hover affordance left an inline cursor:pointer on the canvas when the planet was clicked, which made the reticle step aside for the system hand. Nothing on the canvas is a pointer target in these views. */
   body.mw-altfocus #labels,body.mw-altfocus #msgStars,body.mw-altfocus #msgCanvas{opacity:0;pointer-events:none}
   /* the "drag to rotate…" hint is galaxy-overview chrome only — hide it in any focused view (a project's manual, CV, HoloNet/Contact), not just the altfocus views.
-     The sound switch (#soundToggle) stays on every view except the arcade (which has its own) */
+     The sound switch (#soundToggle) stays on every view, arcade included (top-right) */
   body.mw-altfocus #hint, body.mw-planet #hint{opacity:0;pointer-events:none;transition:opacity .3s ease}
   /* ── CV 3D hyperspace route (drag to orbit; details reuse #manual-scene) ── */
   #cvRouteLayer{position:absolute;inset:0;z-index:16;display:none;pointer-events:none}   /* labels capture clicks; the canvas underneath stays draggable */
@@ -616,8 +616,8 @@
   body.mw-cvroute #cvFxCanvas{display:block}
   /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
-  #soundToggle{position:absolute;bottom:40px;left:22px;z-index:21;transform:translateY(calc(var(--mw-snd-lift,0px) * -1));transition:transform .25s ease,opacity .3s ease}   /* --mw-snd-lift: set from JS (soundToggleAvoid) when a docked project manual would cover it */
-  @media (prefers-reduced-motion:reduce){ #soundToggle{transition:opacity .3s ease} }
+  #soundToggle{position:absolute;top:16px;right:22px;z-index:21;transition:opacity .3s ease}   /* top-right corner on EVERY view (galaxy, focus, case study, CV, HoloNet, arcade); the admin toolbar makes room for it below */
+  body.author-mode #topbar{padding-right:200px}   /* author mode: the toolbar buttons end left of the sound switch */
   .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
   .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
   .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
@@ -10505,8 +10505,8 @@ f 2469//2469 2470//2470 2434//2434
     // ══════ ARCADE: the space battle (assets/battle/battle.js) played inside the galaxy view ══════
     // Keeps the hologram (head, cone, ring), the monogram emitter and the base grid; hides every zone + planet; swaps the ring text.
     // Exit = the top-left button (where the breadcrumb normally sits) or ESC → ships jump to hyperspace, then the galaxy comes back.
-    var arcadeActive=false, arcadeExiting=false, _ringBak=null;
-    var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 PLAY TO UNLOCK COSMETIC REWARDS \u2022 ';
+    var arcadeActive=false, arcadeExiting=false, _ringBak=null, arcGalZoom=1;
+    var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 PLAY TO UNLOCK NEW SHIPS \u2022 ';
     var arcadeStage='select';   // 'select' (hero carousel replaces the head) | 'play' (every hologram artifact hidden, the hero flies)
     function arcadeRingText(on){
       if(on){ if(!_ringBak) _ringBak={en:BIO_EN,aur:BIO_AUR}; BIO_EN=ARCADE_RING; BIO_AUR=ARCADE_RING; }
@@ -10526,6 +10526,7 @@ f 2469//2469 2470//2470 2434//2434
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
+      arcGalZoom=camZoom; if(MWBattle.getSelZoom){ arcEntryZoom=camZoom*MWBattle.getSelZoom(); arcReturn=true; }   // hero-select view: camera eases in so the hologram nearly fills the window height and the ship has room (battle.js P.selZoom)
       if(window.MWLightspeed&&!noJump){ MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWAudio) MWAudio.jumpReveal(); if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); } else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
@@ -10534,6 +10535,7 @@ f 2469//2469 2470//2470 2434//2434
       setSiteVisible(true); mwMount.visible=true;
       ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];
     }
+    window.addEventListener('mw:arcselzoom',function(){ if(arcadeActive&&arcadeStage==='select'&&MWBattle.getSelZoom){ arcEntryZoom=arcGalZoom*MWBattle.getSelZoom(); arcReturn=true; } });   // live from the debug slider
     function arcadeSetStage(st){
       var was=arcadeStage; arcadeStage=st;
       if(was==='play'&&st==='select'){ arcadeRestoreHolo(); arcReturn=true; }   // hero select: camera angle + zoom ease back to the default framing
@@ -14692,15 +14694,6 @@ f 2469//2469 2470//2470 2434//2434
     var _mlRaf=0;
     function mlRelayoutSoon(){ if(_mlRaf) return; _mlRaf=requestAnimationFrame(function(){ _mlRaf=0; if(manualScene.classList.contains('visible')) layoutManual(); }); }
     window.addEventListener('resize',mlRelayoutSoon);
-    // the sound switch lives bottom-left on every view; a docked project manual spans that corner, so lift the switch to sit just above the panel (transform only, via --mw-snd-lift)
-    function soundToggleAvoid(){
-      var lift=0, r;
-      if(manualScene.classList.contains('visible')&&mlIsProject()){ r=manualScene.getBoundingClientRect(); if(r.width>0&&r.left<170&&r.top<window.innerHeight-30) lift=Math.max(0,Math.round(window.innerHeight-r.top+14-40)); }
-      if(lift) document.documentElement.style.setProperty('--mw-snd-lift',lift+'px'); else document.documentElement.style.removeProperty('--mw-snd-lift');
-    }
-    window.addEventListener('resize',function(){ setTimeout(soundToggleAvoid,80); });
-    new MutationObserver(function(){ soundToggleAvoid(); setTimeout(soundToggleAvoid,350); }).observe(manualScene,{attributes:true,attributeFilter:['class','style']});
-    if(window.ResizeObserver) new ResizeObserver(function(){ soundToggleAvoid(); }).observe(manualScene);
     // content growing/shrinking (Edit Mode adding links/rows, a moon with fewer fields) re-measures the stage
     if(window.ResizeObserver) new ResizeObserver(function(){ if(mlMode) mlRelayoutSoon(); }).observe(manualBook);
     var _mlEdit=false;   // body classes flip constantly (box-hovered…) — only Edit Mode toggling (edit-focus) re-measures the stage
