@@ -50,7 +50,7 @@ var HERO={
   'mil-falcon':{ idle:'falcon-idle', active:'falcon-active',
     fire1:['falcon-fire-single-01','falcon-fire-single-02','falcon-fire-double-01','falcon-fire-double-02','falcon-fire-burst'],
     fireN:['falcon-turret-01','falcon-turret-02','falcon-turret-05','falcon-turret-07','falcon-turret-08'], rattle:'falcon-turret-rattle' },   // burst 03's closing rattle plays when fire is released
-  'n1':{ idle:'n1-idle', active:'n1-active', selBoost:1.7,   // selBoost: extra gain on the hero-select idle (this clip gets lost under the ambience)
+  'n1':{ idle:'n1-idle', active:'n1-active', selBoost:1.7, activeBoost:1.8,   // selBoost: extra gain on the hero-select idle; activeBoost: on the in-flight active loop (both clips get lost under the mix)
     fire1:['n1-fire-1','n1-fire-2','n1-fire-3'], chain:['n1-fire-1','n1-fire-2','n1-fire-3'] },
   'razorcrest':{ idle:'razor-idle', active:'razor-active',
     fire1:['razor-fire-1','razor-fire-2','razor-fire-3'], chain:['razor-fire-1'] },   // chain with the true single only
@@ -531,7 +531,7 @@ var MWAudio={
   heroEngine:function(k){
     var h=heroSnd; if(!h) return; k=Math.max(0,Math.min(1,num(k,0))); if(Math.abs(k-h.k)<.01) return; h.k=k;
     var t=now(), a=Math.sin(k*Math.PI/2), i=Math.cos(k*Math.PI/2);
-    if(h.idle) h.idle.g.gain.setTargetAtTime(LEVEL.idle*i,t,.18); if(h.active) h.active.g.gain.setTargetAtTime(LEVEL.active*(h.idle?a:Math.max(a,.0)),t,.18);
+    if(h.idle) h.idle.g.gain.setTargetAtTime(LEVEL.idle*i,t,.18); if(h.active) h.active.g.gain.setTargetAtTime(LEVEL.active*(h.def.activeBoost||1)*(h.idle?a:Math.max(a,.0)),t,.18);
   },
   /* fire. Ships with a fireN set: a tap plays one fire1 clip, holding (>0.4 s) chains fireN bursts until release.
      Ships with chain clips instead: heroShot() is called for every bolt the ship fires — an isolated shot plays a full fire1 clip, and
