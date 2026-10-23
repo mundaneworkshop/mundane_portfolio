@@ -939,17 +939,22 @@ function carLockUi(id){
   var need=heroNeed(id), have=kitsTotal(), locked=have<need; carLocked=locked;
   if(carUi){ var lk=carUi.querySelector('.bt-lock'), pb=carUi.querySelector('.bt-play'), sb=carUi.querySelector('.bt-sub');
     if(lk){ lk.style.display=locked?'block':'none'; lk.textContent=locked?('Locked \u00b7 shoot '+need+' minikit'+(need===1?'':'s')+' to unlock \u00b7 '+have+'/'+need):''; }
-    if(pb){ pb.textContent=locked?'LOCKED':'PLAY'; pb.setAttribute('aria-disabled',locked?'true':'false'); pb.classList.toggle('bt-locked',locked); }
-    if(sb) sb.style.visibility=locked?'hidden':'';
+    if(pb){ pb.textContent=locked?'LOCKED':'PLAY'; pb.setAttribute('aria-disabled',locked?'true':'false'); }   // inactive look comes from the design system's [aria-disabled="true"] state (no custom colour)
+    if(sb) sb.style.display=locked?'none':'';
     carUi.classList.toggle('bt-lockui',locked); }
   if(carKitX){ carKitX.textContent=locked?'\u00d7'+(need-have):''; }
-  if(carModel) carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var m=o.material; m.transparent=locked; m.opacity=locked?.32:1; m.needsUpdate=true; });
+  // Locked = a drastically darkened silhouette: colour near black, no env reflection / emissive / gloss, so none of the ship's detail reads (only its outline against the backdrop).
+  if(carModel) carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var m=o.material, u=m.userData;
+    if(locked){ if(!u.lkSave) u.lkSave={c:m.color.clone(),e:m.envMapIntensity,ei:m.emissiveIntensity,r:m.roughness,mt:m.metalness};
+      m.color.setRGB(.045,.05,.058); m.envMapIntensity=0; if(m.emissiveIntensity!=null) m.emissiveIntensity=0; if(m.roughness!=null) m.roughness=1; if(m.metalness!=null) m.metalness=0; m.transparent=false; m.opacity=1; }
+    else if(u.lkSave){ m.color.copy(u.lkSave.c); m.envMapIntensity=u.lkSave.e; if(m.emissiveIntensity!=null) m.emissiveIntensity=u.lkSave.ei; if(m.roughness!=null) m.roughness=u.lkSave.r; if(m.metalness!=null) m.metalness=u.lkSave.mt; u.lkSave=null; }
+    m.needsUpdate=true; });
 }
 function carBuildKit(){
   var m=cache.minikit; if(!m||carKit||!carGroup) return;
   carKit=m.proto.clone(true);
   carKit.traverse(function(o){ if(!o.isMesh||!o.material) return; var mm=o.material.clone(); mm.userData=Object.assign({},o.material.userData,{btPatched:false}); mm.envMap=envTex; var un=1/SELDIM; mm.color.multiplyScalar(un); mm.envMapIntensity*=un; if(mm.emissiveIntensity!=null) mm.emissiveIntensity*=un; patchMaterial(mm); o.material=mm; });   // same un-dimming as the carousel ships
-  carGroup.add(carKit);
+  G.add(carKit);   // child of G, not carGroup: it must not inherit the ship's bob
 }
 // Brief banner (top centre) — a ship just unlocked.
 function noteShow(txt){ if(!noteEl) return; noteEl.textContent=txt; noteEl.style.opacity=1; clearTimeout(noteT); noteT=setTimeout(function(){ noteEl.style.opacity=0; },4200); }
@@ -1174,7 +1179,7 @@ function ensureCarousel(){
 }
 function updCarousel(dt){
   if(!carGroup) return;
-  var show=stage==='select'&&!quiet(); carGroup.visible=show; if(!show) return;
+  var show=stage==='select'&&!quiet(); carGroup.visible=show; if(carKit) carKit.visible=show&&carLocked; if(!show) return;
   var id=HEROES[carIdx];
   if(window.MWAudio&&carModelId) MWAudio.carouselShip(carModelId);   // the ship on show idles quietly under the hero-select ambience
   if(carModelId!==id&&cache[id]){
@@ -1188,10 +1193,10 @@ function updCarousel(dt){
   carK=Math.min(1,carK+dt*3.2); var pop=1-Math.pow(1-carK,3);
   carWrap.scale.setScalar((1.45/S)/BYID[id].size*(.2+.8*pop)*(P.scaleHero>0?1:1));
   carWrap.rotation.y+=dt*.9; carWrap.rotation.x=.22; carGroup.position.y=Math.sin(clockT*1.3)*.05/S;
-  if(carKit){   // the minikit symbol sits under the ship while it's locked; ×N is a DOM label projected beside it
-    carKit.visible=carLocked; if(carLocked){ carKit.scale.setScalar((.3/S)/BYID.minikit.size*(.4+.6*pop)); carKit.position.set(-.12/S,-.9/S,0); carKit.rotation.y+=dt*1.6; carKit.rotation.x=.3;
-      if(carKitX){ carKit.getWorldPosition(_hF); _hF.project(ctx.camera); var r2=ctx.dom.getBoundingClientRect(); var kx=Math.round((_hF.x+1)/2*r2.width+r2.left), ky=Math.round((1-_hF.y)/2*r2.height+r2.top);
-        if(kx!==carKitX.__l){ carKitX.__l=kx; carKitX.style.left=(kx+30)+'px'; } if(ky!==carKitX.__t){ carKitX.__t=ky; carKitX.style.top=ky+'px'; } } } }
+  if(carKit&&carLocked){   // a small, still minikit under the ship; ×N is a DOM label projected beside it (no spin, no bob)
+    carKit.scale.setScalar((.19/S)/BYID.minikit.size); carKit.position.set(-.09/S,-.94/S,0); carKit.rotation.set(.45,-.55,0);
+    if(carKitX){ carKit.getWorldPosition(_hF); _hF.project(ctx.camera); var r2=ctx.dom.getBoundingClientRect(); var kx=Math.round((_hF.x+1)/2*r2.width+r2.left), ky=Math.round((1-_hF.y)/2*r2.height+r2.top);
+      if(kx!==carKitX.__l){ carKitX.__l=kx; carKitX.style.left=(kx+16)+'px'; } if(ky!==carKitX.__t){ carKitX.__t=ky; carKitX.style.top=ky+'px'; } } }
   if(carKitX) carKitX.style.display=(carLocked&&stage==='select'&&!quiet())?'block':'none';
   if(carUi){   // sit the ◄ PLAY ► row just under the hologram's emitter
     _hF.set(0,(.8-ctx.center[1])/S,0); G.localToWorld(_hF); _hF.project(ctx.camera);
@@ -1437,14 +1442,13 @@ function injectCss(){
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
     '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
-    '#bt-car .bt-lock{margin-top:-8px;font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber-hot,#F0D080);white-space:nowrap}',
-    '#bt-car.bt-lockui .bt-name{margin-top:34px}',   /* room for the minikit symbol between the ship and its name */
-    '#bt-car .bt-play.bt-locked,#bt-car .bt-play.bt-locked:hover{background:rgba(7,12,12,.88);color:var(--amber-hot,#F0D080);border-color:var(--amber-hot,#F0D080);cursor:not-allowed}',
-    '#bt-kitx{position:fixed;z-index:16;transform:translateY(-50%);display:none;pointer-events:none;font-family:var(--mono,monospace);font-size:20px;letter-spacing:2px;color:var(--amber-hot,#F0D080);text-shadow:0 0 12px rgba(240,208,128,.45)}',
-    '#bt-note{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:17;opacity:0;pointer-events:none;font-family:var(--display,sans-serif);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--amber-hot,#F0D080);text-shadow:0 0 14px rgba(240,208,128,.45);white-space:nowrap}',
+    '#bt-car .bt-lock{margin-top:-4px;font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
+    '#bt-car.bt-lockui .bt-name{margin-top:20px;margin-bottom:10px}',   /* room for the small minikit signifier between the ship and its name */
+    '#bt-kitx{position:fixed;z-index:16;transform:translateY(-50%);display:none;pointer-events:none;font-family:var(--mono,monospace);font-size:13px;letter-spacing:2px;color:var(--holo,#AAF5EE)}',
+    '#bt-note{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:17;opacity:0;pointer-events:none;font-family:var(--display,sans-serif);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);text-shadow:0 0 14px rgba(170,245,238,.4);white-space:nowrap}',
     '@media (prefers-reduced-motion:no-preference){#bt-note{transition:opacity .4s}#bt-car .bt-lock.bt-shake{animation:btShake .4s}@keyframes btShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}',
-    '#bt-car .mw-sound-switch{margin-top:var(--bric-space-3-stud,24px)}',
-    '#bt-car .bt-lb{margin-top:26px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
+    '#bt-car .bt-foot{display:flex;align-items:center;gap:var(--bric-space-3-stud,24px);margin-top:14px}',   /* leaderboard + sound share a row (frees a row of height for the unlock line) */
+    '#bt-car .bt-lb{padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
     '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
     '#bt-car .bt-sub b{font-weight:400;color:var(--holo,#AAF5EE)}',
     '#bt-hints{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;display:flex;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap}',
@@ -1476,7 +1480,7 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="display:none" role="status"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button><div class="sw mw-sound-switch mw-sound-switch--lg on" role="switch" aria-checked="true" tabindex="0" title="Sound on or off (M)"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="display:none" role="status"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><div class="bt-foot"><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button><div class="sw mw-sound-switch mw-sound-switch--lg on" role="switch" aria-checked="true" tabindex="0" title="Sound on or off (M)"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div></div>';
   if(window.__mwSyncSound) window.__mwSyncSound();
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
