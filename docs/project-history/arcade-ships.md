@@ -16,3 +16,8 @@
 **Workflow.** Open the Arcade Fleet Lab → Ships tab: edit names / types / sides / thresholds, upload a `.glb` for a new ship → **Export bundle** (zip) → unzip at the repo root (it holds `assets/battle/ships.json` and `assets/battle/models/custom-<id>.glb`) → commit, push, deploy. Every ship in the Lab also gets its sound-review cards automatically (same page, same database).
 
 **Not covered.** Nose orientation beyond the 180° flip (use `tools/battle-orient.html` and ask), per-ship agility (`turn`/`spd`/`fire`/`bright`/`lift` stay in the built-in table for the built-ins; new ships use defaults), engine/fire audio for new ships.
+
+## Where the sound review lives now (Oct 23 2026)
+
+- **Arcade Fleet Lab** (published artifact, the former "Site Sound Review", same URL and database): Ships tab + the ARCADE's sound cards (ambient select/play, heroes, destruction pools, game events, every ship's fire/engine/death). Ship cards are generated from the Ships tab, so a new ship gets its cards at once.
+- **Site Sound Review** = `tools/ui-sounds.html` (renamed from "Arcade UI sound lab"): the NON-arcade sound cards (site-wide ambient bed; entry gate, dock, boot, planets, hologram idle) plus the synthesised interface-sound lab. It is a static repo page with no database: clips are auditioned from IndexedDB and notes are kept in localStorage, in that browser only (`mw_site_sound_rows`). The moved cards had no saved notes, and their clips are already in `assets/audio/`, so nothing was lost; the artifact's old `sfx` rows for them are now simply not shown.
