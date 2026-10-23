@@ -54,13 +54,46 @@ var MODELS=[
   {id:'death-star',        file:'nano-death-star',             team:IMP, cls:'base',    size:2.8, n:1, max:1},
   // heroes (user-spawned)
   {id:'mil-falcon',        file:'nano-mil-falcon',             team:HERO, cls:'hero',   size:.30, n:0, label:'Millennial Hawk'},
-  {id:'n1',                file:'nano-n1',                     team:HERO, cls:'hero',   size:.30, n:0, label:"Bounty Hunter’s M-1", rot:[0,Math.PI,0]},
-  {id:'razorcrest',        file:'nano-razorcrest',             team:HERO, cls:'hero',   size:.30, n:0, label:"Razor’s Edge"},
-  {id:'slave-1',           file:'nano-slave-1',                team:HERO, cls:'hero',   size:.30, n:0, label:'Indentured Servant 1'},   /* as authored: the neon-orange engine sits at the -Z end, so the nose is +Z with the wings folded vertical (no pre-rotation) */
+  {id:'n1',                file:'nano-n1',                     team:HERO, cls:'hero',   size:.30, n:0, label:"Bounty Hunter’s M-1", rot:[0,Math.PI,0], unlockAt:1},
+  {id:'razorcrest',        file:'nano-razorcrest',             team:HERO, cls:'hero',   size:.30, n:0, label:"Razor’s Edge", unlockAt:5},
+  {id:'slave-1',           file:'nano-slave-1',                team:HERO, cls:'hero',   size:.30, n:0, label:'Indentured Servant 1', unlockAt:10},   /* as authored: the neon-orange engine sits at the -Z end, so the nose is +Z with the wings folded vertical (no pre-rotation) */
   // pickup
   {id:'minikit',           file:'minikit',                     team:-1,  cls:'minikit', size:.20, n:0}
 ];
 var BYID={}; MODELS.forEach(function(m){ BYID[m.id]=m; });
+var BASE_MODELS=MODELS.slice();
+
+// ── assets/battle/ships.json: optional overlay on the table above, written by the Arcade Fleet Lab artifact ("Export bundle"). It starts loading with this script, so it is ready long before the arcade opens;
+//    if it isn't (or doesn't exist) the built-in table is used unchanged. Each entry: {id, name, cls:'hero'|'fighter'|'support'|'capital', side:'rebel'|'imperial', file (a .glb in assets/battle/models/),
+//    size, n (count at density 1), unlockAt (heroes: lifetime minikits), flip (turn the nose 180°), removed}. Manifest order = hero carousel order; built-ins it doesn't mention are appended. See docs/project-history/arcade-ships.md.
+var SHIPS_URL='assets/battle/ships.json', shipsMan=null;
+try{ fetch(SHIPS_URL,{cache:'no-cache'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){ shipsMan=j; }).catch(function(){}); }catch(e){}
+function applyShips(){
+  var man=shipsMan&&Array.isArray(shipsMan.ships)?shipsMan.ships:null; if(!man) return;
+  var OKID=/^[a-z0-9][a-z0-9_-]{0,40}$/i, SIDE={imperial:IMP,rebel:REB}, DEF={hero:{size:.3,n:0},fighter:{size:.33,n:2},support:{size:1.3,n:3},capital:{size:2.8,n:2}}, base={}, out=[], seen={};
+  BASE_MODELS.forEach(function(m){ base[m.id]=m; });
+  man.forEach(function(s){
+    if(!s||!OKID.test(String(s.id||''))||seen[s.id]) return; seen[s.id]=1; var b=base[s.id];
+    if(s.removed&&b&&b.cls!=='minikit'&&b.cls!=='base') return;   // a built-in the manager took out of the game
+    var fixed=b&&(b.cls==='minikit'||b.cls==='base');
+    var cls=fixed?b.cls:(DEF[s.cls]?s.cls:(b?b.cls:null)); if(!cls) return;
+    var file=b?b.file:(OKID.test(String(s.file||''))?s.file:null); if(!file) return;
+    var m=b?Object.assign({},b):{id:s.id,file:file,n:0,size:DEF[cls].size};
+    m.cls=cls; if(cls==='hero') m.team=HERO; else if(!fixed) m.team=(SIDE[s.side]!=null?SIDE[s.side]:(b&&b.team!==HERO?b.team:IMP));
+    if(typeof s.name==='string'&&s.name.trim()) m.label=s.name.trim().slice(0,40);
+    if(s.size>0&&s.size<10) m.size=+s.size;
+    if(!fixed&&cls!=='hero'&&s.n>=0&&s.n<60) m.n=s.n|0; if(cls==='hero') m.n=0;
+    if(cls==='hero'){ m.unlockAt=Math.max(0,s.unlockAt|0); } else delete m.unlockAt;
+    if(s.flip!=null){ if(s.flip) m.rot=[0,Math.PI,0]; else delete m.rot; }
+    out.push(m);
+  });
+  BASE_MODELS.forEach(function(b){ if(!seen[b.id]) out.push(b); });   // built-ins the manifest doesn't mention stay in the game, appended
+  MODELS.length=0; out.forEach(function(m){ MODELS.push(m); });
+  BYID={}; MODELS.forEach(function(m){ BYID[m.id]=m; });
+  HEROES.length=0; MODELS.forEach(function(m){ if(m.cls==='hero') HEROES.push(m.id); });
+  if(!HEROES.length){ BASE_MODELS.forEach(function(m){ if(m.cls==='hero'){ MODELS.push(m); BYID[m.id]=m; HEROES.push(m.id); } }); }   // never leave the select page empty
+  DEFAULTS.counts={}; MODELS.forEach(function(m){ if(m.n) DEFAULTS.counts[m.id]=m.n; });
+}
 
 // fighters hunting the hero: chance each (re)target picks the hero, max simultaneous hunters, aim spread multiplier, fire-interval multiplier
 var HUNT={ chance:.15, max:2, spread:2.4, slow:2.8, lock:[22,34], cool:[5,9], stand:3.8, min:2.8, range:5.2 };   // lock = seconds a hunter stays on the hero, cool = pause before it may hunt again, stand/min = preferred / minimum distance from the hero, range = how far a hunter can shoot at it
@@ -85,7 +118,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:20, sunEl:10, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unN1:1, unRazor:5, unSlave:10, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
+  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unlock:{}, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
   planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:1.5, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
   counts:{}, ver:11
 };
@@ -130,7 +163,7 @@ function loadCfg(){
   }catch(e){}
   return o;
 }
-function saveCfg(){ try{ localStorage.setItem(LS_KEY,JSON.stringify(P)); }catch(e){} }
+function saveCfg(){ try{ var o=Object.assign({},P); delete o.unlock; localStorage.setItem(LS_KEY,JSON.stringify(o)); }catch(e){} }   // unlock overrides are session-only: the manager's thresholds (ships.json) must stay authoritative
 function on(target,ev,fn,opt){ target.addEventListener(ev,fn,opt); listeners.push([target,ev,fn,opt]); }
 
 // world geometry of the visible battlefield, from the ENTRY camera (so layout is responsive but doesn't chase user orbit/zoom)
@@ -921,10 +954,11 @@ function updBase(s,dt){
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
 var SEL_SHIP_Y=.32;   // the carousel ship sits this far above the hologram's centre (battle units, in world scale) so there is room for the name + unlock row under it
 // Ship gate: the Falcon is free; the others unlock once LIFETIME minikits shot (localStorage 'mw_kits_total', shared with the site's outfit unlocks) reaches a threshold (debug panel → Minikits · hero).
-var LS_KITS='mw_kits_total', HERO_UN_KEY={'n1':'unN1','razorcrest':'unRazor','slave-1':'unSlave'};
+var LS_KITS='mw_kits_total';
 function kitsTotal(){ try{ return Math.max(0,parseInt(localStorage.getItem(LS_KITS)||'0',10)||0); }catch(e){ return 0; } }
 function kitsBump(){ var n=kitsTotal()+1; try{ localStorage.setItem(LS_KITS,String(n)); }catch(e){} return n; }
-function heroNeed(id){ var k=HERO_UN_KEY[id]; return k&&P?Math.max(0,P[k]|0):0; }
+// threshold = debug-panel override (session only, never saved) → the ship's unlockAt (built-in table / ships.json); the FIRST hero in the carousel is always free so the select page can never be fully locked
+function heroNeed(id){ if(id===HEROES[0]) return 0; var u=P&&P.unlock&&P.unlock[id]; if(u!=null) return Math.max(0,u|0); var m=BYID[id]; return m&&m.unlockAt?Math.max(0,m.unlockAt|0):0; }
 function heroLocked(id){ return kitsTotal()<heroNeed(id); }
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
@@ -1589,9 +1623,7 @@ function buildPanel(){
   slider(kd,'Minikit spawn rate',function(){ return P.kitRate; },function(x){ P.kitRate=x; },0,4,.05,2);
   slider(kd,'Hero-select camera zoom (smaller = closer)',function(){ return P.selZoom; },function(x){ P.selZoom=x; try{ window.dispatchEvent(new CustomEvent('mw:arcselzoom')); }catch(e){} },.35,1.1,.01,2);
   slider(kd,'Locked ship outline detail (drop edges shorter than this fraction of the ship)',function(){ return P.wireMin; },function(x){ P.wireMin=x; wireCache={}; if(carModel&&carModel.userData.holoWireObj){ carModel.remove(carModel.userData.holoWireObj); carModel.userData.holoWireObj=null; } if(carLocked) carLockUi(HEROES[carIdx]); },0,.15,.005,3);
-  slider(kd,'Unlock N-1 starfighter (minikits)',function(){ return P.unN1; },function(x){ P.unN1=x; },0,60,1,0);
-  slider(kd,'Unlock Razor Crest (minikits)',function(){ return P.unRazor; },function(x){ P.unRazor=x; },0,60,1,0);
-  slider(kd,'Unlock Slave I (minikits)',function(){ return P.unSlave; },function(x){ P.unSlave=x; },0,60,1,0);
+  HEROES.forEach(function(id,i){ if(i===0) return; slider(kd,'Unlock '+BYID[id].label+' (minikits, this session)',function(){ return heroNeed(id); },function(x){ P.unlock=P.unlock||{}; P.unlock[id]=x|0; },0,60,1,0); });
   slider(kd,'Minikits at once',function(){ return P.kitMax; },function(x){ P.kitMax=x; },0,8,1,0);
   slider(kd,'Minikit size',function(){ return P.scaleKit; },function(x){ P.scaleKit=x; },.4,4,.05,2);
   var b=document.createElement('button'); b.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; b.textContent='↺ Reset battle sliders';
@@ -1627,7 +1659,7 @@ function resetState(){
 }
 var MWBattle={
   init:function(c){
-    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; P=loadCfg(); if(window.MWReticle) MWReticle.init(); if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom); if(window.MWAudio&&MWAudio.setFighterDuck) MWAudio.setFighterDuck(P.fighterDuck);
+    if(active) return; dead=false; resetState(); pan.x=pan.y=pan.vx=pan.vy=pan.dwell=0; ptr.out=false; ctx=c; T=c.THREE; applyShips(); P=loadCfg(); if(window.MWReticle) MWReticle.init(); if(window.MWAudio&&MWAudio.setMinLoud) MWAudio.setMinLoud(P.minBoom); if(window.MWAudio&&MWAudio.setFighterDuck) MWAudio.setFighterDuck(P.fighterDuck);
     _v1=new T.Vector3(); _v2=new T.Vector3(); _v3=new T.Vector3(); _v4=new T.Vector3(); _ray=new T.Raycaster(); _plane=new T.Plane(); _q=new T.Quaternion(); _zero=new T.Vector3(); _up=new T.Vector3(0,1,0); _aimM=new T.Matrix4(); _ro=new T.Vector3(); _rd=new T.Vector3(); _hT=new T.Vector3(); _hF=new T.Vector3(); DARKLIFT=new T.Color(.30,.38,.44); DARKGLOW=new T.Color(.03,.07,.08); HAZE=new T.Color(.04,.10,.12); _steer=new T.Vector3(); _sep=new T.Vector3();
     G=new T.Group(); G.name='mw-battle'; c.scene.add(G);
     // Stage the battle in the camera's frame at init (includes the saved galaxy-view elevation) so the layout reads the same
@@ -1663,6 +1695,7 @@ var MWBattle={
   },
   isActive:function(){ return active; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
+  heroLabel:function(id){ var m=BYID[id]; return m&&m.label||null; },
   getSelZoom:function(){ return P?P.selZoom:.62; },   // hero-select camera zoom factor (index.html applies it; <1 = closer)
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
   setInverted:function(v){ camInverted=!!v; },   // index.html: the arcade camera is upside down (rolled upright)

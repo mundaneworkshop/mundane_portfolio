@@ -10602,7 +10602,7 @@ f 2469//2469 2470//2470 2434//2434
       rows.forEach(function(r,i){ var tr=document.createElement('tr');
         if(r.gap){ tr.className='ar-gap'; var gd=document.createElement('td'); gd.colSpan=5; gd.textContent='\u2026'; gd.setAttribute('aria-label','scores omitted'); tr.appendChild(gd); body.appendChild(tr); return; }
         if(r.id===mineId||r.you) tr.className='mine';
-        [['ar-r',String(r.rank||i+1)],['ar-f',arcFlag(r.country)],['ar-nm',r.name],['ar-h',ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; if(c[0]==='ar-f'&&c[1]){ td.title=arcCountry(r.country); td.setAttribute('role','img'); td.setAttribute('aria-label',arcCountry(r.country)); } tr.appendChild(td); });
+        [['ar-r',String(r.rank||i+1)],['ar-f',arcFlag(r.country)],['ar-nm',r.name],['ar-h',(window.MWBattle&&MWBattle.heroLabel&&MWBattle.heroLabel(r.hero))||ARC_HERO_NAMES[r.hero]||r.hero],['n',String(r.kills)]].forEach(function(c){ var td=document.createElement('td'); td.className=c[0]; td.textContent=c[1]; if(c[0]==='ar-nm') td.title=c[1]; if(c[0]==='ar-f'&&c[1]){ td.title=arcCountry(r.country); td.setAttribute('role','img'); td.setAttribute('aria-label',arcCountry(r.country)); } tr.appendChild(td); });
         body.appendChild(tr); });
       listEl.appendChild(tb);
       if(animate) arcDecode(tb,0);
