@@ -972,20 +972,32 @@ function playHero(){
 // Select-page lock UI: a locked ship becomes a holographic WIREFRAME (hard edges + a faint fill, like the planet meshes on the galaxy view), PLAY → LOCKED (design-system inactive state),
 // and the requirement is one UI row: [minikit icon] ×(still needed) "shoot N minikits to unlock · have/N" in the feedback-warning colour so it stands out from the rest of the text.
 var kitIconSrc=null, carWireMat=null, carFillMat=null;
-function carKitIcon(){   // the minikit GLB rendered ONCE to a small still image (a UI icon, not a 3D object in the ship's volume)
-  if(kitIconSrc!==null) return kitIconSrc;
-  var c=cache.minikit; if(!c||!T) return '';
-  kitIconSrc='';
+// A GLB rendered ONCE to a small still image (a UI icon, not a 3D object): temporary WebGL context, released immediately. Used for the minikit in the unlock row and for the ships on the game-over modal.
+function modelIcon(proto,o){
+  if(!proto||!T) return '';
   try{
     var rn=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true}); rn.setPixelRatio(1); rn.setSize(96,96,false);
     var sc=new T.Scene(), cam=new T.PerspectiveCamera(28,1,.01,100); sc.add(new T.AmbientLight(0xffffff,1.25)); var dl=new T.DirectionalLight(0xffffff,.8); dl.position.set(2,3,4); sc.add(dl);
-    var m=c.proto.clone(true); m.traverse(function(o){ if(!o.isMesh||!o.material) return; var src=o.material; var c0=src.color?src.color.clone():new T.Color(1,1,1); c0.setRGB(Math.pow(c0.r,1/2.2),Math.pow(c0.g,1/2.2),Math.pow(c0.b,1/2.2)); o.material=new T.MeshLambertMaterial({color:c0,transparent:!!src.transparent,opacity:src.opacity!=null?src.opacity:1}); });   // same linear→display lift the site applies to GLB colours
+    var m=proto.clone(true); m.traverse(function(x){ if(!x.isMesh||!x.material) return; var src=Array.isArray(x.material)?x.material[0]:x.material; var c0=src.color?src.color.clone():new T.Color(1,1,1); c0.setRGB(Math.pow(c0.r,1/2.2),Math.pow(c0.g,1/2.2),Math.pow(c0.b,1/2.2)); x.material=new T.MeshLambertMaterial({color:c0,map:src.map||null,transparent:!!src.transparent,opacity:src.opacity!=null?src.opacity:1}); });   // same linear→display lift the site applies to GLB colours
     var box=new T.Box3().setFromObject(m), size=box.getSize(new T.Vector3()), ctr=box.getCenter(new T.Vector3()); m.position.sub(ctr);
-    var g=new T.Group(); g.add(m); g.rotation.set(.5,-.65,0); sc.add(g); var md=Math.max(size.x,size.y,size.z)||1; cam.position.set(0,0,md*2.5); cam.lookAt(0,0,0);
-    rn.render(sc,cam); kitIconSrc=rn.domElement.toDataURL('image/png');
+    var g=new T.Group(); g.add(m); g.rotation.set(o.rx,o.ry,0); sc.add(g); var md=Math.max(size.x,size.y,size.z)||1; cam.position.set(0,0,md*o.dist); cam.lookAt(0,0,0);
+    rn.render(sc,cam); var url=rn.domElement.toDataURL('image/png');
     try{ var lc=rn.getContext().getExtension('WEBGL_lose_context'); rn.dispose(); if(lc) lc.loseContext(); }catch(e){}
-  }catch(e){ kitIconSrc=''; }
-  return kitIconSrc;
+    return url;
+  }catch(e){ return ''; }
+}
+function carKitIcon(){
+  if(kitIconSrc!==null) return kitIconSrc;
+  var c=cache.minikit; if(!c||!T) return '';
+  kitIconSrc=modelIcon(c.proto,{rx:.5,ry:-.65,dist:2.5}); return kitIconSrc;
+}
+var shipIcons={};
+function shipIcon(id){ if(shipIcons[id]!==undefined) return shipIcons[id]; var c=cache[id]; if(!c||!T) return ''; shipIcons[id]=modelIcon(c.proto,{rx:.62,ry:2.45,dist:2.1}); return shipIcons[id]; }
+// Hero ships whose unlock threshold was crossed during THIS run (lifetime minikits at the first spawn → now). Shown on the game-over modal.
+function unlockedShips(){
+  if(!session.played||session.kits0==null) return [];
+  var now=kitsTotal();
+  return HEROES.filter(function(id){ var need=heroNeed(id); return need>session.kits0&&need<=now; }).map(function(id){ return {id:id,name:BYID[id].label,icon:shipIcon(id)}; });
 }
 // ONE merged outline per ship (cached): every mesh is baked into the model's space and welded into a single geometry, outlined once, and then short edges (studs, brick seams, small
 // detail; shorter than P.wireMin of the ship's size) are dropped, so the parts aren't individually outlined and only the main hull lines remain.
@@ -1035,7 +1047,7 @@ function spawnHero(id){
   var s=makeShip(m); heroShip=s; s.hero=true; s.hp=heroMax;
   s.pos.set(0,0,0); s.dir.set(1,.12,-.1).normalize(); s.spd=0; s.spawnK=1; s.cd=0; s.gun=0; s.hp=heroMax; s.maxhp=heroMax; s.inv=0;
   burst(s.pos,0xaaf5ee,18,1.4,.6); fireHeld=false; if(window.MWAudio) MWAudio.heroStart(id);
-  if(!session.played){ session.played=true; session.t0=performance.now(); }
+  if(!session.played){ session.played=true; session.t0=performance.now(); session.kits0=kitsTotal(); }
   session.hero={id:m.id,label:m.label}; if(session.heroes.indexOf(m.label)<0) session.heroes.push(m.label); if(session.heroIds.indexOf(m.id)<0) session.heroIds.push(m.id);
   setStage('play');
 }
@@ -1704,7 +1716,8 @@ var MWBattle={
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)
   assetsReady:function(){ return active&&(planetState!==1)&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
-  summary:function(){ return { played:session.played, score:kills, kills:kills, minikits:kitCount, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
+  shipIcon:shipIcon,
+  summary:function(){ return { unlocked:unlockedShips(), played:session.played, score:kills, kills:kills, minikits:kitCount, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _explode:function(s){ startDying(s); }, _debris:function(){ return debris.length; },
   _ships:function(){ return ships; }, _env:function(){ return envTex; }, _renderer:function(){ return ctx.renderer; }, _ndc:function(s){ return G.localToWorld(s.pos.clone()).project(ctx.camera).toArray(); }, _cam:function(){ return ctx.camera; }, _group:function(){ return G; },
   stats:function(){ return { ships:ships.length, alive:ships.filter(function(s){ return s.alive; }).length, bolts:bolts.length, kits:kits.length, cached:Object.keys(cache).length, cfg:P }; },

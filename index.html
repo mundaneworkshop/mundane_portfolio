@@ -127,6 +127,11 @@
   #arcadeResult .ar-board td.ar-f,#arcadeResult .ar-board th.ar-f{width:32px;text-align:center;padding-left:0;padding-right:var(--bric-space-stud);font:16px/1 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;letter-spacing:0}
   #arcadeResult .kit td{border-top:1px solid var(--bric-border-default);border-bottom:0;color:var(--bric-content-primary)}
   #arcadeResult .kitnote td{padding-top:0;font-size:10px;letter-spacing:.14em;color:var(--bric-content-tertiary)}
+  #arcadeResult .unl td{padding-top:10px}
+  #arcadeResult .ar-ul{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-content-tertiary);margin-bottom:6px}
+  #arcadeResult .ar-ships{display:flex;flex-wrap:wrap;gap:8px 18px}
+  #arcadeResult .ar-ship{display:inline-flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.06em;color:var(--bric-content-primary)}
+  #arcadeResult .ar-ico{width:28px;height:28px;object-fit:contain;flex:none}
   #arcadeResult .ar-board td.ar-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0}
   #arcadeResult .ar-board td.ar-h{width:34%;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--bric-content-secondary);padding-left:var(--bric-space-1-5-stud)}
   #arcadeResult .ar-board th.ar-h{padding-left:var(--bric-space-1-5-stud)}
@@ -10608,6 +10613,12 @@ f 2469//2469 2470//2470 2434//2434
       if(animate) arcDecode(tb,0);
     }
     function arcEsc(v){ return String(v).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    // Game-over modal: the hero ships this run unlocked, each as an inline icon (the GLB rendered once to a still, MWBattle.shipIcon) + its name. Nothing is shown when none unlocked.
+    function arcUnlockedRows(list){
+      if(!list||!list.length) return '';
+      return '<tr class="unl"><td colspan="4"><span class="ar-ul">'+(list.length===1?'Ship unlocked':'Ships unlocked')+'</span><span class="ar-ships">'+list.map(function(u){
+        return '<span class="ar-ship">'+(u.icon?'<img class="ar-ico" alt="" src="'+u.icon+'" width="28" height="28">':'')+'<span>'+arcEsc(u.name)+'</span></span>'; }).join('')+'</span></td></tr>';
+    }
     // sum: {score, fighters, support, capital, weights, hero, heroes, heroIds, seconds} from MWBattle.summary(), or null for a plain leaderboard view
     function showArcadeResult(sum){
       closeArcadeResult();
@@ -10620,7 +10631,7 @@ f 2469//2469 2470//2470 2434//2434
         html+='<div class="ar-head"><div class="ar-k">Game over</div><div class="ar-n">'+sum.score+'</div><div class="ar-l">Score</div></div>'+
           '<div class="ar-sec"><div class="ar-st">Score breakdown</div><table class="ar-break"><thead><tr><th>Target</th><th class="n">Destroyed</th><th class="n">Value</th><th class="n">Points</th></tr></thead><tbody>'+rowsB+
           '<tr class="tot"><td colspan="3">Total</td><td class="n">'+sum.score+'</td></tr>'+
-          '<tr class="kit"><td colspan="3">Minikits opened</td><td class="n">'+(sum.minikits||0)+'</td></tr><tr class="kitnote"><td colspan="4">Not part of your score \u00b7 reward previews coming soon</td></tr></tbody></table></div>'+
+          '<tr class="kit"><td colspan="3">Minikits shot</td><td class="n">'+(sum.minikits||0)+'</td></tr><tr class="kitnote"><td colspan="4">Not part of your score</td></tr>'+arcUnlockedRows(sum.unlocked)+'</tbody></table></div>'+
           '<table class="ar-meta"><tbody><tr><td>Flown</td><td>'+arcEsc(sum.heroes.length?sum.heroes.join(' \u00b7 '):'\u2014')+'</td></tr><tr><td>Time</td><td>'+mins+':'+secs+'</td></tr></tbody></table>';
         if(scored) html+='<div class="ar-sec"><form class="ar-form" autocomplete="off"><input class="ar-in" maxlength="20" placeholder="Your name" aria-label="Your name"><button type="submit" class="bric-btn bric-btn--primary ar-sub">Submit score</button></form><div class="ar-msg" role="status" aria-live="polite"></div></div>';
       } else html+='<div class="ar-head"><div class="ar-k">Leaderboard</div></div>';
