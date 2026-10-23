@@ -984,12 +984,12 @@ function carWire(on,id){
 }
 function carLockUi(id){
   var need=heroNeed(id), have=kitsTotal(), locked=have<need; carLocked=locked;
-  if(carUi){ var lk=carUi.querySelector('.bt-lock'), pb=carUi.querySelector('.bt-play'), sb=carUi.querySelector('.bt-sub');
-    if(lk){ lk.style.display=locked?'flex':'none';
+  if(carUi){ var lk=carUi.querySelector('.bt-lock'), pb=carUi.querySelector('.bt-play');
+    if(lk){ lk.style.visibility=locked?'visible':'hidden';   // always takes its space, so nothing below it shifts as you tab through ships
       if(locked){ var ic=lk.querySelector('.bt-kiticon'); if(ic&&!ic.getAttribute('src')){ var src=carKitIcon(); if(src) ic.setAttribute('src',src); } ic.style.display=ic.getAttribute('src')?'':'none';
-        lk.querySelector('.bt-kitx').textContent='×'+(need-have); lk.querySelector('.bt-locktxt').textContent='shoot '+need+' minikit'+(need===1?'':'s')+' to unlock · '+have+'/'+need; } }
+        lk.querySelector('.bt-locktxt').textContent='shoot '+need+' minikit'+(need===1?'':'s')+' to unlock · '+have+'/'+need; } }
     if(pb){ pb.textContent=locked?'LOCKED':'PLAY'; pb.setAttribute('aria-disabled',locked?'true':'false'); }   // inactive look = the design system's [aria-disabled="true"] state (no custom colour)
-    if(sb) sb.style.display=locked?'none':''; }
+  }
   carWire(locked,id);
 }
 // Brief banner (top centre) — a ship just unlocked.
@@ -1471,14 +1471,12 @@ function injectCss(){
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
     '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
-    '#bt-car .bt-lock{display:flex;align-items:center;gap:7px;margin-top:-2px;font-family:var(--mono,monospace);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bric-feedback-warning-fg,#F0892A);white-space:nowrap}',   /* feedback-warning token: stands out from the holo-teal text around it, and isn't the interactive amber */
-    '#bt-car .bt-kiticon{width:18px;height:18px;object-fit:contain;flex:none}',
-    '#bt-car .bt-kitx{font-weight:700;letter-spacing:1px}',
+    '#bt-car .bt-play{min-width:104px;justify-content:center}',   /* PLAY and LOCKED are the same width, so the ◄ ► arrows don't shift as you tab through ships */
+    '#bt-car .bt-lock{display:flex;align-items:center;gap:8px;min-height:26px;margin-top:-2px;font-family:var(--mono,monospace);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bric-feedback-warning-fg,#F0892A);white-space:nowrap}',   /* feedback-warning token: stands out from the holo-teal text around it, and isn't the interactive amber */
+    '#bt-car .bt-kiticon{width:24px;height:24px;object-fit:contain;flex:none}',
     '#bt-note{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:17;opacity:0;pointer-events:none;font-family:var(--display,sans-serif);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);text-shadow:0 0 14px rgba(170,245,238,.4);white-space:nowrap}',
     '@media (prefers-reduced-motion:no-preference){#bt-note{transition:opacity .4s}#bt-car .bt-lock.bt-shake{animation:btShake .4s}@keyframes btShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}',
     '#bt-car .bt-lb{margin-top:20px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
-    '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
-    '#bt-car .bt-sub b{font-weight:400;color:var(--holo,#AAF5EE)}',
     '#bt-hints{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;display:flex;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap}',
     '#bt-hints .bt-h{display:flex;align-items:center;gap:11px}',
     '#bt-hints svg{color:var(--holo,#AAF5EE);flex:none}',
@@ -1508,7 +1506,7 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="display:none" role="status"><img class="bt-kiticon" alt="" width="18" height="18"><b class="bt-kitx"></b><span class="bt-locktxt"></span></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="visibility:hidden" role="status"><img class="bt-kiticon" alt="" width="24" height="24"><span class="bt-locktxt"></span></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
