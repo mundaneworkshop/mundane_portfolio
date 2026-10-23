@@ -85,7 +85,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:20, sunEl:10, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
+  kitRate:.3, kitMax:4, kitPts:10, unN1:5, unRazor:15, unSlave:30, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
   planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:1.5, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
   counts:{}, ver:11
 };
@@ -95,7 +95,8 @@ var P=null, ctx=null, T=null, active=false, dead=false;
 var G=null, lights=[], clockT=0, lastT=null, hyper=null, glowTex=null, sess=0, S=1, envTex=null, sunW=null;
 var LREF=4.3;   // the battle is authored for a camera 4.3 units from its centre; G is scaled by (real distance / 4.3) so it reads the same from any camera
 var cache={}, loading={}, loadQ=[], inflight=0, failed={};
-var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
+var ships=[], heroShip=null, kits=[], kitTimer=0, kitCount=0;
+var kitOwed=0, kitAwarded=0, carLocked=false, carKit=null, carKitX=null, noteEl=null, noteT=0;   // kitOwed: minikits earned by score but not yet spawned · kitAwarded: how many score milestones have already paid out
 var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
@@ -918,12 +919,40 @@ function updBase(s,dt){
 // stage 'select': the hologram's head is replaced by a carousel of the playable hero ships (◄ PLAY ► under the cone).
 // stage 'play'  : every hologram artifact hides (ctx.onStage) and the chosen hero flies — it travels toward the mouse, fires where you click.
 var HEROES=['mil-falcon','n1','razorcrest','slave-1'];
+// Ship gate: the Falcon is free; the others unlock once LIFETIME minikits shot (localStorage 'mw_kits_total', shared with the site's outfit unlocks) reaches a threshold (debug panel → Minikits · hero).
+var LS_KITS='mw_kits_total', HERO_UN_KEY={'n1':'unN1','razorcrest':'unRazor','slave-1':'unSlave'};
+function kitsTotal(){ try{ return Math.max(0,parseInt(localStorage.getItem(LS_KITS)||'0',10)||0); }catch(e){ return 0; } }
+function kitsBump(){ var n=kitsTotal()+1; try{ localStorage.setItem(LS_KITS,String(n)); }catch(e){} return n; }
+function heroNeed(id){ var k=HERO_UN_KEY[id]; return k&&P?Math.max(0,P[k]|0):0; }
+function heroLocked(id){ return kitsTotal()<heroNeed(id); }
 var session={played:false,hero:null,heroes:[],heroIds:[],t0:0}, stage='select', carIdx=0, carGroup=null, carWrap=null, carModel=null, carModelId=null, carK=0, kills=0, tally={fighter:0,support:0,capital:0}, carUi=null, hintEl=null, pendingHero=null;
 var _ro=null, _rd=null, _hT=null, _hF=null;
 function reticleDom(playing){ if(!ctx||!ctx.dom) return; if(playing&&window.MWReticle){ ctx.dom.setAttribute('data-mw-reticle','arcade'); ctx.dom.style.cursor='none'; } else { ctx.dom.removeAttribute('data-mw-reticle'); ctx.dom.style.cursor=''; } }   // data-mw-reticle: the site-wide reticle (index.html) steps aside over the canvas while the arcade reticle is up
 function setStage(st){ if(stage===st) return; stage=st; if(st==='play'&&ctx&&ctx.getRot) rot0T=ctx.getRot(); reticleDom(st==='play'); if(window.MWAudio) MWAudio.stage(st); if(G) applyLook(); if(st==='play') endIntro(); if(ctx.onStage) ctx.onStage(st); syncUi(); }
 function stepCar(d){ carIdx=(carIdx+d+HEROES.length)%HEROES.length; carK=0; }
-function playHero(){ spawnHero(HEROES[carIdx]); }
+function playHero(){
+  if(heroLocked(HEROES[carIdx])){ if(window.MWAudio) MWAudio.ui('release'); if(carUi){ var lk=carUi.querySelector('.bt-lock'); if(lk){ lk.classList.remove('bt-shake'); void lk.offsetWidth; lk.classList.add('bt-shake'); } } return; }   // locked: nudge the lock line instead
+  spawnHero(HEROES[carIdx]);
+}
+// Select-page lock UI: ship ghosted, PLAY → LOCKED, "shoot N minikits" line, and the 3D minikit + ×(still needed) under the preview.
+function carLockUi(id){
+  var need=heroNeed(id), have=kitsTotal(), locked=have<need; carLocked=locked;
+  if(carUi){ var lk=carUi.querySelector('.bt-lock'), pb=carUi.querySelector('.bt-play'), sb=carUi.querySelector('.bt-sub');
+    if(lk){ lk.style.display=locked?'block':'none'; lk.textContent=locked?('Locked \u00b7 shoot '+need+' minikit'+(need===1?'':'s')+' to unlock \u00b7 '+have+'/'+need):''; }
+    if(pb){ pb.textContent=locked?'LOCKED':'PLAY'; pb.setAttribute('aria-disabled',locked?'true':'false'); pb.classList.toggle('bt-locked',locked); }
+    if(sb) sb.style.visibility=locked?'hidden':'';
+    carUi.classList.toggle('bt-lockui',locked); }
+  if(carKitX){ carKitX.textContent=locked?'\u00d7'+(need-have):''; }
+  if(carModel) carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var m=o.material; m.transparent=locked; m.opacity=locked?.32:1; m.needsUpdate=true; });
+}
+function carBuildKit(){
+  var m=cache.minikit; if(!m||carKit||!carGroup) return;
+  carKit=m.proto.clone(true);
+  carKit.traverse(function(o){ if(!o.isMesh||!o.material) return; var mm=o.material.clone(); mm.userData=Object.assign({},o.material.userData,{btPatched:false}); mm.envMap=envTex; var un=1/SELDIM; mm.color.multiplyScalar(un); mm.envMapIntensity*=un; if(mm.emissiveIntensity!=null) mm.emissiveIntensity*=un; patchMaterial(mm); o.material=mm; });   // same un-dimming as the carousel ships
+  carGroup.add(carKit);
+}
+// Brief banner (top centre) — a ship just unlocked.
+function noteShow(txt){ if(!noteEl) return; noteEl.textContent=txt; noteEl.style.opacity=1; clearTimeout(noteT); noteT=setTimeout(function(){ noteEl.style.opacity=0; },4200); }
 function spawnHero(id){
   ejectHero(true); cam.death=false; cam.breakup=false; cam.snap=false;
   var m=BYID[id]; if(!m) return;
@@ -1152,11 +1181,18 @@ function updCarousel(dt){
     if(carWrap) carGroup.remove(carWrap);
     carWrap=new T.Group(); carModel=cache[id].proto.clone(true);   /* proto materials are currently dimmed: undo it on the carousel copies */ carModel.traverse(function(o){ if(!o.isMesh||!o.material) return; var mm=o.material.clone(); mm.userData=Object.assign({},o.material.userData,{btPatched:false}); mm.envMap=envTex; var un=stage==='select'?1/SELDIM:1; mm.color.multiplyScalar(un); mm.envMapIntensity*=un; if(mm.emissiveIntensity!=null) mm.emissiveIntensity*=un; patchMaterial(mm); o.material=mm; }); carWrap.add(carModel); carGroup.add(carWrap); carModelId=id; carK=0;
     if(carUi){ var nm=carUi.querySelector('.bt-name'); if(nm) nm.textContent=BYID[id].label; }
+    carLockUi(id);
   }
+  carBuildKit();
   if(!carWrap) return;
   carK=Math.min(1,carK+dt*3.2); var pop=1-Math.pow(1-carK,3);
   carWrap.scale.setScalar((1.45/S)/BYID[id].size*(.2+.8*pop)*(P.scaleHero>0?1:1));
   carWrap.rotation.y+=dt*.9; carWrap.rotation.x=.22; carGroup.position.y=Math.sin(clockT*1.3)*.05/S;
+  if(carKit){   // the minikit symbol sits under the ship while it's locked; ×N is a DOM label projected beside it
+    carKit.visible=carLocked; if(carLocked){ carKit.scale.setScalar((.3/S)/BYID.minikit.size*(.4+.6*pop)); carKit.position.set(-.12/S,-.9/S,0); carKit.rotation.y+=dt*1.6; carKit.rotation.x=.3;
+      if(carKitX){ carKit.getWorldPosition(_hF); _hF.project(ctx.camera); var r2=ctx.dom.getBoundingClientRect(); var kx=Math.round((_hF.x+1)/2*r2.width+r2.left), ky=Math.round((1-_hF.y)/2*r2.height+r2.top);
+        if(kx!==carKitX.__l){ carKitX.__l=kx; carKitX.style.left=(kx+30)+'px'; } if(ky!==carKitX.__t){ carKitX.__t=ky; carKitX.style.top=ky+'px'; } } } }
+  if(carKitX) carKitX.style.display=(carLocked&&stage==='select'&&!quiet())?'block':'none';
   if(carUi){   // sit the ◄ PLAY ► row just under the hologram's emitter
     _hF.set(0,(.8-ctx.center[1])/S,0); G.localToWorld(_hF); _hF.project(ctx.camera);
     var r=ctx.dom.getBoundingClientRect(); var cl=Math.round((_hF.x+1)/2*r.width+r.left), ct=Math.round((1-_hF.y)/2*r.height+r.top);   // whole pixels, written only on change: the row used to creep a fraction of a pixel every frame under the cursor
@@ -1166,6 +1202,7 @@ function updCarousel(dt){
 function syncUi(){
   var sel=stage==='select'&&!quiet(), pl=stage==='play'&&!quiet();
   if(carUi) carUi.style.display=sel?'flex':'none';
+  if(sel) carLockUi(HEROES[carIdx]);
   if(hintEl) hintEl.style.display=(sel||pl)?'flex':'none';
   if(hudEl) hudEl.style.opacity=pl?1:0;
   updCritical();
@@ -1191,12 +1228,16 @@ function openKit(k,via){
   burst(k.pos,0xffe14a,30,2,.9); burst(k.pos,0xffffff,12,2.6,.5);
   var au=audioAt(k); if(au&&window.MWAudio&&MWAudio.kitOpen) MWAudio.kitOpen(au);   // the reward cue (Battle Sound Review: Minikit opens)
   kitCount++; updHud(true);
-  try{ window.dispatchEvent(new CustomEvent('mw:minikit',{detail:{total:kitCount,via:via,reward:null}})); }catch(e){}
-  if(typeof MWBattle.onUnlock==='function'){ try{ MWBattle.onUnlock({total:kitCount,via:via,reward:null}); }catch(e){} }
+  var life=kitsBump();   // lifetime total (localStorage) — the site's outfit unlocks read the same number (detail.lifetime)
+  HEROES.forEach(function(id){ if(heroNeed(id)===life&&life>0) noteShow('Ship unlocked \u00b7 '+BYID[id].label); });
+  try{ window.dispatchEvent(new CustomEvent('mw:minikit',{detail:{total:kitCount,lifetime:life,via:via,reward:null}})); }catch(e){}
+  if(typeof MWBattle.onUnlock==='function'){ try{ MWBattle.onUnlock({total:kitCount,lifetime:life,via:via,reward:null}); }catch(e){} }
 }
 function updKits(dt){
+  // One minikit per P.kitPts points scored (SCORE: fighter 1, support 3, capital 7). Earned kits queue and spawn a beat apart, up to P.kitMax on screen at once.
+  var due=Math.floor(kills/Math.max(1,P.kitPts))-kitAwarded; if(due>0){ kitAwarded+=due; kitOwed+=due; }
   kitTimer-=dt;
-  if(kitTimer<=0&&!quiet()){ var live=kits.filter(function(k){ return !k.opening; }).length; if(live<P.kitMax&&P.kitRate>0&&cache.minikit) spawnKit(); kitTimer=rnd(6,12)/Math.max(.05,P.kitRate); }
+  if(kitOwed>0&&kitTimer<=0&&!quiet()&&cache.minikit){ var live=kits.filter(function(k){ return !k.opening; }).length; if(live<P.kitMax){ spawnKit(); kitOwed--; kitTimer=.45; } }
   var sc=P.scale*P.scaleKit;
   for(var i=kits.length-1;i>=0;i--){
     var k=kits[i]; k.age+=dt;
@@ -1390,12 +1431,18 @@ function updHud(pulse){
 }
 function injectCss(){
   styleEl=document.createElement('style'); styleEl.textContent=[
-    'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints, body:not(.mw-arcade) #bt-bars{display:none!important}',
+    'body:not(.mw-arcade) #bt-car, body:not(.mw-arcade) #bt-kitx, body:not(.mw-arcade) #bt-note, body:not(.mw-arcade) #bt-hud, body:not(.mw-arcade) #bt-hints, body:not(.mw-arcade) #bt-bars{display:none!important}',
     'body.mw-arcade #dbg-battle{display:block}',
     '#bt-car .bric-btn,#arcadeExit .bric-btn,#arcadeResult .bric-btn{touch-action:manipulation}',
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
     '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
     '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
+    '#bt-car .bt-lock{margin-top:-8px;font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber-hot,#F0D080);white-space:nowrap}',
+    '#bt-car.bt-lockui .bt-name{margin-top:34px}',   /* room for the minikit symbol between the ship and its name */
+    '#bt-car .bt-play.bt-locked,#bt-car .bt-play.bt-locked:hover{background:rgba(7,12,12,.88);color:var(--amber-hot,#F0D080);border-color:var(--amber-hot,#F0D080);cursor:not-allowed}',
+    '#bt-kitx{position:fixed;z-index:16;transform:translateY(-50%);display:none;pointer-events:none;font-family:var(--mono,monospace);font-size:20px;letter-spacing:2px;color:var(--amber-hot,#F0D080);text-shadow:0 0 12px rgba(240,208,128,.45)}',
+    '#bt-note{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:17;opacity:0;pointer-events:none;font-family:var(--display,sans-serif);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--amber-hot,#F0D080);text-shadow:0 0 14px rgba(240,208,128,.45);white-space:nowrap}',
+    '@media (prefers-reduced-motion:no-preference){#bt-note{transition:opacity .4s}#bt-car .bt-lock.bt-shake{animation:btShake .4s}@keyframes btShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}',
     '#bt-car .mw-sound-switch{margin-top:var(--bric-space-3-stud,24px)}',
     '#bt-car .bt-lb{margin-top:26px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
     '#bt-car .bt-sub{font-family:var(--mono,monospace);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#6b8a85);opacity:.85;white-space:nowrap}',
@@ -1429,12 +1476,14 @@ function injectCss(){
 function buildUi(){
   injectCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
-  carUi.innerHTML='<div class="bt-name"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button><div class="sw mw-sound-switch mw-sound-switch--lg on" role="switch" aria-checked="true" tabindex="0" title="Sound on or off (M)"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>';
+  carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="display:none" role="status"></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><div class="bt-sub"><b>enter</b> to play</div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button><div class="sw mw-sound-switch mw-sound-switch--lg on" role="switch" aria-checked="true" tabindex="0" title="Sound on or off (M)"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>';
   if(window.__mwSyncSound) window.__mwSyncSound();
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
   carUi.querySelector('.bt-lb').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); if(ctx.showLeaderboard) ctx.showLeaderboard(); });
   carUi.querySelector('.bt-play').addEventListener('click',function(e){ e.stopPropagation(); this.blur(); playHero(); });
   document.body.appendChild(carUi);
+  carKitX=document.createElement('div'); carKitX.id='bt-kitx'; document.body.appendChild(carKitX);
+  noteEl=document.createElement('div'); noteEl.id='bt-note'; noteEl.setAttribute('role','status'); document.body.appendChild(noteEl);
   hintEl=document.createElement('div'); hintEl.id='bt-hints'; hintEl.style.display='none';
   hintEl.innerHTML='<div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 20 m-3 0 h6 M12 17 v6" stroke="currentColor" stroke-width="1.4" fill="none"/></svg><span>Move + aim</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 0 3 11 L3 13 L12 13 Z" fill="currentColor"/></svg><span>Click to fire</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 1 21 11 L21 13 L12 13 Z" fill="currentColor"/></svg><span>Right-click + drag · pan</span></div><div class="bt-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><rect x="10.4" y="4.6" width="3.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M9 16.5 l3 -2.6 l3 2.6 M9 22 l3 2.6 l3 -2.6" stroke="currentColor" stroke-width="1.3" fill="none"/></svg><span>Scroll · zoom</span></div><div class="bt-h"><svg viewBox="0 0 56 24" width="58" height="26" aria-hidden="true"><rect x="1.5" y="3" width="53" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 12.5 v3 h28 v-3" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Spacebar · change ship</span></div><div class="bt-h"><svg viewBox="0 0 40 24" width="42" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="37" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="20" y="16" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="currentColor">ESC</text></svg><span>Esc \u00b7 exit game</span></div>';
   document.body.appendChild(hintEl);
@@ -1507,7 +1556,10 @@ function buildPanel(){
   });
   check(panelEl,'Death Star (only ever one)',function(){ return P.deathStar; },function(x){ P.deathStar=x; reconT=0; });
   var kd=document.createElement('details'); kd.innerHTML='<summary>Minikits · hero</summary>'; panelEl.appendChild(kd);
-  slider(kd,'Minikit spawn rate',function(){ return P.kitRate; },function(x){ P.kitRate=x; },0,4,.05,2);
+  slider(kd,'Points per minikit (1 spawns each time you score this many)',function(){ return P.kitPts; },function(x){ P.kitPts=x; },1,50,1,0);
+  slider(kd,'Unlock N-1 starfighter (minikits)',function(){ return P.unN1; },function(x){ P.unN1=x; },0,60,1,0);
+  slider(kd,'Unlock Razor Crest (minikits)',function(){ return P.unRazor; },function(x){ P.unRazor=x; },0,60,1,0);
+  slider(kd,'Unlock Slave I (minikits)',function(){ return P.unSlave; },function(x){ P.unSlave=x; },0,60,1,0);
   slider(kd,'Minikits at once',function(){ return P.kitMax; },function(x){ P.kitMax=x; },0,8,1,0);
   slider(kd,'Minikit size',function(){ return P.scaleKit; },function(x){ P.scaleKit=x; },.4,4,.05,2);
   var b=document.createElement('button'); b.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; b.textContent='↺ Reset battle sliders';
@@ -1537,7 +1589,7 @@ function makeBolts(){
 }
 
 function resetState(){
-  ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
+  ships=[]; heroShip=null; kits=[]; kitTimer=0; kitOwed=0; kitAwarded=0; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; failed={}; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
   debris=[]; timers=[]; camReset(); introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; PL=null; planet=null; sunObj=null; envQ=envPrev=null; envIdle=0; planetMats=[]; planetState=0; sess++;
 }
@@ -1556,10 +1608,10 @@ var MWBattle={
     var rim=new T.DirectionalLight(0x7fb8e8,P.lightRim);
     [hemi,key,rim].forEach(function(l){ c.scene.add(l); lights.push(l); });
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
-    kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null;
+    kills=0; kitOwed=0; kitAwarded=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=carKit=null;
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(Math.max(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R,SUN_DIST+L+60)+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
     fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
-    active=true; kitTimer=5; if(c.onStage) c.onStage('select');
+    active=true; kitTimer=0; if(c.onStage) c.onStage('select');
     audioRot0=c.getRot?c.getRot():0; if(window.MWAudio){ MWAudio.arcadeStart(); MWAudio.warm(); }
     window.MWBattle=MWBattle;
   },
@@ -1574,7 +1626,7 @@ var MWBattle={
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
     if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.near=camNear; ctx.camera.updateProjectionMatrix(); }
-    [carUi,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
+    [carUi,carKitX,noteEl,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
