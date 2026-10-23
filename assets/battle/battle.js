@@ -85,7 +85,7 @@ var DEFAULTS={
   speedFighter:.5, speedSupport:1, speedCapital:1,
   laserFighter:1, laserSupport:1, laserCapital:1,
   lightFill:.1, lightKey:1.35, lightRim:.25, lightScene:.25, exposure:1, fogK:.25, envInt:.5, rough:.55, sunAz:20, sunEl:10, matBright:1, matEmissive:1, matFighter:.9, dsDim:.7, clear:1, darkLift:.6,
-  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unN1:5, unRazor:15, unSlave:30, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
+  kitRate:.3, kitMax:2, selZoom:.62, wireMin:.03, unN1:1, unRazor:5, unSlave:10, deathStar:true, jumpStep:.045, fighterBurn:.35, minBoom:.6, fighterDuck:.35,
   planetOn:true, planetR:22, planetAng:55, planetTilt:-15, planetAlt:.5, planetBright:.8, planetSpin:1.5, dsAng:70, dsTilt:-40, sunStar:true, sunFollow:true,   /* backdrop planet: radius (battle units), planetAng/Tilt = where the planet sits relative to the Death Star's old spot, dsAng/dsTilt = where the Death Star orbits round the planet (negative tilt = BEHIND it from the camera, so the dish faces us), orbit height in Death Star radii above the hull, brightness, spin deg/s; sunStar = the visible star; sunAz/sunEl (null = start opposite the planet, behind the camera at an offset) place the ONE sun that lights the scene and the star sits at; sunFollow = it stays put in the battle when you orbit (off = fixed to the screen) */
   counts:{}, ver:11
 };
@@ -1469,14 +1469,16 @@ function injectCss(){
     'body.mw-arcade #dbg-battle{display:block}',
     '#bt-car .bric-btn,#arcadeExit .bric-btn,#arcadeResult .bric-btn{touch-action:manipulation}',
     '#bt-car{position:fixed;z-index:16;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;font-family:var(--display,sans-serif)}',
-    '#bt-car .bt-name{margin-bottom:18px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
-    '#bt-car .bt-row{display:flex;gap:34px;align-items:center}',
-    '#bt-car .bt-play{min-width:104px;justify-content:center}',   /* PLAY and LOCKED are the same width, so the ◄ ► arrows don't shift as you tab through ships */
-    '#bt-car .bt-lock{display:flex;align-items:center;gap:8px;min-height:26px;margin-top:-2px;font-family:var(--mono,monospace);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bric-feedback-warning-fg,#F0892A);white-space:nowrap}',   /* feedback-warning token: stands out from the holo-teal text around it, and isn't the interactive amber */
+    '#bt-car .bt-name{margin-bottom:2px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);white-space:nowrap}',
+    '#bt-car .bt-row{display:flex;gap:34px;align-items:center;margin-top:16px}',
+    '#bt-car .bt-play{min-width:104px;justify-content:center}',
+    /* Inactive PLAY (LOCKED): the design system's disabled look (fill/disabled tint + text/disabled) assumes an OPAQUE surface; over the busy scene the 14% tint vanished. Seat it on surface/scene, tokens unchanged (docs/project-history/interactive-states.md "Disabled over imagery"). */
+    '#bt-car .bt-play[aria-disabled="true"]{background:linear-gradient(var(--bric-interactive-fill-disabled),var(--bric-interactive-fill-disabled)),var(--bric-surface-scene,#070C0C)}',   /* PLAY and LOCKED are the same width, so the ◄ ► arrows don't shift as you tab through ships */
+    '#bt-car .bt-lock{display:flex;align-items:center;gap:8px;min-height:26px;margin-top:0;padding:0 10px;background:var(--bric-surface-overlay,rgba(7,12,12,.72));font-family:var(--mono,monospace);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--bric-feedback-warning-fg,#F0892A);white-space:nowrap}',   /* feedback-warning token: stands out from the holo-teal text around it, and isn't the interactive amber */
     '#bt-car .bt-kiticon{width:24px;height:24px;object-fit:contain;flex:none}',
     '#bt-note{position:fixed;left:50%;top:76px;transform:translateX(-50%);z-index:17;opacity:0;pointer-events:none;font-family:var(--display,sans-serif);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--holo,#AAF5EE);text-shadow:0 0 14px rgba(170,245,238,.4);white-space:nowrap}',
     '@media (prefers-reduced-motion:no-preference){#bt-note{transition:opacity .4s}#bt-car .bt-lock.bt-shake{animation:btShake .4s}@keyframes btShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}}',
-    '#bt-car .bt-lb{margin-top:20px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
+    '#bt-car .bt-lb{margin-top:26px;padding-left:var(--bric-space-3-stud);padding-right:var(--bric-space-3-stud)}',
     '#bt-hints{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;display:flex;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap}',
     '#bt-hints .bt-h{display:flex;align-items:center;gap:11px}',
     '#bt-hints svg{color:var(--holo,#AAF5EE);flex:none}',
