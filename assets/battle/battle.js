@@ -103,6 +103,7 @@ var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
    player can swing round to the rest of the field. index.html adds MWBattle.getPan() (camera-plane world units) to the camera's LOOK point (the camera turns in place, it does not move). Easing back to the middle
    does not recentre it: the pan stays where the player left it until they pan back, change hero or restart. */
 var EDGE_ZONE=.4, EDGE_DWELL=.5, EDGE_RAMP=.9, PAN_SPEED=1.3, PAN_REACH=.45;
+var camInverted=false, pitchSign=1;   // camInverted: index.html says the camera has flipped over the pole (it rolls itself upright), so vertical edge-pan input is mirrored
 var pan={x:0,y:0,vx:0,vy:0,dwell:0}, _panW={x:0,y:0}, orbit={yaw:0,pitch:0}, _orb={yaw:0,pitch:0};
 var ORBIT_SPEED=1.2;   // rad/s at full edge pressure (a full turn in ~4 s)
 var keys={}, fireHeld=false;
@@ -1287,7 +1288,8 @@ function updPan(dt){   // edge dwell: the camera ORBITS the battle without limit
   var k=clamp((pan.dwell-EDGE_DWELL)/EDGE_RAMP,0,1); k=k*k*(3-2*k);           // smoothstep: nothing for the first half second, then eases up to full speed
   var tx=ptr.nx<0?-dx:dx, ty=ptr.ny<0?-dy:dy;
   var a=Math.min(1,dt*2.5); pan.vx+=(k*tx*ORBIT_SPEED-pan.vx)*a; pan.vy+=(k*ty*ORBIT_SPEED-pan.vy)*a;   // angular velocity, rad/s
-  orbit.yaw+=pan.vx*dt; orbit.pitch-=pan.vy*dt;
+  if(pan.dwell<=0) pitchSign=camInverted?-1:1;   // re-read between gestures only: a hold that carries the camera over the pole keeps going; the next hover is mirrored so the top edge still pans up on screen
+  orbit.yaw+=pan.vx*dt; orbit.pitch-=pan.vy*dt*pitchSign;
   if(stage!=='play'){ pan.vx=pan.vy=pan.dwell=0; }
 }
 function takeOrbit(){ _orb.yaw=orbit.yaw; _orb.pitch=orbit.pitch; orbit.yaw=orbit.pitch=0; return _orb; }
@@ -1578,6 +1580,7 @@ var MWBattle={
   isActive:function(){ return active; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
+  setInverted:function(v){ camInverted=!!v; },   // index.html: the arcade camera is upside down (rolled upright)
   getOrbit:function(){ return takeOrbit(); },   // {yaw,pitch} radians accumulated since the last call: the edge-dwell orbit, unbounded (right edge turns the view right, top edge looks up)
   getPan:function(){ _panW.x=pan.x*S; _panW.y=pan.y*S; return _panW; },   // {x,y}: edge-pan camera offset in WORLD units (battle units x G's scale), along the camera's right / up
   startIntro:function(){ if(!introHold) return; introHold=false; introT0=clockT; },   // capital/support fly-in is held until the hero-select page is actually visible (loader reveal)

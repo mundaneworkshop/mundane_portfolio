@@ -10058,14 +10058,14 @@ f 2469//2469 2470//2470 2434//2434
       _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display=document.documentElement.hasAttribute('data-bric-reticle')?'none':'block';   // reticle reads the text, shows it itself
     }
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
-    var camUpV=new THREE.Vector3(0,1,0), arcRoll=0, arcRollT=0;   // arcRoll = auto-right roll (radians) about the view axis: eases to π once the free pitch carries the camera upside down, so the hero ends up upright on screen
+    var camUpV=new THREE.Vector3(0,1,0), arcRoll=0, arcRollT=0, arcDragSign=1;   // arcRoll = auto-right roll (radians) about the view axis: eases to π once the free pitch carries the camera upside down, so the hero ends up upright on screen
     var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
     var _arcFoc=new THREE.Vector3(), _arcF=new THREE.Vector3();
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
     renderer.domElement.addEventListener('pointerdown',function(e){ arcReturn=false; if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
-      dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });
+      arcDragSign=Math.cos(arcPitchS)<0?-1:1; dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });   // arcDragSign: the pitch drag is mirrored when the camera starts the drag flipped over the pole
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
@@ -10075,7 +10075,7 @@ f 2469//2469 2470//2470 2434//2434
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
           else { focusYaw-=dx*0.006; focusPitch=clamp(focusPitch+syF*dy*0.006,-0.25,1.45); }
         }
-        else { manualRot+=dx*0.004; if(arcadeActive&&arcadeStage==='play') arcPitch-=sy*dy*0.006; else camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });   // arcade play: unbounded 360° orbit (pitch is a free angle)
+        else { manualRot+=dx*0.004; if(arcadeActive&&arcadeStage==='play') arcPitch-=sy*dy*0.006*arcDragSign; else camElev=clamp(camElev-sy*dy*0.02,-3,7); } } });   // arcade play: unbounded 360° orbit (pitch is a free angle)
     renderer.domElement.addEventListener('wheel',function(e){ e.preventDefault(); arcReturn=false; var dir=(params.wheelInvert?-1:1)*(e.deltaY>0?1:-1);
       if(MWSub.active){ MWSub.active.orbit.zoom(dir); }   // sub-scene: scroll zooms the orbit
       else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
@@ -14131,6 +14131,7 @@ f 2469//2469 2470//2470 2434//2434
         if(_rib.material && _rib.material.map){ var _sgn=_mqc.reverse?-1:1; _rib.material.map.offset.x=((_rib.material.map.offset.x + _sgn*(_mqc.speed||0)*0.01)%1 + 1)%1; }
       }
       var _ca=null; if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getCamAssist){ _ca=MWBattle.getCamAssist();   // battle.js camera assist: auto-snap yaw, dynamic zoom, death close-up
+        if(MWBattle.setInverted) MWBattle.setInverted(arcRollT>0);
         if(MWBattle.getOrbit){ var _ob=MWBattle.getOrbit(); manualRot+=_ob.yaw; arcPitch+=_ob.pitch; }   // edge-dwell orbit (unbounded 360)
         if(_ca.yaw!=null){ var _yd=Math.atan2(Math.sin(_ca.yaw-manualRot),Math.cos(_ca.yaw-manualRot)); manualRot+=_yd*0.05; } }
       if(autoRotate&&!(arcadeActive&&arcadeStage==='play')) manualRot+=0.0011*params.spin*params.camRotDir;   /* no auto-revolve while the hero flies; hero select and the galaxy still drift */ galaxy.rotation.y=manualRot;
