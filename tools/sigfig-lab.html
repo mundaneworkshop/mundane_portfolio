@@ -130,9 +130,9 @@ textarea.in{resize:vertical;min-height:84px;line-height:1.4}
       </ul></div>
       <div><h4>What the bundle holds</h4><ul>
         <li><code>assets/outfits.json</code>: names, order, copy, unlock rules, idle clip, parts.</li>
-        <li><code>assets/models/outfits/&lt;id&gt;/…glb</code> for every GLB in this browser.</li>
+        <li><code>assets/models/outfits/&lt;id&gt;/…glb</code> for every GLB.</li>
         <li>Unzip at the repo root, commit, push.</li>
-        <li>Models stay in this browser. Copy, unlock rules and order sync.</li>
+        <li>Models, thumbnails, copy, unlock rules and order are all stored with this page, so any browser sees the same sig figs.</li>
       </ul></div>
     </div>
   </details>
@@ -145,6 +145,7 @@ textarea.in{resize:vertical;min-height:84px;line-height:1.4}
 
 <div class="bar" role="toolbar" aria-label="Sig figs">
   <span class="tally" id="tally"></span>
+  <span class="tally" id="usage"></span>
   <span class="grow"></span>
   <button class="btn primary" id="export" type="button">Export bundle</button>
   <span class="sync" id="sync" aria-live="polite"></span>
@@ -186,7 +187,7 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=nu
 const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);
 const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-let db=null, idb=null;
+let db=null, idb=null, assetsNS=null;
 
 /* ===== local store: IndexedDB keeps GLB files and .io thumbnails in this browser ===== */
 function openIdb(){return new Promise(res=>{try{const r=indexedDB.open('sigfig-lab',1);
@@ -199,6 +200,18 @@ function idbAll(st,into){return new Promise(res=>{if(!idb)return res();try{const
 const blobs={};      // 'id|uid' -> GLB Blob
 const thumbBlobs={}; // id -> PNG Blob from the .io
 const thumbUrls={};  // id -> object URL
+/* GLBs live in the artifact's asset store so every browser sees them. The store takes no .glb type, so a GLB is kept as base64 text (text/plain), which caps a model near 15 MB. */
+const MAX_GLB=15*1024*1024;
+function bytesToB64(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);}
+function b64ToBytes(t){const s=atob(t.trim()),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;}
+const hasG=(s,g)=>!!(blobs[s.id+'|'+g.uid]||g.asset);
+const fetching={};
+function getBlob(id,g){const k=id+'|'+g.uid;if(blobs[k])return Promise.resolve(blobs[k]);if(!g.asset)return Promise.resolve(null);if(fetching[k])return fetching[k];
+  fetching[k]=fetch('/_blob/'+g.asset).then(r=>{if(!r.ok)throw new Error('missing');return r.text();}).then(t=>{const b=new Blob([b64ToBytes(t)],{type:'model/gltf-binary'});blobs[k]=b;idbPut('glbs',k,b);return b;}).catch(()=>null).then(b=>{delete fetching[k];return b;});
+  return fetching[k];}
+const thumbSrc=s=>thumbUrls[s.id]||(s.io&&s.io.thumbAsset?'/_blob/'+s.io.thumbAsset:null);
+function dropAsset(a){if(a&&assetsNS)assetsNS.delete(a).then(refreshUsage,()=>{});}
+function refreshUsage(){if(!assetsNS)return;assetsNS.list().then(r=>{const u=r.usage;$('#usage').textContent='Storage '+fmtSize(u.bytes)+' of '+fmtSize(u.maxBytes);},()=>{});}
 
 /* ===== the sig figs: seeded from the first batch, edits kept in the db ===== */
 const SEED=[
@@ -274,9 +287,9 @@ function lintGlb(gltf,size){
   const box=new THREE.Box3().setFromObject(gltf.scene),sz=box.getSize(new THREE.Vector3());
   return {found,tris:Math.round(tris),tex:tex.size,maxTex,height:sz.y,size,clips:(gltf.animations||[]).map(a=>({name:a.name||'(unnamed)',dur:a.duration}))};}
 let lintQ=Promise.resolve();
-function lintFor(id,g){const k=id+'|'+g.uid;if(lintCache[k]!==undefined||!blobs[k])return;lintCache[k]=null;
-  lintQ=lintQ.then(()=>parseGlb(blobs[k]).then(gl=>{lintCache[k]=lintGlb(gl,blobs[k].size);},e=>{lintCache[k]={err:String(e&&e.message||e)};})).then(()=>{paintFig(id);});}
-function lintAgg(s){const gs=s.glbs.filter(g=>blobs[s.id+'|'+g.uid]);if(!gs.length)return null;
+function lintFor(id,g){const k=id+'|'+g.uid;if(lintCache[k]!==undefined||(!blobs[k]&&!g.asset))return;lintCache[k]=null;
+  lintQ=lintQ.then(()=>getBlob(id,g).then(b=>{if(!b){lintCache[k]={err:'the file is not in storage'};return;}return parseGlb(b).then(gl=>{lintCache[k]=lintGlb(gl,b.size);},e=>{lintCache[k]={err:String(e&&e.message||e)};});})).then(()=>{paintFig(id);});}
+function lintAgg(s){const gs=s.glbs.filter(g=>hasG(s,g));if(!gs.length)return null;
   const reps=gs.map(g=>lintCache[s.id+'|'+g.uid]);if(reps.some(r=>r===null||r===undefined))return {pending:true};
   const ok=reps.filter(r=>r&&!r.err);if(!ok.length)return {err:reps.map(r=>r&&r.err).filter(Boolean)[0]||'unreadable'};
   const found={};REQUIRED.forEach(([k])=>{found[k]=ok.some(r=>r.found[k]);});
@@ -293,7 +306,7 @@ function patchAbout(id,k,v){const s=eff(id);patchFig(id,{about:Object.assign({},
 
 /* ===== cards ===== */
 function stepsOf(s){
-  const lint=lintAgg(s),local=s.glbs.filter(g=>blobs[s.id+'|'+g.uid]).length,steps=[];
+  const lint=lintAgg(s),local=s.glbs.filter(g=>hasG(s,g)).length,steps=[];
   steps.push(['Source .io',s.io?'ok':'']);
   steps.push(['Model',local?'ok':(s.glbs.length?'warn':'')]);
   if(!local)steps.push(['Parts','']);else if(!lint||lint.pending)steps.push(['Parts','']);else if(lint.err)steps.push(['Parts','warn']);
@@ -303,10 +316,10 @@ function stepsOf(s){
   steps.push(['Copy',(s.about.body||'').trim()?'ok':'']);
   steps.push(['Unlock',siteReady(s.unlock)?'ok':'warn']);
   return steps;}
-const isReady=s=>s.glbs.some(g=>blobs[s.id+'|'+g.uid])&&(s.about.body||'').trim();
+const isReady=s=>s.glbs.some(g=>hasG(s,g))&&(s.about.body||'').trim();
 function stepsNode(s){const w=el('div','steps');stepsOf(s).forEach(([n,st])=>{const x=el('span','step '+st);x.appendChild(el('i'));x.appendChild(document.createTextNode(n));w.appendChild(x);});return w;}
 function lintNode(s){const w=el('div','lint');const lint=lintAgg(s);
-  if(!lint){w.appendChild(el('span',null,'No GLB in this browser yet.'));return w;}
+  if(!lint){w.appendChild(el('span',null,'No GLB yet.'));return w;}
   if(lint.pending){w.appendChild(el('span',null,'Checking the GLB…'));return w;}
   if(lint.err){w.appendChild(el('span','miss','Could not read the GLB: '+lint.err+(/draco/i.test(lint.err)?' Export without Draco compression.':'')));return w;}
   const miss=REQUIRED.filter(([k])=>!lint.found[k]).map(r=>r[0]);
@@ -319,7 +332,7 @@ function lintNode(s){const w=el('div','lint');const lint=lintAgg(s);
 function card(s){
   const id=s.id,c=el('article','card'+(s.enabled?'':' off'));c.setAttribute('data-id',id);
   const head=el('div','head'),th=el('div','thumb');th.setAttribute('data-thumb',id);
-  if(thumbUrls[id]){const im=el('img');im.alt='Studio thumbnail of '+s.name;im.src=thumbUrls[id];th.appendChild(im);}else th.textContent='no .io yet';
+  const tsrc=thumbSrc(s);if(tsrc){const im=el('img');im.alt='Studio thumbnail of '+s.name;im.src=tsrc;th.appendChild(im);}else th.textContent='no .io yet';
   head.appendChild(th);
   const right=el('div'),nm=el('input','name');nm.type='text';nm.value=s.name;nm.setAttribute('data-f','name');nm.setAttribute('data-id',id);nm.setAttribute('aria-label','Name of '+s.name);nm.autocomplete='off';right.appendChild(nm);
   const m=el('div','meta');m.appendChild(el('span',null,'id: '+id));
@@ -337,9 +350,9 @@ function card(s){
   dz.appendChild(el('span',null,s.io?'Studio file: '+s.io.name+' · '+s.io.parts+' parts'+(s.io.minifig&&s.io.minifig.length?' ('+s.io.minifig.join(', ')+')':''):'Drop mw-sigfig-'+id+'.io or a .glb'));dz.appendChild(el('span','pick','Browse'));
   sec1.appendChild(dz);
   const ul=el('ul','files');s.glbs.forEach(g=>{const li=el('li','file'),have=!!blobs[id+'|'+g.uid];
-    li.appendChild(el('span','fn',g.name));li.appendChild(el('span','fm',fmtSize(g.size)+(have?' · in this browser':'')));if(!have)li.appendChild(el('span','bad','not in this browser: add it again to export'));
+    li.appendChild(el('span','fn',g.name));li.appendChild(el('span','fm',fmtSize(g.size)+(g.asset?' · stored with this page':(have?' · this browser only':''))));if(!g.asset&&!have)li.appendChild(el('span','bad','file missing: add it again'));
     const rm=el('button','rm','Remove');rm.type='button';rm.setAttribute('data-act','rmglb');rm.setAttribute('data-id',id);rm.setAttribute('data-uid',g.uid);li.appendChild(rm);ul.appendChild(li);});
-  if(s.io){const li=el('li','file');li.appendChild(el('span','fn','Studio: '+s.io.name));li.appendChild(el('span','fm',fmtSize(s.io.size)+' · thumbnail kept, file not exported'));const rm=el('button','rm','Remove');rm.type='button';rm.setAttribute('data-act','rmio');rm.setAttribute('data-id',id);li.appendChild(rm);ul.appendChild(li);}
+  if(s.io){const li=el('li','file');li.appendChild(el('span','fn','Studio: '+s.io.name));li.appendChild(el('span','fm',fmtSize(s.io.size)+' · thumbnail kept, the .io itself is not stored'));const rm=el('button','rm','Remove');rm.type='button';rm.setAttribute('data-act','rmio');rm.setAttribute('data-id',id);li.appendChild(rm);ul.appendChild(li);}
   sec1.appendChild(ul);const ln=el('div');ln.setAttribute('data-lint',id);ln.appendChild(lintNode(s));sec1.appendChild(ln);
   c.appendChild(sec1);
 
@@ -381,7 +394,7 @@ function card(s){
 
   /* actions */
   const a=el('div','acts');function btn(label,act,pressed){const x=el('button','btn',label);x.type='button';x.setAttribute('data-act',act);x.setAttribute('data-id',id);a.appendChild(x);return x;}
-  const pv=btn('Preview','preview');pv.disabled=!s.glbs.some(g=>blobs[id+'|'+g.uid]);
+  const pv=btn('Preview','preview');pv.disabled=!s.glbs.some(g=>hasG(s,g));
   const up=btn('◄ Earlier','earlier');up.disabled=idx<=0;const dn=btn('Later ►','later');dn.disabled=idx>=figsL.length-1;
   const sh=el('label','chk');const cb=el('input');cb.type='checkbox';cb.checked=s.enabled;cb.setAttribute('data-f','enabled');cb.setAttribute('data-id',id);sh.appendChild(cb);sh.appendChild(document.createTextNode('Show on site'));a.appendChild(sh);
   a.appendChild(el('span','grow'));
@@ -389,7 +402,7 @@ function card(s){
   c.appendChild(a);return c;
 }
 let listSig='';
-function sigOf(){return figs().map(s=>[s.id,s.order,s.enabled?1:0,s.io?1:0,s.glbs.map(g=>g.uid+(blobs[s.id+'|'+g.uid]?'+':'-')).join(','),s.unlock.type,s.unlock.target||'',!!thumbUrls[s.id]].join(':')).join('|');}
+function sigOf(){return figs().map(s=>[s.id,s.order,s.enabled?1:0,s.io?1:0,s.glbs.map(g=>g.uid+(hasG(s,g)?'+':'-')).join(','),s.unlock.type,s.unlock.target||'',!!thumbSrc(s)].join(':')).join('|');}
 function renderList(force){
   const sig=sigOf();
   if(sig===listSig&&!force){figs().forEach(s=>paintFig(s.id));tallyPaint();return;}
@@ -406,10 +419,10 @@ function paintFig(id){const s=eff(id);if(!s||s.removed)return;const c=document.q
   [].forEach.call(c.querySelectorAll('[data-f]'),f=>{if(f===document.activeElement)return;const k=f.getAttribute('data-f');
     if(k==='name')f.value=s.name;else if(k==='enabled')f.checked=s.enabled;else if(k==='animNotes')f.value=s.animNotes||'';else if(k.indexOf('a-')===0)f.value=s.about[k.slice(2)]||'';
     else if(k==='ut')f.value=s.unlock.type;else if(k==='un')f.value=s.unlock.n||0;else if(k==='utarget')f.value=s.unlock.target||'';else if(k==='umin')f.value=Math.floor((s.unlock.n||0)/60);else if(k==='usec')f.value=(s.unlock.n||0)%60;});
-  const pv=c.querySelector('[data-act="preview"]');if(pv)pv.disabled=!s.glbs.some(g=>blobs[id+'|'+g.uid]);
+  const pv=c.querySelector('[data-act="preview"]');if(pv)pv.disabled=!s.glbs.some(g=>hasG(s,g));
 }
-function tallyPaint(){const l=figs(),ready=l.filter(isReady).length,glbs=l.filter(s=>s.glbs.some(g=>blobs[s.id+'|'+g.uid])).length;
-  $('#tally').innerHTML='<b>'+l.length+'</b> sig figs · <b>'+glbs+'</b> with a model here · <b>'+ready+'</b> ready to export';}
+function tallyPaint(){const l=figs(),ready=l.filter(isReady).length,glbs=l.filter(s=>s.glbs.some(g=>hasG(s,g))).length;
+  $('#tally').innerHTML='<b>'+l.length+'</b> sig figs · <b>'+glbs+'</b> with a model · <b>'+ready+'</b> ready to export';}
 
 /* ===== edits ===== */
 $('#list').addEventListener('change',e=>{const t=e.target,id=t.getAttribute('data-id'),f=t.getAttribute('data-f');if(!id||!f)return;const s=eff(id);if(!s)return;
@@ -430,10 +443,10 @@ $('#list').addEventListener('click',e=>{
   if(act==='earlier'||act==='later'){const l=figs(),i=l.findIndex(x=>x.id===id),j=act==='earlier'?i-1:i+1;if(i<0||j<0||j>=l.length)return;
     const a=l[i],o=l[j];let ao=a.order||0,oo=o.order||0;if(ao===oo)oo=ao+(act==='earlier'?-1:1);patchFig(a.id,{order:oo});patchFig(o.id,{order:ao});return;}
   function arm(label){if(b.dataset.armed==='1')return true;b.dataset.armed='1';const old=b.textContent;b.textContent=label;setTimeout(()=>{if(b.isConnected){b.dataset.armed='';b.textContent=old;}},3000);return false;}
-  if(act==='rmglb'){if(!arm('Confirm'))return;const uid=b.getAttribute('data-uid');idbDel('glbs',id+'|'+uid);delete blobs[id+'|'+uid];delete lintCache[id+'|'+uid];patchFig(id,{glbs:s.glbs.filter(g=>g.uid!==uid)});return;}
-  if(act==='rmio'){if(!arm('Confirm'))return;idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}patchFig(id,{io:null});return;}
+  if(act==='rmglb'){if(!arm('Confirm'))return;const uid=b.getAttribute('data-uid');const gx=s.glbs.find(x=>x.uid===uid);if(gx)dropAsset(gx.asset);idbDel('glbs',id+'|'+uid);delete blobs[id+'|'+uid];delete lintCache[id+'|'+uid];patchFig(id,{glbs:s.glbs.filter(g=>g.uid!==uid)});return;}
+  if(act==='rmio'){if(!arm('Confirm'))return;if(s.io)dropAsset(s.io.thumbAsset);idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}patchFig(id,{io:null});return;}
   if(act==='reset'||act==='delete'){if(!arm(act==='delete'?'Confirm delete':'Confirm reset'))return;
-    s.glbs.forEach(g=>{idbDel('glbs',id+'|'+g.uid);delete blobs[id+'|'+g.uid];delete lintCache[id+'|'+g.uid];});idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}
+    s.glbs.forEach(g=>{dropAsset(g.asset);idbDel('glbs',id+'|'+g.uid);delete blobs[id+'|'+g.uid];delete lintCache[id+'|'+g.uid];});if(s.io)dropAsset(s.io.thumbAsset);idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}
     delete ov[id];if(db)db.doc('sigfigs/'+id).delete().then(()=>setSync('saved'),()=>setSync('not saved'));if(Stage.id===id)Stage.clear();renderList(true);return;}
 });
 /* add a sig fig */
@@ -448,11 +461,18 @@ const uid=()=>Math.random().toString(36).slice(2,9);
 async function isGlb(f){const b=await f.slice(0,4).arrayBuffer();return new TextDecoder().decode(b)==='glTF';}
 async function addFile(id,f){
   const low=f.name.toLowerCase();
-  if(low.endsWith('.io')){const r=await parseIo(f);if(r.thumb){thumbBlobs[id]=r.thumb;idbPut('thumbs',id,r.thumb);if(thumbUrls[id])URL.revokeObjectURL(thumbUrls[id]);thumbUrls[id]=URL.createObjectURL(r.thumb);}
-    patchFig(id,{io:r.info});return 'Studio file '+f.name;}
+  if(low.endsWith('.io')){const r=await parseIo(f);let ta=null;
+    if(r.thumb){thumbBlobs[id]=r.thumb;idbPut('thumbs',id,r.thumb);if(thumbUrls[id])URL.revokeObjectURL(thumbUrls[id]);thumbUrls[id]=URL.createObjectURL(r.thumb);
+      if(assetsNS){try{ta=(await assetsNS.upload(r.thumb,{type:'image/png'})).id;}catch(e){}}}
+    const old=eff(id).io;if(old&&old.thumbAsset)dropAsset(old.thumbAsset);
+    patchFig(id,{io:Object.assign({},r.info,ta?{thumbAsset:ta}:{})});refreshUsage();return 'Studio file '+f.name;}
   if(low.endsWith('.glb')){if(!(await isGlb(f)))throw new Error(f.name+' is not a binary glTF');
-    const g={uid:uid(),name:f.name,size:f.size,at:Date.now()};blobs[id+'|'+g.uid]=f;idbPut('glbs',id+'|'+g.uid,f);
-    patchFig(id,{glbs:eff(id).glbs.concat([g])});return f.name;}
+    if(assetsNS&&f.size>MAX_GLB)throw new Error(f.name+' is '+fmtSize(f.size)+'; models over about 15 MB cannot be stored with the page. Shrink the textures or the part count');
+    const g={uid:uid(),name:f.name,size:f.size,at:Date.now()};
+    if(assetsNS){try{const t=new Blob([bytesToB64(new Uint8Array(await f.arrayBuffer()))],{type:'text/plain'});g.asset=(await assetsNS.upload(t,{type:'text/plain'})).id;}
+      catch(e){throw new Error(f.name+' could not be stored ('+((e&&e.code)||'error')+')');}}
+    blobs[id+'|'+g.uid]=f;idbPut('glbs',id+'|'+g.uid,f);
+    patchFig(id,{glbs:eff(id).glbs.concat([g])});refreshUsage();return f.name;}
   throw new Error(f.name+' is not a .io or .glb file');}
 function idFromName(name){const base=name.replace(/\.(io|glb)$/i,'').replace(/^mw[-_ ]?sig[-_ ]?fig[-_ ]?/i,'');
   const cands=[slug(base),slug(base).replace(/-?v\d+$/,''),slug(base).replace(/-(final|new|idle|anim|animated|rig|rigged|test|wip)\b.*$/,'')];
@@ -492,9 +512,9 @@ const Stage={id:null,r:null,scene:null,cam:null,group:null,mixers:[],clipMap:{},
   size(){if(!this.r)return;const h=$('#view'),w=h.clientWidth||400,ht=h.clientHeight||320;this.r.setSize(w,ht,false);this.cam.aspect=w/ht;this.cam.updateProjectionMatrix();},
   clear(){this.id=null;this.mixers=[];this.clipMap={};if(this.group)while(this.group.children.length)this.group.remove(this.group.children[0]);$('#viewEmpty').hidden=false;$('#clipSel').innerHTML='';$('#clipSel').disabled=true;$('#clips').textContent='';$('#stageTitle').textContent='Preview';cancelAnimationFrame(this.raf);this.raf=0;},
   async load(id){this.init();if(!this.r){$('#viewEmpty').textContent='Preview is not available in this view.';return;}
-    const s=eff(id),gs=s.glbs.filter(g=>blobs[id+'|'+g.uid]);if(!gs.length)return;
+    const s=eff(id),gs=s.glbs.filter(g=>hasG(s,g));if(!gs.length)return;
     $('#stageTitle').textContent=s.name;$('#viewEmpty').hidden=false;$('#viewEmpty').textContent='Loading…';
-    let parsed;try{parsed=await Promise.all(gs.map(g=>parseGlb(blobs[id+'|'+g.uid]).then(gl=>({gl,g}))));}catch(e){$('#viewEmpty').textContent='Could not read the GLB: '+(e&&e.message||e);return;}
+    let parsed;try{parsed=await Promise.all(gs.map(g=>getBlob(id,g).then(b=>{if(!b)throw new Error('the file is not in storage');return parseGlb(b);}).then(gl=>({gl,g}))));}catch(e){$('#viewEmpty').textContent='Could not read the GLB: '+(e&&e.message||e);return;}
     this.clear();this.id=id;$('#stageTitle').textContent=s.name;
     const root=new THREE.Group();parsed.forEach(p=>root.add(p.gl.scene));this.group.add(root);
     root.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(root),sz=box.getSize(new THREE.Vector3()),c=box.getCenter(new THREE.Vector3());
@@ -530,8 +550,8 @@ function zip(files){const enc=new TextEncoder(),parts=[],central=[];let off=0,cs
   return new Blob(parts.concat(central,[end.buffer]),{type:'application/zip'});}
 const safeFile=n=>{n=String(n||'part.glb').replace(/[^A-Za-z0-9._-]+/g,'-');return /\.glb$/i.test(n)?n:n+'.glb';};
 function buildManifest(){const out=[],skipped=[],files=[];
-  figs().forEach(s=>{const local=s.glbs.filter(g=>blobs[s.id+'|'+g.uid]);if(!local.length){skipped.push(s.name);return;}
-    const used={},parts=[];local.forEach(g=>{let fn=safeFile(g.name),base=fn,n=2;while(used[fn])fn=base.replace(/\.glb$/i,'')+'-'+(n++)+'.glb';used[fn]=1;const path='assets/models/outfits/'+s.id+'/'+fn;parts.push({file:path});files.push({path,blob:blobs[s.id+'|'+g.uid]});});
+  figs().forEach(s=>{const local=s.glbs.filter(g=>hasG(s,g));if(!local.length){skipped.push(s.name);return;}
+    const used={},parts=[];local.forEach(g=>{let fn=safeFile(g.name),base=fn,n=2;while(used[fn])fn=base.replace(/\.glb$/i,'')+'-'+(n++)+'.glb';used[fn]=1;const path='assets/models/outfits/'+s.id+'/'+fn;parts.push({file:path});files.push({path,sid:s.id,g});});
     const lint=lintAgg(s),idle=lint&&lint.clips&&lint.clips.find(c=>/idle/i.test(c.name));
     const e={id:s.id,name:s.name,enabled:s.enabled};
     const u=s.unlock;e.unlock=u.type==='free'?{type:'free'}:(u.type==='caseStudy'?{type:'caseStudy',target:u.target||'w0'}:Object.assign({type:u.type,n:u.n|0},u.type==='destroy'?{target:u.target||'fighter'}:{}));
@@ -540,22 +560,23 @@ function buildManifest(){const out=[],skipped=[],files=[];
     e.idle=idle?idle.name:null;e.parts=parts;out.push(e);});
   return {manifest:{version:1,outfits:out},files,skipped};}
 $('#export').onclick=async()=>{const es=$('#exportStatus');es.className='status';es.textContent='Building…';
-  try{const r=buildManifest();if(!r.manifest.outfits.length){es.className='status bad';es.textContent='No sig fig has a GLB in this browser yet. Add models first.';return;}
+  try{const r=buildManifest();if(!r.manifest.outfits.length){es.className='status bad';es.textContent='No sig fig has a GLB yet. Add models first.';return;}
     const files=[{name:'assets/outfits.json',data:new TextEncoder().encode(JSON.stringify(r.manifest,null,2)+'\n')}];
-    for(const f of r.files)files.push({name:f.path,data:new Uint8Array(await f.blob.arrayBuffer())});
+    for(const f of r.files){const bl=await getBlob(f.sid,f.g);if(!bl)throw new Error('missing '+f.path);files.push({name:f.path,data:new Uint8Array(await bl.arrayBuffer())});}
     const blob=zip(files),dl=await claude.use('downloads');
     if(!dl){es.className='status bad';es.textContent='Saving files is not available in this view.';return;}
     await dl.save({filename:'mw-sigfigs-bundle.zip',data:blob});
     const soft=r.manifest.outfits.filter(o=>o.unlock.type!=='free'&&o.unlock.type!=='minikits').length;
-    es.className='status good';es.textContent='Bundle ready: '+r.manifest.outfits.length+' sig figs, '+r.files.length+' GLB'+(r.files.length===1?'':'s')+'. Unzip at the repo root, commit and push.'+(soft?' '+soft+' use a rule type the site does not read yet.':'')+(r.skipped.length?' Left out (no model in this browser): '+r.skipped.join(', ')+'.':'');
+    es.className='status good';es.textContent='Bundle ready: '+r.manifest.outfits.length+' sig figs, '+r.files.length+' GLB'+(r.files.length===1?'':'s')+'. Unzip at the repo root, commit and push.'+(soft?' '+soft+' use a rule type the site does not read yet.':'')+(r.skipped.length?' Left out (no model yet): '+r.skipped.join(', ')+'.':'');
   }catch(err){es.className='status bad';es.textContent=(err&&err.code==='declined')?'Save cancelled.':'Could not build the bundle'+(err&&err.code?' ('+err.code+')':'')+'.';}};
 
 /* ===== boot ===== */
 renderList(true);updAdd();
 openIdb().then(()=>Promise.all([idbAll('glbs',blobs),idbAll('thumbs',thumbBlobs)])).then(()=>{Object.keys(thumbBlobs).forEach(id=>{thumbUrls[id]=URL.createObjectURL(thumbBlobs[id]);});renderList(true);});
 if(window.claude&&claude.use){
+  claude.use('assets').then(a=>{assetsNS=a;if(a)refreshUsage();else{const b=$('#banner');b.hidden=false;b.textContent=(b.textContent?b.textContent+' ':'')+'Files can only be kept in this browser here: this view cannot store them with the page.';}},()=>{});
   claude.use('db').then(d=>{
-    if(!d){const b=$('#banner');b.hidden=false;b.textContent='Changes cannot be saved in this view. Files you add still work here and export.';return;}
+    if(!d){const b=$('#banner');b.hidden=false;b.textContent=(b.textContent?b.textContent+' ':'')+'Changes cannot be saved in this view. Files you add still work here and export.';return;}
     db=d;d.collection('sigfigs').onSnapshot(snap=>{const next={};snap.docs.forEach(doc=>{const v=doc.data()||{};next[doc.id]=Object.assign({},v,{id:doc.id});});ov=next;renderList();},()=>setSync('offline'));
   });
 }
