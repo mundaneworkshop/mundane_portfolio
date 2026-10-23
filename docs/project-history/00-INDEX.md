@@ -16,6 +16,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Button / tag / breadcrumb / interactive-text states, the `--bric-*` token file, or regenerating tokens from Figma → [interactive-states.md](interactive-states.md)
 - Foundations vs prod audit, the register narrative (teal = hologram, amber = the work, purple = HoloNet), HUD vs Document tiers, and the prod-migration list → [foundations-audit.md](foundations-audit.md)
 - Touching the Arcade space battle (Fun zone planet, fleets, lasers, hero ships, minikits, lighting, exit) → [arcade-space-battle.md](arcade-space-battle.md)
+- Adding / renaming / retyping arcade ships, hero unlock thresholds, the ships.json manifest and the Arcade Fleet Lab artifact → [arcade-ships.md](arcade-ships.md)
 - Known open backlog items not yet built → [holotable-next-steps.md](holotable-next-steps.md), [text-style-tokens-todo.md](text-style-tokens-todo.md)
 
 **Full file list:**
