@@ -10058,9 +10058,9 @@ f 2469//2469 2470//2470 2434//2434
       _boxHoverLbl.textContent=lbl; _boxHoverLbl.style.display=document.documentElement.hasAttribute('data-bric-reticle')?'none':'block';   // reticle reads the text, shows it itself
     }
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
-    var camUpV=new THREE.Vector3(0,1,0);
+    var camUpV=new THREE.Vector3(0,1,0), arcRoll=0, arcRollT=0;   // arcRoll = auto-right roll (radians) about the view axis: eases to π once the free pitch carries the camera upside down, so the hero ends up upright on screen
     var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
-    var _arcFoc=new THREE.Vector3();
+    var _arcFoc=new THREE.Vector3(), _arcF=new THREE.Vector3();
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
@@ -10516,7 +10516,7 @@ f 2469//2469 2470//2470 2434//2434
     function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
       if(window.MWAudio){ MWAudio.unlock(); MWAudio.siteStop(); }   // the planet click is the user gesture that lets audio start; the arcade has its own ambience, so the site's steps aside
-      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
+      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcRoll=arcRollT=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true);
@@ -14142,9 +14142,9 @@ f 2469//2469 2470//2470 2434//2434
           if(Math.abs(camZoom-arcEntryZoom)<0.003&&Math.abs(camElev)<0.01&&Math.abs(arcPitch)<0.003){ camZoom=arcEntryZoom; camElev=0; arcPitch=0; arcReturn=false; } }
         arcPitchS+=(arcPitch-arcPitchS)*0.2; if(!arcadeActive&&!arcReturn){ arcPitch=0; }
         var _pa=-arcPitchS, _pc=Math.cos(_pa), _ps=Math.sin(_pa);   // orbit the offset about the X axis through the look point; camera.up rolls with it so there is no pole flip
-        camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps);
+        camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps); arcRollT=_pc<0?Math.PI:0;   // past the pole (camera inverted) the view rolls itself upright
         if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getPan){ var _pn=MWBattle.getPan();   // edge-dwell pan (battle.js): a true pan: only the look point moves along the camera's right / up, the camera stays put and turns (no dolly)
-          if(_pn&&(_pn.x||_pn.y)){ camLook.x+=_pn.x; camLook.addScaledVector(camUpV,_pn.y); } }
+          if(_pn&&(_pn.x||_pn.y)){ var _rc=Math.cos(arcRoll); camLook.x+=_pn.x*_rc; camLook.addScaledVector(camUpV,_pn.y*_rc); } }   // _rc: screen-right / up flip with the auto-right roll
         if(_ca&&_ca.fk>0.001&&_ca.focus){ _arcFoc.copy(_ca.focus).sub(_bl); camPos.addScaledVector(_arcFoc,_ca.fk); camLook.lerp(_ca.focus,_ca.fk); } }   // hero death: the camera pivots onto the dying ship and dives in
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
@@ -14189,7 +14189,10 @@ f 2469//2469 2470//2470 2434//2434
 
       for(var i=0;i<fadables.length;i++){ var f=fadables[i]; var keep=(focused&&f.owner===focused); var fv=f.base*(keep?1:(focused?fade:1)); if(f.mat.uniforms&&f.mat.uniforms.opBase) f.mat.uniforms.opBase.value=fv; else f.mat.opacity=fv; }
 
-      if(focused||MWSub.active||msgFocusActive) camUpV.set(0,1,0);
+      if(focused||MWSub.active||msgFocusActive){ camUpV.set(0,1,0); arcRoll=arcRollT=0; }
+      else if(arcRoll||arcRollT){   // auto-right: roll the camera about its view axis so an inverted camera comes up the right way round (the hero ends upright on screen)
+        arcRoll+=(arcRollT-arcRoll)*(reduceMotionQ.matches?1:0.1); if(Math.abs(arcRollT-arcRoll)<0.002) arcRoll=arcRollT;
+        if(arcRoll){ _arcF.copy(camLook).sub(camPos).normalize(); camUpV.applyAxisAngle(_arcF,arcRoll); } }
       camera.up.copy(camUpV);
       // Eased jump: the camera chases its target with a per-frame lerp, which is fastest on the first frame
       // (a jolt). When the view changes (project / artifact focus, CV or other sub-scene, back out), start the

@@ -50,9 +50,9 @@ var HERO={
   'mil-falcon':{ idle:'falcon-idle', active:'falcon-active',
     fire1:['falcon-fire-single-01','falcon-fire-single-02','falcon-fire-double-01','falcon-fire-double-02','falcon-fire-burst'],
     fireN:['falcon-turret-01','falcon-turret-02','falcon-turret-05','falcon-turret-07','falcon-turret-08'], rattle:'falcon-turret-rattle' },   // burst 03's closing rattle plays when fire is released
-  'n1':{ idle:'n1-idle', active:'n1-active',
+  'n1':{ idle:'n1-idle', active:'n1-active', selBoost:1.7,   // selBoost: extra gain on the hero-select idle (this clip gets lost under the ambience)
     fire1:['n1-fire-1','n1-fire-2','n1-fire-3'], chain:['n1-fire-1','n1-fire-2','n1-fire-3'] },
-  'razorcrest':{ idle:null, active:'razor-active',                              // no idle engine clip yet
+  'razorcrest':{ idle:'razor-idle', active:'razor-active',
     fire1:['razor-fire-1','razor-fire-2','razor-fire-3'], chain:['razor-fire-1'] },   // chain with the true single only
   'slave-1':{ idle:'slave-idle', active:'slave-active',
     fire1:['slave-fire-1','slave-fire-3'], fireN:['slave-fire-dbl'] }
@@ -456,7 +456,7 @@ var MWAudio={
   carouselShip:function(id){
     if(!ctx||stageName!=='select'||!id||!amb.sel||(selShip&&selShip.id===id)) return;
     if(selShip) endLoop(selShip.loop,.3);
-    var def=HERO[id]; selShip={ id:id, loop:def?loopSource(def.idle,amb.sel.bus,LEVEL.selIdle,.7):null };
+    var def=HERO[id]; selShip={ id:id, loop:def?loopSource(def.idle,amb.sel.bus,LEVEL.selIdle*(def.selBoost||1),.7):null };
   },
   /* camera yaw around the battle in radians (battle.js passes galaxy.rotation.y − its value at entry); only matters in play */
   setYaw:function(r){ if(amb.play){ yaw=r; applyYaw(false); } },
