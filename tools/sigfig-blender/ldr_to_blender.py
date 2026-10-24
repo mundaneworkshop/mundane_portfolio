@@ -125,6 +125,37 @@ def parse_ldr(text):
 
 
 _FLAT = {}
+_MISSING = set()
+# Studio does not embed the LDraw base primitives it can find in its own library: 48/4-4cyli.dat (high-res cylinder wall),
+# 4-4disc.dat (flat cap), 2-4edge.dat (outline). Importing without them silently deleted cylinder walls and caps: the arms'
+# round parts, the hand clip's wrist, the neck, headset tubes. They are simple, so they are generated here.
+_PRIM = re.compile(r'^(?:(\d+)/)?(\d+)-(\d+)(cyli|disc|edge)\.dat$')
+
+
+def _synth(name):
+    """Triangles for an LDraw cyli / disc / edge primitive (radius 1; the wall runs y 0..1; a disc is a fan at y 0),
+    or None when `name` is not one. cyli faces outward and disc faces up (-y), as in the LDraw library; edge is lines only."""
+    m = _PRIM.match(name)
+    if not m:
+        return None
+    res = int(m.group(1)) if m.group(1) else 16        # '48/' = high-res (48 per circle), '8/' = low-res, none = standard 16
+    frac = int(m.group(2)) / float(int(m.group(3)))
+    kind = m.group(4)
+    if kind == 'edge':
+        return []
+    n = max(1, int(round(res * frac)))
+    out = []
+    for k in range(n):
+        a0 = 2 * math.pi * frac * k / n
+        a1 = 2 * math.pi * frac * (k + 1) / n
+        c0, s0, c1, s1 = math.cos(a0), math.sin(a0), math.cos(a1), math.sin(a1)
+        if kind == 'cyli':
+            b0, t0, t1, b1 = Vector((c0, 0, s0)), Vector((c0, 1, s0)), Vector((c1, 1, s1)), Vector((c1, 0, s1))
+            out.append(('-1', (b0, t0, t1)))
+            out.append(('-1', (b0, t1, b1)))
+        else:
+            out.append(('-1', (Vector((0, 0, 0)), Vector((c0, 0, s0)), Vector((c1, 0, s1)))))
+    return out
 
 
 def flat(secs, name):
@@ -134,6 +165,12 @@ def flat(secs, name):
     _FLAT[name] = []
     out = []
     sec = secs.get(name)
+    if not sec:
+        syn = _synth(name)
+        if syn is None:
+            _MISSING.add(name)                          # reported in the summary: nothing is dropped silently any more
+        _FLAT[name] = syn or []
+        return _FLAT[name]
     if sec:
         for ln in sec['lines']:
             k = ln[0]
@@ -274,6 +311,7 @@ IMPORTANCE = {'head': 1.7, 'torso': 1.4, 'hand_l': 1.5, 'hand_r': 1.5, 'arm_l': 
               'leg_l': 0.9, 'leg_r': 0.9}
 MIN_RATIO = {'head': 0.55, 'torso': 0.5, 'hand_l': 0.6, 'hand_r': 0.6}   # never thinner than this; others may go to 0.2
 PRINT_MATERIALS = 3              # a part that shows >= this many colours is a printed part (torso, controller face, ...):
+SAFE_ACCESSORY_FLOOR = 0.7       # safe mode: hair / helmets / props are never thinned below this fraction
 PRINT_FLOOR = 0.92               # collapse decimation eats the edges of flat colour regions, so these are left almost alone
 
 
@@ -346,7 +384,7 @@ def _collapse(ob, ratio):
 def decimate_parts(objs, budget=DEFAULT_TRI_BUDGET, safe=True):
     """Share a triangle budget across the figure's parts. Returns a report; budget None/0 only runs the lossless pass.
     safe=True (default): body parts (head, torso, hips, arms, hands, legs) and multi-colour printed parts stay at full detail,
-    because thinning round limbs roughens them; accessories and props (hair, helmets, headsets, bikes) may be thinned to half,
+    because thinning round limbs roughens them; accessories and props (hair, helmets, headsets, bikes) may be thinned to 70%,
     with their outline and colour borders pinned. safe=False also thins body parts (see MIN_RATIO / PRINT_FLOOR)."""
     rep = {'before': {n: _tri_count(o) for n, o in objs.items()}}
     for o in objs.values():
@@ -357,7 +395,7 @@ def decimate_parts(objs, budget=DEFAULT_TRI_BUDGET, safe=True):
     if budget and total > budget:
         names = list(objs)
         if safe:
-            floor = {n: (1.0 if (n in BODY_ROLES or _colours(objs[n]) >= PRINT_MATERIALS) else 0.5) for n in names}
+            floor = {n: (1.0 if (n in BODY_ROLES or _colours(objs[n]) >= PRINT_MATERIALS) else SAFE_ACCESSORY_FLOOR) for n in names}
         else:
             floor = {n: (max(MIN_RATIO.get(n, 0.2), PRINT_FLOOR) if _colours(objs[n]) >= PRINT_MATERIALS else MIN_RATIO.get(n, 0.2))
                      for n in names}
@@ -450,8 +488,9 @@ def build_sigfig(io_path, fig_id, clear=True, tri_budget=DEFAULT_TRI_BUDGET, rol
     `roles` = optional {part number or stem: role name} for figures made of custom parts.
     `safe` = see decimate_parts (default True: body parts, open shells and printed parts are never collapsed).
     Returns a summary dict (also stored in the collection's custom properties)."""
-    global _FLAT
+    global _FLAT, _MISSING
     _FLAT = {}
+    _MISSING = set()
     with zipfile.ZipFile(io_path) as z:
         text = z.read('model2.ldr').decode('utf-8-sig', 'replace')
     secs, root = parse_ldr(text)
@@ -514,7 +553,7 @@ def build_sigfig(io_path, fig_id, clear=True, tri_budget=DEFAULT_TRI_BUDGET, rol
     root_empty.location = (-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z)
     bpy.context.view_layer.update()
     info = dict(fig=fig_id, decimate=dec, parts=summary, size=[round(hi.x - lo.x, 3), round(hi.y - lo.y, 3), round(hi.z - lo.z, 3)],
-                triangles=sum(s['tris'] for s in summary), warnings=sorted(set(warn))[:20],
+                triangles=sum(s['tris'] for s in summary), warnings=sorted(set(warn))[:20], unresolved_refs=sorted(_MISSING)[:20],
                 missing_roles=[r for r in ('head', 'torso', 'hips', 'arm_l', 'arm_r', 'leg_l', 'leg_r') if r not in objs])
     coll['sigfig_info'] = json.dumps(info)
     return info
