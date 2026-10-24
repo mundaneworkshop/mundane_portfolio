@@ -119,6 +119,7 @@ textarea.in{resize:vertical;min-height:84px;line-height:1.4}
         <li>Keyframe a 2 to 4 second loop named <code>idle</code> on the parts.</li>
         <li>Export a binary .glb without Draco compression (this page cannot preview Draco).</li>
         <li>Drop the .io and the .glb here. Files named <code>mw-sigfig-&lt;id&gt;…</code> land on the right card by themselves.</li>
+        <li>No Blender work needed: describe the idle on the card, press Request, and ask Claude to run the queue. It builds the rig and idle from the .io and adds the GLB to the card.</li>
         <li>Write the copy, set the unlock, then Export bundle.</li>
       </ol></div>
       <div><h4>Part names the checker looks for</h4><ul>
@@ -187,7 +188,7 @@ function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=nu
 const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32);
 const fmtSize=n=>n>=1048576?(n/1048576).toFixed(1)+' MB':Math.max(1,Math.round(n/1024))+' KB';
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-let db=null, idb=null, assetsNS=null;
+let db=null, idb=null, assetsNS=null, reqs={};
 
 /* ===== local store: IndexedDB keeps GLB files and .io thumbnails in this browser ===== */
 function openIdb(){return new Promise(res=>{try{const r=indexedDB.open('sigfig-lab',1);
@@ -304,6 +305,25 @@ function writeFig(id){if(!db){setSync('not saved (offline)');return;}setSync('sa
 function patchFig(id,f,keepList){ov[id]=Object.assign({},ov[id]||{},f,{id:id});writeFig(id);if(keepList){paintFig(id);tallyPaint();}else renderList();}
 function patchAbout(id,k,v){const s=eff(id);patchFig(id,{about:Object.assign({},s.about,{[k]:v})},true);}
 
+/* ===== idle requests: the page queues them in the db, Claude runs them in Blender and adds the GLB ===== */
+const reqOpen=r=>r&&(r.status==='queued'||r.status==='working');
+function reqText(s){const r=reqs[s.id];if(!r)return 'No request yet.';
+  const d=(r.description||'').length>110?r.description.slice(0,110)+'…':(r.description||'');
+  if(r.status==='queued')return 'Waiting for Claude to run the queue: '+d;
+  if(r.status==='working')return 'Claude is building it in Blender…';
+  if(r.status==='done')return 'Done'+(r.note?': '+r.note:'.');
+  if(r.status==='failed')return 'Failed'+(r.note?': '+r.note:'.');
+  return r.status||'';}
+function paintReq(s){const c=document.querySelector('.card[data-id="'+s.id+'"]');if(!c)return;
+  const t=c.querySelector('[data-req]');if(t){t.textContent=reqText(s);}
+  const b=c.querySelector('[data-act="request"]'),r=reqs[s.id],desc=(s.animNotes||'').trim(),hasIo=!!(s.io&&s.io.asset);
+  if(b){b.disabled=!db||!desc||!hasIo||reqOpen(r);b.textContent=reqOpen(r)?'Request sent':'Request idle from Claude';
+    b.title=!db?'Needs the saved page':(!hasIo?'Add the .io file first (it is stored with the page so Claude can use it)':(!desc?'Describe the idle first':''));}
+  let cb=c.querySelector('[data-act="cancelreq"]');
+  if(r&&r.status==='queued'){if(!cb){cb=el('button','btn','Cancel request');cb.type='button';cb.setAttribute('data-act','cancelreq');cb.setAttribute('data-id',s.id);b&&b.parentNode.appendChild(cb);}}else if(cb)cb.remove();}
+function sendRequest(id){const s=eff(id);if(!db||!s)return;const desc=(s.animNotes||'').trim();if(!desc||!(s.io&&s.io.asset))return;
+  db.doc('requests/'+id).set({figId:id,name:s.name,description:desc.slice(0,2000),triBudget:s.triBudget||9000,ioAsset:s.io.asset,status:'queued',at:Date.now(),note:''}).then(()=>setSync('request sent'),()=>setSync('could not send'));}
+
 /* ===== cards ===== */
 function stepsOf(s){
   const lint=lintAgg(s),local=s.glbs.filter(g=>hasG(s,g)).length,steps=[];
@@ -352,7 +372,7 @@ function card(s){
   const ul=el('ul','files');s.glbs.forEach(g=>{const li=el('li','file'),have=!!blobs[id+'|'+g.uid];
     li.appendChild(el('span','fn',g.name));li.appendChild(el('span','fm',fmtSize(g.size)+(g.asset?' · stored with this page':(have?' · this browser only':''))));if(!g.asset&&!have)li.appendChild(el('span','bad','file missing: add it again'));
     const rm=el('button','rm','Remove');rm.type='button';rm.setAttribute('data-act','rmglb');rm.setAttribute('data-id',id);rm.setAttribute('data-uid',g.uid);li.appendChild(rm);ul.appendChild(li);});
-  if(s.io){const li=el('li','file');li.appendChild(el('span','fn','Studio: '+s.io.name));li.appendChild(el('span','fm',fmtSize(s.io.size)+' · thumbnail kept, the .io itself is not stored'));const rm=el('button','rm','Remove');rm.type='button';rm.setAttribute('data-act','rmio');rm.setAttribute('data-id',id);li.appendChild(rm);ul.appendChild(li);}
+  if(s.io){const li=el('li','file');li.appendChild(el('span','fn','Studio: '+s.io.name));li.appendChild(el('span','fm',fmtSize(s.io.size)+(s.io.asset?' · stored with this page':' · thumbnail kept; add the .io again to enable idle requests')));const rm=el('button','rm','Remove');rm.type='button';rm.setAttribute('data-act','rmio');rm.setAttribute('data-id',id);li.appendChild(rm);ul.appendChild(li);}
   sec1.appendChild(ul);const ln=el('div');ln.setAttribute('data-lint',id);ln.appendChild(lintNode(s));sec1.appendChild(ln);
   c.appendChild(sec1);
 
@@ -387,10 +407,17 @@ function card(s){
   if(firstOn&&firstOn.id===id&&u.type!=='free')sec3.appendChild(el('p','status','This is the first visible sig fig, so the site treats it as the free default whatever the rule says.'));
   c.appendChild(sec3);
 
-  /* animation notes */
-  const sec4=el('div','sec');sec4.appendChild(el('h4',null,'Idle loop notes'));
-  const nf=el('div','fld');const nl=el('label',null,'What to change on the next pass');nl.setAttribute('for','notes-'+id);nf.appendChild(nl);
-  const na=el('textarea','in');na.id='notes-'+id;na.value=s.animNotes||'';na.setAttribute('data-f','animNotes');na.setAttribute('data-id',id);na.placeholder='e.g. slower head bob, wheels should not spin, loop pops at the seam';nf.appendChild(na);sec4.appendChild(nf);c.appendChild(sec4);
+  /* idle loop: describe it, Claude builds it from the .io in Blender and adds the GLB to this card */
+  const sec4=el('div','sec');sec4.appendChild(el('h4',null,'Idle loop'));
+  sec4.appendChild(el('p','note','Describe the idle you want, or what to change on the next pass. Claude builds it from the .io in Blender and adds the GLB to this card to preview. A request waits here until you ask Claude to run the queue.'));
+  const nf=el('div','fld');const nl=el('label',null,'Idle description');nl.setAttribute('for','notes-'+id);nf.appendChild(nl);
+  const na=el('textarea','in');na.id='notes-'+id;na.value=s.animNotes||'';na.setAttribute('data-f','animNotes');na.setAttribute('data-id',id);na.placeholder='e.g. relaxed: slow breathing, glances left and right, the hand holding the controller fidgets, weight drifts side to side. 4 second loop.';nf.appendChild(na);sec4.appendChild(nf);
+  const rq=el('div','row2');rq.style.marginTop='10px';
+  const bf=el('div','fld');const bl=el('label',null,'Triangle target (whole figure)');bl.setAttribute('for','bud-'+id);bf.appendChild(bl);
+  const bn=el('input','in');bn.type='number';bn.min=1000;bn.max=60000;bn.step=500;bn.id='bud-'+id;bn.value=s.triBudget||9000;bn.title='Body parts are never thinned; hair, helmets and props shrink toward this. The result can land above it.';bn.setAttribute('data-f','triBudget');bn.setAttribute('data-id',id);bf.appendChild(bn);rq.appendChild(bf);
+  const bb=el('div','fld');bb.appendChild(el('span','lab','\u00a0'));const rb=el('button','btn primary','Request idle from Claude');rb.type='button';rb.setAttribute('data-act','request');rb.setAttribute('data-id',id);bb.appendChild(rb);rq.appendChild(bb);sec4.appendChild(rq);
+  const rs=el('div','lockmsg');rs.setAttribute('data-req',id);sec4.appendChild(rs);
+  c.appendChild(sec4);
 
   /* actions */
   const a=el('div','acts');function btn(label,act,pressed){const x=el('button','btn',label);x.type='button';x.setAttribute('data-act',act);x.setAttribute('data-id',id);a.appendChild(x);return x;}
@@ -407,7 +434,7 @@ function renderList(force){
   const sig=sigOf();
   if(sig===listSig&&!force){figs().forEach(s=>paintFig(s.id));tallyPaint();return;}
   listSig=sig;const active=document.activeElement,keep=active&&active.getAttribute&&active.getAttribute('data-id')?[active.getAttribute('data-id'),active.getAttribute('data-f')||active.getAttribute('data-act')]:null;
-  const list=$('#list');list.textContent='';figs().forEach(s=>{list.appendChild(card(s));s.glbs.forEach(g=>lintFor(s.id,g));});
+  const list=$('#list');list.textContent='';figs().forEach(s=>{list.appendChild(card(s));s.glbs.forEach(g=>lintFor(s.id,g));paintReq(s);});
   tallyPaint();
   if(keep){const k=document.querySelector('[data-id="'+keep[0]+'"][data-f="'+keep[1]+'"],[data-id="'+keep[0]+'"][data-act="'+keep[1]+'"]');if(k&&!k.disabled)k.focus();}
 }
@@ -417,9 +444,10 @@ function paintFig(id){const s=eff(id);if(!s||s.removed)return;const c=document.q
   const lm=c.querySelector('[data-lock]');if(lm){const line=lockLine(s.unlock);lm.textContent=line?'Locked message: ':'Free: always unlocked.';if(line)lm.appendChild(el('b',null,s.about.teaser&&s.about.teaser.trim()?s.about.teaser.trim():line));}
   const tag=c.querySelector('.meta .tag.ok:last-child,.meta .tag.warn:last-child');if(tag){const r=isReady(s);tag.className='tag '+(r?'ok':'warn');tag.textContent=r?'Ready':'Not ready';}
   [].forEach.call(c.querySelectorAll('[data-f]'),f=>{if(f===document.activeElement)return;const k=f.getAttribute('data-f');
-    if(k==='name')f.value=s.name;else if(k==='enabled')f.checked=s.enabled;else if(k==='animNotes')f.value=s.animNotes||'';else if(k.indexOf('a-')===0)f.value=s.about[k.slice(2)]||'';
+    if(k==='name')f.value=s.name;else if(k==='enabled')f.checked=s.enabled;else if(k==='animNotes')f.value=s.animNotes||'';else if(k==='triBudget')f.value=s.triBudget||9000;else if(k.indexOf('a-')===0)f.value=s.about[k.slice(2)]||'';
     else if(k==='ut')f.value=s.unlock.type;else if(k==='un')f.value=s.unlock.n||0;else if(k==='utarget')f.value=s.unlock.target||'';else if(k==='umin')f.value=Math.floor((s.unlock.n||0)/60);else if(k==='usec')f.value=(s.unlock.n||0)%60;});
   const pv=c.querySelector('[data-act="preview"]');if(pv)pv.disabled=!s.glbs.some(g=>hasG(s,g));
+  paintReq(s);
 }
 function tallyPaint(){const l=figs(),ready=l.filter(isReady).length,glbs=l.filter(s=>s.glbs.some(g=>hasG(s,g))).length;
   $('#tally').innerHTML='<b>'+l.length+'</b> sig figs · <b>'+glbs+'</b> with a model · <b>'+ready+'</b> ready to export';}
@@ -429,6 +457,7 @@ $('#list').addEventListener('change',e=>{const t=e.target,id=t.getAttribute('dat
   if(f==='name'){const v=t.value.trim()||s.name;if(v!==s.name)patchFig(id,{name:v.slice(0,40)},true);else t.value=v;return;}
   if(f==='enabled'){patchFig(id,{enabled:t.checked});return;}
   if(f==='animNotes'){patchFig(id,{animNotes:t.value.slice(0,2000)},true);return;}
+  if(f==='triBudget'){const v=Math.min(60000,Math.max(1000,Math.round(parseFloat(t.value))));if(isFinite(v)){patchFig(id,{triBudget:v},true);}return;}
   if(f.indexOf('a-')===0){patchAbout(id,f.slice(2),t.value.slice(0,4000));return;}
   if(f==='ut'){const d=utype(t.value),nu={type:t.value};if(t.value!=='free'&&t.value!=='caseStudy')nu.n=d[3];if(t.value==='destroy')nu.target='fighter';if(t.value==='caseStudy')nu.target='w0';patchFig(id,{unlock:nu});return;}
   if(f==='utarget'){patchFig(id,{unlock:Object.assign({},s.unlock,{target:t.value})},true);return;}
@@ -440,14 +469,16 @@ $('#list').addEventListener('click',e=>{
   const dz=e.target.closest('.drop');if(dz&&!e.target.closest('button')){cardFor=dz.getAttribute('data-id');$('#cardPicker').accept='.io,.glb,model/gltf-binary';$('#cardPicker').multiple=true;$('#cardPicker').click();return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const id=b.getAttribute('data-id'),act=b.getAttribute('data-act'),s=eff(id);if(!s)return;
   if(act==='preview'){Stage.load(id);return;}
+  if(act==='request'){sendRequest(id);return;}
+  if(act==='cancelreq'){if(db)db.doc('requests/'+id).delete().then(()=>setSync('request cancelled'),()=>{});return;}
   if(act==='earlier'||act==='later'){const l=figs(),i=l.findIndex(x=>x.id===id),j=act==='earlier'?i-1:i+1;if(i<0||j<0||j>=l.length)return;
     const a=l[i],o=l[j];let ao=a.order||0,oo=o.order||0;if(ao===oo)oo=ao+(act==='earlier'?-1:1);patchFig(a.id,{order:oo});patchFig(o.id,{order:ao});return;}
   function arm(label){if(b.dataset.armed==='1')return true;b.dataset.armed='1';const old=b.textContent;b.textContent=label;setTimeout(()=>{if(b.isConnected){b.dataset.armed='';b.textContent=old;}},3000);return false;}
   if(act==='rmglb'){if(!arm('Confirm'))return;const uid=b.getAttribute('data-uid');const gx=s.glbs.find(x=>x.uid===uid);if(gx)dropAsset(gx.asset);idbDel('glbs',id+'|'+uid);delete blobs[id+'|'+uid];delete lintCache[id+'|'+uid];patchFig(id,{glbs:s.glbs.filter(g=>g.uid!==uid)});return;}
-  if(act==='rmio'){if(!arm('Confirm'))return;if(s.io)dropAsset(s.io.thumbAsset);idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}patchFig(id,{io:null});return;}
+  if(act==='rmio'){if(!arm('Confirm'))return;if(s.io){dropAsset(s.io.thumbAsset);dropAsset(s.io.asset);}idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}patchFig(id,{io:null});return;}
   if(act==='reset'||act==='delete'){if(!arm(act==='delete'?'Confirm delete':'Confirm reset'))return;
-    s.glbs.forEach(g=>{dropAsset(g.asset);idbDel('glbs',id+'|'+g.uid);delete blobs[id+'|'+g.uid];delete lintCache[id+'|'+g.uid];});if(s.io)dropAsset(s.io.thumbAsset);idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}
-    delete ov[id];if(db)db.doc('sigfigs/'+id).delete().then(()=>setSync('saved'),()=>setSync('not saved'));if(Stage.id===id)Stage.clear();renderList(true);return;}
+    s.glbs.forEach(g=>{dropAsset(g.asset);idbDel('glbs',id+'|'+g.uid);delete blobs[id+'|'+g.uid];delete lintCache[id+'|'+g.uid];});if(s.io){dropAsset(s.io.thumbAsset);dropAsset(s.io.asset);}idbDel('thumbs',id);delete thumbBlobs[id];if(thumbUrls[id]){URL.revokeObjectURL(thumbUrls[id]);delete thumbUrls[id];}
+    delete ov[id];if(db)db.doc('requests/'+id).delete().then(()=>{},()=>{});if(db)db.doc('sigfigs/'+id).delete().then(()=>setSync('saved'),()=>setSync('not saved'));if(Stage.id===id)Stage.clear();renderList(true);return;}
 });
 /* add a sig fig */
 function updAdd(){$('#addGo').disabled=!$('#addName').value.trim();}
@@ -464,8 +495,10 @@ async function addFile(id,f){
   if(low.endsWith('.io')){const r=await parseIo(f);let ta=null;
     if(r.thumb){thumbBlobs[id]=r.thumb;idbPut('thumbs',id,r.thumb);if(thumbUrls[id])URL.revokeObjectURL(thumbUrls[id]);thumbUrls[id]=URL.createObjectURL(r.thumb);
       if(assetsNS){try{ta=(await assetsNS.upload(r.thumb,{type:'image/png'})).id;}catch(e){}}}
-    const old=eff(id).io;if(old&&old.thumbAsset)dropAsset(old.thumbAsset);
-    patchFig(id,{io:Object.assign({},r.info,ta?{thumbAsset:ta}:{})});refreshUsage();return 'Studio file '+f.name;}
+    let ia=null;   // the .io itself is stored (as base64 text, like a GLB) so Claude can build the idle from it in Blender
+    if(assetsNS&&f.size<=MAX_GLB){try{ia=(await assetsNS.upload(new Blob([bytesToB64(new Uint8Array(await f.arrayBuffer()))],{type:'text/plain'}),{type:'text/plain'})).id;}catch(e){}}
+    const old=eff(id).io;if(old){dropAsset(old.thumbAsset);dropAsset(old.asset);}
+    patchFig(id,{io:Object.assign({},r.info,ta?{thumbAsset:ta}:{},ia?{asset:ia}:{})});refreshUsage();return 'Studio file '+f.name;}
   if(low.endsWith('.glb')){if(!(await isGlb(f)))throw new Error(f.name+' is not a binary glTF');
     if(assetsNS&&f.size>MAX_GLB)throw new Error(f.name+' is '+fmtSize(f.size)+'; models over about 15 MB cannot be stored with the page. Shrink the textures or the part count');
     const g={uid:uid(),name:f.name,size:f.size,at:Date.now()};
@@ -577,7 +610,8 @@ if(window.claude&&claude.use){
   claude.use('assets').then(a=>{assetsNS=a;if(a)refreshUsage();else{const b=$('#banner');b.hidden=false;b.textContent=(b.textContent?b.textContent+' ':'')+'Files can only be kept in this browser here: this view cannot store them with the page.';}},()=>{});
   claude.use('db').then(d=>{
     if(!d){const b=$('#banner');b.hidden=false;b.textContent=(b.textContent?b.textContent+' ':'')+'Changes cannot be saved in this view. Files you add still work here and export.';return;}
-    db=d;d.collection('sigfigs').onSnapshot(snap=>{const next={};snap.docs.forEach(doc=>{const v=doc.data()||{};next[doc.id]=Object.assign({},v,{id:doc.id});});ov=next;renderList();},()=>setSync('offline'));
+    db=d;d.collection('requests').onSnapshot(snap=>{const n={};snap.docs.forEach(doc=>{n[doc.id]=Object.assign({},doc.data(),{id:doc.id});});reqs=n;figs().forEach(s=>paintReq(s));},()=>{});
+    d.collection('sigfigs').onSnapshot(snap=>{const next={};snap.docs.forEach(doc=>{const v=doc.data()||{};next[doc.id]=Object.assign({},v,{id:doc.id});});ov=next;renderList();},()=>setSync('offline'));
   });
 }
 })();
