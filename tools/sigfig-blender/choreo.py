@@ -28,9 +28,10 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
            figure's centre (+dx = the figure's left, +dy = behind it, -dy = in front); z is height. rot is degrees about the
            world axes, applied after the prop's base orientation (`base`: "print_up_handles_in", "buttons_to_player" or None).
   grips:   {name: [lx, ly, lz]}                         points in the prop's local space
-  hand_grips: {arm_l|arm_r: {target, handle_axis, open}}   while that arm's aim weight on `target` is up, the arm AND the hand (turned in its
-                         wrist socket) are solved so the hand's C clip ring sits on the target point, its ring axis lies along the
-                         prop-local `handle_axis`, and its opening faces the prop-local `open` direction (default: away from the print)
+  hand_grips: {arm_l|arm_r: {target, handle_axis, open}}   while that arm's aim weight on `target` is up, the arm and the hand are solved so the
+                         hand's C clip ring sits on the target point (first priority), its ring axis lies along the prop-local
+                         `handle_axis` and its opening faces the prop-local `open` direction. The hand turns about the pin where it
+                         slots into the arm (HAND_PIVOT), so that connection stays in place; hand-vs-controller overlap is tolerated.
   targets: {name: {frame, mode, p, o?}}            o: optional world-space offset added to the target (a fist that must clear the headset)                     aim targets. frame: a part name ("hips"..), a bone ("head_3"), or "prop";
                                                         mode "local" (p is in that frame's local space) or "rest_world"
                                                         (p = [dx, dy, z] in rest-pose world space, then carried with the frame)
@@ -133,8 +134,21 @@ def _base_matrix(name):
 HAND_RING = dict(center=(0.0, -0.114, 0.04), axis=(0.0, 0.999, -0.035), opening=(0.0, -0.035, -0.999))
 
 
-def _solve_grip(Barm, aloc, ascl, Q0, PIh, hloc, hscl, qh0, ring, G, D, Od, x0=None, iters=10):
-    """Least squares for (arm rotation vector, hand rotation vector): ring centre -> G, ring axis || D, opening -> Od."""
+# where the hand's pin leaves the arm (hand-local): the hand turns about THIS point, so the pin stays seated in the socket
+HAND_PIVOT = (0.0, -0.04, -0.005)
+
+
+def _hand_basis(hloc, qh0, hscl, dq, pivot=HAND_PIVOT):
+    """Hand basis (location, rotation) after turning it by dq (a hand-local rotation) about the pin's exit point."""
+    p = Vector(pivot)
+    R = qh0.to_matrix()
+    loc = Vector(hloc) + R @ (p - dq.to_matrix() @ p)
+    return loc, qh0 @ dq
+
+
+def _solve_grip(Barm, aloc, ascl, Q0, PIh, hloc, hscl, qh0, ring, G, D, Od, x0=None, iters=12):
+    """Least squares for (arm rotation vector, hand rotation vector): ring centre -> G first, then ring axis || D and opening -> Od.
+    The hand turns about the pin where it slots into the arm, so that connection stays in place."""
     import numpy as np
     rc, ra, ro = (Vector(HAND_RING['center']), Vector(HAND_RING['axis']).normalized(), Vector(HAND_RING['opening']).normalized())
 
@@ -144,14 +158,15 @@ def _solve_grip(Barm, aloc, ascl, Q0, PIh, hloc, hscl, qh0, ring, G, D, Od, x0=N
 
     def resid(x):
         Qa = quat(x[0:3]) @ Q0
-        Aw = Barm @ Matrix.LocRotScale(aloc, Qa, ascl)
-        Hw = Aw @ PIh @ Matrix.LocRotScale(hloc, quat(x[3:6]) @ qh0, hscl)
+        dq = quat(x[3:6])
+        hl, Qh = _hand_basis(hloc, qh0, hscl, dq)
+        Hw = Barm @ Matrix.LocRotScale(aloc, Qa, ascl) @ PIh @ Matrix.LocRotScale(hl, Qh, hscl)
         H3 = Hw.to_3x3()
         c = Hw @ rc
         a = (H3 @ ra).normalized()
         o = (H3 @ ro).normalized()
-        r = list((c - G) / 0.01) + list(a.cross(D) / 0.04) + list((o - Od) / 0.6) + list(np.asarray(x) / 0.8)
-        return np.array(r), Qa, quat(x[3:6]) @ qh0
+        r = list((c - G) / 0.01) + list(a.cross(D) / 0.06) + list((o - Od) / 0.8) + list(np.asarray(x) / 0.9)
+        return np.array(r), Qa, dq
 
     def run(x):
         lam = 1e-2
@@ -171,19 +186,19 @@ def _solve_grip(Barm, aloc, ascl, Q0, PIh, hloc, hscl, qh0, ring, G, D, Od, x0=N
                 lam *= 4
         return x, r
 
-    # the hand can be turned either way round its ring axis: start from "as is" and from a half turn, keep the better one
-    Rh = (PIh @ Matrix.LocRotScale(hloc, qh0, hscl)).to_3x3()
-    flip = np.array(list((Rh @ ra).normalized() * 3.14159))
-    starts = [np.zeros(6) if x0 is None else np.array(x0, dtype=float), np.concatenate([np.zeros(3), flip])]
+    base = np.zeros(6) if x0 is None else np.array(x0, dtype=float)
+    flipped = base.copy()
+    flipped[4] += 3.14159                                          # a half turn about the pin (hand-local y): keep the better fit
     best = None
-    for st in starts:
+    for st in (base, flipped):
         x, r = run(st)
         c = float((r ** 2).sum())
         if best is None or c < best[0]:
             best = (c, x)
     x = best[1]
-    r, Qa, Qh = resid(x)
-    return x, Qa, Qh, (Vector(r[0:3]) * 0.01).length
+    r, Qa, dq = resid(x)
+    hl, Qh = _hand_basis(hloc, qh0, hscl, dq)
+    return x, Qa, Qh, hl, (Vector(r[0:3]) * 0.01).length
 
 
 def _bone_parent(o, arm_obj, bone_name, mw0):
@@ -491,6 +506,7 @@ def apply_plan(fig_id, plan):
                 hobj = objs.get(hand_of.get(a))
                 qh_rest = Euler(list(hobj['rest'])[3:6], 'XYZ').to_quaternion() if hobj is not None else None
                 qh_key = qh_rest
+                hloc_key = Vector(list(hobj['rest'])[0:3]) if hobj is not None else None
                 if a in grips_cfg and gw > 0.01 and hobj is not None:
                     gc = grips_cfg[a]
                     PM = prop.matrix_world
@@ -498,9 +514,9 @@ def apply_plan(fig_id, plan):
                     D = (PM.to_3x3() @ Vector(gc.get('handle_axis', (0, 1, 0)))).normalized()
                     Od = (PM.to_3x3() @ Vector(gc.get('open', (0, 0, -1)))).normalized()
                     Barm = ob.matrix_world @ ob.matrix_basis.inverted()
-                    x, Qa_s, Qh_s, gap = _solve_grip(Barm, Vector(ob.location), Vector(ob.scale), Q, hobj.matrix_parent_inverse,
-                                                     Vector(list(hobj['rest'])[0:3]), Vector(list(hobj['rest'])[6:9]), qh_rest,
-                                                     None, G, D, Od, x0=warm.get(a))
+                    x, Qa_s, Qh_s, hl_s, gap = _solve_grip(Barm, Vector(ob.location), Vector(ob.scale), Q, hobj.matrix_parent_inverse,
+                                                           Vector(list(hobj['rest'])[0:3]), Vector(list(hobj['rest'])[6:9]), qh_rest,
+                                                           None, G, D, Od, x0=warm.get(a))
                     warm[a] = x
                     if Q.dot(Qa_s) < 0:
                         Qa_s.negate()
@@ -508,6 +524,7 @@ def apply_plan(fig_id, plan):
                     if qh_rest.dot(Qh_s) < 0:
                         Qh_s.negate()
                     qh_key = qh_rest.slerp(Qh_s, min(1.0, gw))
+                    hloc_key = Vector(list(hobj['rest'])[0:3]).lerp(hl_s, min(1.0, gw))
                     if gw > 0.9:
                         report['grip_gap_max'][a] = max(report['grip_gap_max'].get(a, 0.0), round(gap, 3))
                 else:
@@ -519,7 +536,9 @@ def apply_plan(fig_id, plan):
                 ob.keyframe_insert('rotation_quaternion', frame=f)
                 if hobj is not None and a in grips_cfg:
                     hobj.rotation_quaternion = qh_key
+                    hobj.location = hloc_key
                     hobj.keyframe_insert('rotation_quaternion', frame=f)
+                    hobj.keyframe_insert('location', frame=f)
         report['parts_keyed'] += sorted(arms)
     # name the actions (the exporter merges them into one glTF animation)
     for n, o in objs.items():
