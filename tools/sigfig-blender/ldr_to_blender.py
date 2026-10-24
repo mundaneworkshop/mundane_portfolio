@@ -93,6 +93,8 @@ def parse_ldr(text):
                 cur = secs.setdefault(name, {'name': name, 'lines': []})
                 first = first or name
                 st = {'cw': False, 'inv': False}
+            elif cur is not None and rest.startswith('PE_TEX_INFO '):
+                cur['tex'] = rest.split(None, 1)[1].strip()          # Studio embeds a part's print as a base64 PNG
             elif cur is not None and rest.startswith('BFC'):
                 w = rest.split()
                 if 'INVERTNEXT' in w:
@@ -118,14 +120,20 @@ def parse_ldr(text):
             if len(p) < 2 + 3 * n:
                 continue
             v = [Vector((float(p[2 + 3 * i]), float(p[3 + 3 * i]), float(p[4 + 3 * i]))) for i in range(n)]
+            uv = None
+            if len(p) >= 2 + 5 * n:                              # Studio texture-mapped faces carry one (u, v) per corner after the points
+                uv = [(float(p[2 + 3 * n + 2 * i]), float(p[3 + 3 * n + 2 * i])) for i in range(n)]
             if st['cw']:
                 v.reverse()
-            cur['lines'].append((n, p[1], v))
+                if uv:
+                    uv.reverse()
+            cur['lines'].append((n, p[1], v, uv))
     return secs, first
 
 
 _FLAT = {}
 _MISSING = set()
+_TEX = {}                          # part file -> base64 PNG of its print
 # Studio does not embed the LDraw base primitives it can find in its own library: 48/4-4cyli.dat (high-res cylinder wall),
 # 4-4disc.dat (flat cap), 2-4edge.dat (outline). Importing without them silently deleted cylinder walls and caps: the arms'
 # round parts, the hand clip's wrist, the neck, headset tubes. They are simple, so they are generated here.
@@ -180,16 +188,28 @@ def flat(secs, name):
                 if not child:
                     continue
                 flip = (M.to_3x3().determinant() < 0) != bool(inv)
-                for c, (a, b, d) in child:
+                for it in child:
+                    c, (a, b, d) = it[0], it[1]
                     c2 = col if c in INHERIT else c
                     a, b, d = M @ a, M @ b, M @ d
-                    out.append((c2, (a, d, b) if flip else (a, b, d)))
+                    if len(it) > 2:                                # a textured face keeps its (u, v) and which print it belongs to
+                        uv = it[2]
+                        out.append((c2, (a, d, b) if flip else (a, b, d), [uv[0], uv[2], uv[1]] if flip else uv, it[3]))
+                    else:
+                        out.append((c2, (a, d, b) if flip else (a, b, d)))
             elif k == 3:
-                out.append((ln[1], tuple(ln[2])))
+                out.append((ln[1], tuple(ln[2])) if not ln[3] else (ln[1], tuple(ln[2]), ln[3], None))
             else:
-                v = ln[2]
-                out.append((ln[1], (v[0], v[1], v[2])))
-                out.append((ln[1], (v[0], v[2], v[3])))
+                v, uv = ln[2], ln[3]
+                if uv:
+                    out.append((ln[1], (v[0], v[1], v[2]), [uv[0], uv[1], uv[2]], None))
+                    out.append((ln[1], (v[0], v[2], v[3]), [uv[0], uv[2], uv[3]], None))
+                else:
+                    out.append((ln[1], (v[0], v[1], v[2])))
+                    out.append((ln[1], (v[0], v[2], v[3])))
+    if sec.get('tex'):                                             # this part owns a print: its UV faces use it
+        _TEX[name] = sec['tex']
+        out = [(it[0], it[1], it[2], name) if len(it) > 2 and it[3] is None else it for it in out]
     _FLAT[name] = out
     return out
 
@@ -444,6 +464,50 @@ def material_for(code):
     return m
 
 
+_TEXMATS = {}
+
+
+def _srgb(c):
+    return 12.92 * c if c <= 0.0031308 else 1.055 * (c ** (1 / 2.4)) - 0.055
+
+
+def material_for_print(tex_key, code):
+    """Principled material whose base colour is the part colour with the embedded print composited on it (glTF cannot mix)."""
+    key = (tex_key, code)
+    if key in _TEXMATS and _TEXMATS[key].name in bpy.data.materials:
+        return _TEXMATS[key]
+    import base64, tempfile
+    raw = base64.b64decode(_TEX[tex_key] + '=' * (-len(_TEX[tex_key]) % 4))
+    tmp = os.path.join(tempfile.gettempdir(), 'sigfig_print_%d.png' % abs(hash(key)))
+    with open(tmp, 'wb') as f:
+        f.write(raw)
+    src = bpy.data.images.load(tmp)
+    w, h = src.size
+    px = list(src.pixels)                                          # RGBA, sRGB-encoded for an 8-bit PNG
+    rgb, alpha, metal, label = color_info(code)
+    base = [_srgb(rgb[0]), _srgb(rgb[1]), _srgb(rgb[2])]
+    out = []
+    for i in range(0, len(px), 4):
+        a = px[i + 3]
+        out.extend((base[0] * (1 - a) + px[i] * a, base[1] * (1 - a) + px[i + 1] * a, base[2] * (1 - a) + px[i + 2] * a, 1.0))
+    img = bpy.data.images.new('print_%s' % os.path.basename(tex_key).replace('.dat', ''), w, h, alpha=False)
+    img.pixels = out
+    img.pack()
+    img.update()
+    bpy.data.images.remove(src)
+    m = bpy.data.materials.new('lego_print_%s_%s' % (os.path.basename(tex_key).replace('.dat', ''), code))
+    m.use_nodes = True
+    nt = m.node_tree
+    b = nt.nodes.get('Principled BSDF')
+    t = nt.nodes.new('ShaderNodeTexImage')
+    t.image = img
+    t.interpolation = 'Linear'
+    nt.links.new(t.outputs['Color'], b.inputs['Base Color'])
+    b.inputs['Roughness'].default_value = 0.4
+    _TEXMATS[key] = m
+    return m
+
+
 def _mesh_object(name, role, tris, part_color, W, parity, coll):
     """Mesh with the part origin at the object origin; W (LDraw 4x4) becomes the object's world matrix."""
     M3 = W.to_3x3()
@@ -451,24 +515,34 @@ def _mesh_object(name, role, tris, part_color, W, parity, coll):
     F = Matrix(((-1, 0, 0), (0, 1, 0), (0, 0, 1)))
     M3b = M3 @ F if mirror else M3                       # keep the object matrix a proper rotation; bake the mirror into the vertices
     flip_wind = parity != False                          # parity already includes determinant sign and INVERTNEXT
-    verts, faces, face_codes = [], [], []
-    for c, (a, b, d) in tris:
+    verts, faces, face_codes, face_uv = [], [], [], []
+    for it in tris:
+        c, (a, b, d) = it[0], it[1]
+        uv = it[2] if len(it) > 2 else None
         pts = [a, b, d]
         if mirror:
             pts = [F @ p for p in pts]
         if flip_wind:
             pts = [pts[0], pts[2], pts[1]]
+            if uv:
+                uv = [uv[0], uv[2], uv[1]]
         i = len(verts)
         verts.extend((C3 @ p) * SCALE for p in pts)
         faces.append((i, i + 1, i + 2))
-        face_codes.append(part_color if c in INHERIT else c)
+        face_codes.append((part_color if c in INHERIT else c, it[3] if uv and it[3] in _TEX else None))
+        face_uv.append(uv if face_codes[-1][1] else None)
     me = bpy.data.meshes.new(name)
     me.from_pydata([v[:] for v in verts], [], faces)
-    codes = sorted(set(face_codes))
-    for c in codes:
-        me.materials.append(material_for(c))
+    codes = sorted(set(face_codes), key=lambda k: (k[0], k[1] or ''))
+    for c, tk in codes:
+        me.materials.append(material_for(c) if tk is None else material_for_print(tk, c))
     idx = {c: i for i, c in enumerate(codes)}
     me.polygons.foreach_set('material_index', [idx[c] for c in face_codes])
+    if any(face_uv):                                               # texture-mapped faces: Studio's v runs bottom-up, like Blender's
+        layer = me.uv_layers.new(name='UVMap')
+        for fi, uv in enumerate(face_uv):
+            for j in range(3):
+                layer.data[3 * fi + j].uv = uv[j] if uv else (0.0, 0.0)
     me.polygons.foreach_set('use_smooth', [False] * len(faces))
     me.update()
     me.validate()
@@ -488,11 +562,13 @@ def build_sigfig(io_path, fig_id, clear=True, tri_budget=DEFAULT_TRI_BUDGET, rol
     `roles` = optional {part number or stem: role name} for figures made of custom parts.
     `safe` = see decimate_parts (default True: body parts, open shells and printed parts are never collapsed).
     Returns a summary dict (also stored in the collection's custom properties)."""
-    global _FLAT, _MISSING
+    global _FLAT, _MISSING, _TEX
     _FLAT = {}
     _MISSING = set()
+    _TEX = {}
     with zipfile.ZipFile(io_path) as z:
         text = z.read('model2.ldr').decode('utf-8-sig', 'replace')
+        extra_images = [n for n in z.namelist() if n.lower().endswith(('.png', '.jpg', '.jpeg', '.tga')) and 'thumbnail' not in n.lower()]
     secs, root = parse_ldr(text)
     parts, warn = collect_parts(secs, root)
     classify(parts, roles)
@@ -552,7 +628,19 @@ def build_sigfig(io_path, fig_id, clear=True, tri_budget=DEFAULT_TRI_BUDGET, rol
             hi = Vector((max(hi.x, w.x), max(hi.y, w.y), max(hi.z, w.z)))
     root_empty.location = (-(lo.x + hi.x) / 2, -(lo.y + hi.y) / 2, -lo.z)
     bpy.context.view_layer.update()
-    info = dict(fig=fig_id, decimate=dec, parts=summary, size=[round(hi.x - lo.x, 3), round(hi.y - lo.y, 3), round(hi.z - lo.z, 3)],
+    prints, print_warn = [], []                                  # every print the .io carries must reach the GLB: audit it
+    for p in parts:
+        ob = p.get('ob')
+        if not ob:
+            continue
+        tex_mats = [m.name for m in ob.data.materials if m and m.name.startswith('lego_print_')]
+        looks_printed = bool(re.search(r'pb\d+|tex|^bl_', os.path.basename(p['file'])))
+        multi = _colours(ob) >= PRINT_MATERIALS
+        prints.append(dict(role=p['role'], part=_clean(p['file']), textures=tex_mats, colours=_colours(ob)))
+        if looks_printed and not tex_mats and not multi:
+            print_warn.append('%s (%s) is a printed part but came in as a plain colour: its print is not in the .io as geometry or texture' % (p['role'], _clean(p['file'])))
+    unused_tex = [k for k in _TEX if not any(any(m.name.startswith('lego_print_' + os.path.basename(k).replace('.dat', '')) for m in ob.data.materials if m) for ob in objs.values())]
+    info = dict(fig=fig_id, prints=prints, print_warnings=print_warn + ['texture %s was in the .io but no face uses it' % k for k in unused_tex] + ['image file in the .io not imported: %s' % n for n in extra_images], decimate=dec, parts=summary, size=[round(hi.x - lo.x, 3), round(hi.y - lo.y, 3), round(hi.z - lo.z, 3)],
                 triangles=sum(s['tris'] for s in summary), warnings=sorted(set(warn))[:20], unresolved_refs=sorted(_MISSING)[:20],
                 missing_roles=[r for r in ('head', 'torso', 'hips', 'arm_l', 'arm_r', 'leg_l', 'leg_r') if r not in objs])
     coll['sigfig_info'] = json.dumps(info)
