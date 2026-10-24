@@ -1,4 +1,23 @@
 {
   "version": 1,
-  "outfits": []
+  "outfits": [
+    {
+      "id": "vr-gamer",
+      "name": "VR gamer",
+      "enabled": true,
+      "unlockAt": 0,
+      "about": {
+        "kicker": "About me",
+        "title": "VR gamer",
+        "body": "Placeholder about-me copy for the VR gamer outfit. Edit it in Edit Mode, ☺ outfits, unlock + about copy.",
+        "teaser": ""
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/vr-gamer/vr-gamer.glb"
+        }
+      ]
+    }
+  ]
 }

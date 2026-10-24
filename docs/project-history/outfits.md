@@ -13,6 +13,20 @@
 
 **Known limits / next.** Replacing a GLB inside an existing repo outfit = delete+recreate a draft with the same name and re-export (repo outfits are read-only for parts). Draft binaries are not synced (same as other BRICStore uploads). Not built: per-outfit scale/offset, outfit name caption in the scene, arcade "unlock outfit" reward hook (`MWBattle.onUnlock`) — the arcade doc says minikits should unlock outfits.
 
+## Terminology (what to call things)
+
+| say | meaning | in code |
+|---|---|---|
+| **hologram figure** (or just "the figure") | the full minifigure standing in the middle of the hologram cone, the thing you click | `outfitStage` / `outfitCur.group` |
+| **outfit** | one look of the figure: a sig fig GLB (or several) plus name, About copy and unlock rule; the carousel cycles outfits | an entry in `assets/outfits.json`; `ocAll()` |
+| **carousel** | the `◄ name ►` HUD under the cone that cycles outfits | `#outfitHud`, `ocNext()` |
+| **About view** | the focus view you enter by clicking the figure: figure centred, manual below with that outfit's About-me copy; route `/about/<outfit-id>` | `aboutGrp`, `openAbout()` |
+| **sig fig** | Jason's word for a figure made in Studio and converted by the Sig Fig Lab | the `.io` / GLB source of an outfit |
+| **original head** | the pre-outfit placeholder, a minifig head, shown only when no outfit is enabled | `holoHead` (+ `glowShell`) |
+| **logo** | the group everything in the hologram centre hangs off; also the MW monogram shown on the entry gate | `logo` |
+
+"Minifig head" should now only mean the original head placeholder.
+
 ## Carousel, About-me focus view and arcade unlocks (Oct 22 2026)
 
 **Product vision (Jason):** the hologram is an outfit carousel; clicking the central figure zooms into a focus view that reuses the project template, whose manual is an "About me" that changes copy with the selected outfit; locked outfits point visitors at the Space Arcade, which unlocks them.
