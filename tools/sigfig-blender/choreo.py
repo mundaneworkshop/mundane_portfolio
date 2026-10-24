@@ -32,6 +32,9 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
                          hand's C clip ring sits on the target point (first priority), its ring axis lies along the prop-local
                          `handle_axis` and its opening faces the prop-local `open` direction. The hand turns about the pin where it
                          slots into the arm (HAND_PIVOT), so that connection stays in place; hand-vs-controller overlap is tolerated.
+  hand_roll: {arm_l|arm_r: {target, rotvec_deg:[x,y,z]}}   while that arm's aim weight on `target` is up, the hand is turned by that hand-local
+                         axis * degrees (or `deg` = about the pin, local y), pivoting where the pin leaves the arm (HAND_PIVOT) so the connection stays seated. No solver:
+                         the arm motion is exactly the aimed motion.
   targets: {name: {frame, mode, p, o?}}            o: optional world-space offset added to the target (a fist that must clear the headset)                     aim targets. frame: a part name ("hips"..), a bone ("head_3"), or "prop";
                                                         mode "local" (p is in that frame's local space) or "rest_world"
                                                         (p = [dx, dy, z] in rest-pose world space, then carried with the frame)
@@ -131,7 +134,7 @@ def _base_matrix(name):
 
 
 # the LDraw hand's C clip, in the hand's own frame (measured: ring centre, ring axis, direction of the opening)
-HAND_RING = dict(center=(0.0, -0.114, 0.04), axis=(0.0, 0.999, -0.035), opening=(0.0, -0.035, -0.999))
+HAND_RING = dict(center=(0.0, -0.095, 0.009), axis=(1.0, 0.0, 0.0), opening=(0.0, 1.0, 0.0))   # ring in the hand's y-z plane (fit residual 0.4 mm), open toward the pin
 
 
 # where the hand's pin leaves the arm (hand-local): the hand turns about THIS point, so the pin stays seated in the socket
@@ -465,7 +468,8 @@ def apply_plan(fig_id, plan):
             objs[a].rotation_mode = 'QUATERNION'
         hand_of = {'arm_l': 'hand_l', 'arm_r': 'hand_r'}
         grips_cfg = plan.get('hand_grips', {})
-        for a in grips_cfg:
+        roll_cfg = plan.get('hand_roll', {})
+        for a in set(grips_cfg) | set(roll_cfg):
             h = objs.get(hand_of.get(a))
             if h is not None:
                 h.rotation_mode = 'QUATERNION'
@@ -486,12 +490,17 @@ def apply_plan(fig_id, plan):
                 v0 = (R0 @ arm_vec[a]).normalized()
                 pivot = ob.matrix_world.translation
                 gw = 0.0
+                gw_roll = 0.0
                 for ent in aims[a]:
                     w = _weight(ent['w'], t)
                     if a in grips_cfg and ent['target'] == grips_cfg[a]['target']:
                         gw = w
                     elif gw > 0.0:
                         gw *= (1.0 - w)
+                    if a in roll_cfg and ent['target'] == roll_cfg[a]['target']:
+                        gw_roll = w
+                    elif gw_roll > 0.0:
+                        gw_roll *= (1.0 - w)
                     if w <= 1e-4:
                         continue
                     T_w = target_world(ent['target'])
@@ -527,6 +536,10 @@ def apply_plan(fig_id, plan):
                     hloc_key = Vector(list(hobj['rest'])[0:3]).lerp(hl_s, min(1.0, gw))
                     if gw > 0.9:
                         report['grip_gap_max'][a] = max(report['grip_gap_max'].get(a, 0.0), round(gap, 3))
+                elif a in roll_cfg and gw_roll > 0.0 and hobj is not None:
+                    rv = Vector(roll_cfg[a].get('rotvec_deg', (0.0, roll_cfg[a].get('deg', 0.0), 0.0)))   # hand-local axis * degrees
+                    dq = Quaternion(rv.normalized(), math.radians(rv.length) * min(1.0, gw_roll)) if rv.length > 1e-6 else Quaternion((1, 0, 0, 0))
+                    hloc_key, qh_key = _hand_basis(Vector(list(hobj['rest'])[0:3]), qh_rest, Vector(list(hobj['rest'])[6:9]), dq)
                 else:
                     warm.pop(a, None)
                 if prevq[a] is not None and Q.dot(prevq[a]) < 0:
@@ -534,7 +547,7 @@ def apply_plan(fig_id, plan):
                 prevq[a] = Q
                 ob.rotation_quaternion = Q
                 ob.keyframe_insert('rotation_quaternion', frame=f)
-                if hobj is not None and a in grips_cfg:
+                if hobj is not None and (a in grips_cfg or a in roll_cfg):
                     hobj.rotation_quaternion = qh_key
                     hobj.location = hloc_key
                     hobj.keyframe_insert('rotation_quaternion', frame=f)
