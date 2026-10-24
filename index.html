@@ -9426,6 +9426,7 @@ f 2469//2469 2470//2470 2434//2434
     var LOGO_LAYER=2;
     var logoDepthMat=new THREE.MeshBasicMaterial({colorWrite:false, depthWrite:true, side:THREE.DoubleSide});
     logoDepthMat.clippingPlanes=[logoClipPlane];
+    logoDepthMat.skinning=true;   // (r128) the pre-pass must pose skinned figures the same way the colour pass does, or its depth is the bind pose and the figure is cut to pieces
     var holoUniforms={ time:{value:0}, holoColor:{value:new THREE.Color(0x78E0D6)}, holoHot:{value:new THREE.Color(0xAAF5EE)}, opacity:{value:0.82}, fresnelPow:logoFresnel, scanIntensity:logoScan, glitch:SHU.glitch, glitchAmt:SHU.glitchAmt };
     var holoMat=new THREE.ShaderMaterial({
       uniforms:holoUniforms, transparent:true, depthWrite:false,
@@ -10077,7 +10078,7 @@ f 2469//2469 2470//2470 2434//2434
     var planetHits=planets.map(function(p){return p.userData.hitProxy;});
     var _logoOccMeshes=[];   // logo meshes for occlusion — rebuilt each frame, shared with updateMsgStars
     var zoneHits=ZONES.map(function(z){return z.mesh;});
-    var hovered=null, focused=null, focusedMoon=null, autoRotate=true, activeZone=null, focusAmount=0, editMode=false;
+    var figHover=false, hovered=null, focused=null, focusedMoon=null, autoRotate=true, activeZone=null, focusAmount=0, editMode=false;
     // Explicit opt-in for mesh/box editing while in Edit Mode — off by default, so a plain click navigates
     // (opens the booklet) just like normal mode. Previously EVERY click in Edit Mode was hijacked into mesh
     // selection, which made "click a different project to check on it" silently reinterpret as "select this
@@ -10249,6 +10250,8 @@ f 2469//2469 2470//2470 2434//2434
           }
           return null;
         }
+        if(figHover){ var _fo=ocFigObj(), _fm=outfitCur&&ocFind(outfitCur.id);   // the figure / original head: frame it, say what the click does
+          if(_fo) return {key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT ME', rect:function(){ var f=ocFigObj(); return f?rectOf(f):null; }}; }
         if(!hovered||cv.style.cursor!=='pointer') return null;   // galaxy: the page says "clickable here"
         var grp=hovered, hit=grp.userData.hitProxy;
         return {key:grp, label:'\u25B8 OPEN', rect:function(){ return rectOf(hit||grp); }};
@@ -10284,7 +10287,10 @@ f 2469//2469 2470//2470 2434//2434
       var _rh=params.gxRingHover!==false && ringEn.visible && ringEn.userData.decode && ray.intersectObject(ringEn,false).length>0;   // ring hover replays the decode
       if(_rh&&!ringHot) ringEn.userData.decode(true); ringHot=_rh;
       var ph=ray.intersectObjects(planetHits,false); var grp=ph.length?ph[0].object.parent:null;
-      setHovered(grp);
+      var _fh=editMode?null:ocHit(), _fOn=!!_fh&&(!ph.length||_fh.distance<ph[0].distance);   // the central figure (or the original head) is a hover target too, unless a planet is in front of it
+      if(_fOn&&!figHover&&window.MWAudio&&!window.__mwArcade) MWAudio.ui('hover');
+      figHover=_fOn; setHovered(_fOn?null:grp);
+      if(renderer&&renderer.domElement) renderer.domElement.style.cursor=(figHover||hovered)?'pointer':'default';
       if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
     // A click on nothing (empty canvas, empty page): the soft "release" thud from the UI sounds. Controls and planets have their own sounds.
     document.documentElement.addEventListener('mouseleave',function(){ mwHover=false; });   // the pointer left the window: drop the entry monogram's hover
@@ -12656,7 +12662,7 @@ f 2469//2469 2470//2470 2434//2434
     // ── Textured GLB for the LOGO: keep baked materials (unlit) + overlay holo FX ──
     function loadGLBScene(buffer,cb){
       if(!THREE.GLTFLoader){ cb(null,'GLTFLoader not ready'); return; }
-      try{ mwCreateGLTFLoader().parse(buffer,'',function(g){ cb(g.scene,null); }, function(){ cb(null,'glb parse error'); }); }
+      try{ mwCreateGLTFLoader().parse(buffer,'',function(g){ cb(g.scene,null,g.animations); }, function(){ cb(null,'glb parse error'); }); }
       catch(e){ cb(null,e.message); }
     }
     // ── STEP / STP (CAD B-rep) import via occt-import-js (OpenCascade WASM). No native three.js loader
@@ -12726,7 +12732,8 @@ f 2469//2469 2470//2470 2434//2434
         shader.uniforms.uOc=mat.userData.ocU=mat.userData.ocU||{value:(mat.userData.ocV!=null?mat.userData.ocV:1)};   // outfit fade / locked-ghost opacity (the holo alpha below ignores material.opacity)
         shader.vertexShader=shader.vertexShader
           .replace('#include <common>','#include <common>\nvarying vec3 vWP; varying vec3 vNN; varying vec3 vEY;')
-          .replace('#include <begin_vertex>','#include <begin_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*normal); vEY=normalize(cameraPosition-vWP);');
+          .replace('#include <begin_vertex>','#include <begin_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*normal); vEY=normalize(cameraPosition-vWP);')
+          .replace('#include <project_vertex>','#ifdef USE_SKINNING\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*objectNormal); vEY=normalize(cameraPosition-vWP);\n#endif\n#include <project_vertex>');   // skinned figures: position and normal AFTER the bones
         // DECAL_LIFT: the print composites OVER the brick colour by texel alpha. On near-black bricks
         // a print's soft (sub-1 alpha) texels blend toward black and lose their colour ("multiply" look).
         // Boosting effective coverage lets the authored print colour survive on dark plastic, while
@@ -12851,7 +12858,7 @@ f 2469//2469 2470//2470 2434//2434
     // One place that applies the holographic state to the logo materials + interior visibility.
     function setLogoHoloState(){
       var isH=logoHolo.value>0.001, add=!!params.logoHoloAdd;
-      logoMats.forEach(function(m){
+      logoMats.concat(ocMats).forEach(function(m){
         m.transparent=isH;
         if(isH && add){ m.blending=THREE.AdditiveBlending; m.depthWrite=false; m.side=THREE.DoubleSide; }
         else if(isH){ m.blending=THREE.NormalBlending; m.depthWrite=false; m.side=THREE.DoubleSide; }  // pre-pass primes depth → draw front-most only
@@ -12861,6 +12868,7 @@ f 2469//2469 2470//2470 2434//2434
       // (interior meshes stay visible — the depth pre-pass now culls hidden-back surfaces front-most,
       //  and the inner mesh carries the neck, so hiding it would drop the neck in holo mode)
       (logo.userData.innerMeshes||[]).forEach(function(o){ o.visible=true; });
+      if(typeof ocDepthSync==='function') ocDepthSync();
     }
 
     var BOX_FACES=['front','back','top','bottom','left','right'];
@@ -14005,8 +14013,8 @@ f 2469//2469 2470//2470 2434//2434
     // ('outfitMeta', 'outfitCfg'). DRAFTS (uploaded in the manager) are this browser only: metadata in localStorage
     // 'mw_outfit_drafts', binaries in BRICStore 'outfit:<id>:<uid>'; "Export bundle" turns them into repo files.
     // With no enabled outfits nothing here touches the scene and the original sig-fig head shows.
-    var OUTFITS_JSON='assets/outfits.json', OUTFIT_DIR='assets/models/outfits/', OUTFIT_NOMINAL_H=2.9;
-    var outfitRepo=[], outfitDrafts=[], outfitFailed={}, outfitCache={}, outfitCur=null, outfitPrev=null, outfitSeq=0, outfitLastSwitch=0, outfitHeadHidden=false, ocArmed=null, ocArmedT=0, ocMsg='';
+    var OUTFITS_JSON='assets/outfits.json', OUTFIT_DIR='assets/models/outfits/', OUTFIT_NOMINAL_H=2.9, HEAD_ID='head';   // HEAD_ID = the built-in 'Original head' entry: always first in the carousel, always free
+    var outfitRepo=[], outfitDrafts=[], outfitFailed={}, outfitCache={}, outfitCur=null, outfitPrev=null, outfitSeq=0, outfitLastSwitch=0, outfitHeadHidden=false, ocLastT=0, ocArmed=null, ocArmedT=0, ocMsg='';
     var outfitStage=new THREE.Group(); outfitStage.visible=false; logo.add(outfitStage);
     var ocOpenDet={}, outfitHudOn=false, aboutGrp=new THREE.Group();
     aboutGrp.userData={id:'about',kind:'util',hit:outfitStage,moonGrp:new THREE.Group(),moons:[],posTarget:new THREE.Vector3(),homePos:new THREE.Vector3(),target:1,base:1};   // a stand-in 'planet' so the figure reuses the project focus view (camera, manual, exit) — the figure already sits at FOCUSFRAME.anchorY
@@ -14025,11 +14033,15 @@ f 2469//2469 2470//2470 2434//2434
       outfitRepo.forEach(function(o){ if(outfitDrafts.some(function(d){ return d.id===o.id; })) return; var mt=meta.meta[o.id]||{}; if(mt.removed) return;
         list.push({id:o.id,name:mt.name||o.name||o.id,enabled:mt.enabled!=null?!!mt.enabled:o.enabled!==false,src:'repo',parts:o.parts||[],
           unlockAt:ocNum(mt.unlockAt!=null?mt.unlockAt:o.unlockAt,0),about:Object.assign({},o.about||{},mt.about||{})}); });
-      list.forEach(function(o,i){ var oi=meta.order.indexOf(o.id); o._k=(oi<0?1e6:oi)*1000+i; });
+      var hm=meta.meta[HEAD_ID]||{};   // the original head is a built-in carousel entry: first, free, not managed as a file
+      list.push({id:HEAD_ID,name:hm.name||'Original head',enabled:true,src:'builtin',builtin:true,parts:[],unlockAt:0,
+        about:Object.assign({kicker:'About me',title:'Original head',body:'Placeholder about-me copy for the original head. Edit it in Edit Mode, \u263a outfits.',teaser:''},hm.about||{})});
+      list.forEach(function(o,i){ var oi=meta.order.indexOf(o.id); o._k=o.builtin?-1:(oi<0?1e6:oi)*1000+i; });
       list.sort(function(a,b){ return a._k-b._k; }); return list;
     }
     function ocFind(id){ return ocAll().filter(function(o){ return o.id===id; })[0]||null; }
-    function ocCycleList(){ return ocAll().filter(function(o){ return o.enabled&&!outfitFailed[o.id]&&o.parts.length; }); }
+    function ocCycleList(){ return ocAll().filter(function(o){ return o.enabled&&!outfitFailed[o.id]&&(o.parts.length||o.builtin); }); }
+    function ocUserList(){ return ocAll().filter(function(o){ return !o.builtin; }); }   // what the manager and the export bundle deal with
     function ocUniqueId(base,except){ var id=base,n=2; while(ocAll().some(function(o){ return o.id===id&&o.id!==except; })) id=base+'-'+(n++); return id; }
     function ocSig(o){ return o.src+':'+o.id+':'+o.parts.map(function(p){ return p.key||p.file; }).join('|'); }
 
@@ -14038,32 +14050,96 @@ f 2469//2469 2470//2470 2434//2434
       return fetch(p.file).then(function(r){ if(!r.ok) throw new Error(p.file+' → '+r.status); return r.arrayBuffer(); });
     }
     function ocBuild(o){
-      return Promise.all(o.parts.map(function(p){ return ocPartBuffer(o,p).then(function(buf){ return new Promise(function(res,rej){ loadGLBScene(buf,function(sc,err){ if(sc) res(sc); else rej(new Error(err||'glb parse error')); }); }); }); })).then(function(scenes){
+      return Promise.all(o.parts.map(function(p){ return ocPartBuffer(o,p).then(function(buf){ return new Promise(function(res,rej){ loadGLBScene(buf,function(sc,err,anims){ if(sc){ sc.userData.clips=anims||[]; res(sc); } else rej(new Error(err||'glb parse error')); }); }); }); })).then(function(scenes){
         var root=new THREE.Group(); scenes.forEach(function(s){ root.add(s); }); root.updateMatrixWorld(true);
         var size=new THREE.Box3().setFromObject(root).getSize(new THREE.Vector3());
         if(!(size.y>0)||!isFinite(size.y)) throw new Error('outfit has no geometry');
         // buildHoloGLB fits the LONGEST side to radius*2, so scale the radius until the figure's HEIGHT is the nominal height (arms-out poses stay in proportion).
         var ext=Math.max(size.x,size.y,size.z);
-        return buildHoloGLB(root,FX_LOGO,(OUTFIT_NOMINAL_H/2)*(ext/size.y));
+        var fig=buildHoloGLB(root,FX_LOGO,(OUTFIT_NOMINAL_H/2)*(ext/size.y));
+        var clip=null; scenes.forEach(function(sc){ (sc.userData.clips||[]).forEach(function(c){ if(!clip||c.name===(o.idle||'idle')) clip=c; }); });   // the idle loop (a clip named `idle`, else the first)
+        if(clip){ var mx=new THREE.AnimationMixer(root); mx.clipAction(clip).play(); fig.userData.mixer=mx; }
+        ocLogoize(fig); return fig;
       });
+    }
+    // Unlocked figure = the SAME treatment as the logo GLB head: DoubleSide basic materials registered with setLogoHoloState (it owns
+    // transparent / blending / depth, so the figure follows the holo slider and the head's solid-or-hologram look), on LOGO_LAYER so the
+    // depth pre-pass draws only the front-most surface (overlapping parts cannot pile up). Skinned and animated, so never culled.
+    var ocMats=[], ocDepthMat=null;
+    function ocLogoize(grp){
+      if(!ocDepthMat){ ocDepthMat=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:4}); }   // pushed back a hair so the colour pass always passes on the front-most surface
+      var ms=[]; grp.traverse(function(o){ if(o.isMesh&&o.material) ms.push(o); });
+      grp.userData.ocDepth=[];
+      ms.forEach(function(o){ o.frustumCulled=false;
+        var m=o.material; if(o.isSkinnedMesh) m.skinning=true; m.side=THREE.DoubleSide; m.userData.logoMat=true; if(ocMats.indexOf(m)<0) ocMats.push(m); m.needsUpdate=true;
+        // Per-mesh depth pre-pass for the rigid parts (the logo head uses one global pre-pass, which cannot pose a skinned figure: its depth did not
+        // match the colour pass and cut the figure to pieces). A skinned depth clone of the torso/head came out displaced too, so those two draw without
+        // one; the rigid parts' depth is enough to keep the figure to one visible layer.
+        if(o.isSkinnedMesh) return;
+        var d=new THREE.Mesh(o.geometry,ocDepthMat);
+        d.frustumCulled=false; d.userData.ocSkip=true; d.raycast=function(){}; o.add(d); grp.userData.ocDepth.push(d); });
+      setLogoHoloState();
+    }
+    function ocDepthSync(){   // the depth meshes only matter while the figure is a translucent hologram (not solid, not additive, not the ghost)
+      var on=logoHolo.value>0.001&&!params.logoHoloAdd;
+      Object.keys(outfitCache).forEach(function(k){ var g=outfitCache[k]; if(g&&g.userData.ocDepth) g.userData.ocDepth.forEach(function(d){ d.visible=on&&!g.userData.ghost; }); });
+    }
+    // Locked figure = the arcade's locked-ship look: a teal fresnel shell (normal blending, FRONT faces, depth write) over a depth pre-pass so
+    // exactly one surface shows, plus a faint additive outline of the hard edges (short edges dropped). Static pose; the figure's dense internal
+    // geometry can no longer pile up into a bright blob.
+    var OC_GHOST_COL=0x78E0D6;
+    function ocEdges(geo){
+      if(geo.userData.ocEdges) return geo.userData.ocEdges;
+      var g=geo.index?geo.toNonIndexed():geo, a=new THREE.EdgesGeometry(g,48).attributes.position.array; geo.computeBoundingBox();
+      var minL=geo.boundingBox.getSize(new THREE.Vector3()).length()*0.06, keep=[];
+      for(var j=0;j<a.length;j+=6){ var dx=a[j]-a[j+3], dy=a[j+1]-a[j+4], dz=a[j+2]-a[j+5]; if(Math.sqrt(dx*dx+dy*dy+dz*dz)>=minL) for(var q=0;q<6;q++) keep.push(a[j+q]); }
+      var out=new THREE.BufferGeometry(); out.setAttribute('position',new THREE.Float32BufferAttribute(keep,3)); geo.userData.ocEdges=out; return out;
+    }
+    function ocGhostSet(grp,on){
+      if(on&&!grp.userData.ghostMat){
+        var k={value:1};
+        var gm=new THREE.ShaderMaterial({transparent:true,depthWrite:true,side:THREE.FrontSide,fog:false,uniforms:{col:{value:new THREE.Color(OC_GHOST_COL)},k:k},
+          vertexShader:'varying vec3 vN; varying vec3 vV; void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz; gl_Position=projectionMatrix*mv; }',
+          fragmentShader:'uniform vec3 col; uniform float k; varying vec3 vN; varying vec3 vV; void main(){ float fr=pow(1.0-abs(dot(normalize(vV),normalize(vN))),1.6); gl_FragColor=vec4(col,(fr*.55+.1)*k); }'});
+        gm.userData.ocU=k; grp.userData.ghostMat=gm;
+        var em=new THREE.LineBasicMaterial({color:OC_GHOST_COL,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}); em.userData.ocBase=.7; grp.userData.ghostEdge=em;
+        grp.userData.ghostDepth=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.FrontSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+      }
+      grp.traverse(function(o){ if(!o.isMesh||o.userData.ocSkip) return;
+        if(on){ if(!o.userData.ocOrig) o.userData.ocOrig=o.material; o.material=grp.userData.ghostMat;
+          if(!o.userData.ocKids){ var d=new THREE.Mesh(o.geometry,grp.userData.ghostDepth); d.userData.ocSkip=true; var e=new THREE.LineSegments(ocEdges(o.geometry),grp.userData.ghostEdge); e.userData.ocSkip=true; e.renderOrder=2; d.frustumCulled=e.frustumCulled=false; d.raycast=e.raycast=function(){};   /* the helpers must never be hit (a line's pick radius is huge at this scale) */ o.add(d); o.add(e); o.userData.ocKids=[d,e]; }
+          o.userData.ocKids.forEach(function(c){ c.visible=true; }); o.renderOrder=1; }
+        else if(o.userData.ocOrig){ o.material=o.userData.ocOrig; if(o.userData.ocKids) o.userData.ocKids.forEach(function(c){ c.visible=false; }); o.renderOrder=0; } });
+      if(on&&!grp.userData.ghost&&grp.userData.mixer) grp.userData.mixer.setTime(0);   // a locked figure holds its first pose
+      grp.userData.ghost=!!on; grp.userData.ocA=null; ocDepthSync();
     }
     // a = fade 0..1; ocCap = the outfit's resting opacity (a locked outfit is a dim ghost: it's there, but not yet yours)
     function ocSetAlpha(grp,a){ var v=a*(grp.userData.ocCap==null?1:grp.userData.ocCap); if(grp.userData.ocA===v) return; grp.userData.ocA=v;
-      grp.traverse(function(o){ if(!o.isMesh||!o.material) return; var m=o.material; if(m.userData.ocT==null) m.userData.ocT=m.transparent;
-        var tr=v<1?true:m.userData.ocT; if(m.transparent!==tr){ m.transparent=tr; m.needsUpdate=true; } m.opacity=v; m.userData.ocV=v; if(m.userData.ocU) m.userData.ocU.value=v; }); }
+      grp.traverse(function(o){ if(o.userData.ocSkip){ if(o.isLineSegments) o.material.opacity=(o.material.userData.ocBase||1)*v; return; }
+        if(!o.isMesh||!o.material) return; var m=o.material; if(m.userData.ocT==null) m.userData.ocT=m.transparent;
+        var tr=v<1?true:(m.userData.logoMat?logoHolo.value>0.001:m.userData.ocT); if(m.transparent!==tr){ m.transparent=tr; m.needsUpdate=true; } m.opacity=v; m.userData.ocV=v; if(m.userData.ocU) m.userData.ocU.value=v; }); }
     var OUTFIT_LOCKED_ALPHA=0.28;
     function ocInstant(){ return !!(_ocRM&&_ocRM.matches); }
     function ocShow(id,instant){
-      var o=ocFind(id); if(!o||!o.parts.length) return; var seq=++outfitSeq, sig=ocSig(o);
+      var o=ocFind(id); if(!o||(!o.parts.length&&!o.builtin)) return; var seq=++outfitSeq, sig=o.builtin?'':ocSig(o);
+      if(o.builtin){   // the original head: no group; the figure (if any) fades out and mwUpdate shows the head again
+        if(outfitCur&&outfitCur.id===id) return;
+        if(outfitPrev) outfitStage.remove(outfitPrev.group);
+        outfitPrev=(outfitCur&&outfitCur.group)?outfitCur:null;
+        var q2=instant||ocInstant(); outfitCur={id:id,group:null,t0:performance.now(),dur:q2?0:600};
+        if(q2&&outfitPrev){ outfitStage.remove(outfitPrev.group); ocSetAlpha(outfitPrev.group,1); outfitPrev=null; }
+        outfitLastSwitch=performance.now(); if(document.body.classList.contains('oc-open')) ocRender();
+        ocMarkSeen(id); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); return;
+      }
       function go(grp){
         if(seq!==outfitSeq) return;
         if(outfitCur&&outfitCur.group===grp){ outfitCur.id=id; return; }
         if(outfitPrev) outfitStage.remove(outfitPrev.group);
-        outfitPrev=outfitCur;
+        outfitPrev=(outfitCur&&outfitCur.group)?outfitCur:null;
         var quick=instant||ocInstant();
         outfitCur={id:id,group:grp,t0:performance.now(),dur:quick?0:600};
         if(quick&&outfitPrev){ outfitStage.remove(outfitPrev.group); ocSetAlpha(outfitPrev.group,1); outfitPrev=null; }
-        grp.userData.ocCap=ocLocked(o)?OUTFIT_LOCKED_ALPHA:1; grp.userData.ocA=null;
+        ocGhostSet(grp,ocLocked(o)); grp.userData.ocCap=1; grp.userData.ocA=null;   // locked = the teal ghost (it carries its own dimness)
         ocSetAlpha(grp,quick?1:0); outfitStage.add(grp); outfitLastSwitch=performance.now(); if(document.body.classList.contains('oc-open')) ocRender();
         ocMarkSeen(id); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout();
       }
@@ -14073,21 +14149,27 @@ f 2469//2469 2470//2470 2434//2434
         if(document.body.classList.contains('oc-open')) ocRender(); });
     }
     function ocInvalidate(id){ Object.keys(outfitCache).forEach(function(k){ if(k.indexOf(':'+id+':')>0){ delete outfitCache[k]; } }); delete outfitFailed[id]; }
-    function ocClear(){ outfitSeq++; if(outfitCur) outfitStage.remove(outfitCur.group); if(outfitPrev) outfitStage.remove(outfitPrev.group); outfitCur=outfitPrev=null; }
+    function ocClear(){ outfitSeq++; if(outfitCur&&outfitCur.group) outfitStage.remove(outfitCur.group); if(outfitPrev) outfitStage.remove(outfitPrev.group); outfitCur=outfitPrev=null; }
     function ocNext(dir){ var l=ocCycleList(); if(l.length<2) return; var i=-1; l.forEach(function(o,n){ if(outfitCur&&o.id===outfitCur.id) i=n; }); ocShow(l[(i+(dir||1)+l.length)%l.length].id); }
     // After any add/remove/enable/disable: make sure what's on the hologram is still valid.
-    function ocReconcile(){ var l=ocCycleList(); if(!l.length){ ocClear(); return; } if(!outfitCur||!l.some(function(o){ return o.id===outfitCur.id; })) ocShow(l[0].id); }
-    function ocHit(){ if(!outfitCur||!outfitStage.visible) return null; var h=ray.intersectObject(outfitCur.group,true); return h.length?h[0]:null; }
+    function ocReconcile(){ var l=ocCycleList(); if(l.length<2){ ocClear(); return; } if(!outfitCur||!l.some(function(o){ return o.id===outfitCur.id; })) ocShow(l[0].id); }   // (fewer than two entries = the original head alone: no carousel, nothing here touches the scene)
+    function ocFigObj(){ if(!outfitCur) return null; if(outfitCur.group) return outfitStage.visible?outfitCur.group:null;
+      var g=logo.userData.glbGroup; if(g&&g.visible) return g; return holoHead.visible?holoHead:null; }   // head mode: the head (textured GLB if one is set, else the placeholder)
+    function ocHit(){ var f=ocFigObj(); if(!f||mwPhase!=='docked'||arcadeActive) return null; var h=ray.intersectObject(f,true); return h.length?h[0]:null; }
     // Per frame (called from animate): fade, head hand-off, tunables, auto-cycle.
     function ocTick(){
       if(!outfitCur&&!outfitHeadHidden){ if(outfitHudOn){ outfitHudOn=false; document.body.classList.remove('oh-show'); ocSyncKit(false); } return; }
       if(outfitCur){
         var now=performance.now(), k=outfitCur.dur?Math.min(1,(now-outfitCur.t0)/outfitCur.dur):1;
-        ocSetAlpha(outfitCur.group,k); if(outfitPrev) ocSetAlpha(outfitPrev.group,1-k);
+        if(outfitCur.group) ocSetAlpha(outfitCur.group,k); if(outfitPrev) ocSetAlpha(outfitPrev.group,1-k);
         if(k>=1&&outfitPrev){ outfitStage.remove(outfitPrev.group); ocSetAlpha(outfitPrev.group,1); outfitPrev=null; }
         var cfg=ocCfg(); outfitStage.scale.setScalar(cfg.height/OUTFIT_NOMINAL_H); outfitStage.position.y=cfg.y;
-        holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false;   // the figure replaces the head
-        outfitStage.visible=!arcadeActive&&mwPhase==='docked'&&bootLogoGate; outfitHeadHidden=true;   // same gate the head uses (hidden on the entry gate, staggered in by the boot cascade)
+        if(outfitCur.group){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; outfitHeadHidden=true; }   // the figure replaces the head
+        else outfitHeadHidden=false;   // head entry: mwUpdate shows the head again each frame (the figure, if any, is fading out)
+        outfitStage.visible=!!(outfitCur.group||outfitPrev)&&!arcadeActive&&mwPhase==='docked'&&bootLogoGate;   // same gate the head uses (hidden on the entry gate, staggered in by the boot cascade)
+        var _g=outfitCur.group;   // an unlocked figure plays its idle loop on its own (a locked one holds its first pose; reduced motion: no loop)
+        if(_g&&_g.userData.mixer&&outfitStage.visible&&!_g.userData.ghost&&!_g.userData.hold&&!ocInstant()) _g.userData.mixer.update(Math.min(0.1,Math.max(0,(now-(ocLastT||now))/1000)));
+        ocLastT=now;
         var _want=ocCycleList().length>0&&mwPhase==='docked'&&!arcadeActive&&(!focused||focused===aboutGrp)&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden');
         if(_want!==outfitHudOn){ outfitHudOn=_want; document.body.classList.toggle('oh-show',_want); ocHudUpdate(); }
         if(_want){   // in the About focus view the HUD sits in the free stage rectangle the manual layout publishes (centred, just above the manual); otherwise the CSS default
@@ -14124,7 +14206,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     // Builds the bundle blob (also used by the test hook) → Promise<{blob,count}>
     function ocBuildBundle(){
-      var list=ocAll(), files=[], manifest={version:1,outfits:[]}, reads=[];
+      var list=ocUserList(), files=[], manifest={version:1,outfits:[]}, reads=[];
       list.forEach(function(o){
         var entry={id:o.id,name:o.name,enabled:o.enabled,unlockAt:o.unlockAt||0,about:o.about||{},parts:[]}, used={};
         o.parts.forEach(function(p){
@@ -14158,7 +14240,7 @@ f 2469//2469 2470//2470 2434//2434
       cfgRow('Auto-cycle (s, 0 = off)','cycle','number',0,'',1,cfg.cycle); cfgRow('Figure height','height','range',1,4.2,0.05,cfg.height); cfgRow('Vertical offset','y','range',-1.5,1.5,0.05,cfg.y);
       var kr=ocEl('div','pm-row oc-cfg'); kr.appendChild(ocEl('span','oc-lbl','Minikits collected (this browser): '+ocKits())); kr.appendChild(ocBtn('+1','kit-add',null,'Add a minikit (test unlocks)',null)); kr.appendChild(ocBtn('reset','kit-reset',null,'Reset the minikit count and re-lock outfits',null)); s.appendChild(kr);
       body.appendChild(s);
-      var list=ocAll(); if(!list.length) body.appendChild(ocEl('div','pm-empty','no outfits yet · the original head is showing'));
+      var list=ocUserList(); if(!list.length) body.appendChild(ocEl('div','pm-empty','no outfits yet · the original head is showing'));
       list.forEach(function(o,i){
         var card=ocEl('div','pm-zone'+(o.enabled?'':' is-hidden')), top=ocEl('div','pm-row'), nm=ocEl('input','pm-znm'); nm.type='text'; nm.value=o.name; nm.setAttribute('data-oc-field','name'); nm.setAttribute('data-id',o.id); nm.setAttribute('aria-label','Outfit name'); nm.autocomplete='off'; nm.spellcheck=false; top.appendChild(nm); card.appendChild(top);
         var r2=ocEl('div','pm-row oc-r2'); var on=ocEl('label','oc-on'); var cb=ocEl('input'); cb.type='checkbox'; cb.checked=o.enabled; cb.setAttribute('data-oc-field','enabled'); cb.setAttribute('data-id',o.id); on.appendChild(cb); on.appendChild(ocEl('span',null,' show')); r2.appendChild(on);
@@ -14205,7 +14287,7 @@ f 2469//2469 2470//2470 2434//2434
         else if(act==='kit-add'){ ocSetKits(ocKits()+1); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); ocRender(); }
         else if(act==='kit-reset'){ ocSetKits(0); ocSetNew([]); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); ocRender(); }
         else if(act==='preview'){ ocShow(id,false); }
-        else if(act==='up'||act==='down'){ var ids=ocAll().map(function(o){ return o.id; }), i=ids.indexOf(id), j=act==='up'?i-1:i+1; if(i<0||j<0||j>=ids.length) return; ids.splice(j,0,ids.splice(i,1)[0]); ocSetOrder(ids); ocMsg='order changed · SAVE to sync'; ocRender(); }
+        else if(act==='up'||act==='down'){ var ids=ocUserList().map(function(o){ return o.id; }), i=ids.indexOf(id), j=act==='up'?i-1:i+1; if(i<0||j<0||j>=ids.length) return; ids.splice(j,0,ids.splice(i,1)[0]); ocSetOrder(ids); ocMsg='order changed · SAVE to sync'; ocRender(); }
         else if(act==='add-glb'){ var fi=document.createElement('input'); fi.type='file'; fi.accept='.glb'; fi.multiple=true; fi.onchange=function(){ ocAddFiles(id,fi.files); }; fi.click(); }
         else if(act==='rm-part'){ var d=outfitDrafts.filter(function(x){ return x.id===id; })[0]; if(!d) return; var p=d.parts.splice(+b.getAttribute('data-x'),1)[0]; if(p&&p.key) BRICStore.del(p.key); ocSaveDrafts(); ocInvalidate(id); if(!d.parts.length&&outfitCur&&outfitCur.id===id) ocReconcile(); else if(outfitCur&&outfitCur.id===id) ocShow(id,true); ocRender(); }
         else if(act==='delete'){
@@ -14240,7 +14322,7 @@ f 2469//2469 2470//2470 2434//2434
     function ocNewList(){ try{ var a=JSON.parse(localStorage.getItem('mw_outfits_new')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
     function ocSetNew(a){ try{ localStorage.setItem('mw_outfits_new',JSON.stringify(a)); }catch(e){} }
     function ocMarkSeen(id){ var a=ocNewList(), i=a.indexOf(id); var o=ocFind(id); if(i>=0&&o&&!ocLocked(o)){ a.splice(i,1); ocSetNew(a); } }
-    function ocRelock(){ if(!outfitCur) return; var o=ocFind(outfitCur.id); if(!o) return; outfitCur.group.userData.ocCap=ocLocked(o)?OUTFIT_LOCKED_ALPHA:1; outfitCur.group.userData.ocA=null; }
+    function ocRelock(){ if(!outfitCur||!outfitCur.group) return; var o=ocFind(outfitCur.id); if(!o) return; ocGhostSet(outfitCur.group,ocLocked(o)); outfitCur.group.userData.ocCap=1; outfitCur.group.userData.ocA=null; }
     window.addEventListener('mw:minikit',function(e){   // the arcade fires this per minikit opened (assets/battle/battle.js)
       var d=e&&e.detail, before, now;
       if(d&&d.lifetime!=null){ now=d.lifetime|0; before=now-1; }   // newer arcade owns the lifetime counter ('mw_kits_total') and sends it — don't double count
@@ -14310,7 +14392,8 @@ f 2469//2469 2470//2470 2434//2434
     function ocOpenAboutRoute(oid){   // /about[/<outfit-id>] — waits for the outfit list
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
-    window.MWOutfits={cur:function(){ return outfitCur; },kits:ocKits,setKits:ocSetKits,locked:ocLocked,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+    window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
+      cur:function(){ return outfitCur; },kits:ocKits,setKits:ocSetKits,locked:ocLocked,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set

@@ -18,6 +18,24 @@
           "file": "assets/models/outfits/vr-gamer/vr-gamer.glb"
         }
       ]
+    },
+    {
+      "id": "vr-gamer-locked",
+      "name": "VR gamer (locked test)",
+      "enabled": true,
+      "unlockAt": 1000,
+      "about": {
+        "kicker": "About me",
+        "title": "VR gamer",
+        "body": "Placeholder about-me copy for the locked test variant.",
+        "teaser": "Test variant: this outfit is locked so the carousel's locked state can be reviewed. Shoot 1000 minikits in the Space Arcade to unlock it."
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/vr-gamer/vr-gamer.glb"
+        }
+      ]
     }
   ]
 }
