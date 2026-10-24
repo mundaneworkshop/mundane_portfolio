@@ -7,6 +7,7 @@ Two scripts run INSIDE Blender (tested on 5.1; the Blender MCP's `execute_blende
 |---|---|
 | `ldr_to_blender.py` | `.io` -> rig in a collection `sigfig-<id>`; decimation pass; `export_glb()` |
 | `idle_anim.py` | a JSON motion spec -> keyframes on the rig, exported as the glTF animation `idle` |
+| `choreo.py` | a keyed story plan (`plans/*.json`: timed poses, shakes, pivots, a prop that flies, arms aimed at targets) -> the same `idle` clip, for long narrative loops |
 
 ```python
 exec(open('/path/to/repo/tools/sigfig-blender/ldr_to_blender.py').read())
@@ -40,3 +41,7 @@ The Lab's "Idle loop" box queues a request in the artifact db (`requests/<fig id
 3. In Blender: `build_sigfig(...)`, write a `SPEC` from the description, `apply_idle`, `export_glb`, `restore_scene()`, delete the figure's collection and its orphaned meshes / materials / actions (leave the user's Cube, Camera and Light alone).
 4. Base64 the GLB to a `.txt`, upload it with `Artifact publish asset:true` (the asset store takes no `.glb`), then `ArtifactData update` `sigfigs/<id>` `glbs` with `{uid, name, size, at, asset}` and `requests/<id>` to `done` with a note and the spec (or `failed` with the reason).
 Each run adds a new GLB (`-idle-v<N>`); remove the old one from the card and its asset.
+
+## Story choreography (`choreo.py`)
+For idles that are a sequence rather than a sine wobble. `apply_plan(fig_id, plan)` keys every part per frame from a plan JSON (see `plans/vr-gamer-rage-quit.json`): periodic Catmull-Rom keys per part/channel, windowed shakes, pivots (rotate the torso about its waist), world-space prop keys (the prop is re-parented to the root), and arms aimed at named targets (grip, face, pocket) with per-frame weights. Rotation keys are a delta in the PARENT's frame applied on top of the rest rotation (quaternion), so the legs' built-in 180 degree turn swings the right way. Check hand-to-target gaps numerically, then screenshot a few frames before export.
+Feedback in the Lab: the card shows queued / working (step n of 6, elapsed, progress bar) / done, and a toast when a GLB lands. Requests only start when the user tells Claude "run the sig fig queue".

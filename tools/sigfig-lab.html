@@ -95,6 +95,17 @@ textarea.in{resize:vertical;min-height:84px;line-height:1.4}
 .rm:hover{border-color:var(--bad);color:var(--bad)} .rm[data-armed="1"]{background:var(--bad);border-color:var(--bad);color:#fff}
 .lint{margin:8px 0 0;font:400 12px var(--f-mono);color:var(--mute);display:grid;gap:3px}
 .lint .miss{color:var(--warn)} .lint .good{color:var(--ok)}
+.qbar{height:8px;border:1px solid var(--line);background:var(--wash);margin-top:8px;overflow:hidden}
+.qbar>i{display:block;height:100%;background:var(--accent);width:0}
+.qrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:8px}
+.qrow code{border:1px solid var(--line);padding:3px 7px;background:var(--wash);color:var(--ink)}
+.qdone{color:var(--ok)} .qfail{color:var(--bad)}
+.card.fresh{box-shadow:0 0 0 2px var(--accent)}
+.qtop{font:500 12px var(--f-mono);letter-spacing:.04em;color:var(--mute)}
+.qtop b{color:var(--ink);font-weight:500}
+.qtop .hot{color:var(--warn)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);z-index:60;background:var(--accent);color:var(--accent-ink);font:500 13px var(--f-mono);letter-spacing:.04em;padding:10px 14px;display:flex;gap:12px;align-items:center;max-width:calc(100vw - 32px)}
+.toast .btn{border-color:var(--accent-ink);color:var(--accent-ink);padding:4px 8px}
 .lockmsg{margin-top:8px;font:400 12px var(--f-mono);color:var(--mute);border:1px solid var(--line);padding:6px 8px}
 .lockmsg b{font-weight:500;color:var(--ink)}
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}
@@ -147,6 +158,7 @@ textarea.in{resize:vertical;min-height:84px;line-height:1.4}
 <div class="bar" role="toolbar" aria-label="Sig figs">
   <span class="tally" id="tally"></span>
   <span class="tally" id="usage"></span>
+  <span class="qtop" id="qtop" role="status" aria-live="polite"></span>
   <span class="grow"></span>
   <button class="btn primary" id="export" type="button">Export bundle</button>
   <span class="sync" id="sync" aria-live="polite"></span>
@@ -307,20 +319,51 @@ function patchAbout(id,k,v){const s=eff(id);patchFig(id,{about:Object.assign({},
 
 /* ===== idle requests: the page queues them in the db, Claude runs them in Blender and adds the GLB ===== */
 const reqOpen=r=>r&&(r.status==='queued'||r.status==='working');
-function reqText(s){const r=reqs[s.id];if(!r)return 'No request yet.';
+const RUN_PHRASE='run the sig fig queue';
+function ago(ms){const m=Math.max(0,Math.round((Date.now()-ms)/60000));if(m<1)return 'just now';if(m<60)return m+' min ago';const h=Math.floor(m/60);return h+' h '+(m%60)+' min ago';}
+function dur(ms){const t=Math.max(0,Math.round(ms/1000)),m=Math.floor(t/60);return m+':'+('0'+(t%60)).slice(-2);}
+function reqNode(s){const r=reqs[s.id],w=el('div');if(!r){w.appendChild(el('span',null,'No request yet.'));return w;}
   const d=(r.description||'').length>110?r.description.slice(0,110)+'…':(r.description||'');
-  if(r.status==='queued')return 'Waiting for Claude to run the queue: '+d;
-  if(r.status==='working')return 'Claude is building it in Blender…';
-  if(r.status==='done')return 'Done'+(r.note?': '+r.note:'.');
-  if(r.status==='failed')return 'Failed'+(r.note?': '+r.note:'.');
-  return r.status||'';}
+  const line=el('div');w.appendChild(line);
+  if(r.status==='queued'){
+    line.textContent='Sent '+(r.at?ago(r.at):'')+'. Not started: Claude only runs requests when asked. "'+d+'"';
+    const q=el('div','qrow');q.appendChild(el('span',null,'Tell Claude:'));q.appendChild(el('code',null,RUN_PHRASE));
+    const cp=el('button','btn','Copy');cp.type='button';cp.setAttribute('data-act','copyrun');q.appendChild(cp);w.appendChild(q);
+  } else if(r.status==='working'){
+    const st=r.step||1,tot=r.steps||6;
+    line.textContent='Claude is building it: step '+st+' of '+tot+(r.stepLabel?', '+r.stepLabel:'')+(r.startedAt?'. Running for '+dur(Date.now()-r.startedAt):'')+'.';
+    const bar=el('div','qbar');bar.setAttribute('role','progressbar');bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(tot));bar.setAttribute('aria-valuenow',String(st));const i=el('i');i.style.width=Math.min(100,Math.round(100*(st-0.5)/tot))+'%';bar.appendChild(i);w.appendChild(bar);
+    w.appendChild(el('div','note','The page updates by itself. A long choreography can take several minutes.'));
+  } else if(r.status==='done'){
+    line.className='qdone';line.textContent='Ready'+(r.finishedAt?' '+ago(r.finishedAt):'')+(r.note?': '+r.note:'.');
+    const q=el('div','qrow');const pv=el('button','btn primary','Preview it now');pv.type='button';pv.setAttribute('data-act','preview');pv.setAttribute('data-id',s.id);q.appendChild(pv);w.appendChild(q);
+  } else if(r.status==='failed'){
+    line.className='qfail';line.textContent='Failed'+(r.note?': '+r.note:'.');
+  } else line.textContent=r.status||'';
+  return w;}
 function paintReq(s){const c=document.querySelector('.card[data-id="'+s.id+'"]');if(!c)return;
-  const t=c.querySelector('[data-req]');if(t){t.textContent=reqText(s);}
+  const t=c.querySelector('[data-req]');if(t){t.textContent='';t.appendChild(reqNode(s));}
   const b=c.querySelector('[data-act="request"]'),r=reqs[s.id],desc=(s.animNotes||'').trim(),hasIo=!!(s.io&&s.io.asset);
   if(b){b.disabled=!db||!desc||!hasIo||reqOpen(r);b.textContent=reqOpen(r)?'Request sent':'Request idle from Claude';
     b.title=!db?'Needs the saved page':(!hasIo?'Add the .io file first (it is stored with the page so Claude can use it)':(!desc?'Describe the idle first':''));}
   let cb=c.querySelector('[data-act="cancelreq"]');
-  if(r&&r.status==='queued'){if(!cb){cb=el('button','btn','Cancel request');cb.type='button';cb.setAttribute('data-act','cancelreq');cb.setAttribute('data-id',s.id);b&&b.parentNode.appendChild(cb);}}else if(cb)cb.remove();}
+  if(r&&r.status==='queued'){if(!cb){cb=el('button','btn','Cancel request');cb.type='button';cb.setAttribute('data-act','cancelreq');cb.setAttribute('data-id',s.id);b&&b.parentNode.appendChild(cb);}}else if(cb)cb.remove();
+  c.classList.toggle('fresh',!!(r&&r.status==='done'&&r.finishedAt&&!seenDone(s.id,r)));}
+function seenDone(id,r){try{return localStorage.getItem('sfl_seen_'+id)===String(r.finishedAt);}catch(e){return false;}}
+function markSeen(id){const r=reqs[id];if(r&&r.finishedAt){try{localStorage.setItem('sfl_seen_'+id,String(r.finishedAt));}catch(e){}}const c=document.querySelector('.card[data-id="'+id+'"]');if(c)c.classList.remove('fresh');}
+function queueTop(){const open=Object.values(reqs).filter(reqOpen),q=open.filter(r=>r.status==='queued').length,w=open.filter(r=>r.status==='working').length,e=$('#qtop');if(!e)return;
+  if(!q&&!w){e.textContent='';return;}
+  e.innerHTML=[w?'<b>'+w+'</b> building':'',q?'<span class="hot"><b>'+q+'</b> waiting: tell Claude "'+RUN_PHRASE+'"</span>':''].filter(Boolean).join(' · ');}
+let toastT=null;
+function toast(msg,id){let t=$('#toast');if(!t){t=el('div','toast');t.id='toast';t.setAttribute('role','status');document.body.appendChild(t);}t.textContent='';t.appendChild(el('span',null,msg));
+  if(id){const b=el('button','btn','Preview');b.type='button';b.onclick=()=>{t.remove();const f=eff(id);if(f&&f.glbs.some(g=>hasG(f,g))){Stage.load(id);const v=document.getElementById('view');v&&v.scrollIntoView({block:'center'});}markSeen(id);};t.appendChild(b);}
+  const x=el('button','btn','Dismiss');x.type='button';x.onclick=()=>t.remove();t.appendChild(x);clearTimeout(toastT);toastT=setTimeout(()=>{if(t.isConnected)t.remove();},30000);}
+let lastStatus={};
+function onReqs(next){Object.keys(next).forEach(id=>{const was=lastStatus[id],now=next[id].status;
+    if(was&&was!==now&&now==='done'){const f=eff(id);toast((f?f.name:id)+': your idle is ready.',id);}
+    if(was&&was!==now&&now==='failed'){const f=eff(id);toast((f?f.name:id)+': the request failed. '+(next[id].note||''));}
+    lastStatus[id]=now;});}
+setInterval(()=>{if(Object.values(reqs).some(reqOpen)){figs().forEach(s=>{if(reqOpen(reqs[s.id]))paintReq(s);});queueTop();}},15000);
 function sendRequest(id){const s=eff(id);if(!db||!s)return;const desc=(s.animNotes||'').trim();if(!desc||!(s.io&&s.io.asset))return;
   db.doc('requests/'+id).set({figId:id,name:s.name,description:desc.slice(0,2000),triBudget:s.triBudget||9000,ioAsset:s.io.asset,status:'queued',at:Date.now(),note:''}).then(()=>setSync('request sent'),()=>setSync('could not send'));}
 
@@ -468,7 +511,8 @@ $('#list').addEventListener('change',e=>{const t=e.target,id=t.getAttribute('dat
 $('#list').addEventListener('click',e=>{
   const dz=e.target.closest('.drop');if(dz&&!e.target.closest('button')){cardFor=dz.getAttribute('data-id');$('#cardPicker').accept='.io,.glb,model/gltf-binary';$('#cardPicker').multiple=true;$('#cardPicker').click();return;}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const id=b.getAttribute('data-id'),act=b.getAttribute('data-act'),s=eff(id);if(!s)return;
-  if(act==='preview'){Stage.load(id);return;}
+  if(act==='preview'){Stage.load(id);markSeen(id);return;}
+  if(act==='copyrun'){try{navigator.clipboard.writeText(RUN_PHRASE).then(()=>{b.textContent='Copied';setTimeout(()=>{b.textContent='Copy';},1500);},()=>{});}catch(e){}return;}
   if(act==='request'){sendRequest(id);return;}
   if(act==='cancelreq'){if(db)db.doc('requests/'+id).delete().then(()=>setSync('request cancelled'),()=>{});return;}
   if(act==='earlier'||act==='later'){const l=figs(),i=l.findIndex(x=>x.id===id),j=act==='earlier'?i-1:i+1;if(i<0||j<0||j>=l.length)return;
@@ -610,7 +654,7 @@ if(window.claude&&claude.use){
   claude.use('assets').then(a=>{assetsNS=a;if(a)refreshUsage();else{const b=$('#banner');b.hidden=false;b.textContent=(b.textContent?b.textContent+' ':'')+'Files can only be kept in this browser here: this view cannot store them with the page.';}},()=>{});
   claude.use('db').then(d=>{
     if(!d){const b=$('#banner');b.hidden=false;b.textContent=(b.textContent?b.textContent+' ':'')+'Changes cannot be saved in this view. Files you add still work here and export.';return;}
-    db=d;d.collection('requests').onSnapshot(snap=>{const n={};snap.docs.forEach(doc=>{n[doc.id]=Object.assign({},doc.data(),{id:doc.id});});reqs=n;figs().forEach(s=>paintReq(s));},()=>{});
+    db=d;d.collection('requests').onSnapshot(snap=>{const n={};snap.docs.forEach(doc=>{n[doc.id]=Object.assign({},doc.data(),{id:doc.id});});const first=!Object.keys(lastStatus).length&&!window.__reqsSeen;window.__reqsSeen=true;if(first){Object.keys(n).forEach(id=>{lastStatus[id]=n[id].status;});}else onReqs(n);reqs=n;figs().forEach(s=>paintReq(s));queueTop();},()=>{});
     d.collection('sigfigs').onSnapshot(snap=>{const next={};snap.docs.forEach(doc=>{const v=doc.data()||{};next[doc.id]=Object.assign({},v,{id:doc.id});});ov=next;renderList();},()=>setSync('offline'));
   });
 }
