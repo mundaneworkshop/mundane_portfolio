@@ -1,18 +1,18 @@
 """Writes vr-gamer-rage-quit.json (20 s). Times are seconds; the file is the readable source of the choreography.
     python3 make_vr_gamer_plan.py > vr-gamer-rage-quit.json"""
-import json
+import json, math
 
 HOLD = (0.0, -0.27, 0.56)
 K = lambda *pairs: [list(p) for p in pairs]
 
 head_z = K((0, 0), (0.6, 38), (1.3, -35), (1.8, 10), (2.2, 0), (3.4, 0), (4.0, -6), (4.6, 4), (5.3, -4), (6.0, 6), (6.5, 0),
            (7.0, 0), (8.2, 0), (9.0, -8), (11.5, 6), (13.5, -6), (14.8, 0), (16.2, 0), (16.9, -14), (17.8, -12), (18.6, 0), (19.4, 0))
-head_x = K((0, 0), (0.5, -10), (1.0, 12), (1.6, -8), (2.2, 2), (2.8, 10), (3.4, 6), (3.9, 12), (4.3, 10), (4.7, 6), (5.2, 12),
-           (5.6, 6), (6.0, 14), (6.4, 10), (6.8, -8), (7.15, -30), (7.7, -22), (8.3, 6), (9.0, 40), (9.6, 42), (14.4, 42), (15.0, 14),
+head_x = K((0, 0), (0.5, -10), (1.0, 12), (1.6, -8), (2.2, 2), (2.8, 10), (3.4, 6), (3.9, 8), (4.3, 4), (4.7, 3), (5.2, 6),
+           (5.6, 3), (6.0, 8), (6.4, 6), (6.8, -8), (7.15, -30), (7.7, -22), (8.3, 6), (9.0, 28), (9.6, 30), (14.4, 30), (15.0, 12),
            (15.6, 2), (16.2, 0), (17.6, 0), (19.0, 0))
 head_y = K((0, 0), (5.5, 0), (9.4, 0), (10.2, 8), (12.0, -6), (13.5, 6), (14.4, 0), (16.0, 0), (18.0, 0))
-torso_x = K((0, 2), (0.8, 5), (1.6, 3), (2.2, 4), (2.8, 12), (3.3, 16), (3.9, 12), (4.35, 18), (4.8, 8), (5.25, 20), (5.7, 8),
-            (6.0, 22), (6.4, 10), (6.7, -8), (6.95, 22), (7.4, 2), (8.0, 6), (8.7, 30), (9.3, 36), (14.5, 36), (15.1, 20), (15.7, 4),
+torso_x = K((0, 2), (0.8, 5), (1.6, 3), (2.2, 4), (2.8, 12), (3.3, 16), (3.9, 10), (4.35, 14), (4.8, 8), (5.25, 16), (5.7, 8),
+            (6.0, 18), (6.4, 10), (6.7, -8), (6.95, 22), (7.4, 2), (8.0, 6), (8.7, 22), (9.3, 24), (14.5, 24), (15.1, 20), (15.7, 4),
             (16.3, 4), (17.3, 10), (18.2, 8), (19.0, 5), (19.6, 3))
 torso_z = K((0, 0), (1.0, -6), (1.7, 6), (2.2, 0), (3.4, 0), (4.35, -8), (5.25, -10), (6.0, -12), (6.5, 0), (7.5, 0), (16.2, 0),
             (16.8, -26), (17.8, -24), (18.6, -4), (19.3, 0))
@@ -33,27 +33,27 @@ for a, b in ((9.8, 11.6), (12.0, 13.6), (13.8, 14.5)):                     # sob
     shakes.append(dict(part='head', channel='rotation_x', t0=a, t1=b, amp=3, hz=4.8, fade=0.2))
     shakes.append(dict(part='torso', channel='rotation_x', t0=a, t1=b, amp=3, hz=4.8, fade=0.2))
 
-GL, GR = [-0.155, -0.10, -0.04], [0.155, -0.10, -0.04]      # handles: the figure's left hand takes local -x (the prop is turned half way round)
+GL, GR = [-0.153, -0.02, -0.04], [0.153, -0.02, -0.04]      # handles: the figure's left hand takes local -x (the prop is turned half way round)
 targets = {
     'grip_l': dict(frame='prop', mode='local', p=GL),
     'grip_r': dict(frame='prop', mode='local', p=GR),
-    'wind_r': dict(frame='prop', mode='local', p=[0.10, 0.0, 0.26]),     # fist hovering above the printed face
+    'wind_r': dict(frame='prop', mode='local', p=[0.10, 0.0, 0.05], o=[-0.16, 0.0, 0.05]),   # out to the right, clear of the visor     # fist hovering above the printed face
     'hit_r': dict(frame='prop', mode='local', p=[0.10, 0.0, 0.02]),      # ... and on it
-    'face_r': dict(frame='head_3', mode='rest_world', p=[-0.06, -0.19, 0.86]),
-    'face_l': dict(frame='head_3', mode='rest_world', p=[0.06, -0.19, 0.86]),
+    'face_r': dict(frame='head_3', mode='rest_world', p=[-0.14, -0.20, 0.66]),     # in front of the chin, below the visor (found by sweeping for zero headset clipping)
+    'face_l': dict(frame='head_3', mode='rest_world', p=[0.14, -0.20, 0.66]),
     'pocket': dict(frame='hips', mode='rest_world', p=[-0.08, 0.13, 0.43]),
 }
 aim = {
     'arm_l': [
-        dict(target='grip_l', w=K((0, 1), (6.87, 1), (7.02, 0), (18.5, 0), (19.0, 1))),
+        dict(target='grip_l', w=K((0, 1), (6.87, 1), (7.02, 0), (18.5, 0), (19.2, 1))),
         dict(target='face_l', w=K((8.8, 0), (9.3, 1), (14.6, 1), (15.1, 0))),
     ],
     'arm_r': [
-        dict(target='grip_r', w=K((0, 1), (3.5, 1), (3.9, 0), (6.2, 0), (6.55, 1), (6.87, 1), (7.02, 0), (18.0, 0), (18.6, 1))),
+        dict(target='grip_r', w=K((0, 1), (3.5, 1), (3.9, 0), (6.2, 0), (6.55, 1), (6.87, 1), (7.02, 0), (17.4, 0), (17.8, 1))),
         dict(target='wind_r', w=K((3.5, 0), (3.9, 1), (6.1, 1), (6.4, 0))),
         dict(target='hit_r', w=K((4.15, 0), (4.35, 1), (4.5, 0), (5.05, 0), (5.25, 1), (5.4, 0), (5.8, 0), (6.0, 1), (6.15, 0))),
         dict(target='face_r', w=K((8.8, 0), (9.3, 1), (14.6, 1), (15.1, 0))),
-        dict(target='pocket', w=K((16.2, 0), (16.8, 1), (18.1, 1), (18.5, 0))),
+        dict(target='pocket', w=K((16.2, 0), (16.8, 1), (17.5, 1), (17.8, 0))),
     ],
 }
 
@@ -74,14 +74,14 @@ for i in range(8):                                      # fury shake, 2.362 .. 3
     prop.append(pk(2.362 + 0.125 * i, (0.03 * sgn, y0 - 0.005 + 0.0, 0.58 + 0.01 * sgn), (8 * sgn, 16 * sgn, 8 * sgn)))
 prop += [
     pk(3.362, (0.035, y0 + 0.03, 0.59), (10, 24, 6)),
-    pk(3.75, (-0.03, -0.26, 0.60), (-12, 0, 6)),
-    pk(4.05, (-0.05, -0.25, 0.64), (-28, 0, 6)),
-    pk(4.35, (-0.05, -0.245, 0.605), (-24, 0, 6)),         # strike 1
-    pk(4.55, (-0.05, -0.25, 0.64), (-28, 0, 7)),
-    pk(5.25, (-0.05, -0.24, 0.585), (-20, 0, 8)),          # strike 2
-    pk(5.5, (-0.05, -0.25, 0.64), (-28, 0, 7)),
-    pk(6.0, (-0.05, -0.235, 0.57), (-17, 0, 10)),          # strike 3
-    pk(6.3, (-0.02, -0.26, 0.58), (-10, 0, 4)),
+    pk(3.75, (-0.03, -0.24, 0.54), (-12, 0, 6)),
+    pk(4.05, (-0.05, -0.22, 0.53), (-26, 0, 6)),
+    pk(4.35, (-0.05, -0.215, 0.50), (-22, 0, 6)),          # strike 1
+    pk(4.55, (-0.05, -0.22, 0.53), (-26, 0, 7)),
+    pk(5.25, (-0.05, -0.21, 0.485), (-18, 0, 8)),          # strike 2
+    pk(5.5, (-0.05, -0.22, 0.53), (-26, 0, 7)),
+    pk(6.0, (-0.05, -0.205, 0.47), (-15, 0, 10)),          # strike 3
+    pk(6.3, (-0.02, -0.24, 0.52), (-10, 0, 4)),
     pk(6.57, (0, -0.27, 0.46), (-8, 0, 0)),               # throw: wind-up low
     pk(6.77, (0, -0.26, 0.42), (-15, 0, 0)),
     pk(6.95, (0, -0.25, 0.95), (-30, 0, 0)),              # release
@@ -89,10 +89,35 @@ prop += [
     pk(7.52, (0, -0.5, 3.0), (-520, 0, 30)),
     pk(7.67, (0, -0.6, 3.6), (-640, 0, 30), 0.0),
     pk(7.9, (-0.09, 0.12, 0.44), (0, 0, 0), 0.0),         # hidden in the back pocket
-    pk(17.55, (-0.09, 0.12, 0.44), (0, 0, 0), 0.0),
-    pk(17.8, (-0.09, 0.13, 0.45), (0, 0, 0), 1.0),        # pulled out
-    pk(18.5, (-0.08, -0.10, 0.52), (-10, 0, 0)),
-    pk(19.0, (-0.02, -0.22, 0.56), (0, 0, 0)),
+    pk(17.4, (-0.09, 0.12, 0.44), (0, 0, 0), 0.0),
+]
+
+
+def _M(rot):                                          # Euler XYZ (degrees) applied after the print-up / handles-in base turn
+    rx, ry, rz = (math.radians(a) for a in rot)
+    cx, sx, cy, sy, cz, sz = math.cos(rx), math.sin(rx), math.cos(ry), math.sin(ry), math.cos(rz), math.sin(rz)
+    Rx = [[1, 0, 0], [0, cx, -sx], [0, sx, cx]]
+    Ry = [[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]]
+    Rz = [[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]]
+    mm = lambda A, B: [[sum(A[i][k] * B[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+    base = [[-1, 0, 0], [0, -1, 0], [0, 0, 1]]
+    return mm(mm(mm(Rz, Ry), Rx), base)
+
+
+def held(t, G, rot, s=1.0):
+    """Prop key with the RIGHT handle's grip point at G (figure-relative metres), whatever the rotation: the controller
+    swings about the hand that holds it."""
+    M = _M(rot)
+    off = [sum(M[i][k] * GR[k] for k in range(3)) for i in range(3)]
+    return pk(t, [G[i] - off[i] for i in range(3)], rot, s)
+
+
+prop += [
+    held(17.6, (-0.08, 0.13, 0.43), (-90, 0, 0), 0.0),
+    held(17.8, (-0.08, 0.13, 0.43), (-90, 0, 0), 1.0),     # gripped by its right handle, hanging, print facing back
+    held(18.25, (-0.11, 0.04, 0.46), (-72, 0, 14)),
+    held(18.65, (-0.14, -0.07, 0.50), (-38, 0, 8)),
+    held(19.05, (-0.153, -0.15, 0.52), (-8, 0, 2)),
     pk(19.4, (0, -0.27, 0.56), (0, 0, 0)),
 ]
 
@@ -105,6 +130,7 @@ plan = dict(
           'hips': {'location_z': hips_z}, 'leg_l': {'rotation_x': leg_x}, 'leg_r': {'rotation_x': leg_x},
           'arm_l': {'rotation_x': arm_x}, 'arm_r': {'rotation_x': arm_x}},
     shakes=shakes, targets=targets, aim=aim,
+    hand_grips={'arm_l': dict(target='grip_l', handle_axis=[0, 1, 0], open=[0, 0, -1]), 'arm_r': dict(target='grip_r', handle_axis=[0, 1, 0], open=[0, 0, -1])},
     prop=dict(part='acc_53118pb01', base='print_up_handles_in', keys=prop),
 )
 print(json.dumps(plan, indent=1))

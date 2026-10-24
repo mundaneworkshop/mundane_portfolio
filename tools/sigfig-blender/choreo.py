@@ -28,7 +28,10 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
            figure's centre (+dx = the figure's left, +dy = behind it, -dy = in front); z is height. rot is degrees about the
            world axes, applied after the prop's base orientation (`base`: "print_up_handles_in", "buttons_to_player" or None).
   grips:   {name: [lx, ly, lz]}                         points in the prop's local space
-  targets: {name: {frame, mode, p}}                     aim targets. frame: a part name ("hips"..), a bone ("head_3"), or "prop";
+  hand_grips: {arm_l|arm_r: {target, handle_axis, open}}   while that arm's aim weight on `target` is up, the arm AND the hand (turned in its
+                         wrist socket) are solved so the hand's C clip ring sits on the target point, its ring axis lies along the
+                         prop-local `handle_axis`, and its opening faces the prop-local `open` direction (default: away from the print)
+  targets: {name: {frame, mode, p, o?}}            o: optional world-space offset added to the target (a fist that must clear the headset)                     aim targets. frame: a part name ("hips"..), a bone ("head_3"), or "prop";
                                                         mode "local" (p is in that frame's local space) or "rest_world"
                                                         (p = [dx, dy, z] in rest-pose world space, then carried with the frame)
   aim:     {arm_l|arm_r: [{target, w: [[t, weight], ...]}]}   the arm points its wrist at the target, blended by weight
@@ -124,6 +127,63 @@ def _base_matrix(name):
     if name == 'print_up_handles_in':        # print face (local +z) up, handles (local -y) toward the figure: a half turn about Z
         return Matrix(((-1, 0, 0), (0, -1, 0), (0, 0, 1)))
     return Matrix.Identity(3)
+
+
+# the LDraw hand's C clip, in the hand's own frame (measured: ring centre, ring axis, direction of the opening)
+HAND_RING = dict(center=(0.0, -0.114, 0.04), axis=(0.0, 0.999, -0.035), opening=(0.0, -0.035, -0.999))
+
+
+def _solve_grip(Barm, aloc, ascl, Q0, PIh, hloc, hscl, qh0, ring, G, D, Od, x0=None, iters=10):
+    """Least squares for (arm rotation vector, hand rotation vector): ring centre -> G, ring axis || D, opening -> Od."""
+    import numpy as np
+    rc, ra, ro = (Vector(HAND_RING['center']), Vector(HAND_RING['axis']).normalized(), Vector(HAND_RING['opening']).normalized())
+
+    def quat(v):
+        v = Vector(v)
+        return Quaternion(v.normalized(), v.length) if v.length > 1e-9 else Quaternion((1, 0, 0, 0))
+
+    def resid(x):
+        Qa = quat(x[0:3]) @ Q0
+        Aw = Barm @ Matrix.LocRotScale(aloc, Qa, ascl)
+        Hw = Aw @ PIh @ Matrix.LocRotScale(hloc, quat(x[3:6]) @ qh0, hscl)
+        H3 = Hw.to_3x3()
+        c = Hw @ rc
+        a = (H3 @ ra).normalized()
+        o = (H3 @ ro).normalized()
+        r = list((c - G) / 0.01) + list(a.cross(D) / 0.04) + list((o - Od) / 0.6) + list(np.asarray(x) / 0.8)
+        return np.array(r), Qa, quat(x[3:6]) @ qh0
+
+    def run(x):
+        lam = 1e-2
+        r, _, _ = resid(x)
+        for _ in range(iters):
+            J = np.zeros((len(r), 6))
+            for k in range(6):
+                dx = np.zeros(6)
+                dx[k] = 1e-4
+                J[:, k] = (resid(x + dx)[0] - r) / 1e-4
+            step = np.linalg.solve(J.T @ J + lam * np.eye(6), -J.T @ r)
+            r2, _, _ = resid(x + step)
+            if (r2 ** 2).sum() < (r ** 2).sum():
+                x, r = x + step, r2
+                lam = max(lam * 0.5, 1e-6)
+            else:
+                lam *= 4
+        return x, r
+
+    # the hand can be turned either way round its ring axis: start from "as is" and from a half turn, keep the better one
+    Rh = (PIh @ Matrix.LocRotScale(hloc, qh0, hscl)).to_3x3()
+    flip = np.array(list((Rh @ ra).normalized() * 3.14159))
+    starts = [np.zeros(6) if x0 is None else np.array(x0, dtype=float), np.concatenate([np.zeros(3), flip])]
+    best = None
+    for st in starts:
+        x, r = run(st)
+        c = float((r ** 2).sum())
+        if best is None or c < best[0]:
+            best = (c, x)
+    x = best[1]
+    r, Qa, Qh = resid(x)
+    return x, Qa, Qh, (Vector(r[0:3]) * 0.01).length
 
 
 def _bone_parent(o, arm_obj, bone_name, mw0):
@@ -381,14 +441,22 @@ def apply_plan(fig_id, plan):
             tg = targets[name]
             fr = tg['frame']
             if fr == 'prop':
-                return prop.matrix_world @ local_cache[name]
+                return prop.matrix_world @ local_cache[name] + Vector(tg.get('o', (0, 0, 0)))
             if arm_obj is not None and fr in arm_obj.pose.bones:
                 return arm_obj.matrix_world @ arm_obj.pose.bones[fr].matrix @ local_cache[name]
             return objs[fr].matrix_world @ local_cache[name]
 
         for a in arms:
             objs[a].rotation_mode = 'QUATERNION'
+        hand_of = {'arm_l': 'hand_l', 'arm_r': 'hand_r'}
+        grips_cfg = plan.get('hand_grips', {})
+        for a in grips_cfg:
+            h = objs.get(hand_of.get(a))
+            if h is not None:
+                h.rotation_mode = 'QUATERNION'
         prevq = {a: None for a in arms}
+        warm = {}
+        report['grip_gap_max'] = {}
         for f in range(0, N + 1):
             t = f / fps
             sc.frame_set(f)
@@ -402,8 +470,13 @@ def apply_plan(fig_id, plan):
                 R0 = B3 @ q0[a].to_matrix()
                 v0 = (R0 @ arm_vec[a]).normalized()
                 pivot = ob.matrix_world.translation
+                gw = 0.0
                 for ent in aims[a]:
                     w = _weight(ent['w'], t)
+                    if a in grips_cfg and ent['target'] == grips_cfg[a]['target']:
+                        gw = w
+                    elif gw > 0.0:
+                        gw *= (1.0 - w)
                     if w <= 1e-4:
                         continue
                     T_w = target_world(ent['target'])
@@ -415,11 +488,38 @@ def apply_plan(fig_id, plan):
                     if Q.dot(Qa) < 0:
                         Qa.negate()
                     Q = Q.slerp(Qa, w)
+                hobj = objs.get(hand_of.get(a))
+                qh_rest = Euler(list(hobj['rest'])[3:6], 'XYZ').to_quaternion() if hobj is not None else None
+                qh_key = qh_rest
+                if a in grips_cfg and gw > 0.01 and hobj is not None:
+                    gc = grips_cfg[a]
+                    PM = prop.matrix_world
+                    G = PM @ Vector(targets[gc['target']]['p'])
+                    D = (PM.to_3x3() @ Vector(gc.get('handle_axis', (0, 1, 0)))).normalized()
+                    Od = (PM.to_3x3() @ Vector(gc.get('open', (0, 0, -1)))).normalized()
+                    Barm = ob.matrix_world @ ob.matrix_basis.inverted()
+                    x, Qa_s, Qh_s, gap = _solve_grip(Barm, Vector(ob.location), Vector(ob.scale), Q, hobj.matrix_parent_inverse,
+                                                     Vector(list(hobj['rest'])[0:3]), Vector(list(hobj['rest'])[6:9]), qh_rest,
+                                                     None, G, D, Od, x0=warm.get(a))
+                    warm[a] = x
+                    if Q.dot(Qa_s) < 0:
+                        Qa_s.negate()
+                    Q = Q.slerp(Qa_s, min(1.0, gw))
+                    if qh_rest.dot(Qh_s) < 0:
+                        Qh_s.negate()
+                    qh_key = qh_rest.slerp(Qh_s, min(1.0, gw))
+                    if gw > 0.9:
+                        report['grip_gap_max'][a] = max(report['grip_gap_max'].get(a, 0.0), round(gap, 3))
+                else:
+                    warm.pop(a, None)
                 if prevq[a] is not None and Q.dot(prevq[a]) < 0:
                     Q.negate()
                 prevq[a] = Q
                 ob.rotation_quaternion = Q
                 ob.keyframe_insert('rotation_quaternion', frame=f)
+                if hobj is not None and a in grips_cfg:
+                    hobj.rotation_quaternion = qh_key
+                    hobj.keyframe_insert('rotation_quaternion', frame=f)
         report['parts_keyed'] += sorted(arms)
     # name the actions (the exporter merges them into one glTF animation)
     for n, o in objs.items():
