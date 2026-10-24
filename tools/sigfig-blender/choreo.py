@@ -16,14 +16,19 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
            channels: rotation_x/y/z (degrees, a rotation in the parent's frame applied on top of the part's rest pose), location_x/y/z (LDraw units, 1 stud = 20),
                      scale_x/y/z (fraction of rest). Parts: head torso hips arm_l arm_r hand_l hand_r leg_l leg_r acc_* prop_*
   shakes:  [{part, channel, t0, t1, amp, hz, fade, phase}]   windowed oscillation added on top of keys (fade = ramp in/out, s)
-  pivots:  {part: dz}    rotate about a point dz above the part's origin (world units) instead of its origin:
-                         torso -0.32 bends at the waist, head -0.20 nods at the neck
+  pivots:  {part: dz}    rotate about a point dz above the part's origin (world units) instead of its origin
+  bend:    {part: {zone, segments}}   torso and head are SKINNED, not rotated as rigid blocks: a short chain of bones runs up the
+                         bottom `zone` metres of the mesh (`segments` bones), the mesh is sliced there and weighted along the chain,
+                         and rotation_x/y/z on that part become bend forward / bend sideways / twist spread along the chain.
+                         The bottom of the mesh never moves (the torso stays flush on the hips, the head on the torso) and the
+                         geometry stretches between. Default: torso {zone 0.32, segments 4}, head {zone 0.12, segments 3}.
+                         Children (arms, headset, hair) are parented to the bone at their height.
   prop:    {part, keys: [{t, pos:[dx,dy,z], rot:[rx,ry,rz], scale}]}
            a free prop (the controller) is re-parented to the root and keyed in world space. dx, dy are metres from the
            figure's centre (+dx = the figure's left, +dy = behind it, -dy = in front); z is height. rot is degrees about the
-           world axes, applied after the prop's base orientation (`base`: "buttons_to_player" or None).
+           world axes, applied after the prop's base orientation (`base`: "print_up_handles_in", "buttons_to_player" or None).
   grips:   {name: [lx, ly, lz]}                         points in the prop's local space
-  targets: {name: {frame, mode, p}}                     aim targets. frame: a part name ("head", "hips"..) or "prop";
+  targets: {name: {frame, mode, p}}                     aim targets. frame: a part name ("hips"..), a bone ("head_3"), or "prop";
                                                         mode "local" (p is in that frame's local space) or "rest_world"
                                                         (p = [dx, dy, z] in rest-pose world space, then carried with the frame)
   aim:     {arm_l|arm_r: [{target, w: [[t, weight], ...]}]}   the arm points its wrist at the target, blended by weight
@@ -116,7 +121,101 @@ def _to_rest(objs):
 def _base_matrix(name):
     if name == 'buttons_to_player':          # local x -> world X (width), local y -> down, local z (the button face) -> +Y (toward the player)
         return Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))     # columns are the images of local x, y, z
+    if name == 'print_up_handles_in':        # print face (local +z) up, handles (local -y) toward the figure: a half turn about Z
+        return Matrix(((-1, 0, 0), (0, -1, 0), (0, 0, 1)))
     return Matrix.Identity(3)
+
+
+def _bone_parent(o, arm_obj, bone_name, mw0):
+    """Re-parent o to a bone without moving it at rest (it stays at world matrix mw0): world = P_pose * P_rest^-1 * mw0."""
+    Mb = o.matrix_basis.copy()
+    o.parent = arm_obj
+    o.parent_type = 'BONE'
+    o.parent_bone = bone_name
+    o.matrix_parent_inverse = Matrix.Identity(4)
+    bpy.context.view_layer.update()
+    P = o.matrix_world @ Mb.inverted()
+    o.matrix_parent_inverse = P.inverted() @ mw0 @ Mb.inverted()
+
+
+def _build_bend_rig(fig_id, coll, objs, root, cfg, rest_o, prop_role):
+    """Slice + weight the bend parts and give them a bone chain. Returns (arm_obj, chains)."""
+    import bmesh
+    mw0 = {o: o.matrix_world.copy() for o in objs.values()}              # rest world matrices (the figure root may be offset)
+    par = objs.get('hips') or root
+    arm_data = bpy.data.armatures.new('rig-' + fig_id)
+    arm_obj = bpy.data.objects.new('rig-' + fig_id, arm_data)
+    coll.objects.link(arm_obj)
+    arm_obj.parent = par
+    arm_obj.matrix_parent_inverse = par.matrix_world.inverted()       # armature world = identity at rest
+    chains = {}
+    for part in [p for p in ('torso', 'head') if p in cfg]:
+        L, N = float(cfg[part]['zone']), int(cfg[part]['segments'])
+        zb = min(v.co.z for v in objs[part].data.vertices)
+        B = rest_o[part] + Vector((0, 0, zb))
+        chains[part] = dict(L=L, N=N, zb=zb, B=B, names=['%s_%d' % (part, k) for k in range(N + 1)])
+    view = bpy.context.view_layer
+    for o in view.objects:
+        o.select_set(False)
+    view.objects.active = arm_obj
+    arm_obj.select_set(True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = arm_data.edit_bones
+    for part, ch in chains.items():
+        prev = None
+        for k, name in enumerate(ch['names']):
+            b = eb.new(name)
+            b.head = ch['B'] + Vector((0, 0, ch['L'] * k / ch['N']))
+            b.tail = b.head + Vector((0, 0, ch['L'] / ch['N'] if k < ch['N'] else 0.06))
+            b.roll = 0.0
+            if prev is not None:
+                b.parent = prev
+            prev = b
+    if 'head' in chains and 'torso' in chains:
+        eb[chains['head']['names'][0]].parent = eb[chains['torso']['names'][-1]]
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for part, ch in chains.items():
+        ob, L, N, zb = objs[part], ch['L'], ch['N'], ch['zb']
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        cuts = 2 * N
+        for k in range(1, cuts + 1):                                    # slice the zone so it has something to bend
+            geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+            bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-7, plane_co=(0, 0, zb + L * k / cuts), plane_no=(0, 0, 1))
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        bm.to_mesh(ob.data)
+        bm.free()
+        ob.data.update()
+        ob.vertex_groups.clear()
+        vgs = [ob.vertex_groups.new(name=n) for n in ch['names']]
+        for v in ob.data.vertices:
+            x = min(max((v.co.z - zb) / (L / N), 0.0), float(N))
+            k = int(math.floor(x))
+            f = x - k
+            if k >= N:
+                vgs[N].add([v.index], 1.0, 'REPLACE')
+            else:
+                if 1 - f > 1e-4:
+                    vgs[k].add([v.index], 1 - f, 'REPLACE')
+                if f > 1e-4:
+                    vgs[k + 1].add([v.index], f, 'REPLACE')
+        mod = ob.modifiers.new('Armature', 'ARMATURE')
+        mod.object = arm_obj
+    kids = [o for o in objs.values() if o.parent is not None and o.get('role') not in chains and o.get('role') != prop_role]
+    for o in kids:
+        for part, ch in chains.items():
+            if o.parent is objs[part]:
+                sh = rest_o[o['role']].z - ch['B'].z
+                idx = min(max(int(round(sh / (ch['L'] / ch['N']))), 0), ch['N'])
+                _bone_parent(o, arm_obj, ch['names'][idx], mw0[o])
+    for part in chains:                                                  # the skinned meshes hang off the armature
+        ob = objs[part]
+        ob.parent = arm_obj
+        ob.matrix_parent_inverse = arm_obj.matrix_world.inverted() @ mw0[ob] @ ob.matrix_basis.inverted()
+    for part, ch in chains.items():                                      # bone rest orientation, for converting world-axis rotations
+        ch['M'] = arm_data.bones[ch['names'][0]].matrix_local.to_3x3()
+    bpy.context.view_layer.update()
+    return arm_obj, chains
 
 
 def apply_plan(fig_id, plan):
@@ -151,6 +250,14 @@ def apply_plan(fig_id, plan):
         if a in objs and h in objs:
             arm_vec[a] = rest_m[a].to_3x3().inverted() @ (rest_o[h] - rest_o[a])
 
+    bend_cfg = plan.get('bend') or {'torso': {'zone': 0.32, 'segments': 4}, 'head': {'zone': 0.12, 'segments': 3}}
+    bend_cfg = {p: c for p, c in bend_cfg.items() if p in objs}
+    arm_obj, chains = (None, {})
+    if bend_cfg:
+        arm_obj, chains = _build_bend_rig(fig_id, coll, objs, root, bend_cfg, rest_o, prop_role)
+        for pb in arm_obj.pose.bones:
+            pb.rotation_mode = 'QUATERNION'
+
     keys = plan.get('keys', {})
     shakes = plan.get('shakes', [])
     pivots = plan.get('pivots', {})
@@ -176,7 +283,7 @@ def apply_plan(fig_id, plan):
             report['missing'].append(part)
     for part, ob in objs.items():
         ch = touched(part)
-        if not ch or part in arms or part == prop_role:
+        if not ch or part in arms or part == prop_role or part in chains:
             continue
         report['parts_keyed'].append(part)
         dz = pivots.get(part)
@@ -215,6 +322,21 @@ def apply_plan(fig_id, plan):
                     if (chan + '_' + a) in ch:
                         ob.keyframe_insert(data_path=path, index=i, frame=f)
 
+    # ---- bend parts: rotation channels become angles spread along the bone chain
+    for part, ch in chains.items():
+        report['parts_keyed'].append(part)
+        M = ch['M']
+        Mi = M.inverted()
+        for f in range(0, N + 1):
+            t = f / fps
+            ax, ay, az = (math.radians(delta(part, 'rotation_' + c, t)) / ch['N'] for c in 'xyz')
+            Rw = Euler((0, 0, az), 'XYZ').to_matrix() @ Euler((0, ay, 0), 'XYZ').to_matrix() @ Euler((ax, 0, 0), 'XYZ').to_matrix()
+            q = (Mi @ Rw @ M).to_quaternion()
+            for name in ch['names'][1:]:
+                pb = arm_obj.pose.bones[name]
+                pb.rotation_quaternion = q
+                pb.keyframe_insert('rotation_quaternion', frame=f)
+
     # ---- the prop (world-space keys)
     if prop is not None:
         pk = sorted(plan['prop']['keys'], key=lambda k: k['t'])
@@ -247,7 +369,9 @@ def apply_plan(fig_id, plan):
         grips = plan.get('grips', {})
         local_cache = {}
         for name, tg in targets.items():
-            if tg['mode'] == 'rest_world' and tg['frame'] in rest_m:
+            if tg['mode'] == 'rest_world' and arm_obj is not None and tg['frame'] in arm_obj.data.bones:
+                local_cache[name] = arm_obj.data.bones[tg['frame']].matrix_local.inverted() @ (center + Vector(tg['p']))
+            elif tg['mode'] == 'rest_world' and tg['frame'] in rest_m:
                 p = center + Vector(tg['p'])
                 local_cache[name] = rest_m[tg['frame']].inverted() @ p
             else:
@@ -258,6 +382,8 @@ def apply_plan(fig_id, plan):
             fr = tg['frame']
             if fr == 'prop':
                 return prop.matrix_world @ local_cache[name]
+            if arm_obj is not None and fr in arm_obj.pose.bones:
+                return arm_obj.matrix_world @ arm_obj.pose.bones[fr].matrix @ local_cache[name]
             return objs[fr].matrix_world @ local_cache[name]
 
         for a in arms:
@@ -272,7 +398,7 @@ def apply_plan(fig_id, plan):
                 rot = [delta(a, 'rotation_' + c, t) for c in 'xyz']
                 Q = Euler([math.radians(r) for r in rot], 'XYZ').to_quaternion() @ q0[a]
                 par = ob.parent
-                B3 = (par.matrix_world @ ob.matrix_parent_inverse).to_3x3()
+                B3 = (ob.matrix_world @ ob.matrix_basis.inverted()).to_3x3()      # whatever the parent (object or bone) does
                 R0 = B3 @ q0[a].to_matrix()
                 v0 = (R0 @ arm_vec[a]).normalized()
                 pivot = ob.matrix_world.translation
@@ -299,6 +425,8 @@ def apply_plan(fig_id, plan):
     for n, o in objs.items():
         if o.animation_data and o.animation_data.action:
             o.animation_data.action.name = 'idle_' + n
+    if arm_obj is not None and arm_obj.animation_data and arm_obj.animation_data.action:
+        arm_obj.animation_data.action.name = 'idle_rig'
     sc.frame_set(0)
     return report
 
