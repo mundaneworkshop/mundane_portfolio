@@ -14155,7 +14155,18 @@ f 2469//2469 2470//2470 2434//2434
     function ocReconcile(){ var l=ocCycleList(); if(l.length<2){ ocClear(); return; } if(!outfitCur||!l.some(function(o){ return o.id===outfitCur.id; })) ocShow(l[0].id); }   // (fewer than two entries = the original head alone: no carousel, nothing here touches the scene)
     function ocFigObj(){ if(!outfitCur) return null; if(outfitCur.group) return outfitStage.visible?outfitCur.group:null;
       var g=logo.userData.glbGroup; if(g&&g.visible) return g; return holoHead.visible?holoHead:null; }   // head mode: the head (textured GLB if one is set, else the placeholder)
-    function ocHit(){ var f=ocFigObj(); if(!f||mwPhase!=='docked'||arcadeActive) return null; var h=ray.intersectObject(f,true); return h.length?h[0]:null; }
+    // Hit test for the figure / original head: the ray against its meshes, and for the head ALSO the pointer inside its (inset) screen box, because the
+    // head is small and its hair / decal meshes are full of gaps a ray slips through (hover would flicker or never fire).
+    var _ocB=new THREE.Box3(), _ocP=new THREE.Vector3();
+    function ocHit(){ var f=ocFigObj(); if(!f||mwPhase!=='docked'||arcadeActive) return null;
+      var h=ray.intersectObject(f,true); if(h.length) return h[0];
+      if(outfitCur&&!outfitCur.group){
+        _ocB.setFromObject(f); if(_ocB.isEmpty()) return null;
+        var l=1e9,t=1e9,r=-1e9,b=-1e9,i,mn=_ocB.min,mx=_ocB.max;
+        for(i=0;i<8;i++){ _ocP.set(i&1?mx.x:mn.x,i&2?mx.y:mn.y,i&4?mx.z:mn.z).project(camera); if(_ocP.z>1) return null; var x=(_ocP.x+1)/2*W, y=(1-_ocP.y)/2*H; l=Math.min(l,x); r=Math.max(r,x); t=Math.min(t,y); b=Math.max(b,y); }
+        var px=(mouse.x+1)/2*W, py=(1-mouse.y)/2*H, ix=(r-l)*0.18, iy=(b-t)*0.18;
+        if(px>l+ix&&px<r-ix&&py>t+iy&&py<b-iy){ _ocB.getCenter(_ocP); return {distance:camera.position.distanceTo(_ocP),object:f}; } }
+      return null; }
     // Per frame (called from animate): fade, head hand-off, tunables, auto-cycle.
     function ocTick(){
       if(!outfitCur&&!outfitHeadHidden){ if(outfitHudOn){ outfitHudOn=false; document.body.classList.remove('oh-show'); ocSyncKit(false); } return; }
