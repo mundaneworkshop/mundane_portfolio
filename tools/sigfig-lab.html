@@ -435,6 +435,11 @@ function card(s){
   const r=el('div','row2');r.appendChild(fld('Kicker','a-kicker','text','About me'));r.appendChild(fld('Title','a-title','text',s.name));sec2.appendChild(r);
   const b=fld('Copy','a-body','area','What this outfit says about you');b.style.marginTop='10px';sec2.appendChild(b);
   const t=fld('Locked teaser (optional)','a-teaser','area','Leave empty to use the line generated from the unlock rule');t.style.marginTop='10px';t.querySelector('textarea').style.minHeight='56px';sec2.appendChild(t);
+  const ctaH=el('h4',null,'Call-to-action button');ctaH.style.marginTop='14px';sec2.appendChild(ctaH);
+  sec2.appendChild(el('p','note','An optional button under the copy (unlocked outfits only; a locked outfit always shows the arcade button).'));
+  const ctaRow=el('div','fld');const ctaLbl=el('label',null,'');const ctaChk=el('input');ctaChk.type='checkbox';ctaChk.id='a-ctaShow-'+id;ctaChk.checked=!!s.about.ctaShow;ctaChk.setAttribute('data-f','a-ctaShow');ctaChk.setAttribute('data-id',id);ctaLbl.setAttribute('for',ctaChk.id);ctaLbl.appendChild(ctaChk);ctaLbl.appendChild(document.createTextNode(' Show the button'));ctaRow.appendChild(ctaLbl);sec2.appendChild(ctaRow);
+  const ctaR2=el('div','row2');ctaR2.appendChild(fld('Button text','a-ctaText','text','e.g. See my work'));ctaR2.appendChild(fld('Link (URL)','a-ctaUrl','text','https://...'));sec2.appendChild(ctaR2);
+  const ctf=el('div','fld');const ctl=el('label',null,'Link opens in');ctl.setAttribute('for','a-ctaTarget-'+id);ctf.appendChild(ctl);const tsel=el('select','in');tsel.id='a-ctaTarget-'+id;tsel.setAttribute('data-f','a-ctaTarget');tsel.setAttribute('data-id',id);[['new','A new tab'],['same','The same tab']].forEach(x=>{const o=el('option',null,x[1]);o.value=x[0];if(x[0]===(s.about.ctaTarget||'new'))o.selected=true;tsel.appendChild(o);});ctf.appendChild(tsel);sec2.appendChild(ctf);
   c.appendChild(sec2);
 
   /* unlock */
@@ -505,9 +510,10 @@ function tallyPaint(){const l=figs(),ready=l.filter(isReady).length,glbs=l.filte
   $('#tally').innerHTML='<b>'+l.length+'</b> sig figs · <b>'+glbs+'</b> with a model · <b>'+ready+'</b> ready to export';}
 
 /* ===== edits ===== */
+const fv=t=>t.type==='checkbox'?(t.checked?'1':''):t.value;
 function fieldSave(t,quiet){const id=t.getAttribute('data-id'),f=t.getAttribute('data-f');if(!id||!f)return;const s=eff(id);if(!s)return;
   if(f==='animNotes'){const v=t.value.slice(0,2000);(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{animNotes:v});return;}
-  if(f.indexOf('a-')===0){const k=f.slice(2),v=t.value.slice(0,4000),ab=Object.assign({},s.about,{[k]:v});(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{about:ab});return;}
+  if(f.indexOf('a-')===0){const k=f.slice(2),v=fv(t).slice(0,4000),ab=Object.assign({},s.about,{[k]:v});(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{about:ab});return;}
   if(f==='name'){const v=t.value.trim()||s.name;if(v!==s.name)(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{name:v.slice(0,40)});return;}}
 function flushPending(){clearTimeout(autoT);const els=[...pending.keys()];pending.clear();els.forEach(t=>{if(t.isConnected)fieldSave(t,true);});updSaveBtn();}
 $('#list').addEventListener('input',e=>{const t=e.target,f=t.getAttribute&&t.getAttribute('data-f');if(!f||!(f==='animNotes'||f==='name'||f.indexOf('a-')===0))return;
@@ -519,7 +525,7 @@ $('#list').addEventListener('change',e=>{if(pending.has(e.target)){pending.delet
   if(f==='enabled'){patchFig(id,{enabled:t.checked});return;}
   if(f==='animNotes'){patchFig(id,{animNotes:t.value.slice(0,2000)},true);return;}
   if(f==='triBudget'){const v=Math.min(60000,Math.max(1000,Math.round(parseFloat(t.value))));if(isFinite(v)){patchFig(id,{triBudget:v},true);}return;}
-  if(f.indexOf('a-')===0){patchAbout(id,f.slice(2),t.value.slice(0,4000));return;}
+  if(f.indexOf('a-')===0){patchAbout(id,f.slice(2),fv(t).slice(0,4000));return;}
   if(f==='ut'){const d=utype(t.value),nu={type:t.value};if(NONUM.indexOf(t.value)<0)nu.n=d[3];if(t.value==='destroy')nu.target='fighter';if(t.value==='caseStudy')nu.target='w0';patchFig(id,{unlock:nu});return;}
   if(f==='utarget'){patchFig(id,{unlock:Object.assign({},s.unlock,{target:t.value})},true);return;}
   if(f==='un'||f==='umin'||f==='usec'){const u=Object.assign({},s.unlock);let x=Math.max(0,Math.round(parseFloat(t.value)));if(!isFinite(x))return;
@@ -651,7 +657,7 @@ function buildManifest(){const out=[],skipped=[],files=[];
     const e={id:s.id,name:s.name,enabled:s.enabled};
     const u=s.unlock;e.unlock=NONUM.indexOf(u.type)>=0&&u.type!=='caseStudy'?{type:u.type}:(u.type==='caseStudy'?{type:'caseStudy',target:u.target||'w0'}:Object.assign({type:u.type,n:u.n|0},u.type==='destroy'?{target:u.target||'fighter'}:{}));
     if(u.type==='minikits')e.unlockAt=u.n|0;else e.unlockAt=0;
-    const a={};['kicker','title','body','teaser'].forEach(k=>{const v=(s.about[k]||'').trim();if(v)a[k]=v;});e.about=a;
+    const a={};['kicker','title','body','teaser','ctaText','ctaUrl'].forEach(k=>{const v=(s.about[k]||'').trim();if(v)a[k]=v;});if(s.about.ctaShow){a.ctaShow=true;a.ctaTarget=s.about.ctaTarget==='same'?'same':'new';}e.about=a;
     e.idle=idle?idle.name:null;e.parts=parts;out.push(e);});
   return {manifest:{version:1,outfits:out},files,skipped};}
 $('#export').onclick=async()=>{const es=$('#exportStatus');es.className='status';es.textContent='Building…';

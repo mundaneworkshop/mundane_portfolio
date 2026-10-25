@@ -14383,7 +14383,9 @@ f 2469//2469 2470//2470 2434//2434
       if(ocLocked(o)) return Object.assign(base,{kicker:'Outfit locked',title:o.name,
         framing:a.teaser||('Shoot '+o.unlockAt+' minikits in the Space Arcade to unlock this outfit, and what it says about me. You have '+kits+' so far.'),
         cta:'PLAY THE SPACE ARCADE →',ctaUrl:'#',ctaHidden:false,ctaActive:true,onCta:function(){ ocGoArcade(); }});
-      return Object.assign(base,{kicker:a.kicker||'About me',title:a.title||o.name,framing:a.body||'',cta:'',ctaUrl:'#',ctaHidden:true,ctaActive:false});
+      var _cta=!!(a.ctaShow&&a.ctaText&&a.ctaUrl);   // optional CTA from the sig fig's About record: ctaShow, ctaText, ctaUrl, ctaTarget ('new' | 'same')
+      return Object.assign(base,{kicker:a.kicker||'About me',title:a.title||o.name,framing:a.body||'',cta:_cta?a.ctaText:'',ctaUrl:_cta?a.ctaUrl:'#',ctaHidden:!_cta,ctaActive:_cta,external:_cta,
+        onCta:function(){ if(!_cta) return; if(a.ctaTarget==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(a.ctaUrl); else location.href=a.ctaUrl; } else window.open(a.ctaUrl,'_blank','noopener'); }});
     }
     function ocRefreshAbout(){ var o=outfitCur&&ocFind(outfitCur.id); if(!o||!window.CS) return;
       var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:d.kicker||'About me',bold:true},{text:o.name}]);   /* the outfit's kicker is the first breadcrumb word (the booklet itself has no kicker node) */ setRoute('/about/'+o.id); }
