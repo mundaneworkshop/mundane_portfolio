@@ -93,8 +93,22 @@ def parse_ldr(text):
                 cur = secs.setdefault(name, {'name': name, 'lines': []})
                 first = first or name
                 st = {'cw': False, 'inv': False}
-            elif cur is not None and rest.startswith('PE_TEX_INFO '):
-                cur['tex'] = rest.split(None, 1)[1].strip()          # Studio embeds a part's print as a base64 PNG
+            elif cur is not None and rest.startswith('PE_TEX_INFO'):
+                tk = rest.split()[1:]                              # Studio embeds a part's print as a base64 PNG; with 16 numbers in front it is a PROJECTED decal
+                nums = []
+                while tk:
+                    try:
+                        nums.append(float(tk[0]))
+                        tk.pop(0)
+                    except ValueError:
+                        break
+                b64 = ''.join(tk)
+                if len(nums) == 16 and b64:
+                    cur.setdefault('decals', []).append({'n': nums, 'b64': b64})   # origin(3) + 3x3 (width, depth, height axes as columns) + rect (x0, y0, x1, y1)
+                elif b64 and not nums:
+                    cur['tex'] = b64                                # UV-mapped print (the face): the faces carry their own (u, v)
+            elif cur is not None and 'desc' not in cur and not rest.startswith(('FILE', 'Name', 'Author', 'BFC', 'PE_', 'IsSubModel', 'BL_', 'Flexible', 'RenderAngle', 'IsAssembly', 'CustomBrick', 'NOFILE', '!')):
+                cur['desc'] = rest                                   # the part's description line (custom parts say "minifig leg right ...")
             elif cur is not None and rest.startswith('BFC'):
                 w = rest.split()
                 if 'INVERTNEXT' in w:
@@ -133,6 +147,7 @@ def parse_ldr(text):
 
 _FLAT = {}
 _MISSING = set()
+_SECS = {}
 _TEX = {}                          # part file -> base64 PNG of its print
 # Studio does not embed the LDraw base primitives it can find in its own library: 48/4-4cyli.dat (high-res cylinder wall),
 # 4-4disc.dat (flat cap), 2-4edge.dat (outline). Importing without them silently deleted cylinder walls and caps: the arms'
@@ -164,6 +179,47 @@ def _synth(name):
         else:
             out.append(('-1', (Vector((0, 0, 0)), Vector((c0, 0, s0)), Vector((c1, 0, s1)))))
     return out
+
+
+DECAL_FACING = -1          # a face takes the decal when its normal opposes the decal's depth axis (the decal looks into the part)
+
+
+def _apply_decals(out, sec, name):
+    """Project Studio's planar decals onto the faces that sit in each decal's rectangle and face it. Decals that share a frame are
+    composited into one canvas (_TEX[key] = dict, see _tex_pixels), so a face can carry several prints through one UV map."""
+    groups = {}
+    for d in sec['decals']:
+        groups.setdefault(tuple(round(x, 3) for x in d['n'][:12]), []).append(d)
+    res = list(out)
+    for gi, (key, ds) in enumerate(groups.items()):
+        n = ds[0]['n']
+        O = Vector(n[0:3])
+        e1, e2, e3 = Vector((n[3], n[6], n[9])).normalized(), Vector((n[4], n[7], n[10])).normalized(), Vector((n[5], n[8], n[11])).normalized()
+        X0, X1 = min(d['n'][12] for d in ds), max(d['n'][14] for d in ds)
+        Y0, Y1 = max(d['n'][13] for d in ds), min(d['n'][15] for d in ds)
+        tk = '%s#decal%d' % (name, gi)
+        _TEX[tk] = {'decals': ds, 'rect': (X0, Y0, X1, Y1)}
+        used = False
+        for i, it in enumerate(res):
+            if len(it) > 2:
+                continue
+            a, b, c = it[1]
+            nrm = (b - a).cross(c - a)
+            if nrm.length < 1e-9:
+                continue
+            ctr = (a + b + c) / 3.0
+            r = ctr - O
+            lx, ly, dz = r.dot(e1), r.dot(e3), r.dot(e2)
+            if not (X0 - 0.5 <= lx <= X1 + 0.5 and Y1 - 0.5 <= ly <= Y0 + 0.5) or abs(dz) > 3.0:
+                continue
+            if nrm.normalized().dot(e2) * DECAL_FACING < 0.3:
+                continue
+            uv = [(((v - O).dot(e1) - X0) / (X1 - X0), ((v - O).dot(e3) - Y1) / (Y0 - Y1)) for v in (a, b, c)]
+            res[i] = (it[0], it[1], uv, tk)
+            used = True
+        if not used:
+            del _TEX[tk]
+    return res
 
 
 def flat(secs, name):
@@ -210,6 +266,8 @@ def flat(secs, name):
     if sec.get('tex'):                                             # this part owns a print: its UV faces use it
         _TEX[name] = sec['tex']
         out = [(it[0], it[1], it[2], name) if len(it) > 2 and it[3] is None else it for it in out]
+    if sec.get('decals'):
+        out = _apply_decals(out, sec, name)
     _FLAT[name] = out
     return out
 
@@ -276,7 +334,14 @@ def classify(parts, overrides=None):
         elif re.match(r'^(3820|983)', n):
             p['role'] = 'hand_' + side
         else:
-            p['role'] = None
+            d = (_SECS.get(p['file'], {}).get('desc') or '').lower() if '_SECS' in globals() else ''
+            m = re.search(r'minifig(?:ure)? (leg|arm|hand) (right|left)', d)
+            if m:
+                p['role'] = '%s_%s' % (m.group(1), m.group(2)[0])
+            elif re.search(r'minifig(?:ure)? torso', d):
+                p['role'] = 'torso'
+            else:
+                p['role'] = None
     seen = set()
     for p in parts:                                  # one part per body role; a second claimant becomes an accessory
         if p['role'] in PARENT:
@@ -471,31 +536,68 @@ def _srgb(c):
     return 12.92 * c if c <= 0.0031308 else 1.055 * (c ** (1 / 2.4)) - 0.055
 
 
+def _png_pixels(b64):
+    """(w, h, float32 RGBA array, rows bottom-up) of a base64 PNG, decoded with Blender's own image loader."""
+    import base64, tempfile, numpy as np
+    raw = base64.b64decode(b64 + '=' * (-len(b64) % 4))
+    tmp = os.path.join(tempfile.gettempdir(), 'sigfig_png_%d.png' % abs(hash(b64[:200] + str(len(b64)))))
+    with open(tmp, 'wb') as f:
+        f.write(raw)
+    im = bpy.data.images.load(tmp)
+    w, h = im.size
+    px = np.array(im.pixels[:], dtype=np.float32).reshape(h, w, 4)
+    bpy.data.images.remove(im)
+    return w, h, px
+
+
+def _tex_pixels(tex_key):
+    """RGBA pixels of a print: a plain base64 PNG (UV print) or the composite canvas of a group of projected decals."""
+    import numpy as np
+    t = _TEX[tex_key]
+    if isinstance(t, str):
+        return _png_pixels(t)
+    X0, Y0, X1, Y1 = t['rect']
+    imgs = [(d,) + _png_pixels(d['b64']) for d in t['decals']]
+    ppu = max(w / (d['n'][14] - d['n'][12]) for d, w, h, px in imgs)
+    W, H = max(2, int(round((X1 - X0) * ppu))), max(2, int(round((Y0 - Y1) * ppu)))
+    canvas = np.zeros((H, W, 4), dtype=np.float32)
+    for d, w, h, px in imgs:
+        x0, y0, x1, y1 = d['n'][12:16]
+        cx0, cx1 = int(round((x0 - X0) * ppu)), int(round((x1 - X0) * ppu))
+        cy0, cy1 = int(round((y1 - Y1) * ppu)), int(round((y0 - Y1) * ppu))       # rows are bottom-up: the decal's bottom edge (y1) is the lower row
+        tw, th = max(1, cx1 - cx0), max(1, cy1 - cy0)
+        xs = (np.arange(tw) * (w / float(tw))).astype(int).clip(0, w - 1)
+        ys = (np.arange(th) * (h / float(th))).astype(int).clip(0, h - 1)
+        src = px[ys][:, xs]
+        ex, ey = min(W, cx0 + tw), min(H, cy0 + th)
+        if ex <= cx0 or ey <= cy0:
+            continue
+        src = src[:ey - cy0, :ex - cx0]
+        reg = canvas[cy0:ey, cx0:ex]
+        a, ra = src[..., 3:4], reg[..., 3:4]
+        oa = a + ra * (1 - a)
+        reg[..., :3] = (src[..., :3] * a + reg[..., :3] * ra * (1 - a)) / np.maximum(oa, 1e-6)
+        reg[..., 3:4] = oa
+    return W, H, canvas
+
+
 def material_for_print(tex_key, code):
-    """Principled material whose base colour is the part colour with the embedded print composited on it (glTF cannot mix)."""
+    """Principled material whose base colour is the part colour with the print composited on it (glTF cannot mix a colour with a texture)."""
     key = (tex_key, code)
     if key in _TEXMATS and _TEXMATS[key].name in bpy.data.materials:
         return _TEXMATS[key]
-    import base64, tempfile
-    raw = base64.b64decode(_TEX[tex_key] + '=' * (-len(_TEX[tex_key]) % 4))
-    tmp = os.path.join(tempfile.gettempdir(), 'sigfig_print_%d.png' % abs(hash(key)))
-    with open(tmp, 'wb') as f:
-        f.write(raw)
-    src = bpy.data.images.load(tmp)
-    w, h = src.size
-    px = list(src.pixels)                                          # RGBA, sRGB-encoded for an 8-bit PNG
+    import numpy as np
+    w, h, px = _tex_pixels(tex_key)
     rgb, alpha, metal, label = color_info(code)
-    base = [_srgb(rgb[0]), _srgb(rgb[1]), _srgb(rgb[2])]
-    out = []
-    for i in range(0, len(px), 4):
-        a = px[i + 3]
-        out.extend((base[0] * (1 - a) + px[i] * a, base[1] * (1 - a) + px[i + 1] * a, base[2] * (1 - a) + px[i + 2] * a, 1.0))
-    img = bpy.data.images.new('print_%s' % os.path.basename(tex_key).replace('.dat', ''), w, h, alpha=False)
-    img.pixels = out
+    base = np.array([_srgb(rgb[0]), _srgb(rgb[1]), _srgb(rgb[2])], dtype=np.float32)
+    a = px[..., 3:4]
+    out = np.concatenate([base * (1 - a) + px[..., :3] * a, np.ones_like(a)], axis=-1)
+    nm = os.path.basename(tex_key).replace('.dat', '')
+    img = bpy.data.images.new('print_%s_%s' % (nm, code), w, h, alpha=False)
+    img.pixels.foreach_set(out.ravel())
     img.pack()
     img.update()
-    bpy.data.images.remove(src)
-    m = bpy.data.materials.new('lego_print_%s_%s' % (os.path.basename(tex_key).replace('.dat', ''), code))
+    m = bpy.data.materials.new('lego_print_%s_%s' % (nm, code))
     m.use_nodes = True
     nt = m.node_tree
     b = nt.nodes.get('Principled BSDF')
@@ -562,14 +664,17 @@ def build_sigfig(io_path, fig_id, clear=True, tri_budget=DEFAULT_TRI_BUDGET, rol
     `roles` = optional {part number or stem: role name} for figures made of custom parts.
     `safe` = see decimate_parts (default True: body parts, open shells and printed parts are never collapsed).
     Returns a summary dict (also stored in the collection's custom properties)."""
-    global _FLAT, _MISSING, _TEX
+    global _FLAT, _MISSING, _TEX, _SECS
     _FLAT = {}
     _MISSING = set()
     _TEX = {}
+    _MATS.clear()
+    _TEXMATS.clear()                      # materials of an earlier import may have been purged
     with zipfile.ZipFile(io_path) as z:
         text = z.read('model2.ldr').decode('utf-8-sig', 'replace')
         extra_images = [n for n in z.namelist() if n.lower().endswith(('.png', '.jpg', '.jpeg', '.tga')) and 'thumbnail' not in n.lower()]
     secs, root = parse_ldr(text)
+    _SECS = secs
     parts, warn = collect_parts(secs, root)
     classify(parts, roles)
     assign_extras(parts)
@@ -635,7 +740,7 @@ def build_sigfig(io_path, fig_id, clear=True, tri_budget=DEFAULT_TRI_BUDGET, rol
             continue
         tex_mats = [m.name for m in ob.data.materials if m and m.name.startswith('lego_print_')]
         looks_printed = bool(re.search(r'pb\d+|tex|^bl_', os.path.basename(p['file'])))
-        multi = _colours(ob) >= PRINT_MATERIALS
+        multi = _colours(ob) >= 2                          # a two-colour leg pattern is geometry too
         prints.append(dict(role=p['role'], part=_clean(p['file']), textures=tex_mats, colours=_colours(ob)))
         if looks_printed and not tex_mats and not multi:
             print_warn.append('%s (%s) is a printed part but came in as a plain colour: its print is not in the .io as geometry or texture' % (p['role'], _clean(p['file'])))

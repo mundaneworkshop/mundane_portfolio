@@ -35,6 +35,12 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
   hand_roll: {arm_l|arm_r: {target, rotvec_deg:[x,y,z]}}   while that arm's aim weight on `target` is up, the hand is turned by that hand-local
                          axis * degrees (or `deg` = about the pin, local y), pivoting where the pin leaves the arm (HAND_PIVOT) so the connection stays seated. No solver:
                          the arm motion is exactly the aimed motion.
+  free:    [{part, keys:[{t, off, rot, scale}], mix:[[t, wRig, wWorld, wFollow1..]], follow:[{to, like?, off?, rot?}], anchor?}]
+           a part (prop, helmet, a limb that breaks off) posed as a weighted blend of RIG / WORLD / FOLLOW poses, see _pose_free. The pose is
+           converted to the part's local transform and keyed, so the hierarchy is untouched.
+  pivots_local: {part: [x,y,z]}   rotate about that point given in the part's own frame (a hand: the pin's exit point)
+           free-part extras: live (the rig pose is the part's own keyed / aimed motion, for a figure that comes apart mid-run), anchor_follow -1
+           (anchor on that live pose), pre (posed before the arms, so aim targets on it are current)
   targets: {name: {frame, mode, p, o?}}            o: optional world-space offset added to the target (a fist that must clear the headset)                     aim targets. frame: a part name ("hips"..), a bone ("head_3"), or "prop";
                                                         mode "local" (p is in that frame's local space) or "rest_world"
                                                         (p = [dx, dy, z] in rest-pose world space, then carried with the frame)
@@ -204,6 +210,145 @@ def _solve_grip(Barm, aloc, ascl, Q0, PIh, hloc, hscl, qh0, ring, G, D, Od, x0=N
     return x, Qa, Qh, hl, (Vector(r[0:3]) * 0.01).length
 
 
+def _mix(pts, t):
+    """Smooth interpolation of [[t, a, b, c]...] weight rows; held before the first and after the last."""
+    pts = sorted(pts, key=lambda r: r[0])
+    if t <= pts[0][0]:
+        return list(pts[0][1:])
+    for ra, rb in zip(pts, pts[1:]):
+        if t <= rb[0]:
+            u = _sm((t - ra[0]) / max(1e-6, rb[0] - ra[0]))
+            return [a + (b - a) * u for a, b in zip(ra[1:], rb[1:])]
+    return list(pts[-1][1:])
+
+
+def _key_at(keys, t, field, default):
+    """Smooth (Catmull-Rom, clamped ends) interpolation of a scalar or vector field over the free-part keys."""
+    ks = sorted([k for k in keys if field in k], key=lambda k: k['t'])
+    if not ks:
+        return default
+    if t <= ks[0]['t']:
+        return ks[0][field]
+    if t >= ks[-1]['t']:
+        return ks[-1][field]
+    i = 0
+    while ks[i + 1]['t'] < t:
+        i += 1
+    k0, k1 = ks[i], ks[i + 1]
+    km, kp = ks[max(i - 1, 0)], ks[min(i + 2, len(ks) - 1)]
+    h = k1['t'] - k0['t']
+    u = (t - k0['t']) / h
+    def cr(v0, v1, vm, vp):
+        m0 = (v1 - vm) / max(1e-6, (k1['t'] - km['t'])) * h
+        m1 = (vp - v0) / max(1e-6, (kp['t'] - k0['t'])) * h
+        u2, u3 = u * u, u * u * u
+        return (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * m0 + (-2 * u3 + 3 * u2) * v1 + (u3 - u2) * m1
+    a, b, am, ap = k0[field], k1[field], km[field], kp[field]
+    if isinstance(a, (list, tuple)):
+        return [cr(a[j], b[j], am[j], ap[j]) for j in range(len(a))]
+    return cr(a, b, am, ap)
+
+
+def _pose_free(fc, objs, rest_m, center, f, t, T, state):
+    """Key one free part for frame f. Its pose is a weighted blend of
+         RIG      what its parent chain does (the default),
+         WORLD    its rest pose moved by `off` metres (world axes) and turned by `rot` degrees about its own origin,
+                  or, with `anchor` (seconds), relative to where the part stood at that moment (a tossed helmet, a flipped egg),
+         FOLLOW_i glued to another part (`follow`: [{to, like?, off?, rot?}]): `to` a hand keeps its rest relation; `like` another
+                  part names whose rest relation to `to` is copied (a helmet worn like the hair piece sits on the head).
+       `mix` rows are [t, wRig, wWorld, wFollow_1, ...] (smooth between rows). `scale` multiplies the result (0 hides it)."""
+    part = fc['part']
+    ob = objs.get(part)
+    if ob is None:
+        return
+    ob.rotation_mode = 'QUATERNION'
+    factor = ob.matrix_world @ ob.matrix_basis.inverted()                  # what its parent chain contributes this frame
+    r0 = list(ob['rest'])
+    M_rest = Matrix.LocRotScale(Vector(r0[0:3]), Euler(r0[3:6], 'XYZ').to_quaternion(), Vector(r0[6:9]))
+    rig = ob.matrix_world.copy() if fc.get('live') else factor @ M_rest      # live: the part's own keyed / aimed motion counts
+    Wrest = rest_m[part]
+    loc0, rot0, scl0 = Wrest.decompose()
+    follows = fc.get('follow', [])
+    w = _mix(fc.get('mix', [[0, 1, 0] + [0] * len(follows)]), t)
+    w = (w + [0.0] * (2 + len(follows)))[:2 + len(follows)]
+    sm = sum(w)
+    w = [x / sm for x in w] if sm > 1e-6 else [1.0, 0.0] + [0.0] * len(follows)
+    keys = fc.get('keys', [])
+    off = Vector(_key_at(keys, t, 'off', [0, 0, 0]))
+    rot = _key_at(keys, t, 'rot', [0, 0, 0])
+    sc = _key_at(keys, t, 'scale', 1.0)
+    dq = Euler([math.radians(a) for a in rot], 'XYZ').to_quaternion()
+    # follow poses
+    fposes = []
+    for fo in follows:
+        tgt = objs[fo['to']]
+        src = rest_m[fo.get('like', part)]
+        H0 = rest_m[fo['to']].inverted() @ src
+        hl, hq, hs = H0.decompose()
+        rq = Euler([math.radians(a) for a in fo.get('rot', [0, 0, 0])], 'XYZ').to_quaternion()
+        # `off` slides the part in the TARGET's axes; `rot` turns it about its OWN centre, in the target's axes
+        fp = tgt.matrix_world @ Matrix.Translation(Vector(fo.get('off', [0, 0, 0]))) @ Matrix.Translation(hl) @ rq.to_matrix().to_4x4() @ hq.to_matrix().to_4x4()
+        if fo.get('capture') is not None:                                  # a hand-over: from `capture` on, hold the part exactly as the follow pose `from` held it then
+            ck = '%s#cap%d' % (part, len(fposes))
+            src_i = fo.get('from', 0)
+            if t >= fo['capture'] and ck not in state:
+                state[ck] = tgt.matrix_world.inverted() @ fposes[src_i]
+            fp = tgt.matrix_world @ state[ck] if ck in state else fposes[src_i].copy()
+        fposes.append(fp)
+    base = None
+    if 'anchor' in fc:                                                     # world offsets are measured from the pose at the anchor time
+        ak = part + '#anchor'
+        if t >= fc['anchor'] and ak not in state and (fposes or fc.get('anchor_follow', 0) == -1):
+            gi = fc.get('anchor_follow', 0)
+            state[ak] = (rig if gi == -1 else fposes[gi]).copy()
+        base = state.get(ak)
+        if base is None and t < fc['anchor']:
+            base = fposes[fc.get('anchor_follow', 0)] if (fposes and fc.get('anchor_follow', 0) != -1) else rig
+    if base is not None:
+        bl, bq, bs = base.decompose()
+        world = Matrix.LocRotScale(bl + off, dq @ bq, bs)
+    else:
+        world = Matrix.LocRotScale(loc0 + off, dq @ rot0, scl0)
+    poses = [rig, world] + fposes
+    loc = Vector((0, 0, 0))
+    scl = Vector((0, 0, 0))
+    q = None
+    acc = 0.0
+    for wi, P in zip(w, poses):
+        if wi <= 1e-6:
+            continue
+        l, r, sv = P.decompose()
+        loc += l * wi
+        scl += sv * wi
+        if q is None:
+            q = r
+            acc = wi
+        else:
+            if q.dot(r) < 0:
+                r = -r
+            acc += wi
+            q = q.slerp(r, wi / acc)
+    bump = _key_at(fc.get('bump', []), t, 'off', None)                       # an extra world-space offset on top of the blended pose (an arc)
+    if bump is not None:
+        loc = loc + Vector(bump)
+    final = Matrix.LocRotScale(loc, q, scl * sc)
+    sp = fc.get('spin')                                                      # a turn about a world axis through the part's own centre (a helmet spun on a fingertip)
+    if sp:
+        deg = _key_at(sp['keys'], t, 'deg', 0.0)
+        R = Quaternion(Vector(sp.get('axis', [0, 0, 1])).normalized(), math.radians(deg)).to_matrix().to_4x4()
+        final = Matrix.Translation(loc) @ R @ Matrix.Translation(-loc) @ final
+    local = factor.inverted() @ final
+    l2, q2, s2 = local.decompose()
+    pq = state.get(part)
+    if pq is not None and q2.dot(pq) < 0:
+        q2.negate()
+    state[part] = q2
+    ob.location, ob.rotation_quaternion, ob.scale = l2, q2, Vector([max(abs(x), 1e-4) * (1 if x >= 0 else -1) for x in s2])
+    ob.keyframe_insert('location', frame=f)
+    ob.keyframe_insert('rotation_quaternion', frame=f)
+    ob.keyframe_insert('scale', frame=f)
+
+
 def _bone_parent(o, arm_obj, bone_name, mw0):
     """Re-parent o to a bone without moving it at rest (it stays at world matrix mw0): world = P_pose * P_rest^-1 * mw0."""
     Mb = o.matrix_basis.copy()
@@ -314,6 +459,14 @@ def apply_plan(fig_id, plan):
         prop.matrix_parent_inverse = root.matrix_world.inverted()
         prop.matrix_world = mw
         prop['rest'] = list(prop.location) + list(prop.rotation_euler) + list(prop.scale)
+    for fc in plan.get('free', []):                                   # a `pre` part is posed in world space (arms aim at it): it must not ride a hand
+        po = objs.get(fc['part'])
+        if po is not None and (fc.get('pre') or fc.get('detach')) and po.parent is not root:
+            mw = po.matrix_world.copy()
+            po.parent = root
+            po.matrix_parent_inverse = root.matrix_world.inverted()
+            po.matrix_world = mw
+            po['rest'] = list(po.location) + list(po.rotation_euler) + list(po.scale)
     _to_rest(objs)
 
     # rest-pose measurements (world space) taken with everything at rest
@@ -337,6 +490,9 @@ def apply_plan(fig_id, plan):
             pb.rotation_mode = 'QUATERNION'
 
     keys = plan.get('keys', {})
+    free_cfg = plan.get('free', [])
+    free_parts = {f['part'] for f in free_cfg}
+    live_parts = {f['part'] for f in free_cfg if f.get('live')}          # keyed (or aimed) as usual; the free pose blends from that live pose
     shakes = plan.get('shakes', [])
     pivots = plan.get('pivots', {})
     aims = plan.get('aim', {})
@@ -355,13 +511,25 @@ def apply_plan(fig_id, plan):
         return ch
 
     report = {'frames': N + 1, 'duration': T, 'parts_keyed': [], 'missing': []}
+    # ---- pass 0: a live part's baseline is keyed on every channel first, so that its live pose at frame f is its own motion and not whatever the
+    # free pass keyed for it at an earlier frame (an unkeyed channel holds its last key)
+    for part in live_parts:
+        ob = objs.get(part)
+        if ob is None:
+            continue
+        ob.rotation_mode = 'QUATERNION'
+        for f in range(0, N + 1):
+            ob.location, ob.rotation_quaternion, ob.scale = loc0[part], q0[part], scl0[part]
+            ob.keyframe_insert('location', frame=f)
+            ob.keyframe_insert('rotation_quaternion', frame=f)
+            ob.keyframe_insert('scale', frame=f)
     # ---- pass A: everything that is not an aimed arm
     for part in set(keys) | {s['part'] for s in shakes}:
         if part not in objs:
             report['missing'].append(part)
     for part, ob in objs.items():
         ch = touched(part)
-        if not ch or part in arms or part == prop_role or part in chains:
+        if not ch or part in arms or part == prop_role or part in chains or (part in free_parts and part not in live_parts):
             continue
         report['parts_keyed'].append(part)
         dz = pivots.get(part)
@@ -383,9 +551,10 @@ def apply_plan(fig_id, plan):
             for i, a in enumerate('xyz'):
                 if ('location_' + a) in ch:
                     loc[i] += delta(part, 'location_' + a, t) * 0.01
-            if dz is not None and has_rot:
+            pl = plan.get('pivots_local', {}).get(part)
+            if (dz is not None or pl is not None) and has_rot:
                 R = Qd
-                offs = Vector((0, 0, dz))
+                offs = (q0[part] @ Vector(pl)) if pl is not None else Vector((0, 0, dz))
                 loc += (R @ (-offs)) + offs                      # rotate about the point `offs` above the origin
             ob.location = loc
             sc_v = scl0[part].copy()
@@ -441,8 +610,8 @@ def apply_plan(fig_id, plan):
             prop.keyframe_insert('rotation_quaternion', frame=f)
             prop.keyframe_insert('scale', frame=f)
 
-    # ---- pass B: arms aimed at moving targets
-    if arms:
+    # ---- pass B: arms aimed at moving targets, then the free parts
+    if arms or free_cfg:
         targets = plan.get('targets', {})
         grips = plan.get('grips', {})
         local_cache = {}
@@ -474,12 +643,17 @@ def apply_plan(fig_id, plan):
             if h is not None:
                 h.rotation_mode = 'QUATERNION'
         prevq = {a: None for a in arms}
+        free_state = {}
         warm = {}
         report['grip_gap_max'] = {}
         for f in range(0, N + 1):
             t = f / fps
             sc.frame_set(f)
             bpy.context.view_layer.update()
+            for fc in free_cfg:
+                if fc.get('pre'):                                        # a free part the arms aim at (a steering wheel): posed first
+                    _pose_free(fc, objs, rest_m, center, f, t, T, free_state)
+                    bpy.context.view_layer.update()
             for a in arms:
                 ob = objs[a]
                 rot = [delta(a, 'rotation_' + c, t) for c in 'xyz']
@@ -552,7 +726,14 @@ def apply_plan(fig_id, plan):
                     hobj.location = hloc_key
                     hobj.keyframe_insert('rotation_quaternion', frame=f)
                     hobj.keyframe_insert('location', frame=f)
-        report['parts_keyed'] += sorted(arms)
+            if free_cfg:
+                bpy.context.view_layer.update()                      # the arms and hands now stand where this frame puts them
+                for fc in free_cfg:
+                    if fc.get('pre'):
+                        continue
+                    _pose_free(fc, objs, rest_m, center, f, t, T, free_state)
+                    bpy.context.view_layer.update()                      # the next free part may hang off this one
+        report['parts_keyed'] += sorted(arms) + sorted(free_parts)
     # name the actions (the exporter merges them into one glTF animation)
     for n, o in objs.items():
         if o.animation_data and o.animation_data.action:
@@ -561,6 +742,18 @@ def apply_plan(fig_id, plan):
         arm_obj.animation_data.action.name = 'idle_rig'
     sc.frame_set(0)
     return report
+
+def tilt_rig(fig_id, pivot_role, deg, axis='X'):
+    """Pitch the whole figure (the root empty, so the exported GLB's root node carries it) about the world `axis` through `pivot_role`'s origin by
+    `deg` degrees, then drop it so its lowest vertex is on z = 0. A static pose for the whole rig (a wheelie held at 45 degrees): the plan engine
+    only keys parts. Call after apply_plan."""
+    coll, objs, root = _rig(fig_id)
+    P = objs[pivot_role].matrix_world.translation.copy()
+    root.matrix_world = Matrix.Translation(P) @ Matrix.Rotation(math.radians(deg), 4, axis) @ Matrix.Translation(-P) @ root.matrix_world
+    bpy.context.view_layer.update()
+    low = min((o.matrix_world @ v.co).z for o in objs.values() for v in o.data.vertices)
+    root.location.z -= low
+    bpy.context.view_layer.update()
 
 
 _SAVED_SCENE = {}

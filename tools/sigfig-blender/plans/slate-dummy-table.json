@@ -1,0 +1,93 @@
+{
+ "wheel": {
+  "members": [
+   "acc_30663"
+  ],
+  "axis": [
+   1,
+   0,
+   0
+  ],
+  "theta": 810
+ },
+ "arm_l": {
+  "members": [
+   "arm_l",
+   "hand_l"
+  ],
+  "axis": [
+   0.2,
+   1,
+   0
+  ],
+  "theta": 810
+ },
+ "arm_r": {
+  "members": [
+   "arm_r",
+   "hand_r"
+  ],
+  "axis": [
+   0.2,
+   1,
+   0
+  ],
+  "theta": -450
+ },
+ "head": {
+  "members": [
+   "head",
+   "acc_m64a4bc45_202587_011646"
+  ],
+  "axis": [
+   1,
+   0.4,
+   0
+  ],
+  "theta": 1170
+ },
+ "torso": {
+  "members": [
+   "torso"
+  ],
+  "axis": [
+   1,
+   0,
+   0
+  ],
+  "theta": -450
+ },
+ "leg_l": {
+  "members": [
+   "leg_l"
+  ],
+  "axis": [
+   0.1,
+   1,
+   0
+  ],
+  "theta": 450
+ },
+ "leg_r": {
+  "members": [
+   "leg_r"
+  ],
+  "axis": [
+   0.1,
+   1,
+   0
+  ],
+  "theta": -810
+ },
+ "hips": {
+  "members": [
+   "hips"
+  ],
+  "axis": [
+   1,
+   0,
+   0
+  ],
+  "theta": 270
+ }
+}
