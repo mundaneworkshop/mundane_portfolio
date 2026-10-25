@@ -250,7 +250,8 @@ function allIds(){const seen={},out=[];SEED.forEach(s=>{seen[s.id]=1;out.push(s.
 function figs(){return allIds().map(eff).filter(s=>s&&!s.removed).sort((a,b)=>(a.order||0)-(b.order||0));}
 
 /* ===== unlock rules: same vocabulary as the arcade's ship unlocks, plus "view a case study" ===== */
-const UTYPES=[['free','Free',''],['minikits','Shoot minikits','Minikits to shoot',5],['destroy','Destroy ships','How many',10],['hunters','Destroy fighters targeting you','Fighters',5],['planets','See different arcade planets','Planets (max 7)',3],['survive','Survive in one run','',120],['plays','Play the arcade','Times played',3],['rank','Place on the leaderboard','Top rank (1 = first)',10],['score','Reach a score in one run','Score',100],['caseStudy','View a case study','']];
+const UTYPES=[['free','Free',''],['minikits','Shoot minikits','Minikits to shoot',5],['destroy','Destroy ships','How many',10],['hunters','Destroy fighters targeting you','Fighters',5],['planets','See different arcade planets','Planets (max 7)',3],['survive','Survive in one run','',120],['plays','Play the arcade','Times played',3],['rank','Place on the leaderboard','Top rank (1 = first)',10],['score','Reach a score in one run','Score',100],['caseStudy','View a case study',''],['visitLinkedin','Visit my LinkedIn',''],['visitInstagram','Visit my Instagram',''],['visitCV','Visit the CV page',''],['holonet','Leave a message on the HoloNet','']];
+const NONUM=['free','caseStudy','visitLinkedin','visitInstagram','visitCV','holonet'];   // rule types with no number
 const utype=t=>UTYPES.find(u=>u[0]===t)||UTYPES[1];
 const CASES=[['w0','Meta Horizon Worlds'],['w1','Slate Auto'],['w2','Josh.ai'],['cv','CV']];
 const SHIPS=[['x-wing','X-wing'],['y-wing','Y-wing'],['a-wing','A-wing'],['b-wing','B-wing'],['u-wing','U-wing'],['tie-fighter','TIE fighter'],['tie-interceptor','TIE interceptor'],['tie-defender','TIE defender'],['tie-dagger','TIE dagger'],['lambda-shuttle','Lambda shuttle'],['blockade-runner','Blockade runner'],['nebulon-b','Nebulon-B frigate'],['acclamator','Acclamator'],['imperial-light-cruiser','Imperial light cruiser'],['mc80','MC80'],['mc80a','MC80A'],['mc85','MC85'],['star-destroyer','Star Destroyer']];
@@ -266,6 +267,10 @@ function lockLine(u){const n=u.n|0;switch(u.type){
   case 'plays':return 'Play the Space Arcade '+n+' time'+(n===1?'':'s')+' to unlock';
   case 'rank':return 'Place in the top '+n+' on the Space Arcade leaderboard to unlock';
   case 'score':return 'Score '+n+' in one Space Arcade run to unlock';
+  case 'visitLinkedin':return 'Visit my LinkedIn to unlock';
+  case 'visitInstagram':return 'Visit my Instagram to unlock';
+  case 'visitCV':return 'Visit the CV page to unlock';
+  case 'holonet':return 'Leave a message on the HoloNet to unlock';
   case 'caseStudy':return 'View the '+caseName(u.target||'w0')+' case study to unlock';}return null;}
 const siteReady=u=>u.type==='free'||u.type==='minikits';   // the site's outfit unlocks read the minikit count today; the other rule types need the unlock engine
 
@@ -439,7 +444,7 @@ function card(s){
   const tf=el('div','fld');const tl=el('label',null,'Unlock when');tl.setAttribute('for',ts.id);tf.appendChild(tl);tf.appendChild(ts);ur.appendChild(tf);
   function numField(f,label,val,max){const x=el('div','fld');const l=el('label',null,label);l.setAttribute('for',f+'-'+id);x.appendChild(l);const n=el('input','in');n.type='number';n.min=0;if(max)n.max=max;n.step=1;n.value=val;n.id=f+'-'+id;n.setAttribute('data-f',f);n.setAttribute('data-id',id);x.appendChild(n);ur.appendChild(x);}
   if(u.type==='survive'){numField('umin','Minutes alive',Math.floor((u.n||0)/60));numField('usec','Seconds',(u.n||0)%60,59);}
-  else if(u.type!=='free'&&u.type!=='caseStudy')numField('un',utype(u.type)[2],u.n||0,u.type==='planets'?7:0);
+  else if(NONUM.indexOf(u.type)<0)numField('un',utype(u.type)[2],u.n||0,u.type==='planets'?7:0);
   if(u.type==='destroy'){const tg=el('select','in');tg.id='utg-'+id;tg.setAttribute('data-f','utarget');tg.setAttribute('data-id',id);
     [['any','Any ship'],['fighter','Any fighter'],['support','Any support ship'],['capital','Any capital ship']].forEach(x=>{const o=el('option',null,x[1]);o.value=x[0];if(x[0]===(u.target||'fighter'))o.selected=true;tg.appendChild(o);});
     const og=document.createElement('optgroup');og.label='A specific ship';SHIPS.forEach(x=>{const o=el('option',null,x[1]);o.value=x[0];if(x[0]===u.target)o.selected=true;og.appendChild(o);});tg.appendChild(og);
@@ -515,7 +520,7 @@ $('#list').addEventListener('change',e=>{if(pending.has(e.target)){pending.delet
   if(f==='animNotes'){patchFig(id,{animNotes:t.value.slice(0,2000)},true);return;}
   if(f==='triBudget'){const v=Math.min(60000,Math.max(1000,Math.round(parseFloat(t.value))));if(isFinite(v)){patchFig(id,{triBudget:v},true);}return;}
   if(f.indexOf('a-')===0){patchAbout(id,f.slice(2),t.value.slice(0,4000));return;}
-  if(f==='ut'){const d=utype(t.value),nu={type:t.value};if(t.value!=='free'&&t.value!=='caseStudy')nu.n=d[3];if(t.value==='destroy')nu.target='fighter';if(t.value==='caseStudy')nu.target='w0';patchFig(id,{unlock:nu});return;}
+  if(f==='ut'){const d=utype(t.value),nu={type:t.value};if(NONUM.indexOf(t.value)<0)nu.n=d[3];if(t.value==='destroy')nu.target='fighter';if(t.value==='caseStudy')nu.target='w0';patchFig(id,{unlock:nu});return;}
   if(f==='utarget'){patchFig(id,{unlock:Object.assign({},s.unlock,{target:t.value})},true);return;}
   if(f==='un'||f==='umin'||f==='usec'){const u=Object.assign({},s.unlock);let x=Math.max(0,Math.round(parseFloat(t.value)));if(!isFinite(x))return;
     if(f==='un'){u.n=u.type==='planets'?Math.min(7,x):x;}else{const mn=f==='umin'?x:Math.floor((u.n||0)/60),sc=f==='usec'?Math.min(59,x):(u.n||0)%60;u.n=mn*60+sc;}
@@ -644,7 +649,7 @@ function buildManifest(){const out=[],skipped=[],files=[];
     const used={},parts=[];local.forEach(g=>{let fn=safeFile(g.name),base=fn,n=2;while(used[fn])fn=base.replace(/\.glb$/i,'')+'-'+(n++)+'.glb';used[fn]=1;const path='assets/models/outfits/'+s.id+'/'+fn;parts.push({file:path});files.push({path,sid:s.id,g});});
     const lint=lintAgg(s),idle=lint&&lint.clips&&lint.clips.find(c=>/idle/i.test(c.name));
     const e={id:s.id,name:s.name,enabled:s.enabled};
-    const u=s.unlock;e.unlock=u.type==='free'?{type:'free'}:(u.type==='caseStudy'?{type:'caseStudy',target:u.target||'w0'}:Object.assign({type:u.type,n:u.n|0},u.type==='destroy'?{target:u.target||'fighter'}:{}));
+    const u=s.unlock;e.unlock=NONUM.indexOf(u.type)>=0&&u.type!=='caseStudy'?{type:u.type}:(u.type==='caseStudy'?{type:'caseStudy',target:u.target||'w0'}:Object.assign({type:u.type,n:u.n|0},u.type==='destroy'?{target:u.target||'fighter'}:{}));
     if(u.type==='minikits')e.unlockAt=u.n|0;else e.unlockAt=0;
     const a={};['kicker','title','body','teaser'].forEach(k=>{const v=(s.about[k]||'').trim();if(v)a[k]=v;});e.about=a;
     e.idle=idle?idle.name:null;e.parts=parts;out.push(e);});
