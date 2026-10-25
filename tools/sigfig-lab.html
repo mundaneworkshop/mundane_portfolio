@@ -160,6 +160,7 @@ textarea.in{resize:vertical;min-height:84px;line-height:1.4}
   <span class="tally" id="usage"></span>
   <span class="qtop" id="qtop" role="status" aria-live="polite"></span>
   <span class="grow"></span>
+  <button class="btn" id="saveAll" type="button" disabled>Save</button>
   <button class="btn primary" id="export" type="button">Export bundle</button>
   <span class="sync" id="sync" aria-live="polite"></span>
 </div>
@@ -311,10 +312,13 @@ function lintAgg(s){const gs=s.glbs.filter(g=>hasG(s,g));if(!gs.length)return nu
 
 /* ===== persistence ===== */
 let syncT=null;
-function setSync(t){const e=$('#sync');e.textContent=t;clearTimeout(syncT);if(t&&t!=='saving...')syncT=setTimeout(()=>{e.textContent='';},3500);}
+const pending=new Map();let autoT=null;   // typed-but-not-yet-saved fields (element -> true)
+function updSaveBtn(){const b=$('#saveAll');if(b){b.disabled=!pending.size;b.textContent=pending.size?'Save changes':'Save';}}
+function setSync(t){const e=$('#sync');e.textContent=t;clearTimeout(syncT);if(t&&t!=='saving...'&&t!=='unsaved changes')syncT=setTimeout(()=>{e.textContent=pending.size?'unsaved changes':'';},3500);}
 function writeFig(id){if(!db){setSync('not saved (offline)');return;}setSync('saving...');
   db.doc('sigfigs/'+id).set(ov[id]).then(()=>setSync('saved'),()=>setSync('not saved, try again'));}
 function patchFig(id,f,keepList){ov[id]=Object.assign({},ov[id]||{},f,{id:id});writeFig(id);if(keepList){paintFig(id);tallyPaint();}else renderList();}
+function quietPatch(id,f){ov[id]=Object.assign({},ov[id]||{},f,{id:id});writeFig(id);}   // typing: save without repainting the card (a repaint would drop the cursor)
 function patchAbout(id,k,v){const s=eff(id);patchFig(id,{about:Object.assign({},s.about,{[k]:v})},true);}
 
 /* ===== idle requests: the page queues them in the db, Claude runs them in Blender and adds the GLB ===== */
@@ -421,7 +425,7 @@ function card(s){
 
   /* about copy */
   const sec2=el('div','sec');sec2.appendChild(el('h4',null,'About copy in the manual'));
-  sec2.appendChild(el('p','note','Shown in the manual when this sig fig is selected in the carousel. The kicker defaults to "About me" and the title to the name.'));
+  sec2.appendChild(el('p','note','Shown in the manual when this sig fig is selected in the carousel. The kicker is the first word of the breadcrumb at the top left of the About view ("ABOUT ME / VR gamer"); it defaults to "About me". The title heads the manual and defaults to the name.'));
   function fld(label,key,kind,ph){const f=el('div','fld');const lb=el('label',null,label);lb.setAttribute('for',key+'-'+id);f.appendChild(lb);const i=el(kind==='area'?'textarea':'input','in');if(kind!=='area')i.type='text';i.id=key+'-'+id;i.value=s.about[key.slice(2)]||'';i.setAttribute('data-f',key);i.setAttribute('data-id',id);if(ph)i.placeholder=ph;i.autocomplete='off';f.appendChild(i);return f;}
   const r=el('div','row2');r.appendChild(fld('Kicker','a-kicker','text','About me'));r.appendChild(fld('Title','a-title','text',s.name));sec2.appendChild(r);
   const b=fld('Copy','a-body','area','What this outfit says about you');b.style.marginTop='10px';sec2.appendChild(b);
@@ -496,7 +500,16 @@ function tallyPaint(){const l=figs(),ready=l.filter(isReady).length,glbs=l.filte
   $('#tally').innerHTML='<b>'+l.length+'</b> sig figs · <b>'+glbs+'</b> with a model · <b>'+ready+'</b> ready to export';}
 
 /* ===== edits ===== */
-$('#list').addEventListener('change',e=>{const t=e.target,id=t.getAttribute('data-id'),f=t.getAttribute('data-f');if(!id||!f)return;const s=eff(id);if(!s)return;
+function fieldSave(t,quiet){const id=t.getAttribute('data-id'),f=t.getAttribute('data-f');if(!id||!f)return;const s=eff(id);if(!s)return;
+  if(f==='animNotes'){const v=t.value.slice(0,2000);(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{animNotes:v});return;}
+  if(f.indexOf('a-')===0){const k=f.slice(2),v=t.value.slice(0,4000),ab=Object.assign({},s.about,{[k]:v});(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{about:ab});return;}
+  if(f==='name'){const v=t.value.trim()||s.name;if(v!==s.name)(quiet?quietPatch:(i,x)=>patchFig(i,x,true))(id,{name:v.slice(0,40)});return;}}
+function flushPending(){clearTimeout(autoT);const els=[...pending.keys()];pending.clear();els.forEach(t=>{if(t.isConnected)fieldSave(t,true);});updSaveBtn();}
+$('#list').addEventListener('input',e=>{const t=e.target,f=t.getAttribute&&t.getAttribute('data-f');if(!f||!(f==='animNotes'||f==='name'||f.indexOf('a-')===0))return;
+  pending.set(t,true);setSync('unsaved changes');updSaveBtn();clearTimeout(autoT);autoT=setTimeout(flushPending,1200);});   // saves ~1.2 s after you stop typing
+$('#saveAll').addEventListener('click',()=>{flushPending();});
+window.addEventListener('beforeunload',e=>{if(pending.size){e.preventDefault();e.returnValue='';}});
+$('#list').addEventListener('change',e=>{if(pending.has(e.target)){pending.delete(e.target);updSaveBtn();}const t=e.target,id=t.getAttribute('data-id'),f=t.getAttribute('data-f');if(!id||!f)return;const s=eff(id);if(!s)return;
   if(f==='name'){const v=t.value.trim()||s.name;if(v!==s.name)patchFig(id,{name:v.slice(0,40)},true);else t.value=v;return;}
   if(f==='enabled'){patchFig(id,{enabled:t.checked});return;}
   if(f==='animNotes'){patchFig(id,{animNotes:t.value.slice(0,2000)},true);return;}
