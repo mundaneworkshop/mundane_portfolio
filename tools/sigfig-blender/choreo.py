@@ -35,7 +35,7 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
   hand_roll: {arm_l|arm_r: {target, rotvec_deg:[x,y,z]}}   while that arm's aim weight on `target` is up, the hand is turned by that hand-local
                          axis * degrees (or `deg` = about the pin, local y), pivoting where the pin leaves the arm (HAND_PIVOT) so the connection stays seated. No solver:
                          the arm motion is exactly the aimed motion.
-  free:    [{part, keys:[{t, off, rot, scale}], mix:[[t, wRig, wWorld, wFollow1..]], follow:[{to, like?, off?, rot?}], anchor?}]
+  free:    [{part, keys:[{t, off, rot, scale}], mix:[[t, wRig, wWorld, wFollow1..]], follow:[{to, like?, rel?, off?, rot?}], anchor?}]
            a part (prop, helmet, a limb that breaks off) posed as a weighted blend of RIG / WORLD / FOLLOW poses, see _pose_free. The pose is
            converted to the part's local transform and keyed, so the hierarchy is untouched.
   root:    {pivot, base_deg, axis?, pitch?: [[t, deg]], roll?: [[t, deg]]}   the whole rig held pitched `base_deg` about the world `axis` through `pivot`'s origin
@@ -285,7 +285,7 @@ def _pose_free(fc, objs, rest_m, center, f, t, T, state):
     for fo in follows:
         tgt = objs[fo['to']]
         src = rest_m[fo.get('like', part)]
-        H0 = rest_m[fo['to']].inverted() @ src
+        H0 = Matrix(fo['rel']) if fo.get('rel') else rest_m[fo['to']].inverted() @ src        # rel: the part's pose in the target's frame, given explicitly (a re-grip)
         tw = tgt.matrix_world
         arm = state.get('arm')
         if fo.get('bone') and arm is not None and fo['bone'] in arm.pose.bones:       # a skinned part (the head) turns by its bone, not its object

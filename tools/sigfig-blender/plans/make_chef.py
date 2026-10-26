@@ -1,81 +1,73 @@
-"""Chef: stirs the egg in the pan with the spatula (twice), then flips the pan and the egg does a full flip. 10 s loop.
-    python3 make_chef.py > chef.json"""
-import json, math
+"""Chef: stirs the egg in the pan with the spatula (twice), takes the spatula out, flips the pan and the egg does a full flip and lands flat in it. 10 s loop.
+    (Blender)  exec(open(BASE + 'plans/solve_chef.py').read())      # spatula pose + right arm per frame -> chef-solve.json
+    (Blender)  exec(open(BASE + 'plans/measure_chef.py').read())    # where the pan is at take-off and landing -> chef-solve.json (egg_land)
+    python3 make_chef.py > chef.json
+The pan stays as imported in the left hand, level, so only the left arm's flick is keyed. The spatula is a world-space free part (blade flat, hovering over the
+egg) and the right arm / hand-twist keys are the solved ones (clip on the handle, arm clear of the torso). The egg rides the pan, flush on its floor."""
+import json, math, os
 from motionlib import *
+from physlib import *
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+S = json.load(open(os.path.join(HERE, 'chef-solve.json')))
 T = 10.0
-# base pose found by search (spatula blade over the pan centre, pan held flat): degrees
-P = dict(xl=-37.9, yl=9.7, cxh=40.0, hlz=-24.2, hly=9.1, xr=-7.7, yr=-46.6, zr=46.3, hrx=-0.5, hry=-36.7, hrz=-13.8)
+LEAN, HEAD = S['lean'], S['head_tilt']
+N = int(T * 24)
 
-def phase(t, t0):
-    return 2 * math.pi * 1.25 * (t - t0)
+# ---- the pan's flick (left arm, rotation about the shoulder) and the egg
+T_FLICK0, T_LAUNCH, T_LAND = 6.7, 7.2, 8.05
+def arm_l_x(t):
+    return S['pan_level'] + pulse(t, [(T_FLICK0, 0), (7.0, 7), (T_LAUNCH, -22), (7.5, -5), (7.8, 3), (T_LAND, 0)])
 
-stir1, stir2 = (1.0, 3.5), (4.7, 6.3)
+# ---- spatula: absolute world pose per frame -> keys relative to its rest pose
+sp0 = S['sp_rest_true']
+q0 = mat3_to_q([r[:3] for r in sp0[:3]])
+loc0 = [sp0[i][3] for i in range(3)]
+sp_keys = []
+for f in range(N + 1):
+    i = f % N
+    pos, q = S['sp_pos'][i], tuple(S['sp_q'][i])
+    dq = qmul(q, qinv(q0))
+    sp_keys.append(dict(t=f / 24.0, off=[round(pos[k] - loc0[k], 5) for k in range(3)], rot=[round(c, 3) for c in qeuler_xyz(dq)]))
 
-def env(t):
-    return win(t, *stir1, fade=0.4) + win(t, *stir2, fade=0.4)
+# ---- egg: flush on the pan floor (pan local z = -0.06, the egg's bottom is its local z = -0.08), flips about its own centre at launch, lands back
+EGG_REL = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0.0205], [0, 0, 0, 1]]
+c_local = (0.0, 0.0, -0.04)                         # the egg's centre relative to its origin
+land = S.get('egg_land', {'off': [0, 0, 0], 'q': [1, 0, 0, 0]})            # the pan's move from take-off to landing (world), measured
+def egg_path(t):
+    """off (world, relative to the take-off pose) and rotation Euler (world) while it is in the air."""
+    u = (t - T_LAUNCH) / (T_LAND - T_LAUNCH)
+    u = min(1.0, max(0.0, u))
+    z = 0.42 * math.sin(math.pi * u) ** 0.9                                  # up and back down
+    ang = 360.0 * (u - 0.0)                                                  # one full flip about the world x axis
+    qf = qaxis((1, 0, 0), ang)
+    e = sm(u)
+    cw = qrot(tuple(S.get('egg_takeoff_q', [1, 0, 0, 0])), c_local)          # the centre, in world axes at take-off
+    corr = [cw[k] - qrot(qf, cw)[k] for k in range(3)]                       # keep the flip about the centre, not the origin
+    off = [land['off'][k] * e + corr[k] + (z if k == 2 else 0.0) for k in range(3)]
+    q = qmul(qf, qslerp((1, 0, 0, 0), tuple(land['q']), e))
+    return off, qeuler_xyz(q)
+egg_keys = []
+for f in range(int(T_LAUNCH * 24), int(T_LAND * 24) + 1):
+    off, rot = egg_path(f / 24.0)
+    egg_keys.append(dict(t=f / 24.0, off=[round(c, 5) for c in off], rot=[round(c, 3) for c in rot]))
+egg_mix = [[0, 0, 0, 1], [T_LAUNCH - 0.01, 0, 0, 1], [T_LAUNCH + 0.01, 0, 1, 0], [T_LAND - 0.08, 0, 1, 0], [T_LAND + 0.02, 0, 0, 1], [T, 0, 0, 1]]
 
-def circ(t):
-    """+1 .. -1 sine/cosine pair with the right phase per stir session."""
-    if t < 4.0:
-        ph = phase(t, stir1[0])
-    else:
-        ph = phase(t, stir2[0])
-    return math.sin(ph), math.cos(ph)
+head_x = lambda t: HEAD + 1.0 * math.sin(2 * math.pi * t / T) - 8 * win(t, 6.9, 7.9, 0.2)          # looks at the pan, up to follow the egg
 
-def arm_r_x(t):
-    s, c = circ(t)
-    wd = win(t, 6.55, 8.7, 0.35)
-    return P['xr'] + 7 * env(t) * s - 34 * wd
-
-def arm_r_z(t):
-    s, c = circ(t)
-    wd = win(t, 6.55, 8.7, 0.35)
-    return P['zr'] + 8 * env(t) * (c - 1 if False else c) + 12 * wd
-
-def arm_l_x(t):    # pan: small stir sway, then the flip
-    s, c = circ(t)
-    flick = pulse(t, [(6.7, 0), (7.0, 7), (7.2, -20), (7.55, -7), (7.95, 5), (8.3, 1), (8.9, 0)])
-    return P['xl'] + 1.5 * env(t) * s + flick
-
-def hand_l_x(t):   # wrist keeps the pan level through the arm's motion, and tips it for the flip
-    s, c = circ(t)
-    flick = pulse(t, [(6.7, 0), (7.0, -8), (7.2, 22), (7.55, 6), (7.95, -6), (8.3, -1), (8.9, 0)])
-    return P['cxh'] - (arm_l_x(t) - P['xl']) * 0.0 + flick
-
-def head_x(t):
-    return 14 + 5 * env(t) - 12 * win(t, 6.9, 7.9, 0.2) + 0   # looks down at the pan, up to follow the egg
-
-def torso_x(t):
-    return 4 + 3 * env(t) + 1.2 * math.sin(2 * math.pi * t / T)
-
-def torso_z(t):
-    return -3 * env(t) * math.sin(0.5 * phase(t, 1.0) * 0.4)
-
-# the egg: follows the pan, leaves it at 7.2 s, flips once, lands back at 8.0 s
-egg_keys = [
-    dict(t=7.2, off=[0, 0, 0], rot=[0, 0, 0]),
-    dict(t=7.35, off=[0, 0, 0.26], rot=[100, 0, 0]),
-    dict(t=7.55, off=[0, 0, 0.40], rot=[210, 0, 0]),
-    dict(t=7.75, off=[0, 0, 0.27], rot=[290, 0, 0]),
-    dict(t=7.95, off=[0, 0, 0.05], rot=[350, 0, 0]),
-    dict(t=8.05, off=[0, 0, 0], rot=[360, 0, 0]),
-]
 plan = dict(
     duration=T, fps=24,
-    description="Chef stirs the egg in the pan twice with the spatula, then flicks the pan and the egg flips and lands back in it. 10 s loop.",
+    description="Chef stirs the egg in the pan twice with the spatula, takes it out, flicks the pan and the egg flips and lands flat in it. 10 s loop.",
     bend={'torso': {'zone': 0.32, 'segments': 4}, 'head': {'zone': 0.12, 'segments': 3}},
     pivots_local={'hand_l': [0, -0.04, -0.005], 'hand_r': [0, -0.04, -0.005]},
     keys={
-        'arm_l': {'rotation_x': dense(arm_l_x, T), 'rotation_y': [[0, P['yl']]]},
-        'hand_l': {'rotation_x': dense(hand_l_x, T), 'rotation_z': [[0, P['hlz']]], 'rotation_y': [[0, P['hly']]]},
-        'arm_r': {'rotation_x': dense(arm_r_x, T), 'rotation_z': dense(arm_r_z, T), 'rotation_y': [[0, P['yr']]]},
-        'hand_r': {'rotation_x': [[0, P['hrx']]], 'rotation_y': [[0, P['hry']]], 'rotation_z': [[0, P['hrz']]]},
-        'head': {'rotation_x': dense(head_x, T, 2), 'rotation_z': dense(lambda t: 5 * math.sin(2 * math.pi * t / T), T, 4)},
-        'torso': {'rotation_x': dense(torso_x, T, 2), 'rotation_z': dense(torso_z, T, 2)},
+        'arm_l': {'rotation_x': dense(arm_l_x, T)},
+        'arm_r': {c: [[round(f / 24.0, 5), S['arm_r'][f][i]] for f in range(N)] for i, c in enumerate(('rotation_x', 'rotation_y', 'rotation_z'))},
+        'hand_r': {c: [[round(f / 24.0, 5), S['arm_r'][f][3 + i]] for f in range(N)] for i, c in enumerate(('rotation_x', 'rotation_y', 'rotation_z'))},
+        'head': {'rotation_x': dense(head_x, T, 2)},
+        'torso': {'rotation_x': dense(lambda t: LEAN, T, 12)},
     },
-    free=[dict(part='prop_98138pb088', keys=egg_keys, anchor=7.2,
-               follow=[dict(to='acc_4528', off=[-0.018, -0.041, -0.32], rot=[-55.4, 30.2, -27.5])],
-               mix=[[0, 0, 0, 1], [7.19, 0, 0, 1], [7.21, 0, 1, 0], [7.98, 0, 1, 0], [8.1, 0, 0, 1]])],
+    free=[dict(part='acc_93082e', keys=sp_keys, mix=[[0, 0, 1]]),
+          dict(part='prop_98138pb088', keys=egg_keys, anchor=T_LAUNCH, follow=[dict(to='acc_4528', rel=EGG_REL)], mix=egg_mix)],
 )
 print(json.dumps(plan))

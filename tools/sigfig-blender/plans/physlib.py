@@ -54,3 +54,26 @@ def fall(p0, v0, floor, t0, t1, fps=24, g=6.0, e=0.38, hold=0.62, sub=20):
                     v = [0.0, 0.0, 0.0]; at_rest = True; break
                 v[2] = -v[2] * e; v[0] *= hold; v[1] *= hold
     return out
+
+
+def mat3_to_q(m):
+    """3x3 rotation (rows) -> (w, x, y, z)."""
+    t = m[0][0] + m[1][1] + m[2][2]
+    if t > 0:
+        s = math.sqrt(t + 1.0) * 2
+        return (0.25 * s, (m[2][1] - m[1][2]) / s, (m[0][2] - m[2][0]) / s, (m[1][0] - m[0][1]) / s)
+    if m[0][0] > m[1][1] and m[0][0] > m[2][2]:
+        s = math.sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2
+        return ((m[2][1] - m[1][2]) / s, 0.25 * s, (m[0][1] + m[1][0]) / s, (m[0][2] + m[2][0]) / s)
+    if m[1][1] > m[2][2]:
+        s = math.sqrt(1.0 + m[1][1] - m[0][0] - m[2][2]) * 2
+        return ((m[0][2] - m[2][0]) / s, (m[0][1] + m[1][0]) / s, 0.25 * s, (m[1][2] + m[2][1]) / s)
+    s = math.sqrt(1.0 + m[2][2] - m[0][0] - m[1][1]) * 2
+    return ((m[1][0] - m[0][1]) / s, (m[0][2] + m[2][0]) / s, (m[1][2] + m[2][1]) / s, 0.25 * s)
+
+def qinv(q): return (q[0], -q[1], -q[2], -q[3])
+
+
+def euler_xyz_to_q(rx, ry, rz):
+    """Blender 'XYZ' Euler (degrees; R = Rz Ry Rx) -> (w, x, y, z)."""
+    return qmul(qaxis((0, 0, 1), rz), qmul(qaxis((0, 1, 0), ry), qaxis((1, 0, 0), rx)))
