@@ -48,15 +48,18 @@ if STAGE == 'm1':
     res['base_loc'], res['base_q'] = res.get('rel_loc'), res.get('rel_q')
     res['seat_loc'], res['seat_q'] = res.get('land_loc'), res.get('land_q')
     if meta.get('tip_frames'):
-        hnd = _R('hand_' + SIDE)
         a, b = meta['tip_frames']
-        tips = []
-        for f in range(a, b + 1):
-            at(f)
-            tips.append([round(v, 5) for v in (hnd.matrix_world @ Vector((0.0, -0.15, 0.015)))])
-        res['tip_from'], res['tips'] = a, tips
+        res['tip_from'] = a
+        for s in meta.get('tip_hands', [SIDE]):
+            hnd = _R('hand_' + s)
+            tips = []
+            for f in range(a, b + 1):
+                at(f)
+                tips.append([round(v, 5) for v in (hnd.matrix_world @ Vector((0.0, -0.15, 0.015)))])
+            res['tips_' + s] = tips
+        res['tips'] = res['tips_' + meta.get('tip_hands', [SIDE])[0]]
     json.dump(res, open(MP, 'w'), indent=1)
-    result = {k: v for k, v in res.items() if k != 'tips'}
+    result = {k: v for k, v in res.items() if not k.startswith('tips')}
 else:
     PARTS = ['head', 'torso', 'hips', 'leg_l', 'leg_r', 'arm_l', 'arm_r', 'hand_l', 'hand_r', 'acc_23186']
     N = int(plan['duration'] * FPS)

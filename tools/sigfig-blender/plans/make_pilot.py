@@ -2,7 +2,8 @@
 he takes it off and is back at the start. 15 s loop.
   rebel: the helmet hops from the rim grip onto his fingertips (the hand up inside its cavity, the fingers in the anti-stud under the crown) and spins there,
          then he tosses it up and it lands on his head.
-  TIE:   he dribbles the helmet like a basketball, crown up, rim on the floor, patting the crown; the last bounce sends it high and it comes down on his head.
+  TIE:   he dribbles the helmet like a basketball, upside down (crown on the floor), passing it from hand to hand, patting the rim; the last bounce sends it
+         high and it comes down on his head, the right way up.
 On the head the helmet sits as LDraw headgear does: in the hair piece's place, the head's stud in its anti-stud.
 
     (Blender)  FIG = 'rebel-pilot'; exec(open(BASE + 'plans/solve_pilot.py').read())     # rim grip (rebel), the imported grip (rel_rim), the free arm's hip pose
@@ -71,7 +72,11 @@ if REBEL:
         after = {0: [(0, 0), (8.6, -12), (9.0, 6), (10.4, 6), (10.95, CARRY[0]), (11.8, CARRY[0]), (12.8, 0), (T, 0)],
                  1: [(0, 0), (10.4, 0), (10.95, m * CARRY[1]), (11.8, m * CARRY[1]), (12.8, 0), (T, 0)],
                  2: [(0, 0), (10.4, 0), (10.95, m * CARRY[2]), (11.8, m * CARRY[2]), (12.8, 0), (T, 0)]}[i]
-        return lambda t: up(t) * (TIP[i] + (flick(t) if i == 0 else 0.0)) + (1 - up(t)) * pulse(t, after)
+        return lambda t: up(t) * (TIP[i] + (flick(t) if i == 0 else 0.0) + circle(t, i)) + (1 - up(t)) * pulse(t, after)
+    def circle(t, i):                     # the arm waves the spinning helmet round a small circle, about once a second
+        a = 2 * math.pi * 1.1 * (t - T_SPIN0)
+        e = win(t, T_SPIN0, T_SPIN1, 0.6)
+        return e * 7.0 * (math.sin(a) if i == 0 else (m * math.cos(a) if i == 1 else 0.0))
     def helm_hand(i): return lambda t: up(t) * TIP[3 + i]
     def head_x(t): return 6 * win(t, 1.0, 6.0, 0.8) - 20 * win(t, 7.1, 8.2, 0.3) + 4 * win(t, 8.5, 12.8, 0.4) - 4 * win(t, 10.6, 11.7, 0.3)
     def head_z(t): return (-m) * (12 * win(t, 1.0, 6.0, 0.8) + 8 * win(t, 6.8, 8.0, 0.3)) + 10 * pulse(t, [(8.8, 0), (9.3, 1), (9.9, -0.8), (10.4, 0)]) * win(t, 8.6, 10.5, 0.2)
@@ -99,7 +104,8 @@ if REBEL:
             fr = 1 - (1 - s) ** 2
             dq = qmul(qaxis((1, 0, 0), -360.0 * fr), qslerp((1, 0, 0, 0), rres, fr))
             toss.append(dict(t=round(f / FPS, 5), off=[round(dxyz[0] * s, 5), round(dxyz[1] * s, 5), round(APEX - kg * (tau - tau_a) ** 2, 5)], rot=[round(v, 3) for v in qeuler_xyz(dq)]))
-        bump = [dict(t=0.9, off=[0, 0, 0]), dict(t=1.08, off=[0, 0, 0.12]), dict(t=1.25, off=[0, 0, 0]),                  # the hop from the grip onto the fingers
+        bump = [dict(t=0.9, off=[0, 0, 0]), dict(t=1.08, off=[0, 0, 0.12]), dict(t=1.25, off=[0, 0, 0]), dict(t=1.45, off=[0, 0, 0]),   # the hop onto the fingers
+                dict(t=T_OFF0 - 0.2, off=[0, 0, 0]),                     # held flat in between: a long spline span between two zeros sagged 4 cm and crept back
                 dict(t=T_OFF0, off=[0, 0, 0]), dict(t=T_OFF0 + 0.35, off=[0, 0, 0.30]), dict(t=T_OFF0 + 0.8, off=[0, 0, 0.28]), dict(t=T_OFF1, off=[0, 0, 0])]
         helmet_free = dict(
             part=helmet, keys=toss, anchor=T_REL - 0.01, anchor_follow=1, bump=bump,
@@ -108,63 +114,84 @@ if REBEL:
             mix=[[0, 0, 0, 1, 0, 0], [0.9, 0, 0, 1, 0, 0], [1.25, 0, 0, 0, 1, 0], [T_REL - 0.01, 0, 0, 0, 1, 0], [T_REL + 0.01, 0, 1, 0, 0, 0],
                  [T_LAND - 0.15, 0, 1, 0, 0, 0], [T_LAND + 0.15, 0, 0, 0, 0, 1], [T_OFF0, 0, 0, 0, 0, 1], [T_OFF0 + 0.3, 0, 0, 0, 0, 1], [T_OFF1, 0, 0, 1, 0, 0], [T, 0, 0, 1, 0, 0]])
 else:
-    # ---- the TIE's dribble
-    T_D0 = 1.2                                                        # the helmet leaves the hand
-    P = 0.7                                                           # one dribble
-    NB = 6                                                            # pats after the drop
-    T_LAST = T_D0 + NB * P                                            # the last pat
+    # ---- the TIE's dribble: upside down (crown on the floor, rim up), passed from hand to hand: the left hand drops it, it bounces across to the right
+    # hand, which pats it back across to the left, and so on; the last bounce sends it up and it comes down on his head the right way up
+    T_D0 = 1.2                                                        # the helmet leaves the (left) hand
+    P = 0.7                                                           # one bounce, hand to hand
+    NB = 6                                                            # tops after the drop: right, left, right, left, right, left
+    T_LAST = T_D0 + NB * P
     T_KICK = T_LAST + P / 2                                           # the last floor bounce: this one sends it up
     F_D0, F_KICK = int(round(T_D0 * FPS)), int(round(T_KICK * FPS))
     F_LAND = 178
     T_LAND = F_LAND / FPS
-    PAT_X, PAT_OUT, PAT_TURN, PAT_AMP = -15.0, 60.0, 40.0, 10.0        # the arm out to his side and forward, so the helmet bounces clear of his legs (fingertips
-                                                                      # 0.40-0.47 m out, 0.2-0.3 m forward, 0.55-0.61 m up: a sweep of the arm in Blender), patting
+    # the patting poses (arm x, y, z), found by sweeping each arm in Blender: the fingertips about 0.43 m out to that side, 0.22 m forward, 0.6 m up
+    PAT = {side: (-15.0, 45.0, 40.0), other: (-25.0, 45.0, -20.0)}
+    PAT_AMP = 10.0
     def dribbling(t): return win(t, T_D0 - 0.4, T_LAST + 0.25, 0.35)
-    def pat(t): return PAT_AMP * math.cos(2 * math.pi * (t - T_D0) / P)              # up (more negative x is higher) at every top
+    def first_top(s): return T_D0 + (2 * P if s == side else P)    # the right hand meets it first
+    def pat(s, t): return PAT_AMP * math.cos(2 * math.pi * (t - first_top(s)) / (2 * P))     # each hand is up when the helmet comes to it
     def helm_arm(i):
         rest = {0: [(0, 0), (0.6, 0), (T_KICK, 0), (T_KICK + 0.35, -105), (T_KICK + 0.9, -60), (T_LAND + 0.4, 0), (10.4, 0), (10.95, CARRY[0]), (11.8, CARRY[0]), (12.8, 0), (T, 0)],
                 1: [(0, 0), (10.4, 0), (10.95, m * CARRY[1]), (11.8, m * CARRY[1]), (12.8, 0), (T, 0)],
                 2: [(0, 0), (10.4, 0), (10.95, m * CARRY[2]), (11.8, m * CARRY[2]), (12.8, 0), (T, 0)]}[i]
-        if i == 0:
-            return lambda t: dribbling(t) * (PAT_X - pat(t)) + (1 - dribbling(t)) * pulse(t, rest)
-        if i == 1:
-            return lambda t: dribbling(t) * PAT_OUT + (1 - dribbling(t)) * pulse(t, rest)
-        return lambda t: dribbling(t) * PAT_TURN + (1 - dribbling(t)) * pulse(t, rest)
+        return lambda t: dribbling(t) * (PAT[side][i] - (pat(side, t) if i == 0 else 0.0)) + (1 - dribbling(t)) * pulse(t, rest)
+    def other_arm(i, base):               # the free arm leaves the hip to pat, then goes back
+        return lambda t: dribbling(t) * (PAT[other][i] - (pat(other, t) if i == 0 else 0.0)) + (1 - dribbling(t)) * base(t)
     def helm_hand(i): return lambda t: 0.0
     def head_x(t): return 14 * win(t, 0.9, T_KICK + 0.1, 0.4) - 22 * win(t, T_KICK + 0.1, T_LAND - 0.1, 0.25) + 4 * win(t, T_LAND + 0.2, 12.8, 0.4) - 4 * win(t, 10.6, 11.7, 0.3)
-    def head_z(t): return (-m) * 10 * win(t, 0.9, T_KICK, 0.5) + 10 * pulse(t, [(8.8, 0), (9.3, 1), (9.9, -0.8), (10.4, 0)]) * win(t, 8.6, 10.5, 0.2)
-    def torso_z(t): return (-m) * (6 * win(t, 0.9, T_KICK, 0.5) + 6 * win(t, 10.7, 11.9, 0.3))
-    def torso_x(t): return 2 + 6 * win(t, 0.9, T_KICK, 0.5) + 2.0 * math.sin(2 * math.pi * (t - T_D0) / P) * dribbling(t) - 6 * win(t, T_KICK, T_KICK + 0.6, 0.15)
-    meta = dict(frames=dict(rest=0, rel=F_D0, land=F_LAND), tip_frames=[F_D0, F_KICK])
+    def head_z(t):                        # follows the helmet from hand to hand
+        return 12 * math.cos(math.pi * (t - T_D0) / P) * dribbling(t) * m + 10 * pulse(t, [(8.8, 0), (9.3, 1), (9.9, -0.8), (10.4, 0)]) * win(t, 8.6, 10.5, 0.2)
+    def torso_z(t): return 5 * math.cos(math.pi * (t - T_D0) / P) * dribbling(t) * m + (-m) * 6 * win(t, 10.7, 11.9, 0.3)
+    def torso_x(t): return 2 + 8 * win(t, 0.9, T_KICK, 0.5) + 2.0 * math.sin(2 * math.pi * (t - T_D0) / P) * dribbling(t) - 6 * win(t, T_KICK, T_KICK + 0.6, 0.15)
+    meta = dict(frames=dict(rest=0, rel=F_D0, land=F_LAND), tip_frames=[F_D0, F_KICK], tip_hands=[side, other])
     if MODE == 'm1':
         helmet_free = dict(part=helmet, follow=[hold_follow, head_follow], mix=[[0, 0, 0, 1, 0], [6.5, 0, 0, 1, 0], [6.51, 0, 0, 0, 1], [T, 0, 0, 0, 1]])
     else:
         rest = (MEAS['rest_loc'], tuple(MEAS['rest_q']))             # the helmet's imported pose (WORLD keys are relative to it)
         ql = tuple(MEAS['land_q'])                                    # upright as on the head: crown up, face forward
-        TOP, RIM = STUD['top_z'], STUD['rim_z']                       # crown and rim heights above / below the helmet's origin
-        tips = MEAS['tips']
-        tip = lambda t: tips[max(0, min(len(tips) - 1, int(round(t * FPS)) - MEAS['tip_from']))]
-        FLOOR_Z = -RIM + 0.002                                         # the origin's height with the rim on the floor
+        qf = qmul(qaxis((1, 0, 0), 180.0), ql)                        # upside down: crown on the floor, rim up
+        TOP, RIM = STUD['top_z'], STUD['rim_z']
+        tips = {s_: MEAS['tips_' + s_] for s_ in (side, other)}
+        tip = lambda s_, t: tips[s_][max(0, min(len(tips[s_]) - 1, int(round(t * FPS)) - MEAS['tip_from']))]
+        FLOOR_Z = TOP + 0.002                                          # the origin's height with the crown on the floor
+        RIM_UP = -RIM + 0.004                                          # the rim's height above the origin, upside down
         rel_l, rel_q = MEAS['rel_loc'], tuple(MEAS['rel_q'])
+        rel_c = MEAS['land_loc']                                       # his middle (the seat is over his head)
+        RIM_EDGE = 0.15                                                # the helmet's middle sits this far beyond the hand
+        def top_at(k):
+            if k == 0:
+                return rel_l
+            s_ = other if k % 2 == 1 else side
+            tp = tip(s_, T_D0 + k * P)
+            ox, oy = tp[0] - rel_c[0], tp[1] - rel_c[1]               # outward from his middle, through the hand
+            n_ = math.hypot(ox, oy) or 1.0
+            # the hand pats the near edge of the rim (not the middle of the opening, where the forearm would go into the helmet)
+            return [tp[0] + ox / n_ * RIM_EDGE, tp[1] + oy / n_ * RIM_EDGE, tp[2] - RIM_UP]
         def drib(t):
-            """(position, orientation): pats at T_D0 + kP (crown on the fingertips), rim on the floor half way between."""
+            """(position, orientation): the rim meets a hand at T_D0 + kP (alternately right / left), the crown hits the floor half way, out in front of him."""
             k = min(NB, int((t - T_D0) // P))
-            tk = T_D0 + k * P
-            tp = tip(tk) if k > 0 else None
-            top = [tp[0], tp[1], tp[2] - TOP - 0.004] if tp else rel_l
-            nxt = tip(min(T_LAST, tk + P))
-            top_n = [nxt[0], nxt[1], nxt[2] - TOP - 0.004]
-            u = (t - tk) / P
-            h = abs(math.cos(math.pi * u))                             # 1 at the tops, 0 (a cusp: the bounce) on the floor
-            a = top if u < 0.5 else top_n
-            pos = [a[0], a[1], FLOOR_Z + (a[2] - FLOOR_Z) * h]
-            q = qslerp(rel_q, ql, min(1.0, (t - T_D0) / (P / 2))) if k == 0 else ql       # turns crown-up on the way to the first bounce
+            u = (t - T_D0 - k * P) / P
+            a, b_ = top_at(k), top_at(min(NB, k + 1)) if k < NB else top_at(NB)
+            if k >= NB:                                               # after the last pat: down to the floor in front, then the kick
+                b_ = [a[0] * 0.5, a[1] - 0.12, a[2]]
+            mid = [(a[0] + b_[0]) / 2, min(a[1], b_[1]) - 0.12]        # the floor spot: between the hands and a little further out in front
+            h = abs(math.cos(math.pi * u))                             # 1 at the tops, 0 (the bounce, a cusp) on the floor
+            if u < 0.5:
+                w = u * 2
+                xy = [a[0] + (mid[0] - a[0]) * w, a[1] + (mid[1] - a[1]) * w]
+                ztop = a[2]
+            else:
+                w = (u - 0.5) * 2
+                xy = [mid[0] + (b_[0] - mid[0]) * w, mid[1] + (b_[1] - mid[1]) * w]
+                ztop = b_[2]
+            pos = [xy[0], xy[1], FLOOR_Z + (ztop - FLOOR_Z) * h]
+            q = qslerp(rel_q, qf, min(1.0, (t - T_D0) / (P / 2))) if k == 0 else qf       # flips over on the way down to the first bounce
             return pos, q
         keys = []
         for f in range(F_D0, F_KICK + 1):
             pos, q = drib(f / FPS)
             keys.append(world_key(f / FPS, pos, q, rest))
-        # the last bounce: from the floor up over his head and down onto it, one turn about the vertical on the way
+        # the last bounce: from the floor up over his head and down onto it, turning the right way up on the way
         F = drib(T_KICK)[0]
         S = MEAS['land_loc']
         D = T_LAND - T_KICK
@@ -174,10 +201,10 @@ else:
         kg = APEX / tau_a ** 2
         for f in range(F_KICK + 1, F_LAND + 1):
             tau = f / FPS - T_KICK
-            s = min(1.0, tau / D)
-            e = s * s * (3 - 2 * s)
+            s_ = min(1.0, tau / D)
+            e = s_ * s_ * (3 - 2 * s_)
             pos = [F[0] + (S[0] - F[0]) * e, F[1] + (S[1] - F[1]) * e, F[2] + APEX - kg * (tau - tau_a) ** 2]
-            q = qmul(qaxis((0, 0, 1), 360.0 * e), ql)
+            q = qmul(qaxis((1, 0, 0), 180.0 * (1 - e)), ql)
             keys.append(world_key(f / FPS, pos, q, rest))
         bump = [dict(t=T_OFF0, off=[0, 0, 0]), dict(t=T_OFF0 + 0.35, off=[0, 0, 0.30]), dict(t=T_OFF0 + 0.8, off=[0, 0, 0.28]), dict(t=T_OFF1, off=[0, 0, 0])]
         helmet_free = dict(
@@ -199,7 +226,8 @@ plan = dict(
     keys={
         'arm_' + side: {'rotation_x': dense(helm_arm(0), T), 'rotation_y': dense(helm_arm(1), T), 'rotation_z': dense(helm_arm(2), T)},
         'hand_' + side: {'rotation_x': dense(helm_hand(0), T, 2), 'rotation_y': dense(helm_hand(1), T, 2), 'rotation_z': dense(helm_hand(2), T, 2)},
-        'arm_' + other: {'rotation_x': [[0, HIP[0]]], 'rotation_y': dense(hip_arm_y, T, 4), 'rotation_z': [[0, HIP[2]]]},
+        'arm_' + other: ({'rotation_x': [[0, HIP[0]]], 'rotation_y': dense(hip_arm_y, T, 4), 'rotation_z': [[0, HIP[2]]]} if REBEL else
+                         {'rotation_x': dense(other_arm(0, lambda t: HIP[0]), T), 'rotation_y': dense(other_arm(1, hip_arm_y), T), 'rotation_z': dense(other_arm(2, lambda t: HIP[2]), T)}),
         'hand_' + other: {'rotation_x': [[0, HIP[3]]], 'rotation_y': [[0, HIP[4]]], 'rotation_z': [[0, HIP[5]]]},
         'leg_' + side: {'rotation_x': dense(tap, T)},
         'head': {'rotation_x': dense(head_x, T, 2), 'rotation_z': dense(head_z, T, 2)},
