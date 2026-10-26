@@ -36,14 +36,16 @@ def crouch(t):                             # forward lean while loading and land
 def pole(t):                               # arms: poles swing and plant with the turns, thrown back to load the hop and up and forward on take-off
     load = pulse(t, [(T_CROUCH - 0.4, 0), (T_CROUCH + 0.3, 24), (T_AIR0, 24), (T_AIR0 + 0.25, -34), (T_APEX, -22), (T_AIR1 - 0.1, -8), (T_AIR1 + 0.3, 10), (T_W2 + 0.5, 0)])
     return load
+def look(t):                               # glances about: down the slope, to each side, back down the slope (eyes up for the hop)
+    return (16.0 * math.sin(2 * math.pi * t / 5.0 + 0.4) + 6.0 * math.sin(2 * math.pi * t / 2.5 + 2.0)) * (1.0 - 0.8 * win(t, T_CROUCH, T_AIR1 + 0.3, 0.3))
 def legs_land(t): return pulse(t, [(T_AIR1 - 0.05, 0), (T_AIR1 + 0.12, 11), (T_AIR1 + 0.5, 0)])      # the legs take the landing
 
 keys = {
     'hips': {'location_x': dense(slide, T, 2), 'location_z': dense(hop, T), 'rotation_y': dense(roll, T, 2), 'rotation_z': dense(yaw, T, 2),
              'rotation_x': dense(pitch, T, 2)},
     'torso': {'rotation_z': dense(lambda t: -0.7 * yaw(t), T, 2), 'rotation_y': dense(lambda t: 4.0 * sv(t), T, 2), 'rotation_x': dense(crouch, T, 2)},
-    'head': {'rotation_z': dense(lambda t: -0.5 * yaw(t), T, 2), 'rotation_y': dense(lambda t: 5.0 * sv(t), T, 2),
-             'rotation_x': dense(lambda t: -0.4 * crouch(t), T, 2)},
+    'head': {'rotation_z': dense(lambda t: -0.5 * yaw(t) + look(t), T, 2), 'rotation_y': dense(lambda t: 5.0 * sv(t) + 3.0 * math.sin(2 * math.pi * t / 5.0 + 1.6), T, 2),
+             'rotation_x': dense(lambda t: -0.4 * crouch(t) + 4.0 * math.sin(2 * math.pi * t / 2.5 + 1.1), T, 2)},
     'arm_l': {'rotation_x': dense(lambda t: 20 * sh(t, 1.0) + pole(t), T, 2), 'rotation_y': dense(lambda t: -10 * sh(t, 2.4), T, 2)},
     'arm_r': {'rotation_x': dense(lambda t: -20 * sh(t, 1.0) + pole(t), T, 2), 'rotation_y': dense(lambda t: 10 * sh(t, 2.4), T, 2)},
     'leg_l': {'rotation_x': dense(lambda t: 9 * sh(t, 0.9) + legs_land(t), T, 2), 'rotation_y': dense(lambda t: 5 * sv(t), T, 2)},

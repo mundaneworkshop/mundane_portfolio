@@ -19,6 +19,8 @@ from mathutils import Matrix, Vector, Euler, Quaternion
 
 HAND_PIN = Vector((0.0, -0.04, -0.005))
 HAND_RING = Vector((0.0, -0.095, 0.009))          # the C clip's centre, hand-local
+HAND_AXIS = Vector((0.0, 0.0, 1.0))                # the clip's hole runs along hand-local z (ray-cast: open both ends along z, walls 0.04 either side in x/y, the gap faces -y);
+                                                   # Studio's own holds put a handle along it (chef: 0.97 aligned). A handle goes THROUGH the clip along this axis.
 NARM = 4                                            # arm x, y, z + the hand's twist
 
 

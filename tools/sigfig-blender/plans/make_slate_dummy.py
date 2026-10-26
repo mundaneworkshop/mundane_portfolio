@@ -1,5 +1,6 @@
-"""Slate crash-test dummy: runs in place holding the steering wheel, steers left and right until he hits an imaginary wall at 8 s and falls apart (the cap pops
-off, every piece flies, tumbles, bounces and settles), lies still for 3 s, then the pieces snap back in reverse order and he is running again. 15 s loop.
+"""Slate crash-test dummy: runs in place holding the steering wheel, steers left and right and looks around, honks the horn twice with his right hand, throws both arms
+up and shakes his hands in shock as the wall comes, hits it at 11 s and falls apart (the cap pops off, every piece flies, tumbles, bounces and settles), lies still for
+about 3 s, then the pieces snap back in reverse order and he is running again. 20 s loop (the timeline is in dummy_run.py).
     (Blender)  exec(open(BASE + 'plans/solve_dummy.py').read())               # joints + the two arms holding the wheel -> slate-dummy-solve.json
     python3 make_slate_dummy.py measure > slate-dummy-run.json              # the run only (no break) + slate-dummy-table.json
     (Blender)  exec(open(BASE + 'plans/measure_dummy.py').read())            # every piece's centre / origin / resting height at the wall -> slate-dummy-measure.json
@@ -42,7 +43,7 @@ for s in 'lr':
     keys['hand_' + s] = {c: [[round(f / FPS, 5), SOL['arm_keys'][s][f][3 + i]] for f in range(N)] for i, c in enumerate(('rotation_x', 'rotation_y', 'rotation_z'))}
 
 plan = dict(duration=T, fps=FPS, bend={'none': {'zone': 0.1, 'segments': 1}},
-            description="Runs in place gripping the steering wheel, steers left and right until he hits an imaginary wall, falls apart (the cap pops off), lies still for 3 s, the pieces snap back together and he runs again. 15 s loop.",
+            description="Runs in place gripping the steering wheel, steers left and right and looks around, honks the horn twice, throws both arms up and shakes his hands in shock, hits an imaginary wall and falls apart (the cap pops off), lies still for 3 s, the pieces snap back together and he runs again. 20 s loop.",
             pivots_local=SOL['pivots_local'], keys=keys)
 
 # ---- the wheel: it rides in the hands; its rest pose in the import is off to the left, SOL['wheel_pos'/'wheel_q'] are its absolute poses per frame

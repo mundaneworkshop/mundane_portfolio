@@ -65,9 +65,18 @@ def torso_pen(x):
     return r
 
 
+ROLL_PHI = None                                                  # when set: where the wrist sits around the handle (radians, in the spatula's own x-y plane, 0 = +x)
+
+def pin_phi(Mh, M_sp):
+    """Where the hand's wrist (pin) is around the handle, as an angle in the spatula's local x-y plane."""
+    v = (Mh @ HAND_PIN) - (Mh @ HAND_RING)
+    loc = M_sp.to_3x3().inverted() @ v
+    return math.atan2(loc.y, loc.x)
+
+
 def solve_sp(Bc, zb, a0, u0=None, restarts=14, alpha_free=40.0, cont=0.0, attract=None):
     """u = [arm x, y, z, twist, slide, heading]: slide = where the clip sits on the handle (spatula local z), heading = the spatula's heading in degrees
-    (free within +-alpha_free of a0: the blade stays flat and over Bc, the handle swings round it). Ring centre on the handle, ring axis along it."""
+    (free within +-alpha_free of a0: the blade stays flat and over Bc, the handle swings round it). Ring centre on the handle, clip hole axis (hand-local z) along it."""
     u0 = np.array([-55.0, 0, 0, 0, 0.03, a0]) if u0 is None else np.array(u0, float)
     def resid(u):
         M_sp = spatula_pose(Bc, u[5], zb)
@@ -75,9 +84,12 @@ def solve_sp(Bc, zb, a0, u0=None, restarts=14, alpha_free=40.0, cont=0.0, attrac
         Mh = Rl.hand_world(u[0:4])
         tgt = M_sp @ Vector((SP_RING.x, SP_RING.y, u[4]))
         d = (Mh @ HAND_RING) - tgt
-        xa = (Mh.to_3x3() @ Vector((1, 0, 0))).normalized()
+        xa = (Mh.to_3x3() @ HAND_AXIS).normalized()                  # the clip's hole axis runs along the handle
         c = xa.cross(ax_w)
         r = [3 * 3.0 * d.x / 0.01, 3 * 3.0 * d.y / 0.01, 3 * 3.0 * d.z / 0.01, c.x * 8, c.y * 8, c.z * 8]
+        if ROLL_PHI is not None:                                     # the clip is turned about the handle so its wrist sits at this angle round it
+            ph_ = pin_phi(Mh, M_sp)
+            r += [(math.cos(ph_) - math.cos(ROLL_PHI)) * 8.0, (math.sin(ph_) - math.sin(ROLL_PHI)) * 8.0]
         r += torso_pen(u[0:4])
         r += list(max(0.0002, cont) * (np.array(u[0:4]) - u0[0:4]) / 0.01)
         if cont: r.append(cont * (u[5] - u0[5]) / 0.01)
@@ -95,7 +107,8 @@ def solve_sp(Bc, zb, a0, u0=None, restarts=14, alpha_free=40.0, cont=0.0, attrac
     ax_w = M_sp.to_3x3() @ Vector((0, 0, 1))
     Mh = Rl.hand_world(u[0:4])
     ring = ((Mh @ HAND_RING) - (M_sp @ Vector((SP_RING.x, SP_RING.y, u[4])))).length
-    axis_err = math.degrees(math.acos(max(-1, min(1, abs((Mh.to_3x3() @ Vector((1, 0, 0))).normalized().dot(ax_w))))))
+    axis_err = math.degrees(math.acos(max(-1, min(1, abs((Mh.to_3x3() @ HAND_AXIS).normalized().dot(ax_w))))))
+    solve_sp.phi = pin_phi(Mh, M_sp)
     return u, ring, axis_err, sum(torso_pen(u[0:4]))
 
 

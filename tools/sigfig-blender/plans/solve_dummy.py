@@ -8,7 +8,10 @@ The dummy's legs and arms are custom parts whose origins are NOT at the joints, 
   shoulders   = hips + (+-0.156, 0, 0.231)                                           (the standard shoulder sockets; the arm meshes touch them to 1 mm)
 Both go into the plan's pivots_local (part-local coordinates). The arms then hold the rim of the wheel at the two imported grip points while it steers: for each
 frame the torso's pose is read from the running body, the wheel is turned about its own axis, and each limb (arm x, y, z + the hand's twist about its pin)
-is solved so the clip's centre sits on the rim point and its ring axis follows the rim. Solved over the loop until it closes.
+is solved so the clip's centre sits on the rim point and its ring axis (the clip's hole, hand-local z) follows the rim. Solved over the loop until it closes.
+Two things change the plain grip: while the right hand honks (dummy_run.hub_w) its target moves from the rim to the wheel's hub and pushes in with each press, with the
+axis left free; and from the moment the arms are thrown up (dummy_run.up_w) the solved pose is blended into the thrown-up, trembling pose (dummy_run.up_dir),
+re-solved for the clip's centre on that direction, with the hands shaking about their pins. Frames after the impact go back to the grip, so the pieces have a pose to come home to.
 """
 import json
 from mathutils import Matrix, Vector
@@ -40,13 +43,21 @@ rest = {'hips': list(hips), 'hip_pivot': list(HIP_PIVOT), 'shoulder': {k: list(v
 # the grips: the left hand as imported (carried along with the wheel), the right one its mirror image about the figure's centre plane
 hnd = _R('hand_l').matrix_world
 ring_l = Matrix.Translation(SHIFT) @ (hnd @ HAND_RING)
-axis_l = (hnd.to_3x3() @ Vector((1, 0, 0))).normalized()
+axis_l = (hnd.to_3x3() @ HAND_AXIS).normalized()                       # the imported hand holds the rim through the clip's hole
 mir = lambda v: Vector((2 * hips.x - v.x, v.y, v.z))
 ring_r = mir(ring_l)
 axis_r = Vector((-axis_l.x, axis_l.y, axis_l.z)).normalized()
 grip = {'l': {'p': WHEEL0.inverted() @ ring_l, 'a': (WHEEL0.to_3x3().inverted() @ axis_l).normalized()},
         'r': {'p': WHEEL0.inverted() @ ring_r, 'a': (WHEEL0.to_3x3().inverted() @ axis_r).normalized()}}
 rest['grip'] = {s: {'p': list(g['p']), 'a': list(g['a'])} for s, g in grip.items()}
+_wv = [SHIFT + WHEEL_IMPORT @ v.co for v in _R('acc_30663').data.vertices]
+_cen = sum(_wv, Vector()) / len(_wv)                                      # the wheel's middle (its object origin sits 4 cm behind it)
+_hub_far = max((v - _cen).dot(W_AXIS) for v in _wv if ((v - _cen) - W_AXIS * (v - _cen).dot(W_AXIS)).length < 0.05)
+HUB_L = WHEEL0.inverted() @ (_cen + W_AXIS * _hub_far)                    # the hub's end face (the side that faces him), wheel-local
+HUB_N = (WHEEL0.to_3x3().inverted() @ W_AXIS).normalized()                # the wheel's normal; its +y side faces him
+if (WHEEL0 @ HUB_L).y < hips.y:                                          # make HUB_N point at the driver
+    pass
+rest['hub'] = {'p': list(HUB_L), 'n': list(HUB_N), 'face_world': [round(v, 3) for v in (WHEEL0 @ HUB_L)], 'hub_far': round(_hub_far, 3)}
 
 # ---- the running body (no arm keys), to read the torso's pose each frame
 plan0 = dict(duration=T, fps=FPS, bend={'none': {'zone': 0.1, 'segments': 1}}, pivots_local={k: v for k, v in pl.items() if k.startswith('leg')}, keys=body_keys())
@@ -82,12 +93,20 @@ def solve_frame(s, f, u0):
     W = wheel_at(f)
     p_t = W @ grip[s]['p']
     a_t = (W.to_3x3() @ grip[s]['a']).normalized()
+    axw = 1.0
+    h = hub_w(f / FPS) if s == 'r' else 0.0
+    pt_l = HAND_RING
+    if h > 1e-4:                                                      # honking: over the hub, pushed in a little on each press, the clip's axis free
+        n_w = (W.to_3x3() @ HUB_N).normalized()
+        hub = W @ HUB_L + Vector((-0.06, 0, 0.04 * (1.0 - press(f / FPS))))     # the horn: the hub's end face at its edge nearest his shoulder; the arm is one stiff piece, so the clip can only swing on a sphere about the shoulder, and a tap is the clip coming down onto the face from 4 cm above it
+        p_t = p_t.lerp(hub, h)
+        axw = 1.0 - h
     def resid(u):
         Mh = lb.hand_world(u[0:4])
-        d = (Mh @ HAND_RING) - p_t
-        xa = (Mh.to_3x3() @ Vector((1, 0, 0))).normalized()
+        d = (Mh @ pt_l) - p_t
+        xa = (Mh.to_3x3() @ HAND_AXIS).normalized()
         c = xa.cross(a_t)
-        r = [3 * 3.0 * d.x / 0.01, 3 * 3.0 * d.y / 0.01, 3 * 3.0 * d.z / 0.01, c.x * 6, c.y * 6, c.z * 6]
+        r = [3 * 3.0 * d.x / 0.01, 3 * 3.0 * d.y / 0.01, 3 * 3.0 * d.z / 0.01, c.x * 6 * axw, c.y * 6 * axw, c.z * 6 * axw]
         r += list(0.0003 * (np.array(u[0:4])) / 0.01 * 0.2)
         if u0 is not None:
             r += list(0.0004 * (np.array(u[0:4]) - u0[0:4]) / 0.01)
@@ -97,13 +116,14 @@ def solve_frame(s, f, u0):
         cands.append(lm(resid, u0, restarts=1, spread=15.0))
     u, cst = min(cands, key=lambda c: c[1])
     Mh = lb.hand_world(u[0:4])
-    ring = ((Mh @ HAND_RING) - p_t).length
-    ax = math.degrees(math.acos(max(-1, min(1, abs((Mh.to_3x3() @ Vector((1, 0, 0))).normalized().dot(a_t))))))
+    ring = ((Mh @ pt_l) - p_t).length
+    ax = math.degrees(math.acos(max(-1, min(1, abs((Mh.to_3x3() @ HAND_AXIS).normalized().dot(a_t))))))
     return u, ring, ax
 
 
 PASSES = 3
 keys6 = {s: [None] * N for s in 'lr'}
+U = {s: [None] * N for s in 'lr'}
 stats = {}
 for s in 'lr':
     u_prev = None
@@ -113,6 +133,7 @@ for s in 'lr':
             u, ring, ax = solve_frame(s, f, u_prev)
             u_prev = u
             keys6[s][f] = [round(v, 3) for v in limbs[s].keys6(u[0:4])]
+            U[s][f] = [float(v) for v in u[0:4]]
             rings.append(ring); axes.append(ax)
         q0 = Euler([math.radians(v) for v in keys6[s][0][0:3]], 'XYZ').to_quaternion()
         q1 = Euler([math.radians(v) for v in keys6[s][-1][0:3]], 'XYZ').to_quaternion()
@@ -120,6 +141,34 @@ for s in 'lr':
         if pas >= 2 and wrap < 3.0:
             break
     stats[s] = {'ring': rings, 'axis': axes, 'wrap': round(wrap, 2), 'passes': pas}
+# the thrown-up arms: the direction the grip pose points in (from the shoulder) is swung round to straight up, a little out, trembling (a quick throw, a little
+# overshoot), and the limb is solved for the clip's centre on that direction, so the arm always stays on its own sphere; the hands then shake about their pins
+UPLOG = {}
+for s_ in 'lr':
+    lb = limbs[s_]
+    u_prev = None
+    for f in range(N):
+        t = f / FPS
+        w = up_w(t)
+        if w <= 1e-4:
+            u_prev = None
+            continue
+        lb.set_parent(Fs[s_][f])
+        sh_p = lb.arm_world([0, 0, 0, 0]) @ lb.apl                      # the shoulder: the point the arm turns about (not the part's origin)
+        ring_g = lb.hand_world(U[s_][f]) @ HAND_RING
+        rho = (ring_g - sh_p).length
+        d_g = (ring_g - sh_p).normalized()
+        d_u = Vector(up_dir(s_, t))
+        axis = d_g.cross(d_u)
+        ang = math.acos(max(-1.0, min(1.0, d_g.dot(d_u))))
+        d_t = (Matrix.Rotation(ang * w, 3, axis.normalized()) @ d_g) if axis.length > 1e-6 else d_u
+        x0 = u_prev if u_prev is not None else U[s_][f]
+        u_, miss_ = lb.solve([(HAND_RING, sh_p + d_t * rho, 3.0)], x0=list(x0), prior=0.0002)
+        UPLOG.setdefault(s_, []).append((f, round(miss_ * 1000, 1), [round(v, 1) for v in u_], round(rho, 3), round(math.degrees(ang), 1)))
+        u_prev = list(u_)
+        u2 = list(u_)
+        u2[3] += hand_osc(s_, t) * min(1.0, w)
+        keys6[s_][f] = [round(v, 3) for v in lb.keys6(u2)]
 wp, wq = [], []
 for f in range(N):
     W = wheel_at(f)
@@ -128,6 +177,9 @@ for f in range(N):
 rest['wheel_pos'], rest['wheel_q'] = wp, wq
 rest['wheel_rest_true'] = [list(r) for r in WHEEL_IMPORT]
 rest['arm_keys'] = keys6
+rest['ring_mm'] = {s_: [round(v * 1000, 1) for v in stats[s_]['ring']] for s_ in 'lr'}
+rest['axis_deg'] = {s_: [round(v, 1) for v in stats[s_]['axis']] for s_ in 'lr'}
+rest['uplog'] = {s_: UPLOG.get(s_, [])[::6] for s_ in 'lr'}
 rest['stats'] = {s: {'ring_mm_max': round(max(stats[s]['ring']) * 1000, 1), 'axis_deg_max': round(max(stats[s]['axis']), 1), 'wrap': stats[s]['wrap'], 'passes': stats[s]['passes']} for s in 'lr'}
 json.dump(rest, open(BASE + 'plans/slate-dummy-solve.json', 'w'))
 result = {'pivots_local': pl, 'stats': rest['stats'], 'hip_pivot': [round(v, 3) for v in HIP_PIVOT]}

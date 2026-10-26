@@ -1,7 +1,9 @@
 """Blender-side: applies the dummy's run-only plan and measures every piece at the wall (T_I): its bounding-box centre, its origin and how high its centre rides
 when it lies at its final tumble angle -> slate-dummy-measure.json. Needs slate-dummy-table.json (python3 make_slate_dummy.py measure > slate-dummy-run.json)."""
-import json
-from mathutils import Quaternion
+import json, math
+from mathutils import Quaternion, Vector
+exec(open(BASE + 'plans/motionlib.py').read())
+exec(open(BASE + 'plans/dummy_run.py').read())               # T_I
 table = json.load(open(BASE + 'plans/slate-dummy-table.json'))
 go('slate-dummy', json.load(open(BASE + 'plans/slate-dummy-run.json')))
 bpy.context.scene.frame_set(int(round(T_I * 24)))

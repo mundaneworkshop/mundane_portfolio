@@ -35,6 +35,7 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
   hand_roll: {arm_l|arm_r: {target, rotvec_deg:[x,y,z]}}   while that arm's aim weight on `target` is up, the hand is turned by that hand-local
                          axis * degrees (or `deg` = about the pin, local y), pivoting where the pin leaves the arm (HAND_PIVOT) so the connection stays seated. No solver:
                          the arm motion is exactly the aimed motion.
+           spin: {axis, keys:[{t, deg}], in?, pivot?}: a turn about a world axis through the part's centre, or (`in` = a part name) about that part's local axis through its local point `pivot`
   free:    [{part, keys:[{t, off, rot, scale}], mix:[[t, wRig, wWorld, wFollow1..]], follow:[{to, like?, rel?, off?, rot?}], anchor?}]
            a part (prop, helmet, a limb that breaks off) posed as a weighted blend of RIG / WORLD / FOLLOW poses, see _pose_free. The pose is
            converted to the part's local transform and keyed, so the hierarchy is untouched.
@@ -341,8 +342,14 @@ def _pose_free(fc, objs, rest_m, center, f, t, T, state):
     sp = fc.get('spin')                                                      # a turn about a world axis through the part's own centre (a helmet spun on a fingertip)
     if sp:
         deg = _key_at(sp['keys'], t, 'deg', 0.0)
-        R = Quaternion(Vector(sp.get('axis', [0, 0, 1])).normalized(), math.radians(deg)).to_matrix().to_4x4()
-        final = Matrix.Translation(loc) @ R @ Matrix.Translation(-loc) @ final
+        ax = Vector(sp.get('axis', [0, 0, 1]))
+        piv = loc
+        if sp.get('in'):                                                     # axis / pivot given in another part's frame (the hand: a helmet balanced on a fingertip turns about the finger)
+            ref = objs[sp['in']].matrix_world
+            ax = ref.to_3x3() @ ax
+            piv = ref @ Vector(sp.get('pivot', [0, 0, 0]))
+        R = Quaternion(ax.normalized(), math.radians(deg)).to_matrix().to_4x4()
+        final = Matrix.Translation(piv) @ R @ Matrix.Translation(-piv) @ final
     local = factor.inverted() @ final
     l2, q2, s2 = local.decompose()
     pq = state.get(part)

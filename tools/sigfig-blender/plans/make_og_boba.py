@@ -53,28 +53,31 @@ def arm_r_y(t): return armR[1](t) + 7 * win(t, T_WEAVE0, T_REACH0 - 0.3, 0.9)
 # body
 def ph(t): return 2 * math.pi * (t - T_WEAVE0) / PER
 def env(t): return win(t, T_WEAVE0, T_WEAVE1, 0.9)
+def crouch(t):                             # touch-down: the legs take it (hips sink and settle back over the feet), the chest folds forward, then he straightens
+    return pulse(t, [(T_DOWN1 - 0.05, 0), (T_DOWN1 + 0.2, 1), (T_DOWN1 + 0.6, 0)])
+CROUCH_DEG, CROUCH_BACK, CROUCH_DROP = 20.0, 12.7, 2.2        # leg angle forward, hips back over the feet (cm), hips down (cm): L sin20 = 12.7 and L(1-cos20) = 2.2 keep the feet where they were
 def hips_z(t):
     rise = pulse(t, [(T_LIFT0, 0), (T_LIFT1, H + 3), (T_LIFT1 + 0.6, H)])
     fall = pulse(t, [(T_DOWN0, 0), (T_DOWN1, H)])
     bob = 1.6 * math.sin(2 * math.pi * (t - T_LIFT1) / PER) * win(t, T_LIFT1, T_DOWN0 + 0.2, 0.9)
-    return rise - fall + bob
+    return rise - fall + bob - CROUCH_DROP * crouch(t)
 def hips_x(t): return 8 * math.sin(ph(t)) * env(t) + 3 * math.sin(2 * math.pi * (t - T_DOWN0) / 3.8) * win(t, T_DOWN0, T_DOWN1 + 0.4, 0.6)
-def hips_y(t): return 4 * math.sin(2 * ph(t)) * env(t)
+def hips_y(t): return 4 * math.sin(2 * ph(t)) * env(t) + CROUCH_BACK * crouch(t)
 def torso_z(t):
     tw = -9 * math.sin(ph(t)) * env(t)
     aim = 10 * win(t, 10.8, T_FIRE_L + 1.1, 0.4) - 12 * win(t, T_FIRE_R - 0.5, T_FIRE_R + 1.2, 0.4)
     return tw + aim
 def torso_y(t): return 7 * math.cos(ph(t)) * env(t)
 def torso_x(t):
-    return 3 * math.sin(2 * ph(t)) * env(t) - 3 * (recoil(t, T_FIRE_L) + recoil(t, T_FIRE_R)) / 9.0 + 3 * win(t, T_DOWN1 - 0.3, T_DOWN1 + 0.5, 0.2)
+    return 3 * math.sin(2 * ph(t)) * env(t) - 3 * (recoil(t, T_FIRE_L) + recoil(t, T_FIRE_R)) / 9.0 + 3 * win(t, T_DOWN1 - 0.3, T_DOWN1 + 0.5, 0.2) + 16 * crouch(t)
 def head_z(t):
     return 8 * math.sin(ph(t) + 1.0) * env(t) + 12 * win(t, 10.8, T_FIRE_L + 1.1, 0.4) - 12 * win(t, T_FIRE_R - 0.5, T_FIRE_R + 1.2, 0.4)
-def head_x(t): return -3 * win(t, T_LIFT0, T_DOWN0, 0.8) + 3 * win(t, T_DOWN0, T_DOWN1, 0.4)
+def head_x(t): return -3 * win(t, T_LIFT0, T_DOWN0, 0.8) + 3 * win(t, T_DOWN0, T_DOWN1, 0.4) - 12 * crouch(t)
 def air(t): return win(t, T_LIFT0 + 0.3, T_DOWN1 - 0.5, 0.6)
 def leg_x(t, s):                           # legs trail the lift and dangle: two loose pendulums, out of step, swinging with the weave and the bob
     ph0 = 0.0 if s > 0 else 2.3
     dang = 14 * math.sin(2 * math.pi * (t - T_LIFT1) / 1.9 + ph0) + 6 * math.sin(2 * math.pi * (t - T_LIFT1) / 0.95 + ph0 * 1.7 + 1.0)
-    return 6 * win(t, T_LIFT0 + 0.2, T_LIFT1 + 0.4, 0.5) + 4 * math.sin(ph(t) + 0.6) * env(t) + 3 * win(t, T_DOWN0, T_DOWN1 - 0.2, 0.5) + air(t) * dang
+    return 6 * win(t, T_LIFT0 + 0.2, T_LIFT1 + 0.4, 0.5) + 4 * math.sin(ph(t) + 0.6) * env(t) + 3 * win(t, T_DOWN0, T_DOWN1 - 0.2, 0.5) + air(t) * dang - CROUCH_DEG * crouch(t)
 def leg_y(t, s):
     return air(t) * s * 5 * math.sin(2 * math.pi * (t - T_LIFT1) / 2.3 + 0.7)
 

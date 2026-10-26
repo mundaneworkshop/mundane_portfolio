@@ -3,7 +3,7 @@
 
 This is the v5 motion, unchanged, plus: both hands roll 90 degrees about their pin while gripping (hand_roll), and v5's third sob
 burst (13.8-14.5) is a deep breath in and a sigh instead (the two sob bursts at 9.8-11.6 and 12.0-13.6 are v5's)."""
-import json
+import json, os
 
 HOLD = (0.0, -0.27, 0.56)
 K = lambda *pairs: [list(p) for p in pairs]
@@ -44,7 +44,7 @@ targets = {
     'hit_r': dict(frame='prop', mode='local', p=[0.10, 0.0, 0.02]),      # ... and on it
     'face_r': dict(frame='head_3', mode='rest_world', p=[-0.06, -0.19, 0.86]),
     'face_l': dict(frame='head_3', mode='rest_world', p=[0.06, -0.19, 0.86]),
-    'pocket': dict(frame='hips', mode='rest_world', p=[-0.08, 0.13, 0.43]),
+    'pocket': dict(frame='hips', mode='rest_world', p=[-0.09, 0.19, 0.44]),     # where the right wing is as the controller comes out
 }
 aim = {
     'arm_l': [
@@ -52,17 +52,46 @@ aim = {
         dict(target='face_l', w=K((8.8, 0), (9.3, 1), (14.6, 1), (15.1, 0))),
     ],
     'arm_r': [
-        dict(target='grip_r', w=K((0, 1), (3.5, 1), (3.9, 0), (6.2, 0), (6.55, 1), (6.87, 1), (7.02, 0), (18.0, 0), (18.6, 1))),
+        dict(target='grip_r', w=K((0, 1), (3.5, 1), (3.9, 0), (6.2, 0), (6.55, 1), (6.87, 1), (7.02, 0), (17.6, 0), (17.95, 1))),
         dict(target='wind_r', w=K((3.5, 0), (3.9, 1), (6.1, 1), (6.4, 0))),
         dict(target='hit_r', w=K((4.15, 0), (4.35, 1), (4.5, 0), (5.05, 0), (5.25, 1), (5.4, 0), (5.8, 0), (6.0, 1), (6.15, 0))),
         dict(target='face_r', w=K((8.8, 0), (9.3, 1), (14.6, 1), (15.1, 0))),
-        dict(target='pocket', w=K((16.2, 0), (16.8, 1), (18.1, 1), (18.5, 0))),
+        dict(target='pocket', w=K((16.2, 0), (16.8, 1), (17.6, 1), (17.95, 0))),
     ],
 }
 
 def pk(t, pos, rot=(0, 0, 0), s=1.0):
     return dict(t=t, pos=list(pos), rot=list(rot), scale=s)
 
+def swing(f0=428, f1=450, x_side=-0.30, y_side=0.05, z=0.50, psi0=-180.0, psi1=0.0, yaw_from=2.5, yaw_to=4.0):
+    """The controller leaves the back pocket by its right wing and goes round the right hip to the front, a key on every frame f0 .. f1.
+    The right hand holds the wing, so it is the wing that travels: out of the pocket behind him, to his right side (x_side, y_side, metres from his centre), on to the
+    front, and in to where the hold begins (-0.155, -0.17, 0.52). The controller hangs off the wing, and is turned about it (psi0 -> psi1 degrees, a quarter of
+    the way along the path to three quarters: yaw_from / yaw_to are positions along the five waypoints) so that its body always points away from his body: out and
+    back from the pocket, out to the side, then round to the front. The waypoints and yaw schedule were found by scanning his whole body (hips, torso, legs, left arm,
+    head) at every frame of the swing for triangles of the controller cutting it, and the wing's distance from the right shoulder for a reach the arm has."""
+    import math
+    W = [(-0.09, 0.19, z - 0.02), (-0.22, 0.17, z), (x_side, y_side, z), (-0.27, -0.15, z + 0.03), (-0.155, -0.17, 0.52)]
+    off = (-0.155, 0.10, -0.04)                          # the right wing's offset from the controller's origin at yaw 0 (world axes)
+    sm = lambda x: max(0.0, min(1.0, x)) ** 2 * (3 - 2 * max(0.0, min(1.0, x)))
+    def cr(p0, p1, p2, p3, u):
+        return 0.5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (-p0 + 3 * p1 - 3 * p2 + p3) * u ** 3)
+    out, n = [], f1 - f0
+    for k in range(n + 1):
+        sp = sm(k / n) * (len(W) - 1)
+        i = min(int(sp), len(W) - 2)
+        u = sp - i
+        P = lambda j: W[max(0, min(len(W) - 1, j))]
+        w = [cr(P(i - 1)[c], P(i)[c], P(i + 1)[c], P(i + 2)[c], u) for c in range(3)]
+        psi = psi0 + (psi1 - psi0) * sm((sp - yaw_from) / (yaw_to - yaw_from))
+        cs, sn = math.cos(math.radians(psi)), math.sin(math.radians(psi))
+        c = (w[0] - (cs * off[0] - sn * off[1]), w[1] - (sn * off[0] + cs * off[1]), w[2] - off[2])
+        out.append(pk(round((f0 + k) / 24, 5), tuple(round(v, 4) for v in c), (0, 0, round(psi, 3)), 1.0))
+    return out
+
+
+SWING = swing(x_side=float(os.environ.get('VR_X', -0.30)), y_side=float(os.environ.get('VR_Y', 0.05)), z=float(os.environ.get('VR_Z', 0.50)),
+                yaw_from=float(os.environ.get('VR_YF', 2.5)), yaw_to=float(os.environ.get('VR_YT', 4.0)))      # env overrides for the clearance scan
 y0 = -0.27
 prop = [
     pk(0.0, (0, y0, 0.56)),
@@ -92,10 +121,11 @@ prop += [
     pk(7.52, (0, -0.5, 3.0), (-520, 0, 30)),
     pk(7.67, (0, -0.6, 3.6), (-640, 0, 30), 0.0),
     pk(7.9, (-0.09, 0.12, 0.44), (0, 0, 0), 0.0),         # hidden in the back pocket
-    pk(17.55, (-0.09, 0.12, 0.44), (0, 0, 0), 0.0),
-    pk(17.8, (-0.09, 0.13, 0.45), (0, 0, 0), 1.0),        # pulled out
-    pk(18.5, (-0.08, -0.10, 0.52), (-10, 0, 0)),
-    pk(19.0, (-0.02, -0.22, 0.56), (0, 0, 0)),
+    pk(17.55, SWING[0]['pos'], SWING[0]['rot'], 0.0),
+]
+prop += SWING[1:] if False else SWING                    # pulled out of the pocket and swung round the right hip to the front
+prop += [
+    pk(19.0, (0.0, -0.27, 0.56), (0, 0, 0)),
     pk(19.4, (0, -0.27, 0.56), (0, 0, 0)),
 ]
 
