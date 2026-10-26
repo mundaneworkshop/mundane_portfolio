@@ -7,7 +7,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Touching the manual/booklet, routing, or URL slugs → [url-slugs-routing.md](url-slugs-routing.md); manual panel layout/camera framing → [manual-layouts.md](manual-layouts.md)
 - Touching GLB/3D model texture rendering → [glb-texture-rendering.md](glb-texture-rendering.md) (regressed 3×, has a REGRESSION GUARD banner in-code)
 - Touching the galaxy/focus/case-study transition → [case-study-direction.md](case-study-direction.md) (long — the full history of the box-open + cascade feature)
-- Touching CV or HoloNet views → [cv-contact-focus-views.md](cv-contact-focus-views.md)
+- Touching CV or HoloNet views → [cv-contact-focus-views.md](cv-contact-focus-views.md); CV stage framing, hover, arrow keys, list view → [cv-page-tweaks.md](cv-page-tweaks.md)
 - Touching the in-canvas editor / IndexedDB / localStorage persistence → [holotable-editor-and-glb.md](holotable-editor-and-glb.md)
 - Adding/removing/renaming/hiding zones or planets (the Projects Manager panel, live scene sync) → [projects-manager.md](projects-manager.md)
 - Adding any new tunable/parameter → [maximize-customization.md](maximize-customization.md) (standing rule: expose it, don't bake it)
@@ -37,6 +37,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [foundations-audit.md](foundations-audit.md) — Oct 2 2026: Figma Foundations audited against prod; decisions (prod neutrals, amber = the work, two tiers, retired 3px stair-step corner) and what was applied
 - [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
 - [hud-type-grotesk.md](hud-type-grotesk.md) — Oct 2 2026: HUD labels/body moved from Space Mono to Space Grotesk per the locked stack; what stays mono
+- [cv-page-tweaks.md](cv-page-tweaks.md) — Oct 2026: CV route on the shared manual stage (`MWStage`), re-centre click, node hover reticle, ←/→ stops, immersive/list toggle
 - [entry-gate-text.md](entry-gate-text.md) — Oct 22 2026: entry gate H1 (hover decode) + two-line Star Wars crawl under the monogram, fade-in/out timings, 3 s dock
 - [reticle-cursor.md](reticle-cursor.md) — Oct 7 2026: the targeting reticle cursor (one shared file with Framer), where it shows, how it hands the native cursor back
 - [type-floor.md](type-floor.md) — Oct 2 2026: mobile-legibility type floor (11 / 13 / 16 px), small-text contrast rule, what is exempt
