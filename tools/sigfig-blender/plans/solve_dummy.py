@@ -92,13 +92,13 @@ def wheel_at(f):
     return TM[f % N] @ TM0.inverted() @ W
 
 
-def solve_frame(s, f, u0, attract=None):
+def solve_frame(s, f, u0, attract=None, anchor=None):
     lb = limbs[s]
     lb.set_parent(Fs[s][f])
     W = wheel_at(f)
     p_t = W @ grip[s]['p']
     a_t = (W.to_3x3() @ grip[s]['a']).normalized()
-    axw = 1.0
+    axw = 0.35 if s == 'l' else 1.0                                   # the left (rim-only) hand: the clip's axis is a hint, not a must; held hard it flipped the arm over the shoulder twice
     h = hub_w(f / FPS) if s == 'r' else 0.0
     pt_l = HAND_RING
     if h > 1e-4:                                                      # honking: over the hub, pushed in a little on each press, the clip's axis free
@@ -124,8 +124,10 @@ def solve_frame(s, f, u0, attract=None):
             r += list((0.0004 + 0.004 * h) * (np.array(u[0:4]) - u0[0:4]) / 0.01)
         if attract is not None:
             r += list(0.004 * attract[1] * (np.array(u[0:4]) - np.array(attract[0])) / 0.01)
+        if anchor is not None:                                      # stay near the loop's start pose: the arm steers by bending, not by swinging round
+            r += list(0.0010 * (np.array(u[0:4]) - np.array(anchor)) / 0.01)
         return np.array(r + [0.0] * (28 - len(r)))[:28]
-    cands = [lm(resid, np.zeros(4), restarts=2, spread=25.0)]
+    cands = [] if (anchor is not None and u0 is not None) else [lm(resid, np.zeros(4), restarts=2, spread=25.0)]
     if u0 is not None:
         cands.append(lm(resid, u0, restarts=1, spread=15.0))
     u, cst = min(cands, key=lambda c: c[1])
@@ -136,6 +138,7 @@ def solve_frame(s, f, u0, attract=None):
 
 
 PASSES = 3
+ANCHOR_L = None
 keys6 = {s: [None] * N for s in 'lr'}
 U = {s: [None] * N for s in 'lr'}
 stats = {}
@@ -147,7 +150,10 @@ for s in 'lr':
             # coming off the horn the arm is drawn, over half a second, back to the pose the loop starts in (the wheel is straight in both), not left on
             # whatever branch the smashes put it on, so the loop closes without a snap
             pull = ramp(f / FPS, 7.6, 8.1) * (1 - ramp(f / FPS, 8.4, 8.6)) if (s == 'r' and U[s][0] is not None) else 0.0
-            u, ring, ax = solve_frame(s, f, u_prev, (U[s][0], pull) if pull > 1e-4 else None)
+            anc = U[s][0] if (s == 'l' and U[s][0] is not None) else (ANCHOR_L if s == 'l' and f > 0 else None)
+            u, ring, ax = solve_frame(s, f, u_prev, (U[s][0], pull) if pull > 1e-4 else None, anc)
+            if s == 'l' and f == 0 and U[s][0] is None:
+                ANCHOR_L = [float(v) for v in u[0:4]]
             u_prev = u
             keys6[s][f] = [round(v, 3) for v in limbs[s].keys6(u[0:4])]
             U[s][f] = [float(v) for v in u[0:4]]

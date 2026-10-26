@@ -805,7 +805,8 @@
   #outfitHud[data-locked="1"] .oh-go{display:inline-flex}
   #outfitHud.oh-nudge .oh-sub{color:#E9A73E}
   @media (prefers-reduced-motion:no-preference){ #outfitHud{transition:opacity .25s ease} #outfitHud.oh-nudge .oh-name{animation:ohNudge .4s ease} @keyframes ohNudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}} }
-  #outfitHud .oh-row{gap:34px}   /* arcade carousel: big ◄ ► buttons with room between them */
+  #outfitHud .oh-row{gap:34px}
+  #outfitHud .oh-lock{display:none!important}   /* the manual says how to unlock a locked outfit; no second copy in the carousel */   /* arcade carousel: big ◄ ► buttons with room between them */
   /* GALAXY KEYBOARD LEGEND: same look as the arcade's #bt-hints legend */
   #galaxyKeys{display:none;position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,'Space Mono',sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden}
   body.gk-show #galaxyKeys{display:flex}
@@ -1014,7 +1015,7 @@
 
   <!-- GALAXY KEYBOARD LEGEND: shown on the galaxy view instead of the outfit carousel (same style as the arcade's legend) -->
   <div id="galaxyKeys" role="note" aria-label="Keyboard and mouse controls">
-    <div class="gk-h"><svg viewBox="0 0 64 24" width="66" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19 7.5 l-6 4.5 l6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="33.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M45 7.5 l6 4.5 l-6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>Left / right · next planet</span></div>
+    <div class="gk-h"><svg viewBox="0 0 64 24" width="66" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19 7.5 l-6 4.5 l6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="33.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M45 7.5 l6 4.5 l-6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>Left / right · select</span></div>
     <div class="gk-h"><svg viewBox="0 0 56 24" width="58" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="53" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M42 8 v5 h-22 M24 9.5 l-4 3.5 l4 3.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Enter · navigate</span></div>
     <div class="gk-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 0 3 11 L3 13 L12 13 Z" fill="currentColor"/></svg><span>Click + drag · rotate + pan</span></div>
     <div class="gk-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><rect x="10.4" y="4.6" width="3.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M9 16.5 l3 -2.6 l3 2.6 M9 22 l3 2.6 l3 -2.6" stroke="currentColor" stroke-width="1.3" fill="none"/></svg><span>Scroll · zoom</span></div>
@@ -10226,7 +10227,7 @@ f 2469//2469 2470//2470 2434//2434
         }
         var pl=planets.filter(function(p){ return p.visible&&!p.userData.hidden; }).map(function(p){ return {key:p, label:'\u25B8 OPEN', obj:p.userData.hitProxy||p, grp:p, open:function(){ activate(p.userData); }}; });
         var _fo=ocFigObj(), _fm=outfitCur&&ocFind(outfitCur.id);   // the hologram figure is a stop too, between the planets by where it sits on screen
-        if(_fo&&!arcadeActive) pl.push({key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:_fo, open:ocClickFigure});
+        if(_fo&&!arcadeActive) pl.push({key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:ocFigRectObj(), open:ocClickFigure});
         return pl;
       }
       function kbRetarget(){ if(window.__bricReticle&&window.__bricReticle.retarget) window.__bricReticle.retarget(); }
@@ -10258,17 +10259,19 @@ f 2469//2469 2470//2470 2434//2434
         else if(k==='ArrowDown'){ if(kbStep('y',1)) e.preventDefault(); }
         else if(k==='ArrowUp'){ if(kbStep('y',-1)) e.preventDefault(); }
         else if((k==='Enter'||k===' ')&&kb){ var o=kb.open; kb=null; if(!focused) setHovered(null); kbRetarget(); e.preventDefault(); o(); }
+        else if(k==='Enter'&&!focused&&mwPhase==='docked'&&!editMode){   // no keyboard target: Enter opens what the pointer is on
+          if(figHover){ e.preventDefault(); ocClickFigure(); } else if(hovered){ e.preventDefault(); var _hv=hovered; setHovered(null); activate(_hv.userData); } }
         else if(k==='Escape'&&kb){ kbClear(); }
       });
       var kbInitDone=false;
       setInterval(function(){   // once the site has docked and the figure is on show: the reticle starts on it
         if(kbInitDone||mwPhase!=='docked'||focused||arcadeActive||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')||document.body.classList.contains('ui-hidden')) return;
-        var f=ocFigObj(), r=f&&rectOf(f); if(!r) return;
+        var f=ocFigObj(), r=f&&rectOf(ocFigRectObj()); if(!r) return;
         kbInitDone=true; var m=outfitCur&&ocFind(outfitCur.id);
         kb={key:'figure', label:(m&&ocLocked(m))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:f, open:ocClickFigure, init:performance.now()}; kbRetarget();
       },300);
       function targets(x,y,el){
-        if(kb){ var kl=kbList(), kt=kl&&kl.filter(function(t){ return t.key===kb.key; })[0]; if(kt){ return {key:kt.key, label:kt.label, rect:function(){ var f=(kt.key==='figure')?ocFigObj():kt.obj; return f?rectOf(f):null; }}; } kb=null; }
+        if(kb){ var kl=kbList(), kt=kl&&kl.filter(function(t){ return t.key===kb.key; })[0]; if(kt){ return {key:kt.key, label:kt.label, rect:function(){ var f=(kt.key==='figure')?(ocFigObj()&&ocFigRectObj()):kt.obj; return f?rectOf(f):null; }}; } kb=null; }
         var cv=renderer&&renderer.domElement; if(!cv||el!==cv) return null;   // pointer must be on the canvas itself, not a panel above it
         if(arcadeActive) return null;
         if(mwPhase==='entry'){   // the entry monogram: while the pointer is over the mark (mwHover) the corner marks expand round it and show ENTER at its top-left corner
@@ -10288,7 +10291,7 @@ f 2469//2469 2470//2470 2434//2434
           return null;
         }
         if(figHover){ var _fo=ocFigObj(), _fm=outfitCur&&ocFind(outfitCur.id);   // the figure / original head: frame it, say what the click does
-          if(_fo) return {key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', rect:function(){ var f=ocFigObj(); return f?rectOf(f):null; }}; }
+          if(_fo) return {key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', rect:function(){ var f=ocFigObj(); return f?rectOf(ocFigRectObj()):null; }}; }
         if(!hovered||cv.style.cursor!=='pointer') return null;   // galaxy: the page says "clickable here"
         var grp=hovered, hit=grp.userData.hitProxy;
         return {key:grp, label:'\u25B8 OPEN', rect:function(){ return rectOf(hit||grp); }};
@@ -10475,7 +10478,7 @@ f 2469//2469 2470//2470 2434//2434
     //   lookDrop  — camera looks this far BELOW the box → box rises in frame
     //   boxR      — camera distance; SMALLER = box fills MORE of the screen
     var FOCUSFRAME={ anchorY:1.95, lookDrop:0.35, boxR:1.9 };
-    function focusPlanet(grp,ud){ focused=grp; grp.userData.moonGrp.visible=true;
+    function focusPlanet(grp,ud){ focused=grp; grp.userData.moonGrp.visible=true; setHovered(null); setZone(null); figHover=false;   // the galaxy's last hover (zone plaque, planet) goes idle behind the focus view
       // Clicking a planet leaves setHovered()'s inline cursor:pointer on the canvas, and the focus-mode pointer handler never reaches setHovered to clear it. The reticle reads that as "the page declares its own pointer" and steps aside, so drop it: focus view's cursor comes from the stylesheet (crosshair, pointer only while box-hovered).
       if(renderer&&renderer.domElement) renderer.domElement.style.cursor=''; galTargetPos.set(0,0,0); galTargetScale=1; document.body.classList.add('mw-planet');
       // Both modes now settle on the SAME stable upper-stage framing (kills the
@@ -10585,7 +10588,7 @@ f 2469//2469 2470//2470 2434//2434
       // editable in Edit Mode (persists) so a teaser can become a real case study later.
       if(!CASES[id]) CASES[id]={kind:'work',kicker:'Signal encrypted',title:'??? · undiscovered',body:'This sector remains uncharted. Add the case study here in Edit Mode.'};
       openCase(id); }
-    function goHome(){ clearBoxHover(); if(focused){
+    function goHome(){ clearBoxHover(); if(focused===aboutGrp&&typeof ocLeaveAbout==='function') ocLeaveAbout(); if(focused){
       // ── reset the 3D box-open (flaps are children of `hit`; geometry swap won't remove them) ──
       boxOpenStart=null; boxOpenDone=false;
       var _hit=focused.userData.hit;
@@ -14183,7 +14186,9 @@ f 2469//2469 2470//2470 2434//2434
     var OC_STD_BOX={min:[-0.9,-1.45,-0.5],max:[0.9,1.45,0.5]}, _ocV=new THREE.Vector3(), _ocM4=new THREE.Matrix4(), _ocPrev=new THREE.Box3();
     function ocMeasureFit(g){
       var mx=g.userData.mixer, saved=mx?mx.time:0; if(mx) mx.setTime(0);
-      outfitStage.updateMatrixWorld(true); _ocM4.copy(outfitStage.matrixWorld).invert();
+      // Measured in the group's own frame, then put through its local transform (it's a direct child of the stage): it's often measured before it's on
+      // the stage, when stage-world inverse gave a box offset and scaled wrong.
+      g.updateWorldMatrix(true,true); _ocM4.copy(g.matrixWorld).invert().premultiply(g.matrix);
       var mn=[1e9,1e9,1e9], mxv=[-1e9,-1e9,-1e9], any=false;
       g.traverse(function(c){ if(!c.isMesh||!c.geometry||c.userData.ocSkip) return; if(!c.geometry.boundingBox) c.geometry.computeBoundingBox();
         c.updateWorldMatrix(true,false); _ocPrev.copy(c.geometry.boundingBox).applyMatrix4(c.matrixWorld);
@@ -14199,8 +14204,9 @@ f 2469//2469 2470//2470 2434//2434
       for(var i=0;i<8;i++){ _ocV.set(i&1?b.max[0]:b.min[0],i&2?b.max[1]:b.min[1],i&4?b.max[2]:b.min[2]).applyMatrix4(outfitStage.matrixWorld); _sfPts.push([(_ocV.x-px)/gs,(_ocV.y-py)/gs,(_ocV.z-pz)/gs]); }
     }
     function ocInstant(){ return !!(_ocRM&&_ocRM.matches); }
+    var ocLastUnlocked=null;   // the last outfit on show that was unlocked: leaving the About view on a locked one puts this back on the hologram
     function ocShow(id,instant){
-      var o=ocFind(id); if(!o||(!o.parts.length&&!o.builtin)) return; var seq=++outfitSeq, sig=o.builtin?'':ocSig(o);
+      var o=ocFind(id); if(o&&!ocLocked(o)) ocLastUnlocked=id; if(!o||(!o.parts.length&&!o.builtin)) return; var seq=++outfitSeq, sig=o.builtin?'':ocSig(o);
       if(o.builtin){   // the original head: no group; the figure (if any) fades out and mwUpdate shows the head again
         if(outfitCur&&outfitCur.id===id) return;
         if(outfitPrev) outfitStage.remove(outfitPrev.group);
@@ -14237,8 +14243,18 @@ f 2469//2469 2470//2470 2434//2434
     // Hit test for the figure / original head: the ray against its meshes, and for the head ALSO the pointer inside its (inset) screen box, because the
     // head is small and its hair / decal meshes are full of gaps a ray slips through (hover would flicker or never fire).
     var _ocB=new THREE.Box3(), _ocP=new THREE.Vector3();
+    // A box the size of the outfit's start pose (its stage fit, ocMeasureFit), riding the stage: the reticle frames it, hover hits it, and it hides the planet
+    // plaques behind it. The live meshes animate (pieces fly, arms swing), so framing / hitting them made the reticle jump about and let planets behind the
+    // figure through its gaps. Never drawn (visible=false; raycasts and Box3 still see it).
+    var ocProxy=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false})); ocProxy.visible=false; ocProxy.userData.ocSkip=true; outfitStage.add(ocProxy);
+    function ocProxySync(){ var g=outfitCur&&outfitCur.group; if(!g){ ocProxy.userData.ok=false; return null; }
+      if(!g.userData.fit) g.userData.fit=ocMeasureFit(g); var b=g.userData.fit; if(!b){ ocProxy.userData.ok=false; return null; }
+      ocProxy.position.set((b.min[0]+b.max[0])/2,(b.min[1]+b.max[1])/2,(b.min[2]+b.max[2])/2); ocProxy.scale.set(Math.max(1e-3,b.max[0]-b.min[0]),Math.max(1e-3,b.max[1]-b.min[1]),Math.max(1e-3,b.max[2]-b.min[2]));
+      ocProxy.updateMatrixWorld(true); ocProxy.userData.ok=true; return ocProxy; }
+    function ocFigRectObj(){ return (outfitCur&&outfitCur.group&&outfitStage.visible&&ocProxySync())||ocFigObj(); }
     function ocHit(){ var f=ocFigObj(); if(!f||mwPhase!=='docked'||arcadeActive) return null;
-      var h=ray.intersectObject(f,true); if(h.length) return h[0];
+      var px=(outfitCur&&outfitCur.group)?ocProxySync():null;
+      var h=ray.intersectObject(px||f,!px); if(h.length) return h[0];
       if(outfitCur&&!outfitCur.group){
         _ocB.setFromObject(f); if(_ocB.isEmpty()) return null;
         var l=1e9,t=1e9,r=-1e9,b=-1e9,i,mn=_ocB.min,mx=_ocB.max;
@@ -14263,8 +14279,8 @@ f 2469//2469 2470//2470 2434//2434
         var _want=ocCycleList().length>0&&mwPhase==='docked'&&!arcadeActive&&focused===aboutGrp&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden');
         if(_want!==outfitHudOn){ outfitHudOn=_want; document.body.classList.toggle('oh-show',_want); ocHudUpdate(); }
         if(_want){   // in the About focus view the HUD sits in the free stage rectangle the manual layout publishes (centred, just above the manual); otherwise the CSS default
-          var _st=(focused===aboutGrp)?window.MWStage:null, _hu=document.getElementById('outfitHud'), _pos=_st?(((_st.l+_st.r)/2)+'|'+(_st.H-_st.b+10)):'';
-          if(_hu&&_hu._ocPos!==_pos){ _hu._ocPos=_pos; if(_st){ _hu.style.left=((_st.l+_st.r)/2)+'px'; _hu.style.bottom=(_st.H-_st.b+10)+'px'; } else { _hu.style.left=''; _hu.style.bottom=''; } } }
+          var _st=(focused===aboutGrp)?window.MWStage:null, _hu=document.getElementById('outfitHud'), _hb=_st?Math.max(OC_HUD_BOTTOM,_st.H-_st.b+10):0, _pos=_st?(((_st.l+_st.r)/2)+'|'+_hb):'';
+          if(_hu&&_hu._ocPos!==_pos){ _hu._ocPos=_pos; if(_st){ _hu.style.left=((_st.l+_st.r)/2)+'px'; _hu.style.bottom=_hb+'px'; } else { _hu.style.left=''; _hu.style.bottom=''; } } }
         if(cfg.cycle>0&&!ocInstant()&&!focused&&!arcadeActive&&mwPhase==='docked'&&document.visibilityState==='visible'&&now-outfitLastSwitch>cfg.cycle*1000) ocNext();
       } else {   // outfits all gone: hand the scene back to the original head
         outfitStage.visible=false; outfitHeadHidden=false;   // mwUpdate re-shows the head/GLB each frame from here
@@ -14274,6 +14290,7 @@ f 2469//2469 2470//2470 2434//2434
       var on=mwPhase==='docked'&&!focused&&!arcadeActive&&!editMode&&!MWSub.active&&!document.body.classList.contains('mw-altfocus')&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden')&&!document.body.classList.contains('mw-planet');
       if(on!==document.body.classList.contains('gk-show')) document.body.classList.toggle('gk-show',on);
     },200);
+    var OC_HUD_BOTTOM=300;   // px from the window bottom: the carousel row stays put whatever the manual's height (only a manual taller than this pushes it up)
     function ocLoadDrafts(){ try{ var d=JSON.parse(localStorage.getItem('mw_outfit_drafts')||'[]'); outfitDrafts=Array.isArray(d)?d:[]; }catch(e){ outfitDrafts=[]; } }
     function ocSaveDrafts(){ try{ localStorage.setItem('mw_outfit_drafts',JSON.stringify(outfitDrafts)); }catch(e){ ocMsg='could not save drafts locally'; } }
     (function ocInit(){
@@ -14473,12 +14490,11 @@ f 2469//2469 2470//2470 2434//2434
       var _nm=document.getElementById('ohName');
       if(document.activeElement!==_nm) _nm.textContent=(locked&&!editMode?'Locked · ':'')+o.name;
       _nm.contentEditable=editMode?'true':'false'; _nm.classList.toggle('inline-edit-on',!!editMode); _nm.setAttribute('data-ph','outfit name');
-      document.getElementById('ohSub').textContent=locked
-        ? ocLockLine(o)
-        : ('Outfit '+(i+1)+' / '+l.length+(isNew?' · new':'')+(focused===aboutGrp?'':' · click the figure to learn more'));
-      document.getElementById('ohKitX').textContent=locked&&isMk?'\u00d7'+need:'';
+      // Locked: just the counter (the manual below already says how to unlock it); never empty, so the name row doesn't drop a line.
+      document.getElementById('ohSub').textContent='Outfit '+(i+1)+' / '+l.length+(!locked&&isNew?' · new':'')+(locked||focused===aboutGrp?'':' · click the figure to learn more');
+      document.getElementById('ohKitX').textContent='';
       document.getElementById('ohPrev').disabled=document.getElementById('ohNext').disabled=l.length<2;
-      ocSyncKit(locked&&isMk);
+      ocSyncKit(false);
       ocUnlSnap(true);
     }
     // The minikit symbol is the real GLB, spun in the site's mini viewer (a second WebGL context, so it only exists while a locked outfit is on show).
@@ -14538,9 +14554,13 @@ f 2469//2469 2470//2470 2434//2434
       document.getElementById('cs-root').classList.add('cs-focus-panel');
       ocRefreshAbout(); ocHudUpdate();
     }
+    function ocLeaveAbout(){   // About → galaxy: don't leave a locked outfit standing on the hologram
+      var o=outfitCur&&ocFind(outfitCur.id); if(!o||!ocLocked(o)) return;
+      var l=ocCycleList(), back=l.filter(function(x){ return x.id===ocLastUnlocked&&!ocLocked(x); })[0]||l.filter(function(x){ return !ocLocked(x); })[0];
+      if(back) ocShow(back.id,true);
+    }
     function ocClickFigure(){   // click on the central figure: unlocked → focus view; locked → nudge the HUD toward the arcade
-      var o=outfitCur&&ocFind(outfitCur.id); if(!o||focused===aboutGrp) return;
-      if(ocLocked(o)){ emptyClick(); ocHudNudge(); return; }
+      var o=outfitCur&&ocFind(outfitCur.id); if(!o||focused===aboutGrp) return;   // (a locked outfit opens too: its manual says how to unlock it)
       if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       veilThen(openAbout);
     }
@@ -14548,7 +14568,7 @@ f 2469//2469 2470//2470 2434//2434
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
     window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
-      cur:function(){ return outfitCur; },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+      cur:function(){ return outfitCur; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
@@ -14884,6 +14904,7 @@ f 2469//2469 2470//2470 2434//2434
       if(logo.userData.glbGroup && logo.userData.glbGroup.visible){ logo.userData.glbGroup.traverse(function(o){ if(o.isMesh){ occluders.push(o); _logoOccMeshes.push(o); } }); }
       else if(holoHead.visible){ occluders.push(holoHead); _logoOccMeshes.push(holoHead); }
       if(mwQuad && mwQuad.visible){ occluders.push(mwQuad); _logoOccMeshes.push(mwQuad); }
+      if(outfitStage.visible && outfitCur && outfitCur.group && ocProxySync()) occluders.push(ocProxy);   // the outfit figure hides the plaques of planets behind it
       if(typeof updateMsgStars==='function') updateMsgStars();   // project visitor message stars to screen each frame
       if(typeof cvUpdateShip==='function') cvUpdateShip(t);       // advance ship travel along the lane
       if(typeof cvUpdateLabels==='function') cvUpdateLabels();   // project CV route node labels to screen each frame
