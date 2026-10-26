@@ -832,6 +832,8 @@
   #outfitMgr .oc-lbl2{font-size:8px;letter-spacing:1px;text-transform:uppercase;color:rgba(240,237,232,.55);margin:6px 0 3px}
   #outfitMgr details{margin-top:6px}
   #outfitMgr summary{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#E9A73E;cursor:pointer}
+  #outfitMgr .oc-cond select,#outfitMgr .oc-cond input[type=number]{background:rgba(0,0,0,.35);border:1px solid rgba(233,167,62,.3);color:#F0EDE8;font-family:'Space Mono',monospace;font-size:11px;padding:4px 6px;border-radius:2px;max-width:100%}
+  #outfitMgr .oc-ships{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;max-height:130px;overflow:auto;border:1px solid rgba(233,167,62,.2);padding:5px 6px;border-radius:2px}
   #outfitMgr .oc-on{font-size:9px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
   #outfitMgr .pm-zactions{display:flex;justify-content:flex-end;gap:6px;margin:6px 0 0}
   #outfitMgr .pm-zactions .pm-danger{min-width:86px;text-align:center}
@@ -14026,16 +14028,43 @@ f 2469//2469 2470//2470 2434//2434
     function ocMeta(){ var m=copyOvr['outfitMeta']; if(!m||typeof m!=='object'){ m=copyOvr['outfitMeta']={order:[],meta:{}}; } m.order=m.order||[]; m.meta=m.meta||{}; return m; }
     function ocSlug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'outfit'; }
     function ocSafeFile(n){ n=(n||'part.glb').replace(/[^A-Za-z0-9._-]+/g,'-'); return /\.glb$/i.test(n)?n:n+'.glb'; }
+    // Unlock condition model: {type:'minikits',n} | {type:'destroy',ships:[ship ids; empty = any enemy],n} | {type:'ship',id: an arcade hero ship}. Legacy `unlockAt` N = minikits N.
+    function ocCondOf(u,legacy){
+      if(u&&u.type==='destroy') return {type:'destroy',ships:(Array.isArray(u.ships)?u.ships:[]).filter(function(x){ return typeof x==='string'&&/^[a-z0-9][a-z0-9_-]{0,40}$/i.test(x); }),n:Math.max(1,parseInt(u.n,10)||1)};
+      if(u&&u.type==='ship'&&typeof u.id==='string'&&u.id) return {type:'ship',id:u.id};
+      if(u&&u.type==='minikits') return {type:'minikits',n:Math.max(0,parseInt(u.n,10)||0)};
+      return {type:'minikits',n:Math.max(0,parseInt(legacy,10)||0)};
+    }
+    function ocCondFields(det,o){   // manager: unlock condition editor (type, count, multi-select ships / hero ship)
+      var c=o.unlock, wrap=ocEl('div','oc-cond'); wrap.setAttribute('data-oc-cond',o.id);
+      function lbl(t){ wrap.appendChild(ocEl('div','oc-lbl2',t)); }
+      lbl('Unlock when (the first outfit is always free)');
+      var sel=ocEl('select'); sel.setAttribute('data-oc-field','utype'); sel.setAttribute('data-id',o.id);
+      [['minikits','minikits collected'],['destroy','ships destroyed in the arcade'],['ship','arcade hero ship unlocked']].forEach(function(x){ var op=ocEl('option',null,x[1]); op.value=x[0]; if(x[0]===c.type) op.selected=true; sel.appendChild(op); }); wrap.appendChild(sel);
+      if(c.type==='minikits'||c.type==='destroy'){ lbl(c.type==='destroy'?'Number destroyed (total across the ships below)':'Minikits (lifetime)'); var n=ocEl('input'); n.type='number'; n.min=c.type==='destroy'?1:0; n.step=1; n.value=c.n; n.setAttribute('data-oc-field','un'); n.setAttribute('data-id',o.id); wrap.appendChild(n); }
+      if(c.type==='destroy'){
+        lbl('Ship types (tick several; none = any enemy)');
+        var box=ocEl('div','oc-ships'), ships=ocShipList(); if(!ships.length) box.appendChild(ocEl('span','pm-empty','arcade ship list not loaded'));
+        ships.forEach(function(sh){ var l=ocEl('label','oc-on'), cb=ocEl('input'); cb.type='checkbox'; cb.checked=c.ships.indexOf(sh.id)>=0; cb.setAttribute('data-oc-field','uship'); cb.setAttribute('data-ship',sh.id); cb.setAttribute('data-id',o.id); l.appendChild(cb); l.appendChild(ocEl('span',null,' '+sh.name+' · '+sh.cls)); box.appendChild(l); });
+        wrap.appendChild(box);
+      }
+      if(c.type==='ship'){
+        lbl('Hero ship (unlocked in the Space Arcade)'); var hs=ocEl('select'); hs.setAttribute('data-oc-field','uhero'); hs.setAttribute('data-id',o.id);
+        ocHeroList().forEach(function(h){ var op=ocEl('option',null,h.name); op.value=h.id; if(h.id===c.id) op.selected=true; hs.appendChild(op); }); wrap.appendChild(hs);
+      }
+      det.appendChild(wrap);
+    }
     // The merged outfit list, in cycle order. A draft with the same id as a repo outfit shadows it (you're previewing your local copy).
     function ocAll(){
       var list=[], meta=ocMeta();
-      outfitDrafts.forEach(function(d){ list.push({id:d.id,name:d.name,enabled:d.enabled!==false,src:'draft',parts:d.parts||[],unlockAt:ocNum(d.unlockAt,0),about:d.about||{}}); });
+      outfitDrafts.forEach(function(d){ list.push({id:d.id,name:d.name,enabled:d.enabled!==false,src:'draft',parts:d.parts||[],unlock:ocCondOf(d.unlock,d.unlockAt),about:d.about||{}}); });
       outfitRepo.forEach(function(o){ if(outfitDrafts.some(function(d){ return d.id===o.id; })) return; var mt=meta.meta[o.id]||{}; if(mt.removed) return;
         list.push({id:o.id,name:mt.name||o.name||o.id,enabled:mt.enabled!=null?!!mt.enabled:o.enabled!==false,src:'repo',parts:o.parts||[],
-          unlockAt:ocNum(mt.unlockAt!=null?mt.unlockAt:o.unlockAt,0),about:Object.assign({},o.about||{},mt.about||{})}); });
+          unlock:mt.unlock?ocCondOf(mt.unlock):(mt.unlockAt!=null?ocCondOf(null,mt.unlockAt):ocCondOf(o.unlock,o.unlockAt)),about:Object.assign({},o.about||{},mt.about||{})}); });
       var hm=meta.meta[HEAD_ID]||{};   // the original head is a built-in carousel entry: first, free, not managed as a file
-      list.push({id:HEAD_ID,name:hm.name||'Original head',enabled:true,src:'builtin',builtin:true,parts:[],unlockAt:0,
+      list.push({id:HEAD_ID,name:hm.name||'Original head',enabled:true,src:'builtin',builtin:true,parts:[],unlock:{type:'minikits',n:0},
         about:Object.assign({kicker:'About me',title:'Original head',body:'Placeholder about-me copy for the original head. Edit it in Edit Mode, \u263a outfits.',teaser:''},hm.about||{})});
+      list.forEach(function(o){ o.unlockAt=o.unlock.type==='minikits'?o.unlock.n:0; });   // legacy mirror
       list.forEach(function(o,i){ var oi=meta.order.indexOf(o.id); o._k=o.builtin?-1:(oi<0?1e6:oi)*1000+i; });
       list.sort(function(a,b){ return a._k-b._k; }); return list;
     }
@@ -14219,7 +14248,7 @@ f 2469//2469 2470//2470 2434//2434
     function ocBuildBundle(){
       var list=ocUserList(), files=[], manifest={version:1,outfits:[]}, reads=[];
       list.forEach(function(o){
-        var entry={id:o.id,name:o.name,enabled:o.enabled,unlockAt:o.unlockAt||0,about:o.about||{},parts:[]}, used={};
+        var entry={id:o.id,name:o.name,enabled:o.enabled,unlockAt:o.unlockAt||0,unlock:o.unlock,about:o.about||{},parts:[]}, used={};
         o.parts.forEach(function(p){
           if(o.src==='repo'){ entry.parts.push({file:p.file}); return; }
           var fn=ocSafeFile(p.name), base=fn, n=2; while(used[fn]){ fn=base.replace(/\.glb$/i,'')+'-'+(n++)+'.glb'; } used[fn]=1;
@@ -14260,11 +14289,11 @@ f 2469//2469 2470//2470 2434//2434
         if(outfitFailed[o.id]) card.appendChild(ocEl('div','pm-empty','failed to load · '+outfitFailed[o.id]));
         var det=ocEl('details'); det.setAttribute('data-oc-det',o.id); if(ocOpenDet[o.id]) det.open=true; det.addEventListener('toggle',function(){ ocOpenDet[o.id]=det.open; }); det.appendChild(ocEl('summary',null,'unlock + about copy'));
         function fld(label,key,kind,val,ph){ det.appendChild(ocEl('div','oc-lbl2',label)); var f=ocEl(kind==='area'?'textarea':'input'); if(kind==='num'){ f.type='number'; f.min=0; f.step=1; } else if(kind==='text'){ f.type='text'; } f.value=val; if(ph) f.placeholder=ph; f.setAttribute('data-oc-field',key); f.setAttribute('data-id',o.id); f.spellcheck=kind==='area'; det.appendChild(f); }
-        fld('Unlock at (minikits · first outfit is always free)','unlockAt','num',o.unlockAt||0);
+        ocCondFields(det,o);
         fld('Kicker','a-kicker','text',(o.about&&o.about.kicker)||'','About me');
         fld('Title','a-title','text',(o.about&&o.about.title)||'',o.name);
         fld('About copy (shown in the manual for this outfit)','a-body','area',(o.about&&o.about.body)||'');
-        fld('Locked teaser (optional)','a-teaser','area',(o.about&&o.about.teaser)||'','Shoot N minikits in the Space Arcade to unlock…');
+        fld('Locked teaser (optional; blank = auto text from the condition)','a-teaser','area',(o.about&&o.about.teaser)||'',ocLockLine(o));
         card.appendChild(det);
         var ul=ocEl('ul','pm-planets'); o.parts.forEach(function(p,pi){ var li=ocEl('li','pm-planet'), row=ocEl('div','pm-row'); var t=ocEl('span','pm-psub',(p.name||(p.file||'').split('/').pop())+(p.size?'  '+Math.round(p.size/1024)+' KB':'')); t.style.flex='1'; row.appendChild(t); if(o.src==='draft') row.appendChild(ocBtn('✕','rm-part',o.id,'Remove this GLB',null,pi)); li.appendChild(row); ul.appendChild(li); });
         if(!o.parts.length) ul.appendChild(ocEl('li','pm-empty','no GLBs yet')); card.appendChild(ul);
@@ -14293,10 +14322,10 @@ f 2469//2469 2470//2470 2434//2434
       panel.addEventListener('click',function(e){
         var b=e.target.closest&&e.target.closest('[data-oc]'); if(!b||b.disabled) return; var act=b.getAttribute('data-oc'), id=b.getAttribute('data-id');
         if(ocArmed&&!(act==='delete'&&ocArmed===id)){ ocArmed=null; clearTimeout(ocArmedT); }
-        if(act==='new'){ var nid=ocUniqueId('outfit'); outfitDrafts.push({id:nid,name:'New outfit',enabled:true,unlockAt:3,about:{},parts:[]}); ocSaveDrafts(); ocMsg='name it, then add GLB(s)'; ocRender(); var inp=panel.querySelector('input[data-id="'+nid+'"][data-oc-field="name"]'); if(inp){ inp.focus(); inp.select(); } }
+        if(act==='new'){ var nid=ocUniqueId('outfit'); outfitDrafts.push({id:nid,name:'New outfit',enabled:true,unlockAt:3,unlock:{type:'minikits',n:3},about:{},parts:[]}); ocSaveDrafts(); ocMsg='name it, then add GLB(s)'; ocRender(); var inp=panel.querySelector('input[data-id="'+nid+'"][data-oc-field="name"]'); if(inp){ inp.focus(); inp.select(); } }
         else if(act==='export') ocExport();
         else if(act==='kit-add'){ ocSetKits(ocKits()+1); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); ocRender(); }
-        else if(act==='kit-reset'){ ocSetKits(0); ocSetNew([]); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); ocRender(); }
+        else if(act==='kit-reset'){ ocSetKits(0); ocSetNew([]); ocUnlSnap(true); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); ocRender(); }
         else if(act==='preview'){ ocShow(id,false); }
         else if(act==='up'||act==='down'){ var ids=ocUserList().map(function(o){ return o.id; }), i=ids.indexOf(id), j=act==='up'?i-1:i+1; if(i<0||j<0||j>=ids.length) return; ids.splice(j,0,ids.splice(i,1)[0]); ocSetOrder(ids); ocMsg='order changed · SAVE to sync'; ocRender(); }
         else if(act==='add-glb'){ var fi=document.createElement('input'); fi.type='file'; fi.accept='.glb'; fi.multiple=true; fi.onchange=function(){ ocAddFiles(id,fi.files); }; fi.click(); }
@@ -14315,48 +14344,86 @@ f 2469//2469 2470//2470 2434//2434
         if(f==='name'){ var v=e.target.value.trim(); if(!v){ e.target.value=o.name; return; }
           if(d){ var nid=ocUniqueId(ocSlug(v),id); if(nid!==id){ var ord=ocMeta().order, oi=ord.indexOf(id); if(oi>=0) ord[oi]=nid; ocInvalidate(id); d.id=nid; d.parts.forEach(function(p){ /* keys are id-independent */ }); if(outfitCur&&outfitCur.id===id) outfitCur.id=nid; } d.name=v; ocSaveDrafts(); }
           else { ocMeta().meta[id]=Object.assign(ocMeta().meta[id]||{},{name:v}); persistCopy(); ocMsg='renamed · SAVE to sync'; } ocRender(); }
-        else if(f==='unlockAt'||f.indexOf('a-')===0){
-          var key=f==='unlockAt'?null:f.slice(2), val=f==='unlockAt'?Math.max(0,parseInt(e.target.value,10)||0):e.target.value;
-          if(d){ if(key){ d.about=d.about||{}; d.about[key]=val; } else d.unlockAt=val; ocSaveDrafts(); }
-          else { var mm=ocMeta().meta[id]=ocMeta().meta[id]||{}; if(key){ mm.about=mm.about||{}; mm.about[key]=val; } else mm.unlockAt=val; persistCopy(); ocMsg='changed · SAVE to sync'; }
-          ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); if(!key) ocRender(); }
+        else if(f==='utype'||f==='un'||f==='uship'||f==='uhero'){
+          var c=ocCondOf(o.unlock), card=e.target.closest('[data-oc-cond]');
+          if(f==='utype'){ var t=e.target.value; c=t==='destroy'?{type:'destroy',ships:[],n:10}:t==='ship'?{type:'ship',id:(ocHeroList()[1]||ocHeroList()[0]||{id:'slave-1'}).id}:{type:'minikits',n:3}; }
+          else if(f==='un') c.n=Math.max(c.type==='destroy'?1:0,parseInt(e.target.value,10)||0);
+          else if(f==='uhero') c={type:'ship',id:e.target.value};
+          else { var sh=[].slice.call(card.querySelectorAll('input[data-oc-field=uship]:checked')).map(function(x){ return x.getAttribute('data-ship'); }); c={type:'destroy',ships:sh,n:c.n}; }
+          c=ocCondOf(c); var ul=c.type==='minikits'?c.n:0;
+          if(d){ d.unlock=c; d.unlockAt=ul; ocSaveDrafts(); }
+          else { var m2=ocMeta().meta[id]=ocMeta().meta[id]||{}; m2.unlock=c; m2.unlockAt=ul; persistCopy(); ocMsg='changed · SAVE to sync'; }
+          ocUnlSnap(true); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); ocRender(); }
+        else if(f.indexOf('a-')===0){
+          var key=f.slice(2), val=e.target.value;
+          if(d){ d.about=d.about||{}; d.about[key]=val; ocSaveDrafts(); }
+          else { var mm=ocMeta().meta[id]=ocMeta().meta[id]||{}; mm.about=mm.about||{}; mm.about[key]=val; persistCopy(); ocMsg='changed · SAVE to sync'; }
+          ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); }
         else if(f==='enabled'){ if(d){ d.enabled=e.target.checked; ocSaveDrafts(); } else { ocMeta().meta[id]=Object.assign(ocMeta().meta[id]||{},{enabled:e.target.checked}); persistCopy(); ocMsg='changed · SAVE to sync'; }
           ocReconcile(); if(e.target.checked&&!outfitCur) ocShow(id,true); ocRender(); }
       });
     })();
 
-    // ── Unlocks (lifetime minikit total in localStorage; each outfit has an unlockAt threshold, the first enabled outfit is the free default) ──
+    // ── Unlocks. Conditions per outfit (ocCondOf): minikits N (lifetime total, 'mw_kits_total'), destroy N of chosen ship types (per-ship kill tally in 'mw_ark_stats'.kills, written by the arcade), or an arcade hero ship unlocked (MWBattle.heroUnlocked). The first enabled outfit is the free default ──
     function ocKits(){ try{ return Math.max(0,parseInt(localStorage.getItem('mw_kits_total')||'0',10)||0); }catch(e){ return 0; } }
     function ocSetKits(n){ try{ localStorage.setItem('mw_kits_total',String(Math.max(0,n|0))); }catch(e){} }
+    function ocShipList(){ try{ return window.MWBattle&&MWBattle.shipList?MWBattle.shipList():[]; }catch(e){ return []; } }
+    function ocHeroList(){ try{ return window.MWBattle&&MWBattle.heroList?MWBattle.heroList():[]; }catch(e){ return []; } }
+    function ocShipName(id){ var l=ocShipList().concat(ocHeroList()); for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i].name||id; return id; }
+    function ocKillStats(){ try{ var k=(JSON.parse(localStorage.getItem('mw_ark_stats')||'{}')||{}).kills; return k&&typeof k==='object'?k:{}; }catch(e){ return {}; } }
+    function ocProg(o){   // {have,need}; met when have>=need
+      var c=o.unlock;
+      if(c.type==='ship'){ var ok=false; try{ ok=!!(window.MWBattle&&MWBattle.heroUnlocked&&MWBattle.heroUnlocked(c.id)); }catch(e){} return {have:ok?1:0,need:1}; }
+      if(c.type==='destroy'){ var k=ocKillStats(), h=0; (c.ships.length?c.ships:['fighter','support','capital']).forEach(function(x){ h+=k[x]|0; }); return {have:h,need:c.n}; }
+      return {have:ocKits(),need:c.n};
+    }
     function ocIsDefault(o){ var l=ocAll().filter(function(x){ return x.enabled; }); return !!l.length&&l[0].id===o.id; }
-    function ocLocked(o){ return !ocIsDefault(o)&&ocKits()<(o.unlockAt||0); }
+    function ocLocked(o){ if(ocIsDefault(o)) return false; var p=ocProg(o); return p.have<p.need; }
+    // what the visitor has to do, with progress: the carousel HUD line, and the focus view's text when the author wrote no teaser
+    function ocLockLine(o){
+      var c=o.unlock, p=ocProg(o), left=Math.max(0,p.need-p.have);
+      if(c.type==='ship') return 'Unlock '+ocShipName(c.id)+' in the Space Arcade';
+      if(c.type==='destroy'){ var what=c.ships.length?c.ships.map(ocShipName).join(', '):'enemy ships'; return 'Destroy '+left+' more of: '+what+' in the Space Arcade ('+Math.min(p.have,p.need)+'/'+p.need+')'; }
+      return 'Shoot '+left+' more minikit'+(left===1?'':'s')+' in the Space Arcade to unlock ('+p.have+'/'+p.need+')';
+    }
     function ocNewList(){ try{ var a=JSON.parse(localStorage.getItem('mw_outfits_new')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
     function ocSetNew(a){ try{ localStorage.setItem('mw_outfits_new',JSON.stringify(a)); }catch(e){} }
     function ocMarkSeen(id){ var a=ocNewList(), i=a.indexOf(id); var o=ocFind(id); if(i>=0&&o&&!ocLocked(o)){ a.splice(i,1); ocSetNew(a); } }
     function ocRelock(){ if(!outfitCur||!outfitCur.group) return; var o=ocFind(outfitCur.id); if(!o) return; ocGhostSet(outfitCur.group,ocLocked(o)); outfitCur.group.userData.ocCap=1; outfitCur.group.userData.ocA=null; }
-    window.addEventListener('mw:minikit',function(e){   // the arcade fires this per minikit opened (assets/battle/battle.js)
-      var d=e&&e.detail, before, now;
-      if(d&&d.lifetime!=null){ now=d.lifetime|0; before=now-1; }   // newer arcade owns the lifetime counter ('mw_kits_total') and sends it — don't double count
-      else { before=ocKits(); now=before+1; ocSetKits(now); }
-      var fresh=ocAll().filter(function(o){ return o.enabled&&!ocIsDefault(o)&&(o.unlockAt||0)>before&&(o.unlockAt||0)<=now; });
+    // 'mw_outfits_unl' = the outfits last seen unlocked; an outfit that newly appears there (after an arcade event) is "new" + toasts. `quiet` = just re-baseline (seeds on first run; never swallows a fresh unlock).
+    function ocUnlSnap(quiet){
+      var raw=null; try{ raw=localStorage.getItem('mw_outfits_unl'); }catch(e){} var had=raw!=null, prev=[]; try{ prev=JSON.parse(raw||'[]')||[]; }catch(e){}
+      var now=ocAll().filter(function(o){ return o.enabled&&!ocIsDefault(o)&&!ocLocked(o); });
+      try{ localStorage.setItem('mw_outfits_unl',JSON.stringify(now.map(function(o){ return o.id; }))); }catch(e){}
+      return (had&&!quiet)?now.filter(function(o){ return prev.indexOf(o.id)<0; }):[];
+    }
+    function ocAfterArcadeEvent(){
+      var fresh=ocUnlSnap(false);
       if(fresh.length){ var nw=ocNewList(); fresh.forEach(function(o){ if(nw.indexOf(o.id)<0) nw.push(o.id); }); ocSetNew(nw);
         if(typeof toast==='function') toast('Outfit unlocked: '+fresh.map(function(o){ return o.name; }).join(', ')); }
       ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); if(document.body.classList.contains('oc-open')) ocRender();
+    }
+    window.addEventListener('mw:minikit',function(e){   // the arcade fires this per minikit opened (assets/battle/battle.js)
+      var d=e&&e.detail;
+      if(!(d&&d.lifetime!=null)) ocSetKits(ocKits()+1);   // an older arcade without the lifetime counter: count here
+      ocAfterArcadeEvent();
     });
+    window.addEventListener('mw:arcstats',ocAfterArcadeEvent);   // kills / ship unlocks (arcade saveStats)
     // ── Carousel HUD ──
     function ocGoArcade(){ var g=planetById('arcade'); if(!g) return; if(focused===aboutGrp){ veilThen(function(){ goHome(); openArcade('arcade'); }); } else activate(g.userData); }
     function ocHudUpdate(){
       var el=document.getElementById('outfitHud'); if(!el) return; var o=outfitCur?ocFind(outfitCur.id):null; if(!o) return;
       var l=ocCycleList(), i=0; l.forEach(function(x,n){ if(x.id===o.id) i=n; });
-      var locked=ocLocked(o), kits=ocKits(), need=Math.max(0,(o.unlockAt||0)-kits), isNew=ocNewList().indexOf(o.id)>=0;
+      var locked=ocLocked(o), pg=ocProg(o), need=Math.max(0,pg.need-pg.have), isMk=o.unlock.type==='minikits', isNew=ocNewList().indexOf(o.id)>=0;
       el.setAttribute('data-locked',locked?'1':'0');
       document.getElementById('ohName').textContent=(locked?'Locked · ':'')+o.name;
       document.getElementById('ohSub').textContent=locked
-        ? ('Shoot '+need+' more minikit'+(need===1?'':'s')+' in the Space Arcade to unlock ('+kits+'/'+o.unlockAt+')')
+        ? ocLockLine(o)
         : ('Outfit '+(i+1)+' / '+l.length+(isNew?' · new':'')+(focused===aboutGrp?'':' · click the figure to learn more'));
-      document.getElementById('ohKitX').textContent=locked?'\u00d7'+need:'';
+      document.getElementById('ohKitX').textContent=locked&&isMk?'\u00d7'+need:'';
       document.getElementById('ohPrev').disabled=document.getElementById('ohNext').disabled=l.length<2;
-      ocSyncKit(locked);
+      ocSyncKit(locked&&isMk);
+      ocUnlSnap(true);
     }
     // The minikit symbol is the real GLB, spun in the site's mini viewer (a second WebGL context, so it only exists while a locked outfit is on show).
     var ocKitBuf=null, ocKitLoading=false;
@@ -14379,9 +14446,9 @@ f 2469//2469 2470//2470 2434//2434
     })();
     // ── About-me focus view: the project focus view, with the selected outfit's copy as the manual ──
     function aboutData(o){
-      var a=o.about||{}, kits=ocKits(), base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){}};
+      var a=o.about||{}, base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){}};
       if(ocLocked(o)) return Object.assign(base,{kicker:'Outfit locked',title:o.name,
-        framing:a.teaser||('Shoot '+o.unlockAt+' minikits in the Space Arcade to unlock this outfit, and what it says about me. You have '+kits+' so far.'),
+        framing:a.teaser||(ocLockLine(o)+' to unlock this outfit, and what it says about me.'),
         cta:'PLAY THE SPACE ARCADE →',ctaUrl:'#',ctaHidden:false,ctaActive:true,onCta:function(){ ocGoArcade(); }});
       var _cta=!!(a.ctaShow&&a.ctaText&&a.ctaUrl);   // optional CTA from the sig fig's About record: ctaShow, ctaText, ctaUrl, ctaTarget ('new' | 'same')
       return Object.assign(base,{kicker:a.kicker||'About me',title:a.title||o.name,framing:a.body||'',cta:_cta?a.ctaText:'',ctaUrl:_cta?a.ctaUrl:'#',ctaHidden:!_cta,ctaActive:_cta,external:_cta,
@@ -14406,7 +14473,7 @@ f 2469//2469 2470//2470 2434//2434
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
     window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
-      cur:function(){ return outfitCur; },kits:ocKits,setKits:ocSetKits,locked:ocLocked,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+      cur:function(){ return outfitCur; },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
