@@ -10402,7 +10402,7 @@ f 2469//2469 2470//2470 2434//2434
     // rectangle's centre. The fit is measured from a FIXED reference orientation (yaw 0 / pitch 0.28), not
     // the live one, so orbiting doesn't make the framing breathe. focusZoom stays a multiplier on top
     // (1.2 = exactly "fill"), so saved per-project views + mouse-wheel zoom keep their meaning.
-    var ABOUT_YAW=-0.62, ABOUT_PITCH=0.5;   // About view's default camera: a 3/4 front view (the figure's front, turned ~35 deg) from a little above
+    var ABOUT_YAW=-0.62, ABOUT_PITCH=0.5, ABOUT_FILL=0.94, ABOUT_REV=2;   // About view's default camera: a 3/4 front view (the figure's front, turned ~35 deg) from a little above
     var STAGE_ZOOM_REF=1.2, STAGE_REF_PITCH=0.28, STAGE_ZOOM_MIN=0.55, STAGE_NEAR_GAP=0.35;   // zoom-in stop: 55% of the fitted distance, and ≥0.35 units from the nearest content
     var _sf={ok:false,dist:2.3,k:1,sx:0,sy:0}, _sfBox=new THREE.Box3(), _sfTmp=new THREE.Box3(), _sfP=new THREE.Vector3(), _sfPts=[];
     function sfObjBox(o,out){   // world AABB of an object's VISIBLE meshes (skips the hidden kit flaps etc.)
@@ -10451,8 +10451,9 @@ f 2469//2469 2470//2470 2434//2434
         for(var i=0;i<n;i++){ var z=Math.max(0.05,d-qd[i]), x=qx[i]/(z*tX), y=qy[i]/(z*tY);
           if(x<ex.minX)ex.minX=x; if(x>ex.maxX)ex.maxX=x; if(y<ex.minY)ex.minY=y; if(y>ex.maxY)ex.maxY=y; } }
       var fill=(params.stageFill!=null?params.stageFill:0.74); if(focusedMoon) fill=Math.min(fill,0.6);
+      if(abt) fill=Math.max(fill,ABOUT_FILL);
       // never let the content grow past `stageMaxH` of the WINDOW height, however big the free stage is (huge monitors)
-      var sb_=st.b-(abt?72:0);   // About: leave the strip under the figure for the carousel name / counter / arrows
+      var sb_=abt?Math.min(st.b,H_-(window.MWHudBottom||236)-66):st.b;   // About: end the figure's frame at the carousel HUD (a fixed spot, so every outfit gets the same frame whatever its manual's height)
       var Sw=2*(st.r-st.l)/W_*fill, Sh=Math.min(2*(sb_-st.t)/H_*fill, 2*(params.stageMaxH!=null?params.stageMaxH:0.58)), lo=0.3, hi=80;
       for(var k=0;k<22;k++){ var mid=(lo+hi)/2; extents(mid); if((ex.maxX-ex.minX)<=Sw && (ex.maxY-ex.minY)<=Sh) hi=mid; else lo=mid; }
       // ZOOM STOP: the wheel can only zoom in to STAGE_ZOOM_MIN of the fitted distance, and never so close that the
@@ -10537,6 +10538,7 @@ f 2469//2469 2470//2470 2434//2434
     // those keep only their authored ANGLE (yaw/pitch); a view saved under stage-fit carries fit:1 and keeps
     // zoom/pan as fine-tuning multipliers on top of the fit.
     function applyCamView(key){ var v=copyOvr[key]; var fitOn=params.stageFit!==false;
+      if(v&&key==='camview:about'&&v.rev!==ABOUT_REV) v=null;   // a view saved before the 3/4 default existed would pin the old front-on camera
       if(v){ if(v.yaw!=null)focusYaw=v.yaw; if(v.pitch!=null)focusPitch=v.pitch;
         if(fitOn && !v.fit){ params.focusZoom=STAGE_ZOOM_REF; focusPanY=0; }
         else { if(v.zoom!=null)params.focusZoom=v.zoom; if(v.panY!=null)focusPanY=v.panY; }
@@ -10545,7 +10547,7 @@ f 2469//2469 2470//2470 2434//2434
       setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
     function saveCamView(){
       if(MWSub.active){ MWSub.active.orbit.saveView(); if(typeof toast==='function') toast('default view saved'); return; }
-      var k=camViewKey(); if(!k) return; copyOvr[k]={yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,panY:focusPanY,fit:(params.stageFit!==false?1:0)}; persistCopy(); if(typeof toast==='function') toast('default view saved'); }
+      var k=camViewKey(); if(!k) return; copyOvr[k]={yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,panY:focusPanY,fit:(params.stageFit!==false?1:0),rev:ABOUT_REV}; persistCopy(); if(typeof toast==='function') toast('default view saved'); }
     function resetCamView(){
       if(MWSub.active){ MWSub.active.orbit.clearView(); if(MWSub.active.onBack) cvOverview(); if(typeof toast==='function') toast('view reset'); return; }
       var k=camViewKey(); if(!k) return; delete copyOvr[k]; persistCopy();
@@ -14281,8 +14283,8 @@ f 2469//2469 2470//2470 2434//2434
         var _want=ocCycleList().length>0&&mwPhase==='docked'&&!arcadeActive&&focused===aboutGrp&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden');
         if(_want!==outfitHudOn){ outfitHudOn=_want; document.body.classList.toggle('oh-show',_want); ocHudUpdate(); }
         if(_want){   // in the About focus view the HUD sits in the free stage rectangle the manual layout publishes (centred, just above the manual); otherwise the CSS default
-          var _st=(focused===aboutGrp)?window.MWStage:null, _hu=document.getElementById('outfitHud'), _hb=_st?Math.max(OC_HUD_BOTTOM,_st.H-_st.b+10):0, _pos=_st?(((_st.l+_st.r)/2)+'|'+_hb):'';
-          if(_hu&&_hu._ocPos!==_pos){ _hu._ocPos=_pos; if(_st){ _hu.style.left=((_st.l+_st.r)/2)+'px'; _hu.style.bottom=_hb+'px'; } else { _hu.style.left=''; _hu.style.bottom=''; } } }
+          var _st=(focused===aboutGrp)?window.MWStage:null, _hu=document.getElementById('outfitHud'), _hb=_st?Math.max(OC_HUD_BOTTOM,(ocHudMan=Math.max(ocHudMan,_st.H-_st.b+10))):0, _pos=_st?(((_st.l+_st.r)/2)+'|'+_hb):'';
+          if(_hu&&_hu._ocPos!==_pos){ _hu._ocPos=_pos; if(_st){ _hu.style.left=((_st.l+_st.r)/2)+'px'; _hu.style.bottom=_hb+'px'; window.MWHudBottom=_hb; } else { _hu.style.left=''; _hu.style.bottom=''; } } }
         if(cfg.cycle>0&&!ocInstant()&&!focused&&!arcadeActive&&mwPhase==='docked'&&document.visibilityState==='visible'&&now-outfitLastSwitch>cfg.cycle*1000) ocNext();
       } else {   // outfits all gone: hand the scene back to the original head
         outfitStage.visible=false; outfitHeadHidden=false;   // mwUpdate re-shows the head/GLB each frame from here
@@ -14292,7 +14294,8 @@ f 2469//2469 2470//2470 2434//2434
       var on=mwPhase==='docked'&&!focused&&!arcadeActive&&!editMode&&!MWSub.active&&!document.body.classList.contains('mw-altfocus')&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden')&&!document.body.classList.contains('mw-planet');
       if(on!==document.body.classList.contains('gk-show')) document.body.classList.toggle('gk-show',on);
     },200);
-    var OC_HUD_BOTTOM=300;   // px from the window bottom: the carousel row stays put whatever the manual's height (only a manual taller than this pushes it up)
+    var OC_HUD_BOTTOM=236, ocHudMan=0;   // px from the window bottom: the carousel row stays put whatever the manual's height; this is the tallest manual at a laptop width, and a taller one seen later (narrow window) lifts it once and it stays
+    window.addEventListener('resize',function(){ ocHudMan=0; });   // the tallest manual seen is re-learned at the new size
     function ocLoadDrafts(){ try{ var d=JSON.parse(localStorage.getItem('mw_outfit_drafts')||'[]'); outfitDrafts=Array.isArray(d)?d:[]; }catch(e){ outfitDrafts=[]; } }
     function ocSaveDrafts(){ try{ localStorage.setItem('mw_outfit_drafts',JSON.stringify(outfitDrafts)); }catch(e){ ocMsg='could not save drafts locally'; } }
     (function ocInit(){
@@ -14593,7 +14596,7 @@ f 2469//2469 2470//2470 2434//2434
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
     window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
-      cur:function(){ return outfitCur; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+      cur:function(){ return outfitCur; },cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
