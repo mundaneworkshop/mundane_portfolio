@@ -23,7 +23,9 @@ NARM = 4                                            # arm x, y, z + the hand's t
 
 
 class Limb:
-    def __init__(self, fig, side):
+    def __init__(self, fig, side, shoulder=None):
+        """shoulder: world point the arm turns about when the part's own origin is not the shoulder (custom arms): the plan then needs the same
+        point in pivots_local (arm-local = arm.matrix_world^-1 @ shoulder)."""
         coll = bpy.data.collections['sigfig-' + fig]
         objs = {o.get('role'): o for o in coll.all_objects if o.type == 'MESH'}
         a, h = objs['arm_' + side], objs['hand_' + side]
@@ -35,14 +37,19 @@ class Limb:
         self.lh, self.qh, self.sh = Vector(r[0:3]), Euler(r[3:6], 'XYZ').to_quaternion(), Vector(r[6:9])
         self.pinv = h.matrix_parent_inverse.copy()
         self.offs = self.qh @ HAND_PIN
+        self.apl = (a.matrix_world.inverted() @ Vector(shoulder)) if shoulder is not None else None
+        self.aoffs = (self.qa @ self.apl) if self.apl is not None else None
 
     def set_parent(self, F):
         """Replace the parent-chain matrix (e.g. a leaning torso)."""
         self.F = F
 
     def arm_world(self, x):
-        Q = Euler([math.radians(v) for v in x[0:3]], 'XYZ').to_quaternion() @ self.qa
-        return self.F @ Matrix.LocRotScale(self.la, Q, self.sa)
+        Qd = Euler([math.radians(v) for v in x[0:3]], 'XYZ').to_quaternion()
+        loc = self.la
+        if self.aoffs is not None:                       # turn about the shoulder, not the part origin: the same compensation apply_plan does for pivots_local
+            loc = self.la + (Qd @ (-self.aoffs)) + self.aoffs
+        return self.F @ Matrix.LocRotScale(loc, Qd @ self.qa, self.sa)
 
     def twist_q(self, theta):
         """The hand's delta rotation (in the arm's frame) for a twist of `theta` degrees about the hand-local y axis."""

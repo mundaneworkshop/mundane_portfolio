@@ -570,6 +570,8 @@ def apply_plan(fig_id, plan):
             ob.scale = sc_v
             if has_rot:
                 ob.keyframe_insert(data_path='rotation_quaternion', frame=f)
+            if has_rot and (dz is not None or pl is not None):         # a turn about a pivot moves the origin: key that location too, or it holds the last frame's
+                ob.keyframe_insert(data_path='location', frame=f)
             for chan, path in (('location', 'location'), ('scale', 'scale')):
                 for i, a in enumerate('xyz'):
                     if (chan + '_' + a) in ch:

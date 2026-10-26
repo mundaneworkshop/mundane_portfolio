@@ -36,8 +36,7 @@
  },
  "head": {
   "members": [
-   "head",
-   "acc_m64a4bc45_202587_011646"
+   "head"
   ],
   "axis": [
    1,
@@ -45,6 +44,17 @@
    0
   ],
   "theta": 1170
+ },
+ "cap": {
+  "members": [
+   "acc_m64a4bc45_202587_011646"
+  ],
+  "axis": [
+   0.6,
+   0.8,
+   0
+  ],
+  "theta": 1620
  },
  "torso": {
   "members": [

@@ -181,7 +181,9 @@ def _synth(name):
     return out
 
 
-DECAL_FACING = -1          # a face takes the decal when its normal opposes the decal's depth axis (the decal looks into the part)
+DECAL_FACING = -1
+DECAL_BAND = 5.0                  # LDraw units behind the nearest candidate that still take the print
+# a face takes the decal when its normal opposes the decal's depth axis (the decal looks into the part)
 
 
 def _apply_decals(out, sec, name):
@@ -191,15 +193,25 @@ def _apply_decals(out, sec, name):
     for d in sec['decals']:
         groups.setdefault(tuple(round(x, 3) for x in d['n'][:12]), []).append(d)
     res = list(out)
+    UP = Vector((0, -1, 0))                                        # LDraw's up
     for gi, (key, ds) in enumerate(groups.items()):
         n = ds[0]['n']
         O = Vector(n[0:3])
         e1, e2, e3 = Vector((n[3], n[6], n[9])).normalized(), Vector((n[4], n[7], n[10])).normalized(), Vector((n[5], n[8], n[11])).normalized()
+        # Studio stores a decal's frame as three columns. Written down for a cap's logo (two halves of an S, thumbnail.png is the reference): a frame whose height
+        # axis points DOWN (C3 against LDraw's up) puts the image's top at the far end of the rect, so the rect is read in up-coordinates and the image is flipped
+        # (vflip); a left-handed frame (negative determinant) is a mirrored copy, its width axis is turned back. Frames with an upward height axis (a torso) are as stored.
+        vflip = e3.dot(UP) < -0.3
+        if vflip:
+            e3 = -e3
+        if e1.cross(e2).dot(Vector((n[5], n[8], n[11])).normalized()) < 0:
+            e1 = -e1
         X0, X1 = min(d['n'][12] for d in ds), max(d['n'][14] for d in ds)
         Y0, Y1 = max(d['n'][13] for d in ds), min(d['n'][15] for d in ds)
         tk = '%s#decal%d' % (name, gi)
         _TEX[tk] = {'decals': ds, 'rect': (X0, Y0, X1, Y1)}
         used = False
+        cands = []
         for i, it in enumerate(res):
             if len(it) > 2:
                 continue
@@ -210,11 +222,27 @@ def _apply_decals(out, sec, name):
             ctr = (a + b + c) / 3.0
             r = ctr - O
             lx, ly, dz = r.dot(e1), r.dot(e3), r.dot(e2)
-            if not (X0 - 0.5 <= lx <= X1 + 0.5 and Y1 - 0.5 <= ly <= Y0 + 0.5) or abs(dz) > 3.0:
+            if not (X0 - 0.5 <= lx <= X1 + 0.5 and Y1 - 0.5 <= ly <= Y0 + 0.5):
                 continue
             if nrm.normalized().dot(e2) * DECAL_FACING < 0.3:
                 continue
+            cands.append((i, lx, ly, dz))
+        # a print lands on the surface nearest the decal along its depth axis: on a flat part that is the plane within a few units of its origin, on a sloped or
+        # curved one (a cap's crown) the front surface wherever it is; faces behind another candidate (the inside of the back panel) do not get it
+        cell = {}
+        for i, lx, ly, dz in cands:
+            k = (round(lx / 2.0), round(ly / 2.0))
+            cell[k] = min(cell.get(k, 1e9), dz)
+        for i, lx, ly, dz in cands:
+            k = (round(lx / 2.0), round(ly / 2.0))
+            near = min(cell.get((k[0] + dx, k[1] + dy), 1e9) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
+            if dz > near + DECAL_BAND:
+                continue
+            it = res[i]
+            a, b, c = it[1]
             uv = [(((v - O).dot(e1) - X0) / (X1 - X0), ((v - O).dot(e3) - Y1) / (Y0 - Y1)) for v in (a, b, c)]
+            if vflip:
+                uv = [(u_, 1.0 - v_) for u_, v_ in uv]
             res[i] = (it[0], it[1], uv, tk)
             used = True
         if not used:
