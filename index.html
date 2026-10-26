@@ -805,6 +805,20 @@
   #outfitHud[data-locked="1"] .oh-go{display:inline-flex}
   #outfitHud.oh-nudge .oh-sub{color:#E9A73E}
   @media (prefers-reduced-motion:no-preference){ #outfitHud{transition:opacity .25s ease} #outfitHud.oh-nudge .oh-name{animation:ohNudge .4s ease} @keyframes ohNudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}} }
+  #outfitHud .oh-row{gap:34px}   /* arcade carousel: big ◄ ► buttons with room between them */
+  /* GALAXY KEYBOARD LEGEND: same look as the arcade's #bt-hints legend */
+  #galaxyKeys{display:none;position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,'Space Mono',sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden}
+  body.gk-show #galaxyKeys{display:flex}
+  #galaxyKeys .gk-h{display:flex;align-items:center;gap:11px}
+  #galaxyKeys svg{color:var(--holo,#AAF5EE);flex:none}
+  @media (max-width:1100px){ #galaxyKeys{gap:18px;padding:10px 16px;font-size:11px;letter-spacing:1.6px} }
+  @media (max-width:760px){ #galaxyKeys{display:none!important} }
+  /* ABOUT manual: wrap the content: no dead snapshot / tag / link columns, no CTA column unless there is a CTA */
+  #manual-scene[data-ml="dock"][data-about]{ width:max-content; min-width:min(460px,calc(100vw - 2 * var(--ml-gap,24px))); max-width:min(1280px,calc(100vw - 2 * var(--ml-gap,24px))); }
+  #manual-scene[data-ml="dock"][data-about] .manual-page{ grid-template-columns:minmax(0,62ch) auto; }
+  #manual-scene[data-ml="dock"][data-about="plain"] .manual-page{ grid-template-columns:minmax(0,62ch); }
+  #manual-scene[data-ml="dock"][data-about] .manual-cta{ grid-column:2; grid-row:1 / span 4; }
+  #manual-scene[data-ml="dock"][data-about] .snap-grid, #manual-scene[data-ml="dock"][data-about] .manual-tags, #manual-scene[data-ml="dock"][data-about] .manual-extralinks, #manual-scene[data-ml="dock"][data-about] .manual-slug{ display:none!important }
   /* OUTFITS MANAGER: same visual language as the Projects Manager */
   #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.oc-open #outfitMgr{display:flex}
@@ -996,6 +1010,14 @@
     <div class="oh-lock" id="ohLock"><div class="oh-kit" id="ohKit" aria-hidden="true"></div><span class="oh-kitx" id="ohKitX"></span></div>
     <div class="oh-sub" id="ohSub" role="status" aria-live="polite"></div>
     <button type="button" class="oh-go" id="ohGo">Play the Space Arcade →</button>
+  </div>
+
+  <!-- GALAXY KEYBOARD LEGEND: shown on the galaxy view instead of the outfit carousel (same style as the arcade's legend) -->
+  <div id="galaxyKeys" role="note" aria-label="Keyboard and mouse controls">
+    <div class="gk-h"><svg viewBox="0 0 64 24" width="66" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19 7.5 l-6 4.5 l6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="33.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M45 7.5 l6 4.5 l-6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>Left / right · next planet</span></div>
+    <div class="gk-h"><svg viewBox="0 0 56 24" width="58" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="53" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M42 8 v5 h-22 M24 9.5 l-4 3.5 l4 3.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Enter · navigate</span></div>
+    <div class="gk-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 0 3 11 L3 13 L12 13 Z" fill="currentColor"/></svg><span>Click + drag · rotate + pan</span></div>
+    <div class="gk-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><rect x="10.4" y="4.6" width="3.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M9 16.5 l3 -2.6 l3 2.6 M9 22 l3 2.6 l3 -2.6" stroke="currentColor" stroke-width="1.3" fill="none"/></svg><span>Scroll · zoom</span></div>
   </div>
 
   <!-- OUTFITS MANAGER: upload/manage minifigure outfits (each = one or more GLBs). See docs/project-history/outfits.md. -->
@@ -9367,6 +9389,7 @@ f 2469//2469 2470//2470 2434//2434
     var logoMats=[];          // the textured-logo materials (so holo toggle can flip transparency)
     // Reusable holo-FX sets (independent per object type). Logo aliases the existing logo uniforms.
     var FX_LOGO={scan:logoScan,fres:logoFresnel,scanFreq:logoScanFreq,fxInt:logoFxInt,glitch:logoGlitch,hot:logoHot,tint:logoTint,holo:logoHolo};
+    var FX_OUTFIT=Object.assign({},FX_LOGO,{holo:{value:0}});   // sig fig outfits: the head's FX set, always solid (holo 0)
     var FX_MOON={scan:{value:0.7},fres:{value:1.8},scanFreq:{value:14},fxInt:{value:0},glitch:{value:0},glitchOn:true,glitchAmt:0.25,hot:{value:new THREE.Color(0xEAFEFB)},tint:{value:new THREE.Color(0xffffff)},holo:{value:0}};
     var FX_BOX={scan:{value:0.7},fres:{value:1.8},scanFreq:{value:14},fxInt:{value:0},glitch:{value:0},glitchOn:true,glitchAmt:0.25,hot:{value:new THREE.Color(0xEAFEFB)},tint:{value:new THREE.Color(0xffffff)},holo:{value:0}};
     // ── KIT BOX SIDE MARQUEE ──: a CONTINUOUS scrolling text ribbon wrapping the box rim (the 4 non-cover
@@ -10194,13 +10217,17 @@ f 2469//2469 2470//2470 2434//2434
       var kb=null;   // {key, label, obj, open}
       function kbList(){
         if(mwPhase!=='docked'||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')) return null;
+        if(focused===aboutGrp) return null;   // About view: the arrows cycle the outfits (below)
         if(focused){
           var l=[];
           if(focused.userData.hit&&!focused.userData.hit.userData.boxReplaced) l.push({key:'kitbox', label:'\u25B8 VIEW CASE STUDY', obj:focused.userData.hit, open:function(){ clearBoxHover(); openProjectCta(); }});
           if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){ if(m!==focusedMoon) l.push({key:m, label:'\u25B8 OPEN', obj:m.userData.glbGroup||m, open:function(){ focusMoon(m); }}); });
           return l;
         }
-        return planets.filter(function(p){ return p.visible&&!p.userData.hidden; }).map(function(p){ return {key:p, label:'\u25B8 OPEN', obj:p.userData.hitProxy||p, grp:p, open:function(){ activate(p.userData); }}; });
+        var pl=planets.filter(function(p){ return p.visible&&!p.userData.hidden; }).map(function(p){ return {key:p, label:'\u25B8 OPEN', obj:p.userData.hitProxy||p, grp:p, open:function(){ activate(p.userData); }}; });
+        var _fo=ocFigObj(), _fm=outfitCur&&ocFind(outfitCur.id);   // the hologram figure is a stop too, between the planets by where it sits on screen
+        if(_fo&&!arcadeActive) pl.push({key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:_fo, open:ocClickFigure});
+        return pl;
       }
       function kbRetarget(){ if(window.__bricReticle&&window.__bricReticle.retarget) window.__bricReticle.retarget(); }
       function kbClear(){ if(!kb) return; kb=null; if(!focused) setHovered(null); kbRetarget(); }
@@ -10218,13 +10245,14 @@ f 2469//2469 2470//2470 2434//2434
         if(kb.grp) setHovered(kb.grp);
         kbRetarget(); return true;
       }
-      window.addEventListener('pointermove',function(e){ if(kb&&(!e.pointerType||e.pointerType==='mouse')) kbClear(); },{passive:true});
+      window.addEventListener('pointermove',function(e){ if(kb&&(!e.pointerType||e.pointerType==='mouse')){ if(kb.init&&performance.now()-kb.init<1800) return; kbClear(); } },{passive:true});   // (the first figure focus survives the pointer that is already moving as the page docks)
       window.addEventListener('keydown',function(e){
         if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
         var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
         if(typeof csScene!=='undefined'&&csScene.active) return;   // case-study ring owns the arrows
         if(window.__mwArcade) return;                                // arcade: arrows/WASD fly the hero ship
         var k=e.key;
+        if(focused===aboutGrp){ if(k==='ArrowRight'||k==='ArrowLeft'){ e.preventDefault(); if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } outfitLastSwitch=performance.now(); ocNext(k==='ArrowRight'?1:-1); } return; }   // About view: left / right cycle the outfits
         if(k==='ArrowRight'){ if(kbStep('x',1)) e.preventDefault(); }
         else if(k==='ArrowLeft'){ if(kbStep('x',-1)) e.preventDefault(); }
         else if(k==='ArrowDown'){ if(kbStep('y',1)) e.preventDefault(); }
@@ -10232,8 +10260,15 @@ f 2469//2469 2470//2470 2434//2434
         else if((k==='Enter'||k===' ')&&kb){ var o=kb.open; kb=null; if(!focused) setHovered(null); kbRetarget(); e.preventDefault(); o(); }
         else if(k==='Escape'&&kb){ kbClear(); }
       });
+      var kbInitDone=false;
+      setInterval(function(){   // once the site has docked and the figure is on show: the reticle starts on it
+        if(kbInitDone||mwPhase!=='docked'||focused||arcadeActive||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')||document.body.classList.contains('ui-hidden')) return;
+        var f=ocFigObj(), r=f&&rectOf(f); if(!r) return;
+        kbInitDone=true; var m=outfitCur&&ocFind(outfitCur.id);
+        kb={key:'figure', label:(m&&ocLocked(m))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:f, open:ocClickFigure, init:performance.now()}; kbRetarget();
+      },300);
       function targets(x,y,el){
-        if(kb){ var kl=kbList(); if(kl&&kl.some(function(t){ return t.key===kb.key; })){ var kt=kb; return {key:kt.key, label:kt.label, rect:function(){ return rectOf(kt.obj); }}; } kb=null; }
+        if(kb){ var kl=kbList(), kt=kl&&kl.filter(function(t){ return t.key===kb.key; })[0]; if(kt){ return {key:kt.key, label:kt.label, rect:function(){ var f=(kt.key==='figure')?ocFigObj():kt.obj; return f?rectOf(f):null; }}; } kb=null; }
         var cv=renderer&&renderer.domElement; if(!cv||el!==cv) return null;   // pointer must be on the canvas itself, not a panel above it
         if(arcadeActive) return null;
         if(mwPhase==='entry'){   // the entry monogram: while the pointer is over the mark (mwHover) the corner marks expand round it and show ENTER at its top-left corner
@@ -10253,7 +10288,7 @@ f 2469//2469 2470//2470 2434//2434
           return null;
         }
         if(figHover){ var _fo=ocFigObj(), _fm=outfitCur&&ocFind(outfitCur.id);   // the figure / original head: frame it, say what the click does
-          if(_fo) return {key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT ME', rect:function(){ var f=ocFigObj(); return f?rectOf(f):null; }}; }
+          if(_fo) return {key:'figure', label:(_fm&&ocLocked(_fm))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', rect:function(){ var f=ocFigObj(); return f?rectOf(f):null; }}; }
         if(!hovered||cv.style.cursor!=='pointer') return null;   // galaxy: the page says "clickable here"
         var grp=hovered, hit=grp.userData.hitProxy;
         return {key:grp, label:'\u25B8 OPEN', rect:function(){ return rectOf(hit||grp); }};
@@ -10389,7 +10424,8 @@ f 2469//2469 2470//2470 2434//2434
         if(!sfObjBox(focusedMoon,_sfBox)) return null; sfAddBox(_sfBox,px,py,pz,gs);
         var cc=_sfBox.getCenter(new THREE.Vector3()); lookRel=[(cc.x-px)/gs,(cc.y-py)/gs,(cc.z-pz)/gs];
       } else {
-        if(sfObjBox(focused.userData.hit,_sfBox)) sfAddBox(_sfBox,px,py,pz,gs);
+        if(focused===aboutGrp) ocFitPts(px,py,pz,gs);   // About: a fixed frame per outfit (its start pose), so the camera never follows the idle motion
+        else if(sfObjBox(focused.userData.hit,_sfBox)) sfAddBox(_sfBox,px,py,pz,gs);
         if(focused.userData.moonGrp.visible) focused.userData.moons.forEach(function(m){
           // measure each moon at its REST position — the idle float (moonMotion) would otherwise change the bounds every frame, and the fit (distance + lens shift) would bob/sway the camera with it
           var _mu=m.userData, _mrr=_mu.r*(params.moonDist!=null?params.moonDist:1), _px=m.position.x, _py=m.position.y, _pz=m.position.z;
@@ -12735,7 +12771,7 @@ f 2469//2469 2470//2470 2434//2434
         shader.vertexShader=shader.vertexShader
           .replace('#include <common>','#include <common>\nvarying vec3 vWP; varying vec3 vNN; varying vec3 vEY;')
           .replace('#include <begin_vertex>','#include <begin_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*normal); vEY=normalize(cameraPosition-vWP);')
-          .replace('#include <project_vertex>','#ifdef USE_SKINNING\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*objectNormal); vEY=normalize(cameraPosition-vWP);\n#endif\n#include <project_vertex>');   // skinned figures: position and normal AFTER the bones
+          .replace('#include <project_vertex>','#ifdef USE_SKINNING\n mat4 _skM=mat4(0.0); _skM+=skinWeight.x*boneMatX; _skM+=skinWeight.y*boneMatY; _skM+=skinWeight.z*boneMatZ; _skM+=skinWeight.w*boneMatW; _skM=bindMatrixInverse*_skM*bindMatrix; vec3 _skN=(_skM*vec4(normal,0.0)).xyz;\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*_skN); vEY=normalize(cameraPosition-vWP);\n#endif\n#include <project_vertex>');   // skinned figures: position and normal AFTER the bones. (MeshBasicMaterial's vertex shader has no `objectNormal` unless there is an envmap, so the skinned normal is built from the bone matrices here: referencing objectNormal failed to compile, and every skinned part, the head and torso, drew nothing)
         // DECAL_LIFT: the print composites OVER the brick colour by texel alpha. On near-black bricks
         // a print's soft (sub-1 alpha) texels blend toward black and lose their colour ("multiply" look).
         // Boosting effective coverage lets the authored print colour survive on dark plastic, while
@@ -13164,6 +13200,7 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof applyHiddenVisibility==='function') applyHiddenVisibility();
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
       if(typeof setInlineEditing==='function') setInlineEditing(on);
+      if(focused===aboutGrp&&typeof ocRefreshAbout==='function'){ ocRefreshAbout(); ocHudUpdate(); }   // the About copy / CTA / carousel title become editable (or not)
       if(typeof updateSyncBanner==='function') updateSyncBanner();
       if(!on){ setMeshSelectMode(false); if(typeof pmOpen==='function') pmOpen(false); } }   // don't leave the "clicks select mesh" trap armed for next time Edit Mode opens; the Projects Manager is an Edit Mode panel
     var _eb=document.getElementById('editBtn'); if(_eb) _eb.addEventListener('click',function(){ setEditMode(!editMode); });
@@ -13279,6 +13316,7 @@ f 2469//2469 2470//2470 2434//2434
         var _nd=(typeof cvNodeById==='function')?cvNodeById(cvSelId):null;
         if(_nd){ if(n.caseField==='title')_nd.title=v; else if(n.caseField==='body')_nd.body=v; cvPersist(); cvRefreshNodeLabel(cvSelId); }
         return; }
+      if(n.caseField&&focused===aboutGrp&&outfitCur&&typeof ocSetAbout==='function'){ ocSetAbout(outfitCur.id,n.caseField==='title'?{title:v}:{body:v}); return; }   // About view: the outfit's own About record
       if(n.caseField){
         if(focusedMoon){ var meta=getMoonMeta(focusedMoon);   // artifact focus: title/body edit its own content
           if(n.caseField==='title'){ meta.title=v; setMoonLabel(focusedMoon); }
@@ -14063,7 +14101,7 @@ f 2469//2469 2470//2470 2434//2434
           unlock:mt.unlock?ocCondOf(mt.unlock):(mt.unlockAt!=null?ocCondOf(null,mt.unlockAt):ocCondOf(o.unlock,o.unlockAt)),about:Object.assign({},o.about||{},mt.about||{})}); });
       var hm=meta.meta[HEAD_ID]||{};   // the original head is a built-in carousel entry: first, free, not managed as a file
       list.push({id:HEAD_ID,name:hm.name||'Original head',enabled:true,src:'builtin',builtin:true,parts:[],unlock:{type:'minikits',n:0},
-        about:Object.assign({kicker:'About me',title:'Original head',body:'Placeholder about-me copy for the original head. Edit it in Edit Mode, \u263a outfits.',teaser:''},hm.about||{})});
+        about:Object.assign({kicker:'About Jason',title:'Original head',body:'Placeholder about-me copy for the original head. Edit it in Edit Mode, \u263a outfits.',teaser:''},hm.about||{})});
       list.forEach(function(o){ o.unlockAt=o.unlock.type==='minikits'?o.unlock.n:0; });   // legacy mirror
       list.forEach(function(o,i){ var oi=meta.order.indexOf(o.id); o._k=o.builtin?-1:(oi<0?1e6:oi)*1000+i; });
       list.sort(function(a,b){ return a._k-b._k; }); return list;
@@ -14085,29 +14123,20 @@ f 2469//2469 2470//2470 2434//2434
         if(!(size.y>0)||!isFinite(size.y)) throw new Error('outfit has no geometry');
         // buildHoloGLB fits the LONGEST side to radius*2, so scale the radius until the figure's HEIGHT is the nominal height (arms-out poses stay in proportion).
         var ext=Math.max(size.x,size.y,size.z);
-        var fig=buildHoloGLB(root,FX_LOGO,(OUTFIT_NOMINAL_H/2)*(ext/size.y));
+        var fig=buildHoloGLB(root,FX_OUTFIT,(OUTFIT_NOMINAL_H/2)*(ext/size.y));
         var clip=null; scenes.forEach(function(sc){ (sc.userData.clips||[]).forEach(function(c){ if(!clip||c.name===(o.idle||'idle')) clip=c; }); });   // the idle loop (a clip named `idle`, else the first)
         if(clip){ var mx=new THREE.AnimationMixer(root); mx.clipAction(clip).play(); fig.userData.mixer=mx; }
         ocLogoize(fig); return fig;
       });
     }
-    // Unlocked figure = the SAME treatment as the logo GLB head: DoubleSide basic materials registered with setLogoHoloState (it owns
-    // transparent / blending / depth, so the figure follows the holo slider and the head's solid-or-hologram look), on LOGO_LAYER so the
-    // depth pre-pass draws only the front-most surface (overlapping parts cannot pile up). Skinned and animated, so never culled.
+    // Unlocked figure = SOLID, like the big head at holo 0: opaque, depth-writing, DoubleSide basic materials (own FX_OUTFIT set whose `holo` stays 0, so the
+    // holo slider never turns the figure translucent). Opaque + depth test means every part draws (a translucent figure dropped the skinned head / torso,
+    // which cannot have a depth pre-pass) and overlapping parts sort correctly by depth alone. Skinned and animated, so never culled.
     var ocMats=[], ocDepthMat=null;
     function ocLogoize(grp){
-      if(!ocDepthMat){ ocDepthMat=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:4}); }   // pushed back a hair so the colour pass always passes on the front-most surface
-      var ms=[]; grp.traverse(function(o){ if(o.isMesh&&o.material) ms.push(o); });
       grp.userData.ocDepth=[];
-      ms.forEach(function(o){ o.frustumCulled=false;
-        var m=o.material; if(o.isSkinnedMesh) m.skinning=true; m.side=THREE.DoubleSide; m.userData.logoMat=true; if(ocMats.indexOf(m)<0) ocMats.push(m); m.needsUpdate=true;
-        // Per-mesh depth pre-pass for the rigid parts (the logo head uses one global pre-pass, which cannot pose a skinned figure: its depth did not
-        // match the colour pass and cut the figure to pieces). A skinned depth clone of the torso/head came out displaced too, so those two draw without
-        // one; the rigid parts' depth is enough to keep the figure to one visible layer.
-        if(o.isSkinnedMesh) return;
-        var d=new THREE.Mesh(o.geometry,ocDepthMat);
-        d.frustumCulled=false; d.userData.ocSkip=true; d.raycast=function(){}; o.add(d); grp.userData.ocDepth.push(d); });
-      setLogoHoloState();
+      grp.traverse(function(o){ if(!o.isMesh||!o.material) return; o.frustumCulled=false;
+        var m=o.material; if(o.isSkinnedMesh) m.skinning=true; m.side=THREE.DoubleSide; m.transparent=false; m.depthWrite=true; m.depthTest=true; m.blending=THREE.NormalBlending; m.needsUpdate=true; });
     }
     function ocDepthSync(){   // the depth meshes only matter while the figure is a translucent hologram (not solid, not additive, not the ghost)
       var on=logoHolo.value>0.001&&!params.logoHoloAdd;
@@ -14148,6 +14177,27 @@ f 2469//2469 2470//2470 2434//2434
         if(!o.isMesh||!o.material) return; var m=o.material; if(m.userData.ocT==null) m.userData.ocT=m.transparent;
         var tr=v<1?true:(m.userData.logoMat?logoHolo.value>0.001:m.userData.ocT); if(m.transparent!==tr){ m.transparent=tr; m.needsUpdate=true; } m.opacity=v; m.userData.ocV=v; if(m.userData.ocU) m.userData.ocU.value=v; }); }
     var OUTFIT_LOCKED_ALPHA=0.28;
+    // Stationary About framing. The stage fit used to measure the live figure every frame, so it followed the idle (a hop, a flight, flying-apart pieces) and the
+    // original head (nothing to measure) was framed far too close. Now each outfit is measured ONCE at its start pose, into the stage's own frame, and every frame
+    // only re-applies the stage's transform; the original head uses the standard minifig frame, so it gets the same zoom as the others.
+    var OC_STD_BOX={min:[-0.9,-1.45,-0.5],max:[0.9,1.45,0.5]}, _ocV=new THREE.Vector3(), _ocM4=new THREE.Matrix4(), _ocPrev=new THREE.Box3();
+    function ocMeasureFit(g){
+      var mx=g.userData.mixer, saved=mx?mx.time:0; if(mx) mx.setTime(0);
+      outfitStage.updateMatrixWorld(true); _ocM4.copy(outfitStage.matrixWorld).invert();
+      var mn=[1e9,1e9,1e9], mxv=[-1e9,-1e9,-1e9], any=false;
+      g.traverse(function(c){ if(!c.isMesh||!c.geometry||c.userData.ocSkip) return; if(!c.geometry.boundingBox) c.geometry.computeBoundingBox();
+        c.updateWorldMatrix(true,false); _ocPrev.copy(c.geometry.boundingBox).applyMatrix4(c.matrixWorld);
+        for(var i=0;i<8;i++){ _ocV.set(i&1?_ocPrev.max.x:_ocPrev.min.x,i&2?_ocPrev.max.y:_ocPrev.min.y,i&4?_ocPrev.max.z:_ocPrev.min.z).applyMatrix4(_ocM4); any=true;
+          mn[0]=Math.min(mn[0],_ocV.x); mn[1]=Math.min(mn[1],_ocV.y); mn[2]=Math.min(mn[2],_ocV.z); mxv[0]=Math.max(mxv[0],_ocV.x); mxv[1]=Math.max(mxv[1],_ocV.y); mxv[2]=Math.max(mxv[2],_ocV.z); } });
+      if(mx) mx.setTime(saved);
+      return any?{min:mn,max:mxv}:null;
+    }
+    function ocFitPts(px,py,pz,gs){
+      var g=outfitCur&&outfitCur.group, b=OC_STD_BOX;
+      if(g){ if(!g.userData.fit) g.userData.fit=ocMeasureFit(g); if(g.userData.fit) b=g.userData.fit; }
+      outfitStage.updateMatrixWorld(true);
+      for(var i=0;i<8;i++){ _ocV.set(i&1?b.max[0]:b.min[0],i&2?b.max[1]:b.min[1],i&4?b.max[2]:b.min[2]).applyMatrix4(outfitStage.matrixWorld); _sfPts.push([(_ocV.x-px)/gs,(_ocV.y-py)/gs,(_ocV.z-pz)/gs]); }
+    }
     function ocInstant(){ return !!(_ocRM&&_ocRM.matches); }
     function ocShow(id,instant){
       var o=ocFind(id); if(!o||(!o.parts.length&&!o.builtin)) return; var seq=++outfitSeq, sig=o.builtin?'':ocSig(o);
@@ -14210,7 +14260,7 @@ f 2469//2469 2470//2470 2434//2434
         var _g=outfitCur.group;   // an unlocked figure plays its idle loop on its own (a locked one holds its first pose; reduced motion: no loop)
         if(_g&&_g.userData.mixer&&outfitStage.visible&&!_g.userData.ghost&&!_g.userData.hold&&!ocInstant()) _g.userData.mixer.update(Math.min(0.1,Math.max(0,(now-(ocLastT||now))/1000)));
         ocLastT=now;
-        var _want=ocCycleList().length>0&&mwPhase==='docked'&&!arcadeActive&&(!focused||focused===aboutGrp)&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden');
+        var _want=ocCycleList().length>0&&mwPhase==='docked'&&!arcadeActive&&focused===aboutGrp&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden');
         if(_want!==outfitHudOn){ outfitHudOn=_want; document.body.classList.toggle('oh-show',_want); ocHudUpdate(); }
         if(_want){   // in the About focus view the HUD sits in the free stage rectangle the manual layout publishes (centred, just above the manual); otherwise the CSS default
           var _st=(focused===aboutGrp)?window.MWStage:null, _hu=document.getElementById('outfitHud'), _pos=_st?(((_st.l+_st.r)/2)+'|'+(_st.H-_st.b+10)):'';
@@ -14220,6 +14270,10 @@ f 2469//2469 2470//2470 2434//2434
         outfitStage.visible=false; outfitHeadHidden=false;   // mwUpdate re-shows the head/GLB each frame from here
       }
     }
+    setInterval(function(){   // the galaxy keyboard legend: docked galaxy view only
+      var on=mwPhase==='docked'&&!focused&&!arcadeActive&&!editMode&&!MWSub.active&&!document.body.classList.contains('mw-altfocus')&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden')&&!document.body.classList.contains('mw-planet');
+      if(on!==document.body.classList.contains('gk-show')) document.body.classList.toggle('gk-show',on);
+    },200);
     function ocLoadDrafts(){ try{ var d=JSON.parse(localStorage.getItem('mw_outfit_drafts')||'[]'); outfitDrafts=Array.isArray(d)?d:[]; }catch(e){ outfitDrafts=[]; } }
     function ocSaveDrafts(){ try{ localStorage.setItem('mw_outfit_drafts',JSON.stringify(outfitDrafts)); }catch(e){ ocMsg='could not save drafts locally'; } }
     (function ocInit(){
@@ -14290,7 +14344,7 @@ f 2469//2469 2470//2470 2434//2434
         var det=ocEl('details'); det.setAttribute('data-oc-det',o.id); if(ocOpenDet[o.id]) det.open=true; det.addEventListener('toggle',function(){ ocOpenDet[o.id]=det.open; }); det.appendChild(ocEl('summary',null,'unlock + about copy'));
         function fld(label,key,kind,val,ph){ det.appendChild(ocEl('div','oc-lbl2',label)); var f=ocEl(kind==='area'?'textarea':'input'); if(kind==='num'){ f.type='number'; f.min=0; f.step=1; } else if(kind==='text'){ f.type='text'; } f.value=val; if(ph) f.placeholder=ph; f.setAttribute('data-oc-field',key); f.setAttribute('data-id',o.id); f.spellcheck=kind==='area'; det.appendChild(f); }
         ocCondFields(det,o);
-        fld('Kicker','a-kicker','text',(o.about&&o.about.kicker)||'','About me');
+        fld('Kicker','a-kicker','text',(o.about&&o.about.kicker)||'','About Jason');
         fld('Title','a-title','text',(o.about&&o.about.title)||'',o.name);
         fld('About copy (shown in the manual for this outfit)','a-body','area',(o.about&&o.about.body)||'');
         fld('Locked teaser (optional; blank = auto text from the condition)','a-teaser','area',(o.about&&o.about.teaser)||'',ocLockLine(o));
@@ -14416,7 +14470,9 @@ f 2469//2469 2470//2470 2434//2434
       var l=ocCycleList(), i=0; l.forEach(function(x,n){ if(x.id===o.id) i=n; });
       var locked=ocLocked(o), pg=ocProg(o), need=Math.max(0,pg.need-pg.have), isMk=o.unlock.type==='minikits', isNew=ocNewList().indexOf(o.id)>=0;
       el.setAttribute('data-locked',locked?'1':'0');
-      document.getElementById('ohName').textContent=(locked?'Locked · ':'')+o.name;
+      var _nm=document.getElementById('ohName');
+      if(document.activeElement!==_nm) _nm.textContent=(locked&&!editMode?'Locked · ':'')+o.name;
+      _nm.contentEditable=editMode?'true':'false'; _nm.classList.toggle('inline-edit-on',!!editMode); _nm.setAttribute('data-ph','outfit name');
       document.getElementById('ohSub').textContent=locked
         ? ocLockLine(o)
         : ('Outfit '+(i+1)+' / '+l.length+(isNew?' · new':'')+(focused===aboutGrp?'':' · click the figure to learn more'));
@@ -14440,22 +14496,41 @@ f 2469//2469 2470//2470 2434//2434
     (function wireHud(){
       var pv=document.getElementById('ohPrev'), nx=document.getElementById('ohNext'), go=document.getElementById('ohGo'); if(!pv) return;
       function ui(){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } }
+      var nmEl=document.getElementById('ohName');
+      if(nmEl){ nmEl.addEventListener('blur',function(){ if(editMode&&outfitCur) ocSetName(outfitCur.id,nmEl.textContent); });
+        nmEl.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); nmEl.blur(); } }); }
       pv.addEventListener('click',function(){ ui(); outfitLastSwitch=performance.now(); ocNext(-1); });
       nx.addEventListener('click',function(){ ui(); outfitLastSwitch=performance.now(); ocNext(1); });
       go.addEventListener('click',function(){ ui(); ocGoArcade(); });
     })();
     // ── About-me focus view: the project focus view, with the selected outfit's copy as the manual ──
+    // About-view edits (Edit Mode): the booklet's title / copy / CTA write to the outfit's About record: a draft's own `about`, else the repo outfit's overlay in
+    // copyOvr['outfitMeta'].meta[id].about (merged over outfits.json, i.e. over the copy exported from the Sig Fig Lab), and sync with SAVE like everything else.
+    function ocSetAbout(id,patch){
+      var d=outfitDrafts.filter(function(x){ return x.id===id; })[0];
+      if(d){ d.about=Object.assign({},d.about||{},patch); ocSaveDrafts(); }
+      else { var m=ocMeta(), mt=m.meta[id]=m.meta[id]||{}; mt.about=Object.assign({},mt.about||{},patch); persistCopy(); }
+    }
+    function ocSetName(id,v){
+      v=(v||'').replace(/\s+$/,''); var o=ocFind(id); if(!o||!v||v===o.name) return;
+      var d=outfitDrafts.filter(function(x){ return x.id===id; })[0];
+      if(d){ d.name=v; ocSaveDrafts(); } else { var m=ocMeta(); m.meta[id]=Object.assign(m.meta[id]||{},{name:v}); persistCopy(); }
+      ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); if(document.body.classList.contains('oc-open')) ocRender();
+    }
     function aboutData(o){
-      var a=o.about||{}, base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){}};
-      if(ocLocked(o)) return Object.assign(base,{kicker:'Outfit locked',title:o.name,
+      var a=o.about||{}, id=o.id, base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){},aboutView:true};
+      if(!editMode&&ocLocked(o)) return Object.assign(base,{kicker:'Outfit locked',title:o.name,   // (Edit Mode shows the real copy even for a locked outfit, so it can be edited)
         framing:a.teaser||(ocLockLine(o)+' to unlock this outfit, and what it says about me.'),
         cta:'PLAY THE SPACE ARCADE →',ctaUrl:'#',ctaHidden:false,ctaActive:true,onCta:function(){ ocGoArcade(); }});
       var _cta=!!(a.ctaShow&&a.ctaText&&a.ctaUrl);   // optional CTA from the sig fig's About record: ctaShow, ctaText, ctaUrl, ctaTarget ('new' | 'same')
-      return Object.assign(base,{kicker:a.kicker||'About me',title:a.title||o.name,framing:a.body||'',cta:_cta?a.ctaText:'',ctaUrl:_cta?a.ctaUrl:'#',ctaHidden:!_cta,ctaActive:_cta,external:_cta,
+      return Object.assign(base,{kicker:a.kicker||'About Jason',title:a.title||o.name,framing:a.body||'',cta:a.ctaText||(editMode?'Button label':''),ctaUrl:a.ctaUrl||'#',ctaHidden:!a.ctaShow,ctaActive:!!a.ctaShow,external:true,edit:editMode,
+        onCtaLabel:function(v){ ocSetAbout(id,{ctaText:v}); },
+        onCtaUrl:function(v){ ocSetAbout(id,{ctaUrl:v}); },
+        onCtaHide:function(hide){ ocSetAbout(id,{ctaShow:!hide}); ocRefreshAbout(); },
         onCta:function(){ if(!_cta) return; if(a.ctaTarget==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(a.ctaUrl); else location.href=a.ctaUrl; } else window.open(a.ctaUrl,'_blank','noopener'); }});
     }
     function ocRefreshAbout(){ var o=outfitCur&&ocFind(outfitCur.id); if(!o||!window.CS) return;
-      var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:d.kicker||'About me',bold:true},{text:o.name}]);   /* the outfit's kicker is the first breadcrumb word (the booklet itself has no kicker node) */ setRoute('/about/'+o.id); }
+      var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:d.kicker||'About Jason',bold:true},{text:o.name}]);   /* the outfit's kicker is the first breadcrumb word (the booklet itself has no kicker node) */ setRoute('/about/'+o.id); }
     function openAbout(){
       var o=outfitCur&&ocFind(outfitCur.id); if(!o||focused===aboutGrp) return;
       if(focused) goHome();
@@ -15025,6 +15100,7 @@ f 2469//2469 2470//2470 2434//2434
     function setText(sel,val){ if(val==null) return; var el=manualScene.querySelector(sel); if(el) el.textContent=val; }
     function applyData(data){
       if(!data) return;
+      if(data.aboutView) manualScene.setAttribute('data-about',(data.ctaHidden&&!data.edit)?'plain':'cta'); else manualScene.removeAttribute('data-about');   // About: the manual wraps its content (CSS)
       setText('.manual-title', data.title);
       var _subEl=manualScene.querySelector('.manual-subtitle');
       if(_subEl){ var _subEdit=!!(data.edit && data.onSubtitle);
@@ -15054,7 +15130,7 @@ f 2469//2469 2470//2470 2434//2434
           }
         }
       }
-      setText('.manual-framing', data.framing || data.body);
+      setText('.manual-framing', data.aboutView ? (data.framing||'') : (data.framing || data.body));   // (an About outfit with no copy must not keep the previous outfit's text)
       // optional kicker (booklet has no kicker node by default; create none)
       var tagWrap=manualScene.querySelector('.manual-tags');
       if(tagWrap){ tagWrap.innerHTML='';
@@ -15399,7 +15475,8 @@ f 2469//2469 2470//2470 2434//2434
     var MAP=[
       ['#saveBtn, #viewSetBtn, #projMgr .pm-newzone, #outfitMgr .pm-newzone, #outfitHud .oh-go','bric-btn bric-btn--sm bric-btn--primary'],
       ['.tbtn, #projMgr .pm-btn, #outfitMgr .pm-btn:not(.pm-newzone), #debug .resetbtn, .tag-add, .manual-links .link-add','bric-btn bric-btn--sm bric-btn--secondary'],
-      ['#projMgr .pm-close, #outfitMgr .pm-close, #outfitHud .oh-arrow, #debug .seg button, .axis-btn, #ml-switch .seg button, .epFace','bric-btn bric-btn--sm']
+      ['#outfitHud .oh-arrow','bric-btn bric-btn--secondary'],
+      ['#projMgr .pm-close, #outfitMgr .pm-close, #debug .seg button, .axis-btn, #ml-switch .seg button, .epFace','bric-btn bric-btn--sm']
     ];
     var ALL=MAP.map(function(m){return m[0];}).join(',');
     function adopt(el){ if(el.__bricAuthor) return; el.__bricAuthor=true;
