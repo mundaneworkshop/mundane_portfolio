@@ -14461,11 +14461,33 @@ f 2469//2469 2470//2470 2434//2434
     function ocForceSet(id,v){ var f=ocForceGet(); if(v==='auto') delete f[id]; else f[id]=v; try{ sessionStorage.setItem('mw_oc_force',JSON.stringify(f)); }catch(e){} }
     function ocLocked(o){ var fv=ocForceGet()[o.id]; if(fv) return fv==='locked'; if(ocIsDefault(o)) return false; var p=ocProg(o); return p.have<p.need; }
     // what the visitor has to do, with progress: the carousel HUD line, and the focus view's text when the author wrote no teaser
+    // The default locked message: the Sig Fig Lab's own sentence for the rule (its lockLine()), word for word, so the Lab's greyed placeholder and the site never differ.
+    // Names are the Lab's tables, not the arcade's. No progress count: the Lab's line has none.
+    var OC_LAB_SHIPS={'x-wing':'X-wing','y-wing':'Y-wing','a-wing':'A-wing','b-wing':'B-wing','u-wing':'U-wing','tie-fighter':'TIE fighter','tie-interceptor':'TIE interceptor','tie-defender':'TIE defender','tie-dagger':'TIE dagger','lambda-shuttle':'Lambda shuttle','blockade-runner':'Blockade runner','nebulon-b':'Nebulon-B frigate','acclamator':'Acclamator','imperial-light-cruiser':'Imperial light cruiser','mc80':'MC80','mc80a':'MC80A','mc85':'MC85','star-destroyer':'Star Destroyer'};
+    var OC_LAB_HEROES={'n1':'Bounty Hunter\u2019s M-1','razorcrest':'Razor\u2019s Edge','slave-1':'Indentured Servant 1'};
+    var OC_LAB_CASES={w0:'Meta Horizon Worlds',w1:'Slate Auto',w2:'Josh.ai',cv:'CV'};
+    var OC_LAB_CLASSES={fighter:['x-wing','y-wing','a-wing','b-wing','u-wing','tie-fighter','tie-interceptor','tie-defender','tie-dagger','lambda-shuttle'],support:['blockade-runner','nebulon-b','acclamator','imperial-light-cruiser'],capital:['mc80','mc80a','mc85','star-destroyer']};
     function ocLockLine(o){
-      var c=o.unlock, p=ocProg(o), left=Math.max(0,p.need-p.have);
-      if(c.type==='ship') return 'Unlock '+ocShipName(c.id)+' in the Space Arcade';
-      if(c.type==='destroy'){ var what=c.ships.length?c.ships.map(ocShipName).join(', '):'enemy ships'; return 'Destroy '+left+' more of: '+what+' in the Space Arcade ('+Math.min(p.have,p.need)+'/'+p.need+')'; }
-      return 'Shoot '+left+' more minikit'+(left===1?'':'s')+' in the Space Arcade to unlock ('+p.have+'/'+p.need+')';
+      var u=o.unlock||{}, n=u.n|0, t=u.type;
+      switch(t){
+        case 'free': return '';
+        case 'minikits': return 'Shoot '+n+' minikit'+(n===1?'':'s')+' in the Space Arcade to unlock';
+        case 'destroy': { var sh=Array.isArray(u.ships)?u.ships:(OC_LAB_CLASSES[u.target]?OC_LAB_CLASSES[u.target].slice():(u.target&&u.target!=='any'?[u.target]:[]));
+          return 'Destroy '+n+' of: '+(sh.length?sh.map(function(x){ return OC_LAB_SHIPS[x]||x; }).join(', '):'any enemy ship')+' in the Space Arcade to unlock'; }
+        case 'ship': return 'Unlock '+(OC_LAB_HEROES[u.id||'slave-1']||u.id)+' in the Space Arcade';
+        case 'hunters': return 'Destroy '+n+' fighters that are targeting you in the Space Arcade to unlock';
+        case 'planets': return 'See '+n+' different planets in the Space Arcade to unlock';
+        case 'survive': return 'Survive '+Math.floor(n/60)+':'+('0'+(n%60)).slice(-2)+' in one Space Arcade run to unlock';
+        case 'plays': return 'Play the Space Arcade '+n+' time'+(n===1?'':'s')+' to unlock';
+        case 'rank': return 'Place in the top '+n+' on the Space Arcade leaderboard to unlock';
+        case 'score': return 'Score '+n+' in one Space Arcade run to unlock';
+        case 'visitLinkedin': return 'Visit my LinkedIn to unlock';
+        case 'visitInstagram': return 'Visit my Instagram to unlock';
+        case 'visitCV': return 'Visit the CV page to unlock';
+        case 'holonet': return 'Leave a message on the HoloNet to unlock';
+        case 'caseStudy': return 'View the '+(OC_LAB_CASES[u.target||'w0']||u.target)+' case study to unlock';
+      }
+      return '';
     }
     // The Debug panel block: one row per outfit, Auto / Locked / Unlocked. Rebuilt whenever the outfit list changes; shown in the galaxy and the focus debug panels.
     var ocDbgSig='';
@@ -14565,9 +14587,14 @@ f 2469//2469 2470//2470 2434//2434
     }
     function aboutData(o){
       var a=o.about||{}, id=o.id, base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){},aboutView:true};
-      if(!editMode&&ocLocked(o)) return Object.assign(base,{kicker:'Outfit locked',title:o.name,   // (Edit Mode shows the real copy even for a locked outfit, so it can be edited)
-        framing:a.teaser||(ocLockLine(o)+' to unlock this outfit, and what it says about me.'),
-        cta:'PLAY THE SPACE ARCADE →',ctaUrl:'#',ctaHidden:false,ctaActive:true,onCta:function(){ ocGoArcade(); }});
+      if(!editMode&&ocLocked(o)){   // (Edit Mode shows the real copy even for a locked outfit, so it can be edited)
+        // Locked = the Lab's fields as written: title, the locked message (its teaser, else the Lab's line for the rule) and the CTA (text, link, target). Only when the Lab gave
+        // no CTA does it fall back to the arcade button.
+        var _lc=!!(a.ctaShow&&a.ctaText&&a.ctaUrl);
+        return Object.assign(base,{kicker:'Outfit locked',title:a.title||o.name,framing:a.teaser||ocLockLine(o),
+          cta:_lc?a.ctaText:'PLAY THE SPACE ARCADE \u2192',ctaUrl:_lc?a.ctaUrl:'#',ctaHidden:false,ctaActive:true,external:_lc,
+          onCta:function(){ if(!_lc){ ocGoArcade(); return; } if(a.ctaTarget==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(a.ctaUrl); else location.href=a.ctaUrl; } else window.open(a.ctaUrl,'_blank','noopener'); }});
+      }
       var _cta=!!(a.ctaShow&&a.ctaText&&a.ctaUrl);   // optional CTA from the sig fig's About record: ctaShow, ctaText, ctaUrl, ctaTarget ('new' | 'same')
       return Object.assign(base,{kicker:a.kicker||'About Jason',title:a.title||o.name,framing:a.body||'',cta:a.ctaText||(editMode?'Button label':''),ctaUrl:a.ctaUrl||'#',ctaHidden:!a.ctaShow,ctaActive:!!a.ctaShow,external:true,edit:editMode,
         onCtaLabel:function(v){ ocSetAbout(id,{ctaText:v}); },

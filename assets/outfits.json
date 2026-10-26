@@ -157,7 +157,8 @@
         "ctaText": "play arcade",
         "ctaUrl": "https://www.mundanework.shop/arcade",
         "ctaShow": true,
-        "ctaTarget": "same"
+        "ctaTarget": "same",
+        "teaser": "Attain the \"Indentured Servant 1\" ship in the Arcade to unlock."
       },
       "idle": "idle",
       "parts": [
