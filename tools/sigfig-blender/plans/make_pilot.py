@@ -19,6 +19,8 @@ T_SPIN0, T_SPIN1 = 1.0, 6.0
 T_WIND, T_REL = 6.2, 7.1
 T_LAND = 8.4
 T_OFF0, T_OFF1 = 10.6, 11.8
+ARM_OUT = 18.0                          # and held a little out to the side, clear of the face
+ARM_UP = 45.0                           # the helmet arm is raised this far forward while the helmet spins, so the forearm stays out of the helmet's swing
 
 # spin: rev/s profile, scaled so the helmet ends exactly on a whole number of turns
 def speed(t):
@@ -31,10 +33,10 @@ def spin_deg(t):
 spin_keys = [dict(t=round(i / 12.0, 4), deg=round(spin_deg(i / 12.0), 3)) for i in range(0, int(T * 12) + 1)]
 
 def helm_arm_x(t):
-    return pulse(t, [(0, 0), (T_WIND, 0), (6.75, 31), (7.0, -60), (T_REL + 0.05, -105), (7.8, -118), (8.6, -12), (9.0, 6), (10.4, 6),
+    return pulse(t, [(0, 0), (0.4, 0), (T_SPIN0, -ARM_UP), (T_WIND, -ARM_UP), (6.75, 31), (7.0, -60), (T_REL + 0.05, -105), (7.8, -118), (8.6, -12), (9.0, 6), (10.4, 6),
                      (10.95, -103), (11.8, -103), (12.8, 0), (T, 0)])
 def helm_arm_y(t):
-    return m * pulse(t, [(0, 0), (T_WIND, 0), (6.75, 2), (7.1, -3), (8.6, 0), (10.4, 0), (10.95, 4.5), (11.8, 4.5), (12.8, 0), (T, 0)])
+    return m * pulse(t, [(0, 0), (0.4, 0), (T_SPIN0, ARM_OUT), (T_WIND, ARM_OUT), (6.75, 2), (7.1, -3), (8.6, 0), (10.4, 0), (10.95, 4.5), (11.8, 4.5), (12.8, 0), (T, 0)])
 def helm_arm_z(t):
     return m * pulse(t, [(0, 0), (T_WIND, 0), (6.75, 1.7), (7.1, 22), (7.8, 22), (8.6, 0), (10.4, 0), (10.95, 7.5), (11.8, 7.5), (12.8, 0), (T, 0)])
 
@@ -72,7 +74,7 @@ bump = [dict(t=T_OFF0, off=[0, 0, 0]), dict(t=(T_OFF0 + T_OFF1) / 2, off=[0, 0, 
 helmet_free = dict(
     part=helmet, keys=toss, anchor=T_REL, anchor_follow=0, bump=bump,
     spin=dict(axis=[0, 0, 1], keys=spin_keys),
-    follow=[dict(to='hand_' + side), dict(to='head', off=seat['off'], rot=seat['rot'])],
+    follow=[dict(to='hand_' + side), dict(to='head', bone='head_3', off=seat['off'], rot=seat['rot'])],
     mix=[[0, 0, 0, 1, 0], [T_REL - 0.01, 0, 0, 1, 0], [T_REL + 0.01, 0, 1, 0, 0], [T_LAND - 0.15, 0, 1, 0, 0], [T_LAND + 0.15, 0, 0, 0, 1],
          [T_OFF0, 0, 0, 0, 1], [T_OFF1, 0, 0, 1, 0], [T, 0, 0, 1, 0]])
 hair_free = dict(part=HAIR, keys=[dict(t=0, scale=1), dict(t=T_LAND + 0.05, scale=1), dict(t=T_LAND + 0.10, scale=0.0001), dict(t=T_OFF0 + 0.45, scale=0.0001), dict(t=T_OFF0 + 0.5, scale=1), dict(t=T, scale=1)],

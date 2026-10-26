@@ -38,6 +38,8 @@ PLAN (all times in seconds; the loop is `duration` long and every channel is clo
   free:    [{part, keys:[{t, off, rot, scale}], mix:[[t, wRig, wWorld, wFollow1..]], follow:[{to, like?, off?, rot?}], anchor?}]
            a part (prop, helmet, a limb that breaks off) posed as a weighted blend of RIG / WORLD / FOLLOW poses, see _pose_free. The pose is
            converted to the part's local transform and keyed, so the hierarchy is untouched.
+  root:    {pivot, base_deg, axis?, pitch?: [[t, deg]], roll?: [[t, deg]]}   the whole rig held pitched `base_deg` about the world `axis` through `pivot`'s origin
+           (a wheelie), with pitch / roll wobble keyed on the root node, standing on z = 0 (no separate tilt_rig call needed)
   pivots_local: {part: [x,y,z]}   rotate about that point given in the part's own frame (a hand: the pin's exit point)
            free-part extras: live (the rig pose is the part's own keyed / aimed motion, for a figure that comes apart mid-run), anchor_follow -1
            (anchor on that live pose), pre (posed before the arms, so aim targets on it are current)
@@ -284,16 +286,20 @@ def _pose_free(fc, objs, rest_m, center, f, t, T, state):
         tgt = objs[fo['to']]
         src = rest_m[fo.get('like', part)]
         H0 = rest_m[fo['to']].inverted() @ src
+        tw = tgt.matrix_world
+        arm = state.get('arm')
+        if fo.get('bone') and arm is not None and fo['bone'] in arm.pose.bones:       # a skinned part (the head) turns by its bone, not its object
+            tw = arm.matrix_world @ arm.pose.bones[fo['bone']].matrix @ arm.data.bones[fo['bone']].matrix_local.inverted() @ rest_m[fo['to']]
         hl, hq, hs = H0.decompose()
         rq = Euler([math.radians(a) for a in fo.get('rot', [0, 0, 0])], 'XYZ').to_quaternion()
         # `off` slides the part in the TARGET's axes; `rot` turns it about its OWN centre, in the target's axes
-        fp = tgt.matrix_world @ Matrix.Translation(Vector(fo.get('off', [0, 0, 0]))) @ Matrix.Translation(hl) @ rq.to_matrix().to_4x4() @ hq.to_matrix().to_4x4()
+        fp = tw @ Matrix.Translation(Vector(fo.get('off', [0, 0, 0]))) @ Matrix.Translation(hl) @ rq.to_matrix().to_4x4() @ hq.to_matrix().to_4x4()
         if fo.get('capture') is not None:                                  # a hand-over: from `capture` on, hold the part exactly as the follow pose `from` held it then
             ck = '%s#cap%d' % (part, len(fposes))
             src_i = fo.get('from', 0)
             if t >= fo['capture'] and ck not in state:
-                state[ck] = tgt.matrix_world.inverted() @ fposes[src_i]
-            fp = tgt.matrix_world @ state[ck] if ck in state else fposes[src_i].copy()
+                state[ck] = tw.inverted() @ fposes[src_i]
+            fp = tw @ state[ck] if ck in state else fposes[src_i].copy()
         fposes.append(fp)
     base = None
     if 'anchor' in fc:                                                     # world offsets are measured from the pose at the anchor time
@@ -643,7 +649,7 @@ def apply_plan(fig_id, plan):
             if h is not None:
                 h.rotation_mode = 'QUATERNION'
         prevq = {a: None for a in arms}
-        free_state = {}
+        free_state = {'arm': arm_obj}
         warm = {}
         report['grip_gap_max'] = {}
         for f in range(0, N + 1):
@@ -734,6 +740,30 @@ def apply_plan(fig_id, plan):
                     _pose_free(fc, objs, rest_m, center, f, t, T, free_state)
                     bpy.context.view_layer.update()                      # the next free part may hang off this one
         report['parts_keyed'] += sorted(arms) + sorted(free_parts)
+    # ---- the whole rig: a held pitch (a wheelie) with wobble, keyed on the root node about the pivot part's origin, standing on z = 0
+    rk = plan.get('root')
+    if rk:
+        P = rest_m[rk['pivot']].translation.copy()
+        base = root.matrix_world.copy()
+        ax = rk.get('axis', 'X')
+        def root_M(f, t):
+            th = rk.get('base_deg', 0.0) + (_interp(rk['pitch'], t, T) if rk.get('pitch') else 0.0)
+            rl = _interp(rk['roll'], t, T) if rk.get('roll') else 0.0
+            return Matrix.Translation(P) @ Matrix.Rotation(math.radians(th), 4, ax) @ Matrix.Rotation(math.radians(rl), 4, 'Y') @ Matrix.Translation(-P) @ base
+        M0 = root_M(0, 0.0)
+        low = min((M0 @ base.inverted() @ rest_m[n] @ v.co).z for n, o in objs.items() for v in o.data.vertices)
+        root.rotation_mode = 'QUATERNION'
+        prevq = None
+        for f in range(0, N + 1):
+            Mf = Matrix.Translation((0, 0, -low)) @ root_M(f, f / fps)
+            l, q, s_ = Mf.decompose()
+            if prevq is not None and q.dot(prevq) < 0:
+                q.negate()
+            prevq = q
+            root.location, root.rotation_quaternion, root.scale = l, q, s_
+            for path in ('location', 'rotation_quaternion', 'scale'):
+                root.keyframe_insert(path, frame=f)
+        report['parts_keyed'].append('root')
     # name the actions (the exporter merges them into one glTF animation)
     for n, o in objs.items():
         if o.animation_data and o.animation_data.action:

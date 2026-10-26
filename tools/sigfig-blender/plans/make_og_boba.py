@@ -15,6 +15,7 @@ T_REACH0, T_GRAB = 7.9, 9.1
 T_FIRE_L, T_FIRE_R = 11.5, 13.0
 T_BACK0, T_PUT = 14.4, 15.7
 T_DOWN0, T_DOWN1 = 16.9, 19.0
+HID = 0.0001                               # scale of a hidden piece: the blasters (and their studs) are not shown until they are drawn
 PER = 2.4                                  # one weave
 
 STOW = {'R': dict(off=[0.0881, 0.3821, -0.1715], rot=[75, -15, 0]), 'L': dict(off=[-0.0892, 0.3874, -0.1729], rot=[75, 15, 0])}
@@ -25,6 +26,9 @@ HOLD = (-8.0, 0.0, 0.0)                    # blasters brought forward before aim
 # studs fly off along these world directions (set from the aimed blasters)
 DIR_L = [0.83, -0.54, 0.12]
 DIR_R = [-0.84, -0.51, -0.17]
+
+def scale_keys(fn):                        # a scale key on every frame: no spline overshoot between hidden and shown
+    return [dict(t=f / 24.0, scale=fn(f / 24.0)) for f in range(int(T * 24) + 1)]
 
 def way(pts):
     """Per-channel pulse through waypoints [(t, x, y, z)] -> (fx, fy, fz)."""
@@ -66,25 +70,32 @@ def torso_x(t):
 def head_z(t):
     return 8 * math.sin(ph(t) + 1.0) * env(t) + 12 * win(t, 10.8, T_FIRE_L + 1.1, 0.4) - 12 * win(t, T_FIRE_R - 0.5, T_FIRE_R + 1.2, 0.4)
 def head_x(t): return -3 * win(t, T_LIFT0, T_DOWN0, 0.8) + 3 * win(t, T_DOWN0, T_DOWN1, 0.4)
-def leg_x(t, s):                           # legs trail the lift and swing a little with the weave
-    return s * (6 * win(t, T_LIFT0 + 0.2, T_LIFT1 + 0.4, 0.5) + 4 * math.sin(ph(t) + 0.6) * env(t) + 3 * win(t, T_DOWN0, T_DOWN1 - 0.2, 0.5))
+def air(t): return win(t, T_LIFT0 + 0.3, T_DOWN1 - 0.5, 0.6)
+def leg_x(t, s):                           # legs trail the lift and dangle: two loose pendulums, out of step, swinging with the weave and the bob
+    ph0 = 0.0 if s > 0 else 2.3
+    dang = 14 * math.sin(2 * math.pi * (t - T_LIFT1) / 1.9 + ph0) + 6 * math.sin(2 * math.pi * (t - T_LIFT1) / 0.95 + ph0 * 1.7 + 1.0)
+    return 6 * win(t, T_LIFT0 + 0.2, T_LIFT1 + 0.4, 0.5) + 4 * math.sin(ph(t) + 0.6) * env(t) + 3 * win(t, T_DOWN0, T_DOWN1 - 0.2, 0.5) + air(t) * dang
+def leg_y(t, s):
+    return air(t) * s * 5 * math.sin(2 * math.pi * (t - T_LIFT1) / 2.3 + 0.7)
 
 # studs: held = follow the hand; stowed = follow the hips; popped = flying in the world, anchored at the pop
 def stud(part, hand, side, t_fire, d):
     stow = STUD_STOW[side]
     follows = [dict(to=hand), dict(to='hips', off=stow['off'], rot=stow['rot'])]
-    path = [dict(t=t_fire, off=[0, 0, 0], rot=[0, 0, 0], scale=1.0),
-            dict(t=t_fire + 0.25, off=[c * 0.55 for c in d], rot=[0, 0, 400], scale=1.0),
-            dict(t=t_fire + 0.55, off=[c * 1.2 for c in d], rot=[0, 0, 900], scale=0.9),
-            dict(t=t_fire + 0.85, off=[c * 1.8 for c in d], rot=[0, 0, 1400], scale=0.0001),
-            dict(t=T_PUT, scale=0.0001), dict(t=T_PUT + 0.12, scale=1.0), dict(t=T, scale=1.0)]
+    def vis(t):                                           # hidden until the draw, popped off at the fire, gone as it flies away, hidden again until the next draw
+        if t < T_GRAB or t >= t_fire + 0.85:
+            return HID
+        return 1.0 - 0.1 * ramp(t, t_fire + 0.25, t_fire + 0.55) - 0.9 * ramp(t, t_fire + 0.55, t_fire + 0.85)
+    path = [dict(t=t_fire, off=[0, 0, 0]), dict(t=t_fire + 0.25, off=[c * 0.55 for c in d]), dict(t=t_fire + 0.55, off=[c * 1.2 for c in d]),
+            dict(t=t_fire + 0.85, off=[c * 1.8 for c in d])] + scale_keys(vis)      # no spin on the way out
     mix = [[0, 0, 0, 0, 1], [T_GRAB - 0.01, 0, 0, 0, 1], [T_GRAB + 0.01, 0, 0, 1, 0], [t_fire - 0.01, 0, 0, 1, 0], [t_fire + 0.01, 0, 1, 0, 0],
            [t_fire + 0.9, 0, 1, 0, 0], [t_fire + 0.95, 0, 0, 0, 1], [T, 0, 0, 0, 1]]
     return dict(part=part, follow=follows, keys=path, anchor=t_fire, anchor_follow=0, mix=mix)
 
 def blaster(part, side):
     stow = STOW[side]
-    return dict(part=part, follow=[dict(to='hips', off=stow['off'], rot=stow['rot'])], keys=[dict(t=0, scale=1)],
+    return dict(part=part, follow=[dict(to='hips', off=stow['off'], rot=stow['rot'])],
+                keys=scale_keys(lambda t: 1.0 if T_GRAB <= t < T_PUT else HID),
                 mix=[[0, 0, 0, 1], [T_GRAB - 0.01, 0, 0, 1], [T_GRAB + 0.01, 1, 0, 0], [T_PUT - 0.01, 1, 0, 0], [T_PUT + 0.01, 0, 0, 1], [T, 0, 0, 1]])
 
 plan = dict(
@@ -95,7 +106,8 @@ plan = dict(
         'hips': {'location_z': dense(hips_z, T), 'location_x': dense(hips_x, T, 2), 'location_y': dense(hips_y, T, 2)},
         'torso': {'rotation_z': dense(torso_z, T, 2), 'rotation_y': dense(torso_y, T, 2), 'rotation_x': dense(torso_x, T, 2)},
         'head': {'rotation_z': dense(head_z, T, 2), 'rotation_x': dense(head_x, T, 2)},
-        'leg_l': {'rotation_x': dense(lambda t: leg_x(t, 1), T, 2)}, 'leg_r': {'rotation_x': dense(lambda t: leg_x(t, 1), T, 2)},
+        'leg_l': {'rotation_x': dense(lambda t: leg_x(t, 1), T, 2), 'rotation_y': dense(lambda t: leg_y(t, -1), T, 2)},
+        'leg_r': {'rotation_x': dense(lambda t: leg_x(t, -1), T, 2), 'rotation_y': dense(lambda t: leg_y(t, 1), T, 2)},
         'arm_l': {'rotation_x': dense(arm_l_x, T, 2), 'rotation_y': dense(arm_l_y, T, 2), 'rotation_z': dense(armL[2], T, 4)},
         'arm_r': {'rotation_x': dense(arm_r_x, T, 2), 'rotation_y': dense(arm_r_y, T, 2), 'rotation_z': dense(armR[2], T, 4)},
     },
