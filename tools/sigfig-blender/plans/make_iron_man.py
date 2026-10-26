@@ -38,7 +38,10 @@ def leg_y(t, s): return air(t) * s * 4 * math.sin(2 * math.pi * (t - T_LIFT1) / 
 
 def crouch(t):                             # touch-down: legs take it, hips sink and settle back over the feet, chest folds forward, then he straightens (before the visor opens)
     return pulse(t, [(T_DOWN1 - 0.05, 0), (T_DOWN1 + 0.2, 1), (T_DOWN1 + 0.55, 0)])
-CROUCH_DEG, CROUCH_BACK, CROUCH_DROP = 20.0, 12.7, 2.2        # leg angle forward, hips back over the feet (cm), hips down (cm): L sin20 = 12.7 and L(1-cos20) = 2.2 keep the feet where they were
+KNEE_Z, THIGH = 0.38, 0.14                    # knee height (world, at rest) and hip pin -> knee: the legs bend at the knee (choreo `knees`)
+CROUCH_DEG = 55.0                          # thigh forward, shin back by the same: the shin stays upright and the foot flat and planted
+CROUCH_BACK = 100 * THIGH * math.sin(math.radians(CROUCH_DEG))           # hips back over the feet (cm)
+CROUCH_DROP = 100 * THIGH * (1 - math.cos(math.radians(CROUCH_DEG)))     # hips down (cm)
 def hips_y(t): return CROUCH_BACK * crouch(t)
 def hips_z(t):
     rise = pulse(t, [(T_LIFT0, 0), (T_LIFT1, H)])
@@ -60,16 +63,17 @@ plan = dict(
     duration=T, fps=24,
     description="Stands with the visor open, looks left and right, the visor closes, he looks up and takes off, teal thrusters appear under the feet, he hovers half a figure height up, returns, the thrusters turn off and the visor opens. 15 s loop.",
     bend={'torso': {'zone': 0.32, 'segments': 4}, 'head': {'zone': 0.12, 'segments': 3}},
+    knees={'leg_l': {'z': KNEE_Z, 'band': 0.03}, 'leg_r': {'z': KNEE_Z, 'band': 0.03}},
     keys={
         VISOR: {'rotation_x': dense(visor_k, T)},
         'head': {'rotation_z': dense(head_z, T, 2), 'rotation_x': dense(head_x, T, 2)},
         'torso': {'rotation_z': dense(torso_z, T, 2), 'rotation_x': dense(torso_x, T, 2)},
         'hips': {'location_z': dense(hips_z, T), 'location_y': dense(hips_y, T, 2)},
-        'leg_l': {'rotation_x': dense(lambda t: leg_x(t, 0.0) + leg_x_crouch(t), T, 2), 'rotation_y': dense(lambda t: leg_y(t, -1), T, 2)},
-        'leg_r': {'rotation_x': dense(lambda t: leg_x(t, 2.3) + leg_x_crouch(t), T, 2), 'rotation_y': dense(lambda t: leg_y(t, 1), T, 2)},
+        'leg_l': {'rotation_x': dense(lambda t: leg_x(t, 0.0) + leg_x_crouch(t), T, 2), 'rotation_y': dense(lambda t: leg_y(t, -1), T, 2), 'knee': dense(lambda t: CROUCH_DEG * crouch(t), T)},
+        'leg_r': {'rotation_x': dense(lambda t: leg_x(t, 2.3) + leg_x_crouch(t), T, 2), 'rotation_y': dense(lambda t: leg_y(t, 1), T, 2), 'knee': dense(lambda t: CROUCH_DEG * crouch(t), T)},
         'arm_l': {'rotation_x': dense(arm_x, T, 2), 'rotation_y': dense(lambda t: arm_y(t, -1), T, 2)},
         'arm_r': {'rotation_x': dense(arm_x, T, 2), 'rotation_y': dense(lambda t: arm_y(t, 1), T, 2)},
     },
-    free=[dict(part=c, keys=cyl_scale(), follow=[dict(to=leg)], mix=[[0, 0, 0, 1]]) for c, leg in zip(CYL, ('leg_r', 'leg_l'))],     # each thruster rides its foot
+    free=[dict(part=c, keys=cyl_scale(), follow=[dict(to=leg, bone='knee_' + leg)], mix=[[0, 0, 0, 1]]) for c, leg in zip(CYL, ('leg_r', 'leg_l'))],     # each thruster rides its foot (the shin's bone: the legs are skinned)
 )
 print(json.dumps(plan))

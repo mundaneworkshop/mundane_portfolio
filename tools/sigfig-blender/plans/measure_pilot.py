@@ -37,13 +37,26 @@ def pose(o):
 
 
 if STAGE == 'm1':
-    at(F_REL)
-    bl, bq = pose(helm)
-    at(F_LAND)
-    sl, sq = pose(helm)
-    res = dict(base_loc=bl, base_q=bq, seat_loc=sl, seat_q=sq)
+    # the helmet's pose at the frames the plan names (rest = in the hand at the start, rel = where it leaves the hand, land = on the head), and the
+    # fingertips of the helmet hand over a span (the TIE's dribble: the helmet's crown meets them on every pat)
+    meta = plan.get('meta', {})
+    res = {}
+    for name, f in meta.get('frames', {'rel': F_REL, 'land': F_LAND}).items():
+        at(f)
+        l, q = pose(helm)
+        res[name + '_loc'], res[name + '_q'] = l, q
+    res['base_loc'], res['base_q'] = res.get('rel_loc'), res.get('rel_q')
+    res['seat_loc'], res['seat_q'] = res.get('land_loc'), res.get('land_q')
+    if meta.get('tip_frames'):
+        hnd = _R('hand_' + SIDE)
+        a, b = meta['tip_frames']
+        tips = []
+        for f in range(a, b + 1):
+            at(f)
+            tips.append([round(v, 5) for v in (hnd.matrix_world @ Vector((0.0, -0.15, 0.015)))])
+        res['tip_from'], res['tips'] = a, tips
     json.dump(res, open(MP, 'w'), indent=1)
-    result = res
+    result = {k: v for k, v in res.items() if k != 'tips'}
 else:
     PARTS = ['head', 'torso', 'hips', 'leg_l', 'leg_r', 'arm_l', 'arm_r', 'hand_l', 'hand_r', 'acc_23186']
     N = int(plan['duration'] * FPS)
@@ -76,10 +89,19 @@ else:
                 rr.append([f, f, n])
         runs[p] = rr
     hair = dict(hit['acc_23186'])
-    down = [f for f in sorted(hair) if F_REL < f < 260]
+    meta = plan.get('meta', {})
+    fl = meta.get('frames', {}).get('land', F_LAND)
+    down = [f for f in sorted(hair) if fl - 8 < f < 260]                 # the landing (a brush on the way up is not it)
     off_ = [f for f in sorted(hair) if f >= 250]
     hide_f = min(down) if down else F_LAND
-    show_f = (max(off_) + 1) if off_ else int(10.6 * FPS)
+    show_f = int(10.6 * FPS)
+    if off_:                                                          # the first frame clear after the helmet leaves the head (later brushes are not it)
+        run_end = off_[0]
+        for f in off_[1:]:
+            if f - run_end > 2:
+                break
+            run_end = f
+        show_f = run_end + 1
     res = json.load(open(MP))
     res.update(hair_hide_f=hide_f, hair_show_f=show_f, runs={p: r for p, r in runs.items() if p != 'acc_23186'}, hair_runs=runs['acc_23186'])
     json.dump(res, open(MP, 'w'), indent=1)

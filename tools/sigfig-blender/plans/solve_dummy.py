@@ -32,6 +32,11 @@ pl = {}
 for role, w in (('leg_l', HIP_PIVOT), ('leg_r', HIP_PIVOT), ('arm_l', SHOULDER['l']), ('arm_r', SHOULDER['r'])):
     pl[role] = [round(v, 5) for v in (_R(role).matrix_world.inverted() @ w)]
 pl['hand_l'] = pl['hand_r'] = [0, -0.04, -0.005]
+_hd = _R('head')
+_hv = [_hd.matrix_world @ v.co for v in _hd.data.vertices]
+_hz = min(v.z for v in _hv)
+_neck = Vector((sum(v.x for v in _hv) / len(_hv), sum(v.y for v in _hv) / len(_hv), _hz))       # the bottom of the head, where it sits on the torso's neck stud
+pl['head'] = [round(v, 5) for v in (_hd.matrix_world.inverted() @ _neck)]
 WHEEL_IMPORT = _R('acc_30663').matrix_world.copy()
 TM0_REST = _R('torso').matrix_world.copy()
 SHIFT = Vector((hips.x - WHEEL_IMPORT.translation.x, 0, 0))             # the import holds the wheel a little to the left of the figure; centre it so both hands reach it alike
@@ -87,7 +92,7 @@ def wheel_at(f):
     return TM[f % N] @ TM0.inverted() @ W
 
 
-def solve_frame(s, f, u0):
+def solve_frame(s, f, u0, attract=None):
     lb = limbs[s]
     lb.set_parent(Fs[s][f])
     W = wheel_at(f)
@@ -98,7 +103,14 @@ def solve_frame(s, f, u0):
     pt_l = HAND_RING
     if h > 1e-4:                                                      # honking: over the hub, pushed in a little on each press, the clip's axis free
         n_w = (W.to_3x3() @ HUB_N).normalized()
-        hub = W @ HUB_L + Vector((-0.06, 0, 0.04 * (1.0 - press(f / FPS))))     # the horn: the hub's end face at its edge nearest his shoulder; the arm is one stiff piece, so the clip can only swing on a sphere about the shoulder, and a tap is the clip coming down onto the face from 4 cm above it
+        # the horn: the hub's end face at its edge nearest his shoulder. The arm is one stiff piece, so its clip moves on a sphere about the shoulder:
+        # wound up, it is 42 degrees up that sphere above the hub; it smashes down onto it (press 1) and goes back up
+        hit = W @ HUB_L + Vector((-0.06, 0, 0))
+        sh_w = lb.arm_world([0, 0, 0, 0]) @ lb.apl
+        dv = hit - sh_w
+        ax = dv.cross(Vector((0, 0, 1))).normalized()
+        sgn = 1.0 if (Matrix.Rotation(math.radians(42.0), 3, ax) @ dv).z > dv.z else -1.0
+        hub = sh_w + Matrix.Rotation(math.radians(sgn * 42.0 * (1.0 - press(f / FPS))), 3, ax) @ dv
         p_t = p_t.lerp(hub, h)
         axw = 1.0 - h
     def resid(u):
@@ -108,9 +120,11 @@ def solve_frame(s, f, u0):
         c = xa.cross(a_t)
         r = [3 * 3.0 * d.x / 0.01, 3 * 3.0 * d.y / 0.01, 3 * 3.0 * d.z / 0.01, c.x * 6 * axw, c.y * 6 * axw, c.z * 6 * axw]
         r += list(0.0003 * (np.array(u[0:4])) / 0.01 * 0.2)
-        if u0 is not None:
-            r += list(0.0004 * (np.array(u[0:4]) - u0[0:4]) / 0.01)
-        return np.array(r + [0.0] * (24 - len(r)))[:24]
+        if u0 is not None:                                          # smooth from frame to frame, more so while the horn frees the clip's axis
+            r += list((0.0004 + 0.004 * h) * (np.array(u[0:4]) - u0[0:4]) / 0.01)
+        if attract is not None:
+            r += list(0.004 * attract[1] * (np.array(u[0:4]) - np.array(attract[0])) / 0.01)
+        return np.array(r + [0.0] * (28 - len(r)))[:28]
     cands = [lm(resid, np.zeros(4), restarts=2, spread=25.0)]
     if u0 is not None:
         cands.append(lm(resid, u0, restarts=1, spread=15.0))
@@ -130,7 +144,10 @@ for s in 'lr':
     for pas in range(1, PASSES + 1):
         rings, axes = [], []
         for f in range(N):
-            u, ring, ax = solve_frame(s, f, u_prev)
+            # coming off the horn the arm is drawn, over half a second, back to the pose the loop starts in (the wheel is straight in both), not left on
+            # whatever branch the smashes put it on, so the loop closes without a snap
+            pull = ramp(f / FPS, 7.6, 8.1) * (1 - ramp(f / FPS, 8.4, 8.6)) if (s == 'r' and U[s][0] is not None) else 0.0
+            u, ring, ax = solve_frame(s, f, u_prev, (U[s][0], pull) if pull > 1e-4 else None)
             u_prev = u
             keys6[s][f] = [round(v, 3) for v in limbs[s].keys6(u[0:4])]
             U[s][f] = [float(v) for v in u[0:4]]

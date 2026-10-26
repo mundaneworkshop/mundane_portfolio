@@ -3,15 +3,15 @@
  "arm": [
   -70.0,
   -20.0,
-  30.0
+  15.0
  ],
- "dist": 0.31,
+ "dist": 0.322,
  "overlaps": {
-  "arm_l": 0,
+  "arm_l": 484,
   "head": 0,
   "torso": 0,
   "acc_23186": 0,
   "arm_r": 0
  },
- "clean_poses": 22
+ "clean_poses": 0
 }

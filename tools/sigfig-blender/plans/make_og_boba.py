@@ -4,7 +4,7 @@ reaches behind the back for two blasters, fires them in separate directions (a r
 Blasters acc_4349 (right hand) / acc_4349_2 (left), red studs prop_4073 / prop_4073_2 (loose in the import, so they follow the hand).
 While stowed a blaster is glued to the hips at the pose it has when its arm is swung 75 degrees back (offsets solved from the rig: STOW), so the
 hand-over in both directions is seamless; both arms are held still (torso straight) at those two moments."""
-import json, math
+import json, math, os
 from motionlib import *
 
 T = 20.0
@@ -55,12 +55,17 @@ def ph(t): return 2 * math.pi * (t - T_WEAVE0) / PER
 def env(t): return win(t, T_WEAVE0, T_WEAVE1, 0.9)
 def crouch(t):                             # touch-down: the legs take it (hips sink and settle back over the feet), the chest folds forward, then he straightens
     return pulse(t, [(T_DOWN1 - 0.05, 0), (T_DOWN1 + 0.2, 1), (T_DOWN1 + 0.6, 0)])
-CROUCH_DEG, CROUCH_BACK, CROUCH_DROP = 20.0, 12.7, 2.2        # leg angle forward, hips back over the feet (cm), hips down (cm): L sin20 = 12.7 and L(1-cos20) = 2.2 keep the feet where they were
+KNEE_Z, THIGH = 0.14, 0.14                    # knee height (world, at rest) and hip pin -> knee: the legs bend at the knee (choreo `knees`)
+CROUCH_DEG = 55.0                          # thigh forward, shin back by the same: the shin stays upright and the foot flat and planted
+CROUCH_BACK = 100 * THIGH * math.sin(math.radians(CROUCH_DEG))           # hips back over the feet (cm)
+CROUCH_DROP = 100 * THIGH * (1 - math.cos(math.radians(CROUCH_DEG)))     # hips down (cm)
+_FIXP = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'og-boba-landfix.json')
+LAND_FIX = {int(k): v for k, v in json.load(open(_FIXP)).items()} if os.path.exists(_FIXP) else {}     # cm, per frame: lifts the hips by however far the soft knee fold let a foot sink below the floor (measured in Blender)
 def hips_z(t):
     rise = pulse(t, [(T_LIFT0, 0), (T_LIFT1, H + 3), (T_LIFT1 + 0.6, H)])
     fall = pulse(t, [(T_DOWN0, 0), (T_DOWN1, H)])
     bob = 1.6 * math.sin(2 * math.pi * (t - T_LIFT1) / PER) * win(t, T_LIFT1, T_DOWN0 + 0.2, 0.9)
-    return rise - fall + bob - CROUCH_DROP * crouch(t)
+    return rise - fall + bob - CROUCH_DROP * crouch(t) + LAND_FIX.get(int(round(t * 24)), 0.0)
 def hips_x(t): return 8 * math.sin(ph(t)) * env(t) + 3 * math.sin(2 * math.pi * (t - T_DOWN0) / 3.8) * win(t, T_DOWN0, T_DOWN1 + 0.4, 0.6)
 def hips_y(t): return 4 * math.sin(2 * ph(t)) * env(t) + CROUCH_BACK * crouch(t)
 def torso_z(t):
@@ -105,12 +110,13 @@ plan = dict(
     duration=T, fps=24,
     description="Stands, lifts off as the jetpack turns on, floats bobbing and weaving, reaches behind the back for two blasters, fires them in separate directions (a red stud pops off each), puts them back, drifts down and lands. 20 s loop.",
     bend={'torso': {'zone': 0.32, 'segments': 4}, 'head': {'zone': 0.12, 'segments': 3}},
+    knees={'leg_l': {'z': KNEE_Z, 'band': 0.03}, 'leg_r': {'z': KNEE_Z, 'band': 0.03}},
     keys={
         'hips': {'location_z': dense(hips_z, T), 'location_x': dense(hips_x, T, 2), 'location_y': dense(hips_y, T, 2)},
         'torso': {'rotation_z': dense(torso_z, T, 2), 'rotation_y': dense(torso_y, T, 2), 'rotation_x': dense(torso_x, T, 2)},
         'head': {'rotation_z': dense(head_z, T, 2), 'rotation_x': dense(head_x, T, 2)},
-        'leg_l': {'rotation_x': dense(lambda t: leg_x(t, 1), T, 2), 'rotation_y': dense(lambda t: leg_y(t, -1), T, 2)},
-        'leg_r': {'rotation_x': dense(lambda t: leg_x(t, -1), T, 2), 'rotation_y': dense(lambda t: leg_y(t, 1), T, 2)},
+        'leg_l': {'rotation_x': dense(lambda t: leg_x(t, 1), T, 2), 'rotation_y': dense(lambda t: leg_y(t, -1), T, 2), 'knee': dense(lambda t: CROUCH_DEG * crouch(t), T)},
+        'leg_r': {'rotation_x': dense(lambda t: leg_x(t, -1), T, 2), 'rotation_y': dense(lambda t: leg_y(t, 1), T, 2), 'knee': dense(lambda t: CROUCH_DEG * crouch(t), T)},
         'arm_l': {'rotation_x': dense(arm_l_x, T, 2), 'rotation_y': dense(arm_l_y, T, 2), 'rotation_z': dense(armL[2], T, 4)},
         'arm_r': {'rotation_x': dense(arm_r_x, T, 2), 'rotation_y': dense(arm_r_y, T, 2), 'rotation_z': dense(armR[2], T, 4)},
     },

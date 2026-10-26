@@ -13,7 +13,7 @@ P = T / CYCLES                             # run cycle (27 per loop, so the stri
 T_I = 11.0                                 # impact
 T_HOME = 16.3                              # first piece called home (they have lain still for about 3 s)
 T_STRAIGHT = 5.9                           # the wheel is straight from here: the horn is next
-T_HONK = (6.55, 7.05)                      # the two presses
+T_HONK = (6.6, 7.35)                       # the two horn smashes (the hand comes down on the hub)
 T_UP0, T_UP1 = 8.4, 8.75                   # the arms go up
 T_SHAKE = 6.3                              # Hz, hands and body shaking in shock
 
@@ -28,9 +28,9 @@ def look_x(t):                             # and up and down: a check of the mir
     return pulse(t, [(0, 0), (2.9, 0), (3.3, -12), (3.9, -12), (4.6, 8), (5.1, 8), (5.6, 0)])
 
 def hub_w(t):                              # how much the right hand is on the horn rather than the rim
-    return ramp(t, T_STRAIGHT, T_STRAIGHT + 0.45) * (1 - ramp(t, 7.35, 7.85))
-def press(t):                              # 0 hovering over the hub, 1 pushed in
-    return sum(win(t, a - 0.03, a + 0.19, 0.08) for a in T_HONK)
+    return ramp(t, T_STRAIGHT, T_STRAIGHT + 0.4) * (1 - ramp(t, 7.75, 8.15))
+def press(t):                              # 0 wound up high above the hub, 1 down on it: a slow wind-up, a fast smash, a beat on it, back up (the VR gamer's smashes)
+    return sum(pulse(t, [(a - 0.13, 0), (a, 1), (a + 0.1, 1), (a + 0.38, 0)]) for a in T_HONK)
 
 def up_w(t):                               # the arms thrown up: quick, with overshoot; down again out of sight once he has hit the wall
     if t < T_UP0: return 0.0
@@ -41,12 +41,12 @@ def shake(t):                              # the shock: 0 before the arms go up
 def tremble(t, ph0=0.0): return math.sin(2 * math.pi * T_SHAKE * t + ph0) * shake(t)
 
 def lean_back(t): return 14 * ramp(t, 8.1, 8.7) * (1 - ramp(t, T_I + 0.05, T_I + 0.35))
-def torso_x(t): return 6 + 2.0 * math.sin(2 * ph(t)) - lean_back(t)
+def torso_x(t): return 6 + 2.0 * math.sin(2 * ph(t)) - lean_back(t) + 6 * press(t)            # leans into each smash
 def torso_z(t): return -4 * S(t) + 0.14 * steer(t) + 1.8 * tremble(t)
 def torso_y(t): return -0.18 * steer(t)
-def head_x(t):
-    return (2.0 * math.sin(2 * ph(t) + 0.6) + look_x(t) + 7 * win(t, 5.9, 7.7, 0.4)         # a glance down at the hand on the horn
-            - 18 * win(t, 8.1, T_I + 0.1, 0.35) + 2.5 * tremble(t, 1.0))                     # then eyes up at the wall
+def head_x(t):                             # a nod tips the head on its neck stud: kept to a few degrees (the swivel, head_z, is the free one)
+    return max(-8.0, min(8.0, 1.5 * math.sin(2 * ph(t) + 0.6) + 0.5 * look_x(t) + 5 * win(t, 5.9, 7.7, 0.4)
+                         - 7 * win(t, 8.1, T_I + 0.1, 0.35) + 1.5 * tremble(t, 1.0)))
 def head_z(t): return -0.2 * steer(t) + look(t) + 3.0 * tremble(t, 2.0)
 def hips_z(t): return 2.6 * abs(S(t))
 def leg_l_x(t): return -10 - 55 * S(t)

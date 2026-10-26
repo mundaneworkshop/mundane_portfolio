@@ -454,6 +454,72 @@ def _build_bend_rig(fig_id, coll, objs, root, cfg, rest_o, prop_role):
     return arm_obj, chains
 
 
+def _build_knees(arm_obj, objs, cfg):
+    """Give each leg in `cfg` ({leg: {z: knee height (world, at rest), band: half-height of the soft fold}}) a hip and a knee in the figure's bend armature:
+    bone hip_<leg> turns about the leg's own origin (the hip pin) and carries the leg's rotation keys, bone knee_<leg> below it folds the shin back (`knee`
+    key, degrees) about the knee point. The leg is sliced through the band and skinned to the two (thigh above, shin below, blended across the band), and
+    hangs off the armature like the torso and head, so it exports as a plain glTF skin. Returns {leg: (hip bone, knee bone)}."""
+    import bmesh
+    legs = [l for l in cfg if l in objs]
+    if not legs:
+        return {}
+    mw0 = {l: objs[l].matrix_world.copy() for l in legs}
+    view = bpy.context.view_layer
+    for o in view.objects:
+        o.select_set(False)
+    view.objects.active = arm_obj
+    arm_obj.select_set(True)
+    bpy.ops.object.mode_set(mode='EDIT')
+    eb = arm_obj.data.edit_bones
+    Ainv = arm_obj.matrix_world.inverted()
+    for leg in legs:
+        M = mw0[leg]
+        vs = [M @ v.co for v in objs[leg].data.vertices]
+        kz = float(cfg[leg]['z'])
+        kx, ky = sum(v.x for v in vs) / len(vs), sum(v.y for v in vs) / len(vs)
+        hb = eb.new('hip_' + leg)
+        hb.head = Ainv @ M.translation
+        hb.tail, hb.roll = hb.head + Vector((0, 0, 0.05)), 0.0
+        kb = eb.new('knee_' + leg)
+        kb.head = Ainv @ Vector((kx, ky, kz))
+        kb.tail, kb.roll = kb.head + Vector((0, 0, 0.05)), 0.0         # pointing up, roll 0: the same axes as the hip bone
+        kb.parent = hb
+    bpy.ops.object.mode_set(mode='OBJECT')
+    out = {}
+    for leg in legs:
+        ob, M = objs[leg], mw0[leg]
+        Mi = M.inverted()
+        kz, band = float(cfg[leg]['z']), float(cfg[leg].get('band', 0.03))
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        nrm = (M.to_3x3().transposed() @ Vector((0, 0, 1))).normalized()     # a world-horizontal plane, in the leg's local frame
+        for i in range(5):
+            geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+            co = Mi @ Vector((M.translation.x, M.translation.y, kz - band + 2 * band * i / 4))
+            bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-7, plane_co=co, plane_no=nrm)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        bm.to_mesh(ob.data)
+        bm.free()
+        ob.data.update()
+        g_t, g_k = ob.vertex_groups.new(name='hip_' + leg), ob.vertex_groups.new(name='knee_' + leg)
+        for v in ob.data.vertices:
+            w = min(1.0, max(0.0, ((M @ v.co).z - (kz - band)) / (2 * band)))          # 1 above the band (thigh), 0 below (shin)
+            w = w * w * (3 - 2 * w)
+            if w > 1e-4:
+                g_t.add([v.index], w, 'REPLACE')
+            if 1 - w > 1e-4:
+                g_k.add([v.index], 1 - w, 'REPLACE')
+        mod = ob.modifiers.new('Knee', 'ARMATURE')
+        mod.object = arm_obj
+        ob.parent = arm_obj
+        ob.matrix_parent_inverse = arm_obj.matrix_world.inverted() @ M @ ob.matrix_basis.inverted()
+        out[leg] = ('hip_' + leg, 'knee_' + leg)
+    for pb in arm_obj.pose.bones:
+        pb.rotation_mode = 'QUATERNION'
+    bpy.context.view_layer.update()
+    return out
+
+
 def apply_plan(fig_id, plan):
     coll, objs, root = _rig(fig_id)
     sc = bpy.context.scene
@@ -502,6 +568,8 @@ def apply_plan(fig_id, plan):
         for pb in arm_obj.pose.bones:
             pb.rotation_mode = 'QUATERNION'
 
+    knee_rigs = _build_knees(arm_obj, objs, plan['knees']) if (plan.get('knees') and arm_obj is not None) else {}
+
     keys = plan.get('keys', {})
     free_cfg = plan.get('free', [])
     free_parts = {f['part'] for f in free_cfg}
@@ -542,7 +610,7 @@ def apply_plan(fig_id, plan):
             report['missing'].append(part)
     for part, ob in objs.items():
         ch = touched(part)
-        if not ch or part in arms or part == prop_role or part in chains or (part in free_parts and part not in live_parts):
+        if not ch or part in arms or part == prop_role or part in chains or part in knee_rigs or (part in free_parts and part not in live_parts):
             continue
         report['parts_keyed'].append(part)
         dz = pivots.get(part)
@@ -598,6 +666,20 @@ def apply_plan(fig_id, plan):
                 pb = arm_obj.pose.bones[name]
                 pb.rotation_quaternion = q
                 pb.keyframe_insert('rotation_quaternion', frame=f)
+
+    # ---- knee-rigged legs: the leg's rotation keys turn its hip bone (about the pin), the `knee` key folds the shin back about the knee
+    for leg, (hb, kb) in knee_rigs.items():
+        report['parts_keyed'].append(leg)
+        Mh = arm_obj.data.bones[hb].matrix_local.to_3x3()
+        Mk = arm_obj.data.bones[kb].matrix_local.to_3x3()
+        ph, pk_ = arm_obj.pose.bones[hb], arm_obj.pose.bones[kb]
+        for f in range(0, N + 1):
+            t = f / fps
+            Qd = Euler([math.radians(delta(leg, 'rotation_' + a, t)) for a in 'xyz'], 'XYZ').to_matrix()
+            ph.rotation_quaternion = (Mh.inverted() @ Qd @ Mh).to_quaternion()
+            pk_.rotation_quaternion = (Mk.inverted() @ Matrix.Rotation(math.radians(delta(leg, 'knee', t)), 3, 'X') @ Mk).to_quaternion()
+            ph.keyframe_insert('rotation_quaternion', frame=f)
+            pk_.keyframe_insert('rotation_quaternion', frame=f)
 
     # ---- the prop (world-space keys)
     if prop is not None:

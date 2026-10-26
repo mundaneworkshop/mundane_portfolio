@@ -7,6 +7,7 @@ import json, os
 
 HOLD = (0.0, -0.27, 0.56)
 K = lambda *pairs: [list(p) for p in pairs]
+POCKET = (-0.08, 0.13, 0.43)                                 # the right back pocket (metres from his centre; z is height)
 
 head_z = K((0, 0), (0.6, 38), (1.3, -35), (1.8, 10), (2.2, 0), (3.4, 0), (4.0, -6), (4.6, 4), (5.3, -4), (6.0, 6), (6.5, 0),
            (7.0, 0), (8.2, 0), (9.0, -8), (11.5, 6), (13.5, -6), (14.8, 0), (16.2, 0), (16.9, -14), (17.8, -12), (18.6, 0), (19.4, 0))
@@ -44,7 +45,7 @@ targets = {
     'hit_r': dict(frame='prop', mode='local', p=[0.10, 0.0, 0.02]),      # ... and on it
     'face_r': dict(frame='head_3', mode='rest_world', p=[-0.06, -0.19, 0.86]),
     'face_l': dict(frame='head_3', mode='rest_world', p=[0.06, -0.19, 0.86]),
-    'pocket': dict(frame='hips', mode='rest_world', p=[-0.09, 0.19, 0.44]),     # where the right wing is as the controller comes out
+    'pocket': dict(frame='hips', mode='rest_world', p=list(POCKET)),            # the back pocket of his trousers: the hand goes there, and the controller comes out there
 }
 aim = {
     'arm_l': [
@@ -52,11 +53,10 @@ aim = {
         dict(target='face_l', w=K((8.8, 0), (9.3, 1), (14.6, 1), (15.1, 0))),
     ],
     'arm_r': [
-        dict(target='grip_r', w=K((0, 1), (3.5, 1), (3.9, 0), (6.2, 0), (6.55, 1), (6.87, 1), (7.02, 0), (17.6, 0), (17.95, 1))),
+        dict(target='grip_r', w=K((0, 1), (3.5, 1), (3.9, 0), (6.2, 0), (6.55, 1), (6.87, 1), (7.02, 0), (16.2, 0), (16.8, 1))),       # from the reach into the pocket on, the clip holds the (still hidden) controller's wing there
         dict(target='wind_r', w=K((3.5, 0), (3.9, 1), (6.1, 1), (6.4, 0))),
         dict(target='hit_r', w=K((4.15, 0), (4.35, 1), (4.5, 0), (5.05, 0), (5.25, 1), (5.4, 0), (5.8, 0), (6.0, 1), (6.15, 0))),
         dict(target='face_r', w=K((8.8, 0), (9.3, 1), (14.6, 1), (15.1, 0))),
-        dict(target='pocket', w=K((16.2, 0), (16.8, 1), (17.6, 1), (17.95, 0))),
     ],
 }
 
@@ -71,7 +71,7 @@ def swing(f0=428, f1=450, x_side=-0.30, y_side=0.05, z=0.50, psi0=-180.0, psi1=0
     back from the pocket, out to the side, then round to the front. The waypoints and yaw schedule were found by scanning his whole body (hips, torso, legs, left arm,
     head) at every frame of the swing for triangles of the controller cutting it, and the wing's distance from the right shoulder for a reach the arm has."""
     import math
-    W = [(-0.09, 0.19, z - 0.02), (-0.22, 0.17, z), (x_side, y_side, z), (-0.27, -0.15, z + 0.03), (-0.155, -0.17, 0.52)]
+    W = [POCKET, (-0.22, 0.17, z), (x_side, y_side, z), (-0.27, -0.15, z + 0.03), (-0.155, -0.17, 0.52)]
     off = (-0.155, 0.10, -0.04)                          # the right wing's offset from the controller's origin at yaw 0 (world axes)
     sm = lambda x: max(0.0, min(1.0, x)) ** 2 * (3 - 2 * max(0.0, min(1.0, x)))
     def cr(p0, p1, p2, p3, u):
@@ -88,6 +88,14 @@ def swing(f0=428, f1=450, x_side=-0.30, y_side=0.05, z=0.50, psi0=-180.0, psi1=0
         c = (w[0] - (cs * off[0] - sn * off[1]), w[1] - (sn * off[0] + cs * off[1]), w[2] - off[2])
         out.append(pk(round((f0 + k) / 24, 5), tuple(round(v, 4) for v in c), (0, 0, round(psi, 3)), 1.0))
     return out
+
+
+def POCKET_KEY(sc):
+    """The controller growing out of the pocket (scale sc) about its right wing, which stays in the hand: (position, wing)."""
+    import math
+    c, s_ = math.cos(math.radians(-180.0)), math.sin(math.radians(-180.0))
+    off = (-0.155, 0.10, -0.04)
+    return (tuple(round(POCKET[i] - sc * ((c * off[0] - s_ * off[1]), (s_ * off[0] + c * off[1]), off[2])[i], 4) for i in range(3)), POCKET)
 
 
 SWING = swing(x_side=float(os.environ.get('VR_X', -0.30)), y_side=float(os.environ.get('VR_Y', 0.05)), z=float(os.environ.get('VR_Z', 0.50)),
@@ -121,7 +129,7 @@ prop += [
     pk(7.52, (0, -0.5, 3.0), (-520, 0, 30)),
     pk(7.67, (0, -0.6, 3.6), (-640, 0, 30), 0.0),
     pk(7.9, (-0.09, 0.12, 0.44), (0, 0, 0), 0.0),         # hidden in the back pocket
-    pk(17.55, SWING[0]['pos'], SWING[0]['rot'], 0.0),
+] + [pk(t_, POCKET_KEY(sc)[0], SWING[0]['rot'], sc) for t_, sc in ((16.0, 0.0), (17.55, 0.0), (17.62, 0.25), (17.69, 0.55), (17.76, 0.85))] + [
 ]
 prop += SWING[1:] if False else SWING                    # pulled out of the pocket and swung round the right hip to the front
 prop += [

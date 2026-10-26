@@ -16,7 +16,7 @@ SIDE = {'rebel-pilot': 'r', 'tie-pilot': 'l'}[FIG]
 M_SIGN = 1 if SIDE == 'r' else -1
 SOL = json.load(open(BASE + 'plans/%s-solve.json' % FIG))
 MEAS = json.load(open(BASE + 'plans/%s-measure.json' % FIG))
-REL = Matrix(SOL['rel_hold'])
+REL = Matrix(SOL['rel_hold'] if FIG == 'rebel-pilot' else SOL['rel_rim'])     # the rebel keeps the searched rim grip; the TIE the imported one
 PIN = {'hand_r': [0, -0.04, -0.005], 'hand_l': [0, -0.04, -0.005]}
 BEND = {'torso': {'zone': 0.32, 'segments': 4}, 'head': {'zone': 0.12, 'segments': 3}}
 TESTED = ('arm_' + SIDE, 'hand_' + SIDE, 'head', 'torso', 'acc_23186', 'arm_' + ('l' if SIDE == 'r' else 'r'))

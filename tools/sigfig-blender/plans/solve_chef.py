@@ -65,6 +65,7 @@ def torso_pen(x):
     return r
 
 
+SLIDE_FIX = 0.0                                                  # where the clip holds the handle (spatula local z), fixed for the whole loop
 ROLL_PHI = None                                                  # when set: where the wrist sits around the handle (radians, in the spatula's own x-y plane, 0 = +x)
 
 def pin_phi(Mh, M_sp):
@@ -77,7 +78,7 @@ def pin_phi(Mh, M_sp):
 def solve_sp(Bc, zb, a0, u0=None, restarts=14, alpha_free=40.0, cont=0.0, attract=None):
     """u = [arm x, y, z, twist, slide, heading]: slide = where the clip sits on the handle (spatula local z), heading = the spatula's heading in degrees
     (free within +-alpha_free of a0: the blade stays flat and over Bc, the handle swings round it). Ring centre on the handle, clip hole axis (hand-local z) along it."""
-    u0 = np.array([-55.0, 0, 0, 0, 0.03, a0]) if u0 is None else np.array(u0, float)
+    u0 = np.array([-55.0, 0, 0, 0, SLIDE_FIX, a0]) if u0 is None else np.array(u0, float)
     def resid(u):
         M_sp = spatula_pose(Bc, u[5], zb)
         ax_w = M_sp.to_3x3() @ Vector((0, 0, 1))
@@ -96,7 +97,7 @@ def solve_sp(Bc, zb, a0, u0=None, restarts=14, alpha_free=40.0, cont=0.0, attrac
         if attract is not None:
             r += list(attract[1] * (np.array(u[0:4]) - attract[0][0:4]) / 0.01)
             r.append(attract[1] * (u[5] - attract[0][5]) / 0.01)
-        r.append((u[4] - 0.03) / 0.05 * 0.4)
+        r.append((u[4] - SLIDE_FIX) / 0.002 * 3.0)                # the hand holds the handle at one place: the spatula never slides through the clip, so the arm has to carry every stir
         if u[4] < -0.06: r.append((-0.06 - u[4]) / 0.01 * 3)
         if u[4] > 0.12: r.append((u[4] - 0.12) / 0.01 * 3)
         r.append((u[5] - a0) / 10.0 * 0.3)
