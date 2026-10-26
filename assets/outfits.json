@@ -2,38 +2,257 @@
   "version": 1,
   "outfits": [
     {
-      "id": "vr-gamer",
-      "name": "VR gamer",
+      "id": "work",
+      "name": "Work",
       "enabled": true,
+      "unlock": {
+        "type": "visitLinkedin"
+      },
       "unlockAt": 0,
       "about": {
-        "kicker": "About me",
-        "title": "VR gamer",
-        "body": "Placeholder about-me copy for the VR gamer outfit. Edit it in Edit Mode, ☺ outfits, unlock + about copy.",
-        "teaser": ""
+        "title": "Professional Designer",
+        "teaser": "Oh, you want to meet my innie? We should shake hands first.",
+        "ctaText": "let's connect!",
+        "ctaUrl": "https://www.linkedin.com/in/jason-hsin-00378837/",
+        "ctaShow": true,
+        "ctaTarget": "new"
       },
       "idle": "idle",
       "parts": [
         {
-          "file": "assets/models/outfits/vr-gamer/vr-gamer.glb"
+          "file": "assets/models/outfits/work/mw-sigfig-work-idle-v2.glb"
         }
       ]
     },
     {
-      "id": "vr-gamer-locked",
-      "name": "VR gamer (locked test)",
+      "id": "slate-dummy",
+      "name": "Slate dummy",
       "enabled": true,
-      "unlockAt": 1000,
+      "unlock": {
+        "type": "caseStudy",
+        "target": "w1"
+      },
+      "unlockAt": 0,
       "about": {
-        "kicker": "About me",
-        "title": "VR gamer",
-        "body": "Placeholder about-me copy for the locked test variant.",
-        "teaser": "Test variant: this outfit is locked so the carousel's locked state can be reviewed. Shoot 1000 minikits in the Space Arcade to unlock it."
+        "title": "Crash Dummy",
+        "body": "At Slate Auto, I led the redesign and development of Slatemaker, the online car configurator responsible for over 160,000 paid reservations and over $4B in potential order value.",
+        "ctaText": "see case study",
+        "ctaShow": true,
+        "ctaTarget": "same"
       },
       "idle": "idle",
       "parts": [
         {
-          "file": "assets/models/outfits/vr-gamer/vr-gamer.glb"
+          "file": "assets/models/outfits/slate-dummy/mw-sigfig-slate-dummy-idle-v4.glb"
+        }
+      ]
+    },
+    {
+      "id": "vr-gamer",
+      "name": "VR gamer",
+      "enabled": true,
+      "unlock": {
+        "type": "caseStudy",
+        "target": "w0"
+      },
+      "unlockAt": 0,
+      "about": {
+        "title": "VR Gamer",
+        "body": "At Meta I was the product design lead on Horizon Worlds responsible for delivering seasonal and limited time quests where players could partake in special events to unlock rewards for their Meta Avatars. I also led exploratory work on platform monetization to empower creators selling custom digital content and enable players to purchase content throughout the Metaverse.",
+        "ctaText": "see case study",
+        "ctaShow": true,
+        "ctaTarget": "same"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/vr-gamer/mw-sigfig-vr-gamer-idle-v12.glb"
+        }
+      ]
+    },
+    {
+      "id": "rebel-pilot",
+      "name": "Rebel pilot",
+      "enabled": true,
+      "unlock": {
+        "type": "destroy",
+        "n": 10,
+        "ships": [
+          "tie-fighter",
+          "tie-interceptor",
+          "tie-defender",
+          "tie-dagger",
+          "lambda-shuttle",
+          "acclamator",
+          "imperial-light-cruiser",
+          "star-destroyer"
+        ]
+      },
+      "unlockAt": 0,
+      "about": {
+        "title": "Rebel Pilot",
+        "body": "To the contrary, I try not to blow up massive cross-functional work projects.",
+        "teaser": "Destroy a total of 10 Imperial ships (fighters or capital ships) in the Arcade to unlock.",
+        "ctaText": "play arcade",
+        "ctaUrl": "https://www.mundanework.shop/arcade",
+        "ctaShow": true,
+        "ctaTarget": "same"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/rebel-pilot/mw-sigfig-rebel-pilot-idle-v6.glb"
+        }
+      ]
+    },
+    {
+      "id": "tie-pilot",
+      "name": "TIE pilot",
+      "enabled": true,
+      "unlock": {
+        "type": "destroy",
+        "n": 10,
+        "ships": [
+          "x-wing",
+          "y-wing",
+          "a-wing",
+          "b-wing",
+          "u-wing",
+          "blockade-runner",
+          "nebulon-b",
+          "mc80",
+          "mc80a",
+          "mc85"
+        ]
+      },
+      "unlockAt": 0,
+      "about": {
+        "title": "Imperial Pilot",
+        "body": "I'm a team player and work well on my own or as part of a large, cross-functional org. Just like, well, you know.",
+        "teaser": "Destroy a total of 10 Rebel ships (fighters or capital ships) in the Arcade to unlock.",
+        "ctaText": "play arcade",
+        "ctaUrl": "https://www.mundanework.shop/arcade",
+        "ctaShow": true,
+        "ctaTarget": "same"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/tie-pilot/mw-sigfig-tie-pilot-idle-v7.glb"
+        }
+      ]
+    },
+    {
+      "id": "og-boba",
+      "name": "OG Boba",
+      "enabled": true,
+      "unlock": {
+        "type": "ship",
+        "id": "slave-1"
+      },
+      "unlockAt": 0,
+      "about": {
+        "title": "LEGO Boba Fett (OG)",
+        "body": "This is the way... I think.",
+        "ctaText": "play arcade",
+        "ctaUrl": "https://www.mundanework.shop/arcade",
+        "ctaShow": true,
+        "ctaTarget": "same"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/og-boba/mw-sigfig-og-boba-idle-v4.glb"
+        }
+      ]
+    },
+    {
+      "id": "iron-man",
+      "name": "Iron Man",
+      "enabled": true,
+      "unlock": {
+        "type": "caseStudy",
+        "target": "w2"
+      },
+      "unlockAt": 0,
+      "about": {
+        "title": "Iron Man (Mk 17)",
+        "body": "Jarvis served as a huge inspiration for my work on Josh.ai, a voice-first home control and automation platform that was ahead of its time. As founding designer I built a company from scratch to $10M+ ARR and 30+ FTE, becoming the dominant voice control solution for the luxury smart home market with 70% market share.",
+        "ctaText": "see case study",
+        "ctaUrl": "https://case.mundanework.shop/josh-ai",
+        "ctaShow": true,
+        "ctaTarget": "same"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/iron-man/mw-sigfig-iron-man-idle-v4.glb"
+        }
+      ]
+    },
+    {
+      "id": "biker",
+      "name": "Biker",
+      "enabled": true,
+      "unlock": {
+        "type": "visitInstagram"
+      },
+      "unlockAt": 0,
+      "about": {
+        "body": "As an adolescent I used to ride BMX, and my bike was my pride and joy. I have no idea where it is now.",
+        "ctaText": "view instagram",
+        "ctaUrl": "https://www.instagram.com/jas0n_0n_a_bike/",
+        "ctaShow": true,
+        "ctaTarget": "new"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/biker/mw-sigfig-biker-idle-v2.glb"
+        }
+      ]
+    },
+    {
+      "id": "skier",
+      "name": "Skier",
+      "enabled": true,
+      "unlock": {
+        "type": "visitInstagram"
+      },
+      "unlockAt": 0,
+      "about": {
+        "body": "When I'm not on my bike, you'll find me ripping down fresh powder in Lake Tahoe.",
+        "ctaText": "view instagram",
+        "ctaUrl": "https://www.instagram.com/jas0n_0n_a_bike/",
+        "ctaShow": true,
+        "ctaTarget": "new"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/skier/mw-sigfig-skier-idle-v4.glb"
+        }
+      ]
+    },
+    {
+      "id": "chef",
+      "name": "Chef",
+      "enabled": true,
+      "unlock": {
+        "type": "visitInstagram"
+      },
+      "unlockAt": 0,
+      "about": {
+        "body": "Although pasta is my go-to, I probably cook eggs more than anything else.",
+        "ctaText": "view instagram",
+        "ctaUrl": "https://www.instagram.com/jas0n_0n_a_bike/",
+        "ctaShow": true,
+        "ctaTarget": "new"
+      },
+      "idle": "idle",
+      "parts": [
+        {
+          "file": "assets/models/outfits/chef/mw-sigfig-chef-idle-v4.glb"
         }
       ]
     }
