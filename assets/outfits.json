@@ -10,12 +10,12 @@
       },
       "unlockAt": 0,
       "about": {
-        "title": "Professional Designer",
-        "teaser": "Oh, you want to meet my innie? We should shake hands first.",
-        "ctaText": "let's connect!",
+        "title": "Staff Product Designer",
+        "ctaText": "let's connect",
         "ctaUrl": "https://www.linkedin.com/in/jason-hsin-00378837/",
         "ctaShow": true,
-        "ctaTarget": "new"
+        "ctaTarget": "new",
+        "body": "I have over a decade of experience designing consumer experience across multiple verticals including social media, entertainment, augmented and virtual reality, voice control, internet of things, AI, and automotive. I've been a founding designer at a startup with 8 figure annual revenue, and led platform initiatives as product design lead for the Metaverse while at Meta."
       },
       "idle": "idle",
       "parts": [
