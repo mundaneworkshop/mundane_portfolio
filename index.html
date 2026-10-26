@@ -10386,7 +10386,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
-      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#') window.open(_u,'_blank','noopener'); return; }
+      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.open(_u,'_blank','noopener'); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
       if(ud.id==='arcade'){ if(window.MWAudio) MWAudio.unlock();   /* keep the click's user gesture: the wipe delays the open */ veilThen(function(){ openArcade(ud.id); }); return; }
@@ -10564,6 +10564,7 @@ f 2469//2469 2470//2470 2434//2434
         setCrumb('case:'+id,[{text:(CASES[id]&&CASES[id].title)||'',bold:true}]);
         var c=CASES[id]; setRoute('/work/'+(c?(c.slug||slugify(c.title||id)):id)); } }
     function openCase(id){ var grp=planetById(id); if(!grp)return; var c=CASES[id];
+      if(window.MWOutfitEvent) MWOutfitEvent('caseStudy',id);   // unlock engine: a case study was viewed
       if(!c){ c=CASES[id]={kind:'work',kicker:'Case file',title:(grp.userData.labelTitle?grp.userData.labelTitle.textContent:id),body:'New world. Add your case study here in Edit Mode.'}; }
       focusPlanet(grp,grp.userData);
       document.getElementById('cpKicker').textContent=c.kicker; document.getElementById('cpTitle').textContent=c.title; document.getElementById('cpBody').textContent=c.body;
@@ -11326,6 +11327,7 @@ f 2469//2469 2470//2470 2434//2434
       cvPersist(); rebuildCVRoute();
     }
     function enterCVRoute(grp){
+      if(window.MWOutfitEvent){ MWOutfitEvent('visitCV'); MWOutfitEvent('caseStudy','cv'); }   // unlock engine: the CV page was visited (every way in comes through here)
       buildCVRoute();
       cvScene.enter(grp);   // galaxy hides, route shows, camera handed to cvOrbit
       cvRootLabel=crumbTitle(grp,'CV');
@@ -11577,6 +11579,7 @@ f 2469//2469 2470//2470 2434//2434
           .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
           .then(function(res){
             if(!res.ok){ if(typeof toast==='function') toast('transmission failed · '+(res.body&&res.body.error||'try again')); return; }
+            if(window.MWOutfitEvent) MWOutfitEvent('holonet');   // unlock engine: a message was sent
             var m=pinMessage(res.body.message);
             if(typeof toast==='function') toast('transmission pinned ✓');
             if(m) focusMessageStar(m);
@@ -14076,10 +14079,17 @@ f 2469//2469 2470//2470 2434//2434
     function ocSlug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'outfit'; }
     function ocSafeFile(n){ n=(n||'part.glb').replace(/[^A-Za-z0-9._-]+/g,'-'); return /\.glb$/i.test(n)?n:n+'.glb'; }
     // Unlock condition model: {type:'minikits',n} | {type:'destroy',ships:[ship ids; empty = any enemy],n} | {type:'ship',id: an arcade hero ship}. Legacy `unlockAt` N = minikits N.
+    // the rule types that carry a number: [label for the number, default]. Same set as the Sig Fig Lab's rule list (its UTYPES); the engine itself is ocProg.
+    var OC_NUMTYPES={hunters:['Fighters that were targeting you',5],planets:['Different arcade planets (max 7)',3],survive:['Seconds alive in one run',120],plays:['Times played',3],rank:['Top rank (1 = first)',10],score:['Score in one run',100]};
+    var OC_UTYPES=[['free','free'],['minikits','minikits collected'],['destroy','ships destroyed in the arcade'],['ship','arcade hero ship unlocked'],['hunters','fighters destroyed that were targeting you'],['planets','different arcade planets seen'],['survive','survive in one arcade run'],['plays','arcade runs played'],['rank','place on the arcade leaderboard'],['score','reach a score in one arcade run'],['caseStudy','view a case study'],['visitLinkedin','visit my LinkedIn'],['visitInstagram','visit my Instagram'],['visitCV','visit the CV page'],['holonet','leave a HoloNet message']];
+    var OC_CASEIDS=[['w0','Meta Horizon Worlds'],['w1','Slate Auto'],['w2','Josh.ai'],['cv','CV']];
     function ocCondOf(u,legacy){
       if(u&&u.type==='destroy') return {type:'destroy',ships:(Array.isArray(u.ships)?u.ships:[]).filter(function(x){ return typeof x==='string'&&/^[a-z0-9][a-z0-9_-]{0,40}$/i.test(x); }),n:Math.max(1,parseInt(u.n,10)||1)};
       if(u&&u.type==='ship'&&typeof u.id==='string'&&u.id) return {type:'ship',id:u.id};
       if(u&&u.type==='minikits') return {type:'minikits',n:Math.max(0,parseInt(u.n,10)||0)};
+      if(u&&OC_NUMTYPES[u.type]) return {type:u.type,n:Math.max(1,parseInt(u.n,10)||OC_NUMTYPES[u.type][1])};
+      if(u&&u.type==='caseStudy') return {type:'caseStudy',target:(typeof u.target==='string'&&/^[a-z0-9_-]{1,40}$/i.test(u.target))?u.target:'w0'};
+      if(u&&(u.type==='free'||u.type==='visitLinkedin'||u.type==='visitInstagram'||u.type==='visitCV'||u.type==='holonet')) return {type:u.type};
       return {type:'minikits',n:Math.max(0,parseInt(legacy,10)||0)};
     }
     function ocCondFields(det,o){   // manager: unlock condition editor (type, count, multi-select ships / hero ship)
@@ -14087,8 +14097,11 @@ f 2469//2469 2470//2470 2434//2434
       function lbl(t){ wrap.appendChild(ocEl('div','oc-lbl2',t)); }
       lbl('Unlock when (the first outfit is always free)');
       var sel=ocEl('select'); sel.setAttribute('data-oc-field','utype'); sel.setAttribute('data-id',o.id);
-      [['minikits','minikits collected'],['destroy','ships destroyed in the arcade'],['ship','arcade hero ship unlocked']].forEach(function(x){ var op=ocEl('option',null,x[1]); op.value=x[0]; if(x[0]===c.type) op.selected=true; sel.appendChild(op); }); wrap.appendChild(sel);
+      OC_UTYPES.forEach(function(x){ var op=ocEl('option',null,x[1]); op.value=x[0]; if(x[0]===c.type) op.selected=true; sel.appendChild(op); }); wrap.appendChild(sel);
       if(c.type==='minikits'||c.type==='destroy'){ lbl(c.type==='destroy'?'Number destroyed (total across the ships below)':'Minikits (lifetime)'); var n=ocEl('input'); n.type='number'; n.min=c.type==='destroy'?1:0; n.step=1; n.value=c.n; n.setAttribute('data-oc-field','un'); n.setAttribute('data-id',o.id); wrap.appendChild(n); }
+      if(OC_NUMTYPES[c.type]){ lbl(OC_NUMTYPES[c.type][0]); var n2=ocEl('input'); n2.type='number'; n2.min=1; n2.step=1; n2.value=c.n; n2.setAttribute('data-oc-field','un'); n2.setAttribute('data-id',o.id); wrap.appendChild(n2); }
+      if(c.type==='caseStudy'){ lbl('Case study'); var cs=ocEl('select'); cs.setAttribute('data-oc-field','utarget'); cs.setAttribute('data-id',o.id);
+        OC_CASEIDS.forEach(function(x){ var op=ocEl('option',null,x[1]); op.value=x[0]; if(x[0]===c.target) op.selected=true; cs.appendChild(op); }); wrap.appendChild(cs); }
       if(c.type==='destroy'){
         lbl('Ship types (tick several; none = any enemy)');
         var box=ocEl('div','oc-ships'), ships=ocShipList(); if(!ships.length) box.appendChild(ocEl('span','pm-empty','arcade ship list not loaded'));
@@ -14422,10 +14435,11 @@ f 2469//2469 2470//2470 2434//2434
         if(f==='name'){ var v=e.target.value.trim(); if(!v){ e.target.value=o.name; return; }
           if(d){ var nid=ocUniqueId(ocSlug(v),id); if(nid!==id){ var ord=ocMeta().order, oi=ord.indexOf(id); if(oi>=0) ord[oi]=nid; ocInvalidate(id); d.id=nid; d.parts.forEach(function(p){ /* keys are id-independent */ }); if(outfitCur&&outfitCur.id===id) outfitCur.id=nid; } d.name=v; ocSaveDrafts(); }
           else { ocMeta().meta[id]=Object.assign(ocMeta().meta[id]||{},{name:v}); persistCopy(); ocMsg='renamed · SAVE to sync'; } ocRender(); }
-        else if(f==='utype'||f==='un'||f==='uship'||f==='uhero'){
+        else if(f==='utype'||f==='un'||f==='uship'||f==='uhero'||f==='utarget'){
           var c=ocCondOf(o.unlock), card=e.target.closest('[data-oc-cond]');
-          if(f==='utype'){ var t=e.target.value; c=t==='destroy'?{type:'destroy',ships:[],n:10}:t==='ship'?{type:'ship',id:(ocHeroList()[1]||ocHeroList()[0]||{id:'slave-1'}).id}:{type:'minikits',n:3}; }
-          else if(f==='un') c.n=Math.max(c.type==='destroy'?1:0,parseInt(e.target.value,10)||0);
+          if(f==='utype'){ var t=e.target.value; c=t==='destroy'?{type:'destroy',ships:[],n:10}:t==='ship'?{type:'ship',id:(ocHeroList()[1]||ocHeroList()[0]||{id:'slave-1'}).id}:OC_NUMTYPES[t]?{type:t,n:OC_NUMTYPES[t][1]}:t==='caseStudy'?{type:'caseStudy',target:'w0'}:t==='minikits'?{type:'minikits',n:3}:{type:t}; }
+          else if(f==='utarget') c={type:'caseStudy',target:e.target.value};
+          else if(f==='un') c.n=Math.max((c.type==='destroy'||OC_NUMTYPES[c.type])?1:0,parseInt(e.target.value,10)||0);
           else if(f==='uhero') c={type:'ship',id:e.target.value};
           else { var sh=[].slice.call(card.querySelectorAll('input[data-oc-field=uship]:checked')).map(function(x){ return x.getAttribute('data-ship'); }); c={type:'destroy',ships:sh,n:c.n}; }
           c=ocCondOf(c); var ul=c.type==='minikits'?c.n:0;
@@ -14449,10 +14463,38 @@ f 2469//2469 2470//2470 2434//2434
     function ocHeroList(){ try{ return window.MWBattle&&MWBattle.heroList?MWBattle.heroList():[]; }catch(e){ return []; } }
     function ocShipName(id){ var l=ocShipList().concat(ocHeroList()); for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i].name||id; return id; }
     function ocKillStats(){ try{ var k=(JSON.parse(localStorage.getItem('mw_ark_stats')||'{}')||{}).kills; return k&&typeof k==='object'?k:{}; }catch(e){ return {}; } }
+    // ── UNLOCK ENGINE ──────────────────────────────────────────────────────────────────────────────────────────────────
+    // Every rule type the Sig Fig Lab offers. Two sources of progress, both in localStorage and both read fresh (no cached state to drift):
+    //   the arcade's lifetime stats  `mw_ark_stats`  {kills{id|class}, hunters, planets[], bestSurvive (s), plays, bestScore, bestRank}  +  `mw_kits_total`
+    //   the site's own events        `mw_oc_events`   {visitLinkedin, visitInstagram, visitCV, holonet: timestamp, cases:{w0:ts,...}}  written by ocNote() below
+    // ocProg(o) = {have,need}; an outfit is unlocked when have>=need. Best-of rules (survive / score / rank) read the best ever, lifetime ones the running total.
+    function ocArkStats(){ try{ var s=JSON.parse(localStorage.getItem('mw_ark_stats')||'{}'); return (s&&typeof s==='object')?s:{}; }catch(e){ return {}; } }
+    function ocEvents(){ try{ var e=JSON.parse(localStorage.getItem('mw_oc_events')||'{}'); return (e&&typeof e==='object')?e:{}; }catch(e2){ return {}; } }
+    // The site reports an event (a visit, a case study opened, a HoloNet message sent); stored once (the first time), then the lock check + "unlocked" toast run.
+    function ocNote(type,arg){
+      var e=ocEvents(), had;
+      if(type==='caseStudy'){ e.cases=(e.cases&&typeof e.cases==='object')?e.cases:{}; had=!!e.cases[arg]; if(!had) e.cases[arg]=Date.now(); }
+      else { had=!!e[type]; if(!had) e[type]=Date.now(); }
+      if(had) return;
+      try{ localStorage.setItem('mw_oc_events',JSON.stringify(e)); }catch(x){}
+      setTimeout(ocAfterArcadeEvent,0);   // after the click's own work (it may be mid-transition); same path as the arcade's events
+    }
+    window.MWOutfitEvent=ocNote;
     function ocProg(o){   // {have,need}; met when have>=need
-      var c=o.unlock;
+      var c=o.unlock||{type:'free'}, n=c.n|0, st, ev;
+      switch(c.type){
+        case 'free': return {have:1,need:1};
+        case 'hunters': return {have:ocArkStats().hunters|0,need:n};
+        case 'planets': st=ocArkStats(); return {have:Array.isArray(st.planets)?st.planets.length:0,need:n};
+        case 'survive': return {have:ocArkStats().bestSurvive|0,need:n};
+        case 'plays': return {have:ocArkStats().plays|0,need:n};
+        case 'score': return {have:ocArkStats().bestScore|0,need:n};
+        case 'rank': st=ocArkStats(); return {have:((st.bestRank|0)>0&&(st.bestRank|0)<=n)?1:0,need:1};   // top N: the best rank ever placed
+        case 'visitLinkedin': case 'visitInstagram': case 'visitCV': case 'holonet': return {have:ocEvents()[c.type]?1:0,need:1};
+        case 'caseStudy': ev=ocEvents(); return {have:(ev.cases&&ev.cases[c.target||'w0'])?1:0,need:1};
+      }
       if(c.type==='ship'){ var ok=false; try{ ok=!!(window.MWBattle&&MWBattle.heroUnlocked&&MWBattle.heroUnlocked(c.id)); }catch(e){} return {have:ok?1:0,need:1}; }
-      if(c.type==='destroy'){ var k=ocKillStats(), h=0; (c.ships.length?c.ships:['fighter','support','capital']).forEach(function(x){ h+=k[x]|0; }); return {have:h,need:c.n}; }
+      if(c.type==='destroy'){ var k=ocKillStats(), h=0; ((c.ships&&c.ships.length)?c.ships:['fighter','support','capital']).forEach(function(x){ h+=k[x]|0; }); return {have:h,need:c.n}; }
       return {have:ocKits(),need:c.n};
     }
     function ocIsDefault(o){ var l=ocAll().filter(function(x){ return x.enabled; }); return !!l.length&&l[0].id===o.id; }
@@ -14625,7 +14667,7 @@ f 2469//2469 2470//2470 2434//2434
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
     window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
-      cur:function(){ return outfitCur; },cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null,pos:camPos.toArray(),look:camLook.toArray(),sf:{dist:_sf.dist,k:_sf.k,sx:_sf.sx,sy:_sf.sy,ok:_sf.ok}}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+      cur:function(){ return outfitCur; },prog:ocProg,cond:ocCondOf,cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null,pos:camPos.toArray(),look:camLook.toArray(),sf:{dist:_sf.dist,k:_sf.k,sx:_sf.sx,sy:_sf.sy,ok:_sf.ok}}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
