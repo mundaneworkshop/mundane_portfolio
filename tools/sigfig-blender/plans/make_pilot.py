@@ -126,17 +126,23 @@ else:
     T_LAND = F_LAND / FPS
     # the patting poses (arm x, y, z), found by sweeping each arm in Blender: the fingertips about 0.43 m out to that side, 0.22 m forward, 0.6 m up
     PAT = {side: (-15.0, 45.0, 40.0), other: (-25.0, 45.0, -20.0)}
-    PAT_AMP = 10.0
     def dribbling(t): return win(t, T_D0 - 0.4, T_LAST + 0.25, 0.35)
     def first_top(s): return T_D0 + (2 * P if s == side else P)    # the right hand meets it first
-    def pat(s, t): return PAT_AMP * math.cos(2 * math.pi * (t - first_top(s)) / (2 * P))     # each hand is up when the helmet comes to it
+    def pat(s, t):
+        """How far the hand is raised (degrees of arm swing) for its stroke: it rises to meet the helmet, slaps it down and follows through hard, then
+        comes back up and waits for the helmet to return (one stroke every other bounce)."""
+        ph_ = ((t - first_top(s)) % (2 * P)) / (2 * P)
+        return pulse(ph_, [(0.0, 22.0), (0.10, -16.0), (0.22, -12.0), (0.55, 4.0), (0.85, 14.0), (1.0, 22.0)])
+    def pat_side(s, t):                   # and swings a little across as it pushes the helmet over to the other hand
+        ph_ = ((t - first_top(s)) % (2 * P)) / (2 * P)
+        return pulse(ph_, [(0.0, 0.0), (0.12, -10.0), (0.4, -4.0), (1.0, 0.0)])
     def helm_arm(i):
         rest = {0: [(0, 0), (0.6, 0), (T_KICK, 0), (T_KICK + 0.35, -105), (T_KICK + 0.9, -60), (T_LAND + 0.4, 0), (10.4, 0), (10.95, CARRY[0]), (11.8, CARRY[0]), (12.8, 0), (T, 0)],
                 1: [(0, 0), (10.4, 0), (10.95, m * CARRY[1]), (11.8, m * CARRY[1]), (12.8, 0), (T, 0)],
                 2: [(0, 0), (10.4, 0), (10.95, m * CARRY[2]), (11.8, m * CARRY[2]), (12.8, 0), (T, 0)]}[i]
-        return lambda t: dribbling(t) * (PAT[side][i] - (pat(side, t) if i == 0 else 0.0)) + (1 - dribbling(t)) * pulse(t, rest)
+        return lambda t: dribbling(t) * (PAT[side][i] - (pat(side, t) if i == 0 else 0.0) + (pat_side(side, t) if i == 1 else 0.0)) + (1 - dribbling(t)) * pulse(t, rest)
     def other_arm(i, base):               # the free arm leaves the hip to pat, then goes back
-        return lambda t: dribbling(t) * (PAT[other][i] - (pat(other, t) if i == 0 else 0.0)) + (1 - dribbling(t)) * base(t)
+        return lambda t: dribbling(t) * (PAT[other][i] - (pat(other, t) if i == 0 else 0.0) - (pat_side(other, t) if i == 1 else 0.0)) + (1 - dribbling(t)) * base(t)
     def helm_hand(i): return lambda t: 0.0
     def head_x(t): return 14 * win(t, 0.9, T_KICK + 0.1, 0.4) - 22 * win(t, T_KICK + 0.1, T_LAND - 0.1, 0.25) + 4 * win(t, T_LAND + 0.2, 12.8, 0.4) - 4 * win(t, 10.6, 11.7, 0.3)
     def head_z(t):                        # follows the helmet from hand to hand
@@ -185,8 +191,14 @@ else:
                 xy = [mid[0] + (b_[0] - mid[0]) * w, mid[1] + (b_[1] - mid[1]) * w]
                 ztop = b_[2]
             pos = [xy[0], xy[1], FLOOR_Z + (ztop - FLOOR_Z) * h]
-            q = qslerp(rel_q, qf, min(1.0, (t - T_D0) / (P / 2))) if k == 0 else qf       # flips over on the way down to the first bounce
-            return pos, q
+            # it tumbles: a steady turn about the vertical (a third of a turn a bounce), and a tip of up to 40 degrees toward where it is going, most at
+            # the floor and level again at each hand, so the rim always comes up flat under the next pat
+            dx_, dy_ = b_[0] - a[0], b_[1] - a[1]
+            n_ = math.hypot(dx_, dy_) or 1.0
+            tip_ax = (-dy_ / n_, dx_ / n_, 0.0)
+            tumble = qmul(qaxis(tip_ax, 40.0 * math.sin(math.pi * u)), qaxis((0, 0, 1), 120.0 * (t - T_D0) / P))
+            base_q = qslerp(rel_q, qf, min(1.0, (t - T_D0) / (P / 2))) if k == 0 else qf       # flips over on the way down to the first bounce
+            return pos, qmul(tumble, base_q)
         keys = []
         for f in range(F_D0, F_KICK + 1):
             pos, q = drib(f / FPS)
@@ -204,7 +216,7 @@ else:
             s_ = min(1.0, tau / D)
             e = s_ * s_ * (3 - 2 * s_)
             pos = [F[0] + (S[0] - F[0]) * e, F[1] + (S[1] - F[1]) * e, F[2] + APEX - kg * (tau - tau_a) ** 2]
-            q = qmul(qaxis((1, 0, 0), 180.0 * (1 - e)), ql)
+            q = qslerp(drib(T_KICK)[1], ql, e)
             keys.append(world_key(f / FPS, pos, q, rest))
         bump = [dict(t=T_OFF0, off=[0, 0, 0]), dict(t=T_OFF0 + 0.35, off=[0, 0, 0.30]), dict(t=T_OFF0 + 0.8, off=[0, 0, 0.28]), dict(t=T_OFF1, off=[0, 0, 0])]
         helmet_free = dict(
