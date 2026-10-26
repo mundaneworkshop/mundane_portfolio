@@ -14129,7 +14129,14 @@ f 2469//2469 2470//2470 2434//2434
       list.sort(function(a,b){ return a._k-b._k; }); return list;
     }
     function ocFind(id){ return ocAll().filter(function(o){ return o.id===id; })[0]||null; }
-    function ocCycleList(){ return ocAll().filter(function(o){ return o.enabled&&!outfitFailed[o.id]&&(o.parts.length||o.builtin); }); }
+    // Carousel order: the author's order, except that an outfit which is still LOCKED behind arcade play goes to the end (its place among those kept), so what a visitor can
+    // unlock just by visiting a link (LinkedIn / Instagram / CV / HoloNet / a case study) comes up first. It moves back once unlocked.
+    var OC_ARCADE_TYPES={minikits:1,destroy:1,ship:1,hunters:1,planets:1,survive:1,plays:1,rank:1,score:1};
+    function ocCycleList(){
+      var l=ocAll().filter(function(o){ return o.enabled&&!outfitFailed[o.id]&&(o.parts.length||o.builtin); });
+      var late=function(o){ return !o.builtin&&!ocIsDefault(o)&&OC_ARCADE_TYPES[o.unlock&&o.unlock.type]&&ocLocked(o); };
+      return l.filter(function(o){ return !late(o); }).concat(l.filter(late));
+    }
     function ocUserList(){ return ocAll().filter(function(o){ return !o.builtin; }); }   // what the manager and the export bundle deal with
     function ocUniqueId(base,except){ var id=base,n=2; while(ocAll().some(function(o){ return o.id===id&&o.id!==except; })) id=base+'-'+(n++); return id; }
     function ocSig(o){ return o.src+':'+o.id+':'+o.parts.map(function(p){ return p.key||p.file; }).join('|'); }
