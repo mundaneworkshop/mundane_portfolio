@@ -10402,6 +10402,7 @@ f 2469//2469 2470//2470 2434//2434
     // rectangle's centre. The fit is measured from a FIXED reference orientation (yaw 0 / pitch 0.28), not
     // the live one, so orbiting doesn't make the framing breathe. focusZoom stays a multiplier on top
     // (1.2 = exactly "fill"), so saved per-project views + mouse-wheel zoom keep their meaning.
+    var ABOUT_YAW=-0.62, ABOUT_PITCH=0.5;   // About view's default camera: a 3/4 front view (the figure's front, turned ~35 deg) from a little above
     var STAGE_ZOOM_REF=1.2, STAGE_REF_PITCH=0.28, STAGE_ZOOM_MIN=0.55, STAGE_NEAR_GAP=0.35;   // zoom-in stop: 55% of the fitted distance, and ≥0.35 units from the nearest content
     var _sf={ok:false,dist:2.3,k:1,sx:0,sy:0}, _sfBox=new THREE.Box3(), _sfTmp=new THREE.Box3(), _sfP=new THREE.Vector3(), _sfPts=[];
     function sfObjBox(o,out){   // world AABB of an object's VISIBLE meshes (skips the hidden kit flaps etc.)
@@ -10441,9 +10442,9 @@ f 2469//2469 2470//2470 2434//2434
       if(!_sfPts.length) return null;
       var W_=window.innerWidth, H_=window.innerHeight;
       var tY=Math.tan(camera.fov*Math.PI/360), tX=tY*camera.aspect;
-      var sp=Math.sin(STAGE_REF_PITCH), cp=Math.cos(STAGE_REF_PITCH);
+      var abt=(focused===aboutGrp&&!focusedMoon), rp=abt?ABOUT_PITCH:STAGE_REF_PITCH, sp=Math.sin(rp), cp=Math.cos(rp), cy_=abt?Math.cos(ABOUT_YAW):1, sy_=abt?Math.sin(ABOUT_YAW):0;   // About: fit the figure as the default 3/4 camera sees it
       var n=_sfPts.length, qx=new Array(n), qy=new Array(n), qd=new Array(n);   // per-point x, up, along-view offsets from the look target
-      for(var i=0;i<n;i++){ var a=_sfPts[i][0]-lookRel[0], b=_sfPts[i][1]-lookRel[1], c=_sfPts[i][2]-lookRel[2];
+      for(var i=0;i<n;i++){ var a0=_sfPts[i][0]-lookRel[0], b=_sfPts[i][1]-lookRel[1], c0=_sfPts[i][2]-lookRel[2], a=a0*cy_-c0*sy_, c=a0*sy_+c0*cy_;
         qx[i]=a; qy[i]=b*cp-c*sp; qd[i]=b*sp+c*cp; }
       var ex={minX:0,maxX:0,minY:0,maxY:0};
       function extents(d){ ex.minX=ex.minY=1e9; ex.maxX=ex.maxY=-1e9;
@@ -10451,7 +10452,8 @@ f 2469//2469 2470//2470 2434//2434
           if(x<ex.minX)ex.minX=x; if(x>ex.maxX)ex.maxX=x; if(y<ex.minY)ex.minY=y; if(y>ex.maxY)ex.maxY=y; } }
       var fill=(params.stageFill!=null?params.stageFill:0.74); if(focusedMoon) fill=Math.min(fill,0.6);
       // never let the content grow past `stageMaxH` of the WINDOW height, however big the free stage is (huge monitors)
-      var Sw=2*(st.r-st.l)/W_*fill, Sh=Math.min(2*(st.b-st.t)/H_*fill, 2*(params.stageMaxH!=null?params.stageMaxH:0.58)), lo=0.3, hi=80;
+      var sb_=st.b-(abt?72:0);   // About: leave the strip under the figure for the carousel name / counter / arrows
+      var Sw=2*(st.r-st.l)/W_*fill, Sh=Math.min(2*(sb_-st.t)/H_*fill, 2*(params.stageMaxH!=null?params.stageMaxH:0.58)), lo=0.3, hi=80;
       for(var k=0;k<22;k++){ var mid=(lo+hi)/2; extents(mid); if((ex.maxX-ex.minX)<=Sw && (ex.maxY-ex.minY)<=Sh) hi=mid; else lo=mid; }
       // ZOOM STOP: the wheel can only zoom in to STAGE_ZOOM_MIN of the fitted distance, and never so close that the
       // nearest part of the content gets within STAGE_NEAR_GAP of the lens — past that the projection maths blows up
@@ -10461,7 +10463,7 @@ f 2469//2469 2470//2470 2434//2434
       var kAct=dAct/dFit;
       var zFloor=kAct*STAGE_ZOOM_REF; if(params.focusZoom<zFloor-0.001){ params.focusZoom=zFloor; setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }   // keep the param honest so scrolling back out responds at once
       extents(dAct);
-      var tcx=(st.l+st.r)/W_-1, tcy=1-(st.t+st.b)/H_;
+      var tcx=(st.l+st.r)/W_-1, tcy=1-(st.t+sb_)/H_;
       return { dist:dFit, k:kAct, sx:Math.max(-1.2,Math.min(1.2,tcx-(ex.minX+ex.maxX)/2)), sy:Math.max(-1.2,Math.min(1.2,tcy-(ex.minY+ex.maxY)/2)) };
     }
     function stageLens(){   // call once per frame after the camera is placed
@@ -10489,7 +10491,7 @@ f 2469//2469 2470//2470 2434//2434
       grp.userData.target=1.0;
       camLook.set(0,FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,0);
       focusBaseR=FOCUSFRAME.boxR;
-      focusYaw=0; focusPitch=0.28; focusPanY=0; setFocusCam(); applyCamView('camview:'+grp.userData.id); }
+      focusYaw=(grp===aboutGrp?ABOUT_YAW:0); focusPitch=(grp===aboutGrp?ABOUT_PITCH:0.28); focusPanY=0; setFocusCam(); applyCamView('camview:'+grp.userData.id); }
     // ── ARTIFACT (moon) FOCUS + CONTENT ──────────────────────────────────────
     // Each artifact carries its own booklet content (title, description, CTA, links),
     // defaulted from the planet's sub-sections and persisted per-artifact on edit.
@@ -10547,7 +10549,7 @@ f 2469//2469 2470//2470 2434//2434
     function resetCamView(){
       if(MWSub.active){ MWSub.active.orbit.clearView(); if(MWSub.active.onBack) cvOverview(); if(typeof toast==='function') toast('view reset'); return; }
       var k=camViewKey(); if(!k) return; delete copyOvr[k]; persistCopy();
-      focusYaw=0; focusPitch=0.28; focusPanY=0; params.focusZoom=(params.stageFit!==false?STAGE_ZOOM_REF:1.0); focusBaseR=focusedMoon?MOONFRAME.boxR:FOCUSFRAME.boxR; setFocusCam(); if(typeof toast==='function') toast('view reset'); }
+      focusYaw=(focused===aboutGrp&&!focusedMoon?ABOUT_YAW:0); focusPitch=(focused===aboutGrp&&!focusedMoon?ABOUT_PITCH:0.28); focusPanY=0; params.focusZoom=(params.stageFit!==false?STAGE_ZOOM_REF:1.0); focusBaseR=focusedMoon?MOONFRAME.boxR:FOCUSFRAME.boxR; setFocusCam(); if(typeof toast==='function') toast('view reset'); }
     function focusMoon(m){ focusedMoon=m; focusYaw=0; focusPitch=0.28; focusPanY=0; focusBaseR=MOONFRAME.boxR; setFocusCam(); applyCamView('camview:'+m.userData.editId); showMoonManual(m);
       if(focused){ var _pid=focused.userData.id, _pc=CASES[_pid]; var _ps=_pc?(_pc.slug||slugify(_pc.title||_pid)):_pid;
         var _meta=getMoonMeta(m); var _ms=_meta.slug||slugify(_meta.title||''); setRoute('/work/'+_ps+'/'+_ms); } }
