@@ -51,3 +51,21 @@
 - **Unlocked figures play their idle loop** (`AnimationMixer` over the figure root, clip named `idle` else the first; `ocTick` updates it while the stage is visible, not locked, not reduced-motion). `MWOutfits.seek(t)` freezes it at t seconds (review hook, `seek(null)` resumes). Skinned meshes need `material.skinning=true` in r128, and `addFx` now recomputes `vWP`/`vNN` after skinning (`#ifdef USE_SKINNING`).
 - **Locked = the arcade's locked-ship look** (`ocGhostSet`, mirrors `carWire` in battle.js): a teal fresnel shell (normal blending, front faces, depth write) over a depth pre-pass so exactly one surface shows, plus a faint additive outline of hard edges (edges shorter than 6% of the part dropped). Static first pose; the mixer is rewound to 0 when a figure locks.
 - **Test variants** in `assets/outfits.json`: `vr-gamer` (unlocked) and `vr-gamer-locked` (same GLB, `unlockAt:1000`, "locked test"). Delete the second entry when real sig figs land.
+
+## Unlock-condition model (Oct 26 2026)
+
+An outfit has ONE condition, `unlock` (repo manifest, `copyOvr['outfitMeta'].meta[id].unlock`, or a draft), normalised by `ocCondOf()`:
+
+| type | fields | met when |
+|---|---|---|
+| `minikits` | `n` | lifetime `mw_kits_total` >= n (legacy `unlockAt: N` still reads as this, and is still written as a mirror) |
+| `destroy` | `ships:[ids]`, `n` | sum of `mw_ark_stats.kills[id]` over the chosen ships >= n. Several ship types per condition (manager: checkbox multi-select); empty list = any enemy (fighter+support+capital). |
+| `ship` | `id` | the arcade hero ship is unlocked: `MWBattle.heroUnlocked(id)`, i.e. the arcade's own `heroCond`/`condMet`, so ships.json thresholds stay authoritative. |
+
+The first enabled outfit is still the free default. `ocProg(o)` gives `{have,need}`; `ocLockLine(o)` is the text ("Shoot N more minikits…", "Destroy N more of: TIE fighter, X-wing in the Space Arcade (h/n)", "Unlock Indentured Servant 1 in the Space Arcade"); the focus view uses it when the outfit has no teaser. The minikit GLB + ×N in the carousel HUD only shows for `minikits` outfits; every lock keeps the PLAY THE SPACE ARCADE link.
+
+**Arcade side (`assets/battle/battle.js`)**: kills were already tallied per ship id and per class in `mw_ark_stats.kills`; `saveStats()` now also fires `window` event `mw:arcstats` (no detail) so the site re-checks outfit locks after kills / stat changes. `MWBattle.shipList()` (killable ships for the manager), `heroList()` and `heroUnlocked(id)` are read-only. The `mw:minikit` contract (`detail.lifetime`, `mw_kits_total`) is unchanged.
+
+**"Just unlocked" tracking**: `mw_outfits_unl` = outfits last seen unlocked; ones that newly appear after `mw:minikit` / `mw:arcstats` get "· new" and the toast. Author edits and the HUD re-baseline it silently.
+
+**OG Boba**: set its condition to `{type:'ship', id:'slave-1'}` ("Indentured Servant 1" = the Slave I hero ship) in the manager (unlock condition → "arcade hero ship unlocked"). At the time of writing no OG Boba outfit entry/GLB is in `assets/outfits.json` (only the Blender plan in `tools/sigfig-blender/plans/`), so it is set when the outfit is exported from the Sig Fig Lab.
