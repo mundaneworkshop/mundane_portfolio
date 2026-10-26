@@ -14451,7 +14451,10 @@ f 2469//2469 2470//2470 2434//2434
       return {have:ocKits(),need:c.n};
     }
     function ocIsDefault(o){ var l=ocAll().filter(function(x){ return x.enabled; }); return !!l.length&&l[0].id===o.id; }
-    function ocLocked(o){ if(ocIsDefault(o)) return false; var p=ocProg(o); return p.have<p.need; }
+    // DEBUG override (Debug panel > "Outfit locks"): force any outfit locked / unlocked whatever its condition says; per tab session, never saved with the content
+    function ocForceGet(){ try{ return JSON.parse(sessionStorage.getItem('mw_oc_force')||'{}')||{}; }catch(e){ return {}; } }
+    function ocForceSet(id,v){ var f=ocForceGet(); if(v==='auto') delete f[id]; else f[id]=v; try{ sessionStorage.setItem('mw_oc_force',JSON.stringify(f)); }catch(e){} }
+    function ocLocked(o){ var fv=ocForceGet()[o.id]; if(fv) return fv==='locked'; if(ocIsDefault(o)) return false; var p=ocProg(o); return p.have<p.need; }
     // what the visitor has to do, with progress: the carousel HUD line, and the focus view's text when the author wrote no teaser
     function ocLockLine(o){
       var c=o.unlock, p=ocProg(o), left=Math.max(0,p.need-p.have);
@@ -14459,6 +14462,26 @@ f 2469//2469 2470//2470 2434//2434
       if(c.type==='destroy'){ var what=c.ships.length?c.ships.map(ocShipName).join(', '):'enemy ships'; return 'Destroy '+left+' more of: '+what+' in the Space Arcade ('+Math.min(p.have,p.need)+'/'+p.need+')'; }
       return 'Shoot '+left+' more minikit'+(left===1?'':'s')+' in the Space Arcade to unlock ('+p.have+'/'+p.need+')';
     }
+    // The Debug panel block: one row per outfit, Auto / Locked / Unlocked. Rebuilt whenever the outfit list changes; shown in the galaxy and the focus debug panels.
+    var ocDbgSig='';
+    function ocDbgBuild(){
+      var l=ocAll().filter(function(o){ return o.enabled&&(o.parts.length||o.builtin); }), f=ocForceGet(), sig=l.map(function(o){ return o.id+':'+(f[o.id]||'auto'); }).join('|');
+      if(sig===ocDbgSig) return; ocDbgSig=sig;
+      ['dbg-galaxy','dbg-planet'].forEach(function(cid){
+        var host=document.getElementById(cid); if(!host) return; var old=host.querySelector('.oc-dbg-locks'); if(old) old.remove();
+        if(!l.length) return;
+        var box=document.createElement('div'); box.className='oc-dbg-locks';
+        box.innerHTML='<div class="menudiv"></div><div class="ctl sec"><label>Outfit locks (debug)</label></div>';
+        l.forEach(function(o){
+          var row=document.createElement('div'); row.className='ctl'; var cur=f[o.id]||'auto';
+          row.innerHTML='<label></label><div class="seg">'+['auto','locked','unlocked'].map(function(v){ return '<button data-oc-force="'+v+'"'+(v===cur?' class="on"':'')+'>'+v.charAt(0).toUpperCase()+v.slice(1)+'</button>'; }).join('')+'</div>';
+          row.firstChild.textContent=o.name;
+          row.querySelectorAll('button').forEach(function(b){ b.addEventListener('click',function(){
+            ocForceSet(o.id,b.getAttribute('data-oc-force')); ocDbgBuild(); ocUnlSnap(true); ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); if(document.body.classList.contains('oc-open')) ocRender(); }); });
+          box.appendChild(row); });
+        host.appendChild(box); });
+    }
+    setInterval(function(){ try{ ocDbgBuild(); }catch(e){} },1000);
     function ocNewList(){ try{ var a=JSON.parse(localStorage.getItem('mw_outfits_new')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
     function ocSetNew(a){ try{ localStorage.setItem('mw_outfits_new',JSON.stringify(a)); }catch(e){} }
     function ocMarkSeen(id){ var a=ocNewList(), i=a.indexOf(id); var o=ocFind(id); if(i>=0&&o&&!ocLocked(o)){ a.splice(i,1); ocSetNew(a); } }
