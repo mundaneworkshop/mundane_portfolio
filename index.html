@@ -806,6 +806,9 @@
   #outfitHud.oh-nudge .oh-sub{color:#E9A73E}
   @media (prefers-reduced-motion:no-preference){ #outfitHud{transition:opacity .25s ease} #outfitHud.oh-nudge .oh-name{animation:ohNudge .4s ease} @keyframes ohNudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}} }
   #outfitHud .oh-row{gap:34px}
+  #outfitHud .oh-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;align-self:stretch;min-width:120px}   /* name + counter stacked inside the arrow buttons' height */
+  #outfitHud .oh-mid .oh-name{min-width:0;line-height:1.2;white-space:nowrap}
+  #outfitHud .oh-mid .oh-sub{line-height:1.2;white-space:nowrap;max-width:none}
   #outfitHud .oh-lock{display:none!important}   /* the manual says how to unlock a locked outfit; no second copy in the carousel */   /* arcade carousel: big ◄ ► buttons with room between them */
   /* GALAXY KEYBOARD LEGEND: same look as the arcade's #bt-hints legend */
   #galaxyKeys{display:none;position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,'Space Mono',sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden}
@@ -1007,9 +1010,8 @@
 
   <!-- OUTFIT CAROUSEL HUD: shown under the hologram while an outfit is on it (see the OUTFITS block in the script) -->
   <div id="outfitHud" role="group" aria-label="Outfit carousel">
-    <div class="oh-row"><button type="button" class="oh-arrow" id="ohPrev" aria-label="Previous outfit">◄</button><div class="oh-name" id="ohName"></div><button type="button" class="oh-arrow" id="ohNext" aria-label="Next outfit">►</button></div>
+    <div class="oh-row"><button type="button" class="oh-arrow" id="ohPrev" aria-label="Previous outfit">◄</button><div class="oh-mid"><div class="oh-name" id="ohName"></div><div class="oh-sub" id="ohSub" role="status" aria-live="polite"></div></div><button type="button" class="oh-arrow" id="ohNext" aria-label="Next outfit">►</button></div>
     <div class="oh-lock" id="ohLock"><div class="oh-kit" id="ohKit" aria-hidden="true"></div><span class="oh-kitx" id="ohKitX"></span></div>
-    <div class="oh-sub" id="ohSub" role="status" aria-live="polite"></div>
     <button type="button" class="oh-go" id="ohGo">Play the Space Arcade →</button>
   </div>
 
@@ -10402,7 +10404,7 @@ f 2469//2469 2470//2470 2434//2434
     // rectangle's centre. The fit is measured from a FIXED reference orientation (yaw 0 / pitch 0.28), not
     // the live one, so orbiting doesn't make the framing breathe. focusZoom stays a multiplier on top
     // (1.2 = exactly "fill"), so saved per-project views + mouse-wheel zoom keep their meaning.
-    var ABOUT_YAW=-0.62, ABOUT_PITCH=0.5, ABOUT_FILL=0.94, ABOUT_REV=2;   // About view's default camera: a 3/4 front view (the figure's front, turned ~35 deg) from a little above
+    var ABOUT_YAW=-0.62, ABOUT_PITCH=0.36, ABOUT_FILL=0.94, ABOUT_REV=2;   // About view's default camera: a 3/4 front view (the figure's front, turned ~35 deg) from a little above
     var STAGE_ZOOM_REF=1.2, STAGE_REF_PITCH=0.28, STAGE_ZOOM_MIN=0.55, STAGE_NEAR_GAP=0.35;   // zoom-in stop: 55% of the fitted distance, and ≥0.35 units from the nearest content
     var _sf={ok:false,dist:2.3,k:1,sx:0,sy:0}, _sfBox=new THREE.Box3(), _sfTmp=new THREE.Box3(), _sfP=new THREE.Vector3(), _sfPts=[];
     function sfObjBox(o,out){   // world AABB of an object's VISIBLE meshes (skips the hidden kit flaps etc.)
@@ -14596,7 +14598,7 @@ f 2469//2469 2470//2470 2434//2434
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
     window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
-      cur:function(){ return outfitCur; },cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+      cur:function(){ return outfitCur; },cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null,pos:camPos.toArray(),look:camLook.toArray(),sf:{dist:_sf.dist,k:_sf.k,sx:_sf.sx,sy:_sf.sy,ok:_sf.ok}}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
@@ -14881,7 +14883,7 @@ f 2469//2469 2470//2470 2434//2434
       beamHoloPer.beamBottom.value=Math.min(1,_beamBot*_beamThemeMul*_beamFocusMul);
       beamHoloPer.beamTop.value=Math.min(1,_beamTop*_beamThemeMul*_beamFocusMul);
       var GS=(params.objScale!=null?params.objScale:1);   // global size/scale knob (logo + planets; moons scale with their parent planet)
-      if(focused===aboutGrp){ var _tw=Math.PI*2, _tg=Math.round(_logoSpin/_tw)*_tw; _logoSpin+=(_tg-_logoSpin)*0.06; _logoSpinT=t; }   // About focus: the figure turns to face the camera and holds
+      if(focused===aboutGrp){ var _tw=Math.PI*2, _gr=galaxy.rotation.y, _tg=Math.round((_logoSpin+_gr)/_tw)*_tw-_gr; _logoSpin+=(_tg-_logoSpin)*0.06; _logoSpinT=t; }   // About focus: the figure turns to face the camera and holds (its heading in the WORLD = the galaxy's drift + its own spin, so the target cancels the drift: the same heading every visit, which the 3/4 default camera is written against)
       else { _logoSpin+=(t-_logoSpinT)*0.35*params.spin*(1-(params.mwHoverSpin!=null?params.mwHoverSpin:.3)*mwHoverK); _logoSpinT=t; } logo.rotation.y=_logoSpin; logo.scale.setScalar(GS);   // accumulated so the hover can ease it without a jump (identical to t*0.35*spin when not hovered) holoUniforms.time.value=t; glowMat.uniforms.time.value=t;
       var holoFocused=focused&&focused!==aboutGrp&&params.focusMode==='hologram'; var logoOpBase=dark?0.82:0.68; holoUniforms.opacity.value=holoFocused?0:logoOpBase*(focused?fade:1);
       glowMat.uniforms.opacity.value=holoFocused?0:0.2*(focused?fade:1);
