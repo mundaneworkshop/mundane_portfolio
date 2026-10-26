@@ -979,7 +979,7 @@ function stats(){
   if(ST) return ST; try{ ST=JSON.parse(localStorage.getItem(LS_STATS)||'null'); }catch(e){ ST=null; } if(!ST||typeof ST!=='object') ST={};
   ST.kills=(ST.kills&&typeof ST.kills==='object')?ST.kills:{}; ST.planets=Array.isArray(ST.planets)?ST.planets:[]; ['hunters','plays','bestSurvive','bestScore','bestRank'].forEach(function(k){ ST[k]=ST[k]|0; }); return ST;
 }
-function saveStats(){ try{ localStorage.setItem(LS_STATS,JSON.stringify(ST)); }catch(e){} }
+function saveStats(){ try{ localStorage.setItem(LS_STATS,JSON.stringify(ST)); }catch(e){} try{ window.dispatchEvent(new CustomEvent('mw:arcstats')); }catch(e){} }   // the site's outfit unlocks re-check on this (kills are tallied per ship id in st.kills[id], and per class)
 function planetsVisited(){ return stats().planets.length; }   // different backdrop planets seen in the arcade (PLANETS: one is picked at random per visit)
 function noteSeenPlanet(name){ var st=stats(); if(st.planets.indexOf(name)>=0) return; st.planets.push(name); saveStats(); checkUnlocks(); }
 function shipName(id){ var m=BYID[id]; return (m&&m.label)||id; }
@@ -1798,6 +1798,10 @@ var MWBattle={
   assetsReady:function(){ return active&&(planetState!==1)&&HEROES.every(function(id){ return cache[id]||failed[id]; }); },   // every hero model loaded (or failed) — the lightspeed loader waits on this
   // what a results screen / leaderboard submission needs: kills, the last hero flown (and all used), time played
   shipIcon:shipIcon,
+  // read-only, for the site's outfit unlock conditions (index.html): the killable ships (id, label, class) for the manager's multi-select, and whether a hero ship is unlocked (ignores the debug 'unlock all')
+  shipList:function(){ return MODELS.filter(function(m){ return m.cls==='fighter'||m.cls==='support'||m.cls==='capital'||m.cls==='base'; }).map(function(m){ return {id:m.id,name:shipName(m.id),cls:m.cls}; }); },
+  heroList:function(){ return HEROES.map(function(id){ return {id:id,name:shipName(id)}; }); },
+  heroUnlocked:function(id){ var c=heroCond(id); return !c||condMet(c); },
   noteRank:function(r){ r=r|0; if(!(r>0)) return []; var st=stats(); if(!st.bestRank||r<st.bestRank){ st.bestRank=r; saveStats(); } checkUnlocks(); return unlockedShips(); },   // index.html: the leaderboard rank a submitted score got → returns the ships this run has unlocked so far
   summary:function(){ return { unlocked:unlockedShips(), played:session.played, score:kills, kills:kills, minikits:kitCount, fighters:tally.fighter, support:tally.support, capital:tally.capital, weights:{fighter:SCORE.fighter,support:SCORE.support,capital:SCORE.capital}, hero:session.hero, heroes:session.heroes.slice(), heroIds:session.heroIds.slice(), died:!!session.died, seconds:session.played?Math.round((performance.now()-session.t0)/1000):0 }; },
   _explode:function(s){ startDying(s); }, _noteKill:function(id,cls,hunted){ kills+=SCORE[cls]||1; if(tally[cls]!=null) tally[cls]++; noteKill({id:id,cls:cls},!!hunted); },   // test hook: count a hero kill without shooting
