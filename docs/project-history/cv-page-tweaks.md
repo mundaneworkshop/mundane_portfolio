@@ -44,4 +44,7 @@
   - One-liner top = max(16% of the window height, 40px under the breadcrumb / toggle) (`cvHeroPlace`).
   - Button emphasis inverted: **Start a chat is primary**, Download CV secondary (`cvCtaBtn(kind)`); the stop booklet's own Download CV is unchanged.
   - The view toggle moved from top centre to **beside the breadcrumb** (16px after it, centred on its row) in the new Secondary appearance (`.bric-seg--secondary`); when a long stop title leaves no room before the right-hand controls it drops under the breadcrumb, left-aligned (`placeView`, re-run on breadcrumb changes and resize). The filled toggle at top centre was competing with the CTAs right under it.
+- **Oct 27 round 7:**
+  - List → Immersive always lands zoomed out on the whole route with the one-liner (`cvApplyView` calls `cvOverview()`); the ship moves to the card that was in focus. Immersive → List with nothing open starts at the top (`cvRenderList` resets the scroll when there's no `cvSelId`; it used to keep the last visit's scroll and re-focus that card).
+  - List starfield now copies the immersive route's own stars (`buildCVRoute`: one colour `0x8fe6df` at 0.7 opacity, every star the same brightness, evenly scattered) instead of the galaxy's dim-to-bright curve, whose faint specks read far denser at the same count of visible stars. ~0.08 stars per 1000px² over three layers (0.04 / 0.025 / 0.015), no clumps.
 - The render loop is paused while the list shows (`animate()` checks `cvListOn && cvScene.active`).
