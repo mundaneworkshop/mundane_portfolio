@@ -282,7 +282,7 @@
   /* SOURCE :root design tokens, scoped so they don't pollute the holotable globals */
   /* The manual keeps its own scope but no longer its own palette: it is a .bric-dark subtree (the screen stays dark in light mode)
      and every value below is a BRIC token. Text is the solid ladder (primary / secondary / tertiary). */
-  #cs-root {
+  #cs-root, #cvList, #cvHero {
     --bg:         var(--bric-surface-base);
     --surface:    var(--bric-surface-raised);
     --amber:      var(--bric-register-amber-text);
@@ -611,18 +611,72 @@
   .cvrlbl .cvrlbl-t{font-family:var(--display);font-weight:500;font-size:12px;letter-spacing:.5px;color:#cfe8e3;text-transform:uppercase;white-space:nowrap}
   .cvrlbl .cvrlbl-s{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;color:#6b8a85;white-space:nowrap}
   .cvrlbl:hover .cvrlbl-t,.cvrlbl.sel .cvrlbl-t{color:#F0D080}
+  .cvrlbl.hov .cvrlbl-t{color:#F0D080}   /* node hovered in the scene (or its label): same highlight as the label's own :hover */
+  /* ── CV view toggle (Immersive / List: the BRIC segmented toggle, assets/bric-components.css) at the top centre + the list view ── */
+  #cvView{position:fixed;top:16px;left:22px;width:max-content;visibility:hidden}   /* fixed to the viewport, beside the breadcrumb (placed by placeView in wireCVView; hidden until placed) */
+  #cvView.placed{visibility:visible}
+  #cvListBar{position:fixed;left:0;right:0;top:0;height:112px;z-index:16;display:none;pointer-events:none;background:linear-gradient(to bottom,var(--bric-surface-scene) 62%,transparent)}   /* the page's fixed chrome (breadcrumb, toggle, sound) sits on this, not on scrolling cards */
+  body.cv-list #cvListBar{display:block}
+  @media (max-width:700px){ #cvListBar{height:140px;background:linear-gradient(to bottom,var(--bric-surface-scene) 74%,transparent)} }   /* a wrapped breadcrumb + the toggle under it */
+  body.cv-list .glb-up, body.cv-list #cvRouteLayer, body.cv-list #cvFxCanvas, body.cv-list #cs-root.cs-focus-panel #manual-scene{display:none!important}
+  #cvList{position:fixed;inset:0;z-index:15;display:none;overflow-y:auto;overscroll-behavior:contain;background:var(--bric-surface-scene);color:var(--c-primary);scrollbar-width:thin;scrollbar-color:var(--teal-dim) transparent}
+  body.cv-list #cvList{display:block}
+  /* starfield: three canvas layers (the galaxy's density and brightness spread, pixel-snapped and posterized when drawn) that drift at
+     different rates as the page scrolls (transform only; still under reduced motion) */
+  #cvList .cvl-sky{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+  #cvList .cvl-stars{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;will-change:transform}
+  /* the timeline (rail, nodes, the focus pulse) is drawn on a low-res canvas behind the cards: pixelated + posterized like the scene */
+  #cvList .cvl-tl{position:fixed;left:0;top:0;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
+  #cvList .cvl-wrap{position:relative;max-width:820px;margin:0 auto;padding:128px 24px 50vh}
+  #cvList .cvl-hero{position:relative;margin:0 0 48px 56px;will-change:transform,opacity}
+  #cvList .cvl-head{font-family:var(--f-d);font-size:32px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;color:var(--c-primary);margin:0 0 24px;max-width:680px;text-wrap:balance}
+  #cvList .cvl-end{margin:48px 0 0 56px}
+  .cvl-ctas{display:flex;flex-wrap:wrap;gap:var(--bric-space-1-5-stud)}   /* Download CV (primary) + Start a chat (secondary) */
+  /* immersive: the same one-liner + buttons, centred under the view toggle while the whole route is in view (no stop open).
+     Glyph-decodes in line by line (GFX), fades out when a stop opens. Top is set under the toggle by cvHeroPlace. */
+  #cvHero{position:fixed;left:0;right:0;top:56px;margin-inline:auto;width:min(720px,calc(100% - 32px));z-index:20;display:none;text-align:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),visibility 0s linear var(--bric-float-duration-short)}
+  body.mw-cvroute:not(.cv-list) #cvHero{display:block}
+  #cvHero.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),visibility 0s}
+  #cvHero .cvh-line{display:block;font-family:var(--f-d);font-size:22px;font-weight:700;letter-spacing:-0.01em;line-height:1.3;color:var(--c-primary);margin-inline:auto;width:max-content;max-width:100%}
+  #cvHero .cvl-ctas{justify-content:center;margin-top:var(--bric-space-2-stud)}
+  @media (prefers-reduced-motion:reduce){ #cvHero,#cvHero.on{transition:none} }
+  @media (max-width:700px){ #cvHero .cvh-line{font-size:16px} }
+  /* the timeline: the route's star path stood upright on the left. --cvl-rail-x / --cvl-node-y place the canvas-drawn rail and nodes against each card */
+  #cvList .cvl-track{--cvl-rail-x:20px;--cvl-node-y:42px;position:relative;display:flex;flex-direction:column;gap:var(--bric-space-3-stud);padding-left:56px}
+  #cvList .cvl-item{position:relative;padding:28px 30px;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--border-dim) 1px,transparent 1px);background-size:16px 16px;cursor:pointer;opacity:.42;transform:scale(.98);transform-origin:left center;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),transform var(--bric-float-duration-short) var(--bric-float-easing);--bric-ret-arm:16px}
+  #cvList .cvl-item.focus{opacity:1;transform:none;cursor:default}
+  #cvList .cvl-item.focus .mb-corner{border-color:var(--amber)}
+  #cvList .cvl-item.focus .manual-title{color:var(--amber-hot)}
+  @media (hover:hover){ #cvList .cvl-item:not(.focus):hover{opacity:.72;transform:none} #cvList .cvl-item:not(.focus):hover .manual-title{color:var(--amber-hot)} }   /* another card under the pointer: lifts toward focus while the reticle frames it (▸ FOCUS) */
+  #cvList .cvl-item.branch{margin-left:28px}
+  #cvList .manual-title{font-size:22px;margin-bottom:12px;transition:color var(--bric-snap-duration-normal) linear}
+  #cvList .manual-subtitle{margin:-4px 0 12px}
+  #cvList .manual-framing{max-width:none}
+  #cvList .cvl-item .snap-cell{gap:var(--bric-space-3-stud);align-items:baseline}   /* room between a label and a value that wraps; no row rule (it fought the card's dot grid) */
+  #cvList .cvl-item .mb-corner{transition:border-color var(--bric-snap-duration-normal) linear}
+  #cvList .manual-link{max-width:100%;min-width:0}   /* a long link label truncates instead of pushing the page sideways on a phone */
+  #cvList .manual-link .ml-label{overflow:hidden;text-overflow:ellipsis}
+  @media (prefers-reduced-motion:reduce){
+    #cvList .cvl-item,#cvList .manual-title,#cvList .cvl-item .mb-corner{transition:none}
+  }
+  @media (max-width:700px){
+    #cvList .cvl-wrap{padding:120px 16px 50vh}
+    #cvList .cvl-hero{margin:0 0 36px 32px}
+    #cvList .cvl-head{font-size:24px}
+    #cvList .cvl-end{margin:36px 0 0 32px}
+    #cvList .cvl-track{--cvl-rail-x:8px;--cvl-node-y:35px;padding-left:32px;gap:var(--bric-space-2-stud)}
+    #cvList .cvl-item.branch{margin-left:14px}
+    #cvList .cvl-item{padding:22px 20px}
+    #cvList .cvl-item .snap-cell{gap:var(--bric-space-2-stud)}
+  }
   .cvrlbl.dis .cvrlbl-t{color:#5a6f6b}
   .cvrlbl.dis .cvrlbl-s{color:#41524f}
   .cvrlbl-ctl{display:none;gap:4px;flex-wrap:wrap;justify-content:center;max-width:150px}
   body.editing .cvrlbl-ctl{display:flex}
   .cvrlbl-ctl button{font-family:var(--mono);font-size:11px;line-height:1;color:#78E0D6;background:rgba(8,14,13,.8);border:1px solid rgba(90,191,184,.4);border-radius:2px;padding:3px 6px;cursor:pointer}
   .cvrlbl-ctl button:hover{border-color:#5ABFB8;color:#AAF5EE}
-  #cvRouteCtl{position:absolute;top:58px;left:22px;z-index:21;display:none;flex-direction:column;gap:8px;align-items:flex-start}
+  #cvRouteCtl{position:absolute;top:84px;right:22px;z-index:21;display:none;flex-direction:column;gap:8px;align-items:flex-end}   /* right edge, under the sound switch / author toolbar: the left is the breadcrumb, which wraps to two rows on a node */
   #cvRouteCtl.show{display:flex}
-  /* camera control hint: middle of the top edge (fixed to the viewport, so it ignores the left-hand control stack it lives in). Clicking empty space zooms back out to the whole route, so there is no Recenter button. */
-  #cvHint{position:fixed;top:18px;left:0;right:0;margin-inline:auto;width:max-content;pointer-events:none}
-  @media (max-width:700px){ #cvHint{top:52px} }   /* clear of the breadcrumb on a phone */
-  .cvrlbl{--bric-ret-arm:8px;--bric-ret-outset:2px}   /* the reticle frames a node label tightly (labels are targets: see where they are built) */
   .cvr-pill{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:rgba(8,14,13,.7);border:1px solid rgba(90,191,184,.4);border-radius:2px;padding:8px 11px;cursor:pointer;backdrop-filter:blur(4px)}
   .cvr-pill:hover{border-color:#5ABFB8}
   .cvr-hint{color:#6b8a85;cursor:default;border:none;background:transparent;padding:8px 2px;backdrop-filter:none}
@@ -1397,9 +1451,15 @@
   </div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
+    <div class="bric-seg bric-seg--sm bric-seg--secondary" id="cvView" role="radiogroup" aria-label="CV view" data-bric-target>
+      <button type="button" class="bric-seg__opt" role="radio" data-cv-view="immersive" aria-checked="true" tabindex="0">Immersive</button>
+      <button type="button" class="bric-seg__opt" role="radio" data-cv-view="list" aria-checked="false" tabindex="-1">List</button>
+    </div>
     <label class="cvr-pill glb-up" id="cvShipUp" data-bric-target data-bric-label="">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
-    <span class="cvr-pill cvr-hint" id="cvHint">drag orbit · shift-drag pan Y · scroll zoom</span>
   </div>
+  <div id="cvHero" class="bric-dark"></div>
+  <div id="cvListBar"></div>
+  <div id="cvList" class="bric-dark" aria-label="Career path, list view"></div>
 
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
   <div id="contactFocus" class="altfocus">
@@ -10274,12 +10334,20 @@ f 2469//2469 2470//2470 2434//2434
       },300);
       function targets(x,y,el){
         if(kb){ var kl=kbList(), kt=kl&&kl.filter(function(t){ return t.key===kb.key; })[0]; if(kt){ return {key:kt.key, label:kt.label, rect:function(){ var f=(kt.key==='figure')?(ocFigObj()&&ocFigRectObj()):kt.obj; return f?rectOf(f):null; }}; } kb=null; }
-        var cv=renderer&&renderer.domElement; if(!cv||el!==cv) return null;   // pointer must be on the canvas itself, not a panel above it
+        var cv=renderer&&renderer.domElement, _onLbl=!!(el&&el.closest&&el.closest('.cvrlbl'));
+        if(!cv||(el!==cv&&!(_onLbl&&cvScene.active))) return null;   // pointer must be on the canvas itself, not a panel above it (a CV node's label is part of the node)
         if(arcadeActive) return null;
         if(mwPhase==='entry'){   // the entry monogram: while the pointer is over the mark (mwHover) the corner marks expand round it and show ENTER at its top-left corner
           if(!mwHover||!_mwHit) return null;
           return {key:'monogram', label:'ENTER', arm:params.mwRetArm||28, weight:3, glow:true, outset:params.mwRetOutset!=null?params.mwRetOutset:6,
                   rect:function(){ if(!_mwHit) return null; var r=_mwHit.R*.92; return {left:_mwHit.cx-r,top:_mwHit.cy-r,right:_mwHit.cx+r,bottom:_mwHit.cy+r}; }};
+        }
+        if(mwPhase==='docked'&&!editMode&&cvScene.active){   // CV route: node + its label are ONE target (hovering either lights both); the frame spans the pair
+          var _cn=cvHoverId&&cvNodeRec(cvHoverId); if(!_cn) return null;
+          return {key:'cvnode:'+_cn.id, label:'\u25B8 VIEW', arm:8, outset:2, rect:function(){ var n=cvNodeRec(_cn.id), r=n&&rectOf(n.mesh); if(!r) return null;
+            var u={left:r.left-4,top:r.top-4,right:r.right+4,bottom:r.bottom+4}, lr=n.lbl.style.display!=='none'&&n.lbl.getBoundingClientRect();
+            if(lr&&lr.width){ u.left=Math.min(u.left,lr.left); u.top=Math.min(u.top,lr.top); u.right=Math.max(u.right,lr.right); u.bottom=Math.max(u.bottom,lr.bottom); }
+            return u; }};
         }
         if(mwPhase!=='docked'||editMode||document.body.classList.contains('mw-altfocus')) return null;
         if(focused){
@@ -11116,6 +11184,7 @@ f 2469//2469 2470//2470 2434//2434
     };
 
     // ══════ CV — 3D HYPERSPACE ROUTE (branchable tree; CV focus view) ══════
+    var cvListOn=false, cvHoverId=null, cvFrameMode='overview';   // list view on (render loop paused while it shows) / node under the pointer
     var cvLaneGroup=null, cvShipGroup=null, cvShipModel=null, cvNodes=[], cvSelId=null, cvData=null, cvAtNode=false, cvRootLabel='';
     var cvFxCanvas=null, cvFxCtx=null, cvPulseColor='#F0D080', cvPulseSize=22, cvPulseDur=1.6;   // active-node pulse drawn on a low-res canvas (pixelated like message stars)
     var cvGlimmerAmp=0.18;   // node glimmer — HSL lightness swing amplitude (0=off)
@@ -11127,7 +11196,7 @@ f 2469//2469 2470//2470 2434//2434
     // Orbit camera state now lives in the shared rig (MWOrbit, above). What used to be
     // CV_OVERVIEW is the rig's `home` framing, and 'cvview' its saved-default-view key.
     var cvOrbit=new MWOrbit({look:new THREE.Vector3(0,1,-3.5), yaw:0.5, pitch:0.28, radius:16, viewKey:'cvview'},
-                            {pitch:[-0.15,1.35], radius:[3,24], panY:[-3,9]});
+                            {pitch:[-0.15,1.35], radius:[3,40], panY:[-3,9]});
     // The CV route AS a sub-scene. Only enter/exit and the camera live in the primitive;
     // everything CV-specific below (branching tree, ship, pulse FX) stays exactly where it was.
     var cvScene=new MWSubScene({
@@ -11135,7 +11204,8 @@ f 2469//2469 2470//2470 2434//2434
       hits:function(){ return cvNodes.map(function(n){ return n.hit||n.mesh; }); },
       hitId:function(o){ for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].hit===o||cvNodes[i].mesh===o) return cvNodes[i].id; } return null; },
       onPick:function(id){ selectCV(id); },
-      onBack:function(){ if(cvAtNode) cvOverview(); }   // node → overview; at overview, empty clicks do nothing (exit via breadcrumb)
+      onBack:function(){ cvOverview(); },   // empty space: back to the overview AND re-centre the whole route in the free stage (also from the overview itself)
+      onExit:function(){ cvHoverId=null; document.body.classList.remove('cv-list'); var _h=document.getElementById('cvHero'); if(_h) _h.classList.remove('on'); window.MWStage=null; var ms=document.getElementById('manual-scene'); if(ms){ ms.removeAttribute('data-ml'); ms.style.removeProperty('--ml-gap'); } }   // hand the stage back (project focus publishes its own)
     });
     // Career nodes (tree): parent = the node this one connects from (null = root). branch=true for off-path nodes.
     var CV_DEFAULT=[
@@ -11253,7 +11323,7 @@ f 2469//2469 2470//2470 2434//2434
       for(var i=cvLaneGroup.children.length-1;i>=0;i--){ var o=cvLaneGroup.children[i]; cvLaneGroup.remove(o); if(o.geometry)o.geometry.dispose(); if(o.material)o.material.dispose(); }
       var layer=document.getElementById('cvRouteLayer');
       Array.prototype.slice.call(layer.querySelectorAll('.cvrlbl')).forEach(function(el){ el.remove(); });
-      cvNodes=[];
+      cvNodes=[]; cvHoverId=null;
       // connecting lines (parent → node); disabled node = dashed "path not taken"
       cvData.forEach(function(n){ if(!n.parent) return; var p=cvNodeById(n.parent); if(!p) return;
         var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p.pos[0],p.pos[1],p.pos[2]),new THREE.Vector3(n.pos[0],n.pos[1],n.pos[2])]);
@@ -11267,7 +11337,7 @@ f 2469//2469 2470//2470 2434//2434
         var mesh=new THREE.Mesh(new THREE.SphereGeometry(0.16,18,18),new THREE.MeshBasicMaterial({color:n.disabled?0x2f5f59:0x78E0D6,fog:false,transparent:true,opacity:n.disabled?0.45:1}));
         mesh.position.set(n.pos[0],n.pos[1],n.pos[2]); cvLaneGroup.add(mesh);
         if(!n.disabled) mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.27,14,14),new THREE.MeshBasicMaterial({color:0x5ABFB8,transparent:true,opacity:0.16,depthWrite:false,fog:false})));
-        var lbl=document.createElement('div'); lbl.className='cvrlbl'+(n.disabled?' dis':''); lbl.setAttribute('data-bric-target',''); lbl.setAttribute('data-bric-label','');   // the page's pointer cursor on a label is the reticle here, not the native hand
+        var lbl=document.createElement('div'); lbl.className='cvrlbl'+(n.disabled?' dis':'');   // not its own reticle target: hovering it targets the node (targets(), one frame round node + label)
         lbl.innerHTML='<div class="cvrlbl-txt"><div class="cvrlbl-t"></div><div class="cvrlbl-s"></div></div>'
           +'<div class="cvrlbl-ctl edit-only"><button data-act="linear" title="add linear step">＋</button><button data-act="branch" title="add branch">⑂</button>'
           +'<button data-act="convert" title="linear ⇄ branch">⇄</button><button data-act="disable" title="toggle disabled">⊘</button><button data-act="del" title="delete">✕</button></div>';
@@ -11276,7 +11346,8 @@ f 2469//2469 2470//2470 2434//2434
         (function(node){ lbl.addEventListener('click',function(e){
           var b=e.target.closest&&e.target.closest('[data-act]');
           if(b){ e.stopPropagation(); var a=b.getAttribute('data-act'); if(a==='linear')cvAddLinear(node.id); else if(a==='branch')cvAddBranch(node.id); else if(a==='convert')cvToggleBranch(node.id); else if(a==='disable')cvToggleDisabled(node.id); else if(a==='del')cvDeleteNode(node.id); return; }
-          selectCV(node.id); }); })(n);
+          selectCV(node.id); });
+          lbl.addEventListener('pointerenter',function(e){ if(!e.pointerType||e.pointerType==='mouse') cvSetHover(node.id); }); lbl.addEventListener('pointerleave',function(){ cvSetHover(null); }); })(n);
         layer.appendChild(lbl);
         var hit=new THREE.Mesh(new THREE.SphereGeometry(0.55,10,10),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,fog:false}));   // generous invisible click target (sphere is tiny at overview zoom)
         hit.position.copy(mesh.position); cvLaneGroup.add(hit);
@@ -11327,34 +11398,82 @@ f 2469//2469 2470//2470 2434//2434
       cvPersist(); rebuildCVRoute();
     }
     function enterCVRoute(grp){
+      cvListOn=(cvViewPref()==='list' && !editMode);   // decided before selectCV so a list-view visit never raises the booklet or flies the camera
       if(window.MWOutfitEvent){ MWOutfitEvent('visitCV'); MWOutfitEvent('caseStudy','cv'); }   // unlock engine: the CV page was visited (every way in comes through here)
       buildCVRoute();
       cvScene.enter(grp);   // galaxy hides, route shows, camera handed to cvOrbit
       cvRootLabel=crumbTitle(grp,'CV');
       var _latest=cvLatestId();
-      if(_latest) selectCV(_latest);   // latest is the active node (booklet, breadcrumb, gold/pulse)
-      cvFitOverview();   // ...but the DEFAULT CAMERA frames the WHOLE route (auto-fit), not dollied into the node
+      if(_latest) cvShipGoTo(_latest);   // the ship parks at the newest stop...
+      cvOverview();   // ...but nothing is open: the whole route is framed and the one-liner shows (Oct 27; before, the newest stop opened with its booklet)
+      cvApplyView(false); cvHeroSync();
     }
-    // Camera-only: frame the whole route's bounding box so spread/variegated layouts stay in
-    // view. fitPoints() ends by restoring a saved default view over the auto-fit — including the
-    // Jul 9 2026 all-four-fields guard, which now lives in MWOrbit.restoreSaved().
-    function cvFitOverview(){
-      cvOrbit.fitPoints(cvData&&cvData.length ? cvData.map(function(n){ return n.pos; }) : null);
+    // ── Stage framing ──────────────────────────────────────────────────────────
+    // The node manual is laid out by CS.layoutManual (dock, or the drawer on phones) and publishes the free
+    // rectangle of the screen as window.MWStage — the same contract stageFit() uses for a project's kit box and
+    // the outfit About view. The CV camera is an orbit rig rather than a fixed box, so instead of a lens shift it
+    // solves (look, radius) for the CURRENT yaw/pitch so the points' projected bounds fit inside that rectangle
+    // with margins, centred. Overview (no manual up) = the whole viewport below the breadcrumb row.
+    var cvFrameCam=new THREE.PerspectiveCamera(48,1,0.1,400), _cvV=new THREE.Vector3(), _cvR=new THREE.Vector3(), _cvU=new THREE.Vector3(), _cvLook=new THREE.Vector3();
+    function cvNodeRec(id){ for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].id===id) return cvNodes[i]; } return null; }
+    function cvStageRect(){
+      var W_=window.innerWidth, H_=window.innerHeight, st=window.MWStage;
+      if(cvAtNode && !cvListOn && st && st.W===W_ && st.H===H_) return {l:st.l,t:st.t,r:st.r,b:st.b};
+      var hr=document.getElementById('cvHero'), t=48; if(hr&&!cvListOn&&cvHeroWanted()){ var b=hr.getBoundingClientRect().bottom; if(b>t) t=Math.round(b); }   // the overview frames the route under the one-liner
+      return {l:0,t:t,r:W_,b:H_};
     }
-    function cvOverview(){ cvFitOverview();   // frame the whole route (holds it in view regardless of variegation)
-      cvAtNode=false; cvSelId=null; cvMarkLabels();
+    // pts: [[x,y,z]…]; opt.radius fixes the distance (node fly-to), opt.pad = px the labels need beyond the points
+    function cvFrame(pts,opt){
+      if(!pts||!pts.length) return; opt=opt||{};
+      var o=cvOrbit, W_=window.innerWidth, H_=window.innerHeight, rc=cvStageRect(), cam=cvFrameCam;
+      var M=Math.round(Math.max(20,Math.min(72,Math.min(rc.r-rc.l,rc.b-rc.t)*0.08)));   // margin on every side
+      var pad=opt.pad||{l:Math.min(96,W_*0.18),r:Math.min(96,W_*0.18),t:20,b:56};      // label half-width either side, the label hung under a node
+      var L=rc.l+M+pad.l, R=rc.r-M-pad.r, T=rc.t+M*0.6+pad.t, B=rc.b-M-pad.b;
+      if(R-L<48){ var cx=(rc.l+rc.r)/2; L=cx-24; R=cx+24; } if(B-T<48){ var cy=(rc.t+rc.b)/2; T=cy-24; B=cy+24; }
+      var mn=[1e9,1e9,1e9], mx=[-1e9,-1e9,-1e9]; pts.forEach(function(q){ for(var i=0;i<3;i++){ if(q[i]<mn[i])mn[i]=q[i]; if(q[i]>mx[i])mx[i]=q[i]; } });
+      var look=_cvLook.set((mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2);
+      cam.fov=camera.fov; cam.aspect=W_/H_; cam.up.set(0,1,0); cam.updateProjectionMatrix();
+      var cp=Math.cos(o.pitch), sp=Math.sin(o.pitch), fov=cam.fov*Math.PI/180;
+      function place(rad){ cam.position.set(look.x+Math.sin(o.yaw)*cp*rad, look.y+sp*rad, look.z+Math.cos(o.yaw)*cp*rad); cam.lookAt(look); cam.updateMatrixWorld(true); }
+      function bounds(){ var l=1e9,t=1e9,r=-1e9,b=-1e9;
+        for(var i=0;i<pts.length;i++){ _cvV.set(pts[i][0],pts[i][1],pts[i][2]).project(cam); if(_cvV.z>1) return null;
+          var x=(_cvV.x+1)/2*W_, y=(1-_cvV.y)/2*H_; if(x<l)l=x; if(x>r)r=x; if(y<t)t=y; if(y>b)b=y; }
+        return {l:l,t:t,r:r,b:b}; }
+      var rad=opt.radius;
+      if(rad==null){ var lo=2.5, hi=90; for(var k=0;k<24;k++){ var mid=(lo+hi)/2; place(mid); var bb=bounds(); if(bb && (bb.r-bb.l)<=(R-L) && (bb.b-bb.t)<=(B-T)) hi=mid; else lo=mid; } rad=hi; }
+      for(var j=0;j<6;j++){ place(rad); var b2=bounds(); if(!b2) break;   // slide the look target so the bounds centre lands on the stage centre
+        var ex=(L+R)/2-(b2.l+b2.r)/2, ey=(T+B)/2-(b2.t+b2.b)/2, wpp=2*rad*Math.tan(fov/2)/H_;
+        _cvR.setFromMatrixColumn(cam.matrixWorld,0); _cvU.setFromMatrixColumn(cam.matrixWorld,1);
+        look.addScaledVector(_cvR,-ex*wpp).addScaledVector(_cvU,ey*wpp); }
+      o.look.copy(look); o.radius=rad;   // animate() eases the real camera toward this, so a re-frame glides
+    }
+    // Camera-only: frame the whole route in the free stage. keepAngle (resize / stage change) leaves the user's
+    // orbit angle alone; an explicit re-centre resets to the home angle — or the author's saved default angle
+    // (Save default view still stores yaw/pitch; zoom and pan are always re-solved so the route fits any window).
+    function cvFitOverview(keepAngle){ cvFrameMode='overview';
+      if(!(cvData&&cvData.length)){ cvOrbit.fitPoints(null); return; }
+      if(!keepAngle){ var o=cvOrbit, sv=(typeof copyOvr!=='undefined')&&o.viewKey&&copyOvr[o.viewKey]; o.yaw=o.home.yaw; o.pitch=o.home.pitch; if(sv){ if(sv.yaw!=null)o.yaw=sv.yaw; if(sv.pitch!=null)o.pitch=sv.pitch; } }
+      cvFrame(cvData.map(function(n){ return n.pos; }));
+    }
+    // A resize, or the manual changing height / mode, moves the free rectangle: glide back into it.
+    var _cvReRaf=0;
+    function cvReframeSoon(){ if(_cvReRaf) return; _cvReRaf=requestAnimationFrame(function(){ _cvReRaf=requestAnimationFrame(function(){ _cvReRaf=0;   // two frames: let CS.layoutManual re-measure first
+      if(!cvScene.active||cvListOn) return;
+      if(cvFrameMode==='node'&&cvSelId){ var sn=cvNodeById(cvSelId); if(sn) cvFlyTo(sn,true); } else cvFitOverview(true); }); }); }
+    window.addEventListener('resize',cvReframeSoon);
+    window.addEventListener('mwstage',cvReframeSoon);
+    function cvOverview(){ cvAtNode=false; cvSelId=null; cvFrameMode='overview'; cvHeroSync(); cvFitOverview();   // frame the whole route (holds it in view regardless of variegation); cvAtNode=false first so the stage is the full viewport
+      cvMarkLabels(); cvListMark();
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');   // hide the node booklet at overview level
       if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);
     }
-    function cvFlyTo(node){ if(!node) return;
-      // ORDER MATTERS: dolly in first — panelGapOffset() measures against the NEW radius, so
-      // setting it afterwards would frame the node against the old zoom.
-      cvOrbit.radius=4.4;   // keep current yaw/pitch
-      var off=cvOrbit.panelGapOffset(document.getElementById('manual-scene'));   // node rises into the gap above the manual
-      cvOrbit.flyTo(node.pos, null, off);
+    function cvFlyTo(node,keepRadius){ if(!node) return; cvFrameMode='node';
+      // the node lands at the centre of the free stage (beside / above the manual), at a close dolly unless the user has zoomed
+      cvFrame([node.pos],{radius:keepRadius?cvOrbit.radius:4.4,pad:{l:0,r:0,t:0,b:0}});
     }
-    function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFlyTo(n); cvShipGoTo(id); cvShowBooklet(id); cvMarkLabels();
-      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level
+    function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvShipGoTo(id); if(cvListOn){ cvFrameMode='node'; cvMarkLabels(); cvListMark(true); } else { cvFlyTo(n); cvShowBooklet(id); cvMarkLabels(); }
+      if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);   // the breadcrumb stops at CV (Oct 27): no stop level, so it never changes length and the view toggle beside it stays put
+      cvHeroSync();
     }
     function cvUpdateShipUnderColor(){ if(!cvShipGroup) return;
       var shipOnSelected=(cvShipNodeId&&cvSelId&&cvShipNodeId===cvSelId);
@@ -11430,6 +11549,232 @@ f 2469//2469 2470//2470 2434//2434
         cvFxCtx.globalAlpha=1; cvFxCtx.fillStyle=g; cvFxCtx.beginPath(); cvFxCtx.arc(cx,cy,rr,0,6.2832); cvFxCtx.fill();
       }
     }
+    // ══════ CV VIEW: immersive (default) ⇄ list ══════
+    // List = the same node data (title, kicker, sub, body, tags, snapshot rows, links, CTA) as a normal scrolling page,
+    // built from the manual's own classes so type, tokens, tags, buttons and corner marks are the manual's. The WebGL loop is
+    // paused while it shows (animate) and the choice is remembered per browser (localStorage, wrapped).
+    function cvViewPref(){ try{ return localStorage.getItem('mw_cvview')==='list'?'list':'immersive'; }catch(e){ return 'immersive'; } }
+    function cvStops(){   // reading order = arrow-key order: depth-first, the main path before any side branch
+      var kids={}, roots=[]; cvData.forEach(function(n){ if(n.parent&&cvNodeById(n.parent)){ (kids[n.parent]=kids[n.parent]||[]).push(n); } else roots.push(n); });
+      var out=[]; function walk(n){ out.push(n); (kids[n.id]||[]).slice().sort(function(a,b){ return (a.branch?1:0)-(b.branch?1:0); }).forEach(walk); }
+      roots.forEach(walk); return out;
+    }
+    // The list: solid stops only (a dimmed "path not taken" stays a 3D-only detail), newest first. The route has no dates, so
+    // time = distance along it: deeper is later, and at the same depth the main path comes before a side branch.
+    function cvListStops(){
+      return cvStops().map(function(n,i){ return {n:n,i:i,d:cvNodeDepth(n)}; }).filter(function(x){ return !x.n.disabled; })
+        .sort(function(a,b){ return (b.d-a.d)||((a.n.branch?1:0)-(b.n.branch?1:0))||(a.i-b.i); }).map(function(x){ return x.n; });
+    }
+    function cvEl(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+    function cvReduced(){ return !!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches); }
+    // The list's parallax sky: the immersive CV route's own starfield (buildCVRoute: one star colour at 0.7 opacity, every star the same
+    // brightness, scattered evenly) split into three drifting canvas layers. Drawn at 1/params.pixel and scaled up nearest-neighbour,
+    // alpha posterized to params.levels. Each layer is tall enough for its whole drift, so nothing tiles or repeats. (Oct 27: the galaxy's
+    // dim-to-bright curve left a haze of faint specks that read as far denser than the immersive view, at the same count of visible stars.)
+    var CV_SKY=[{f:0.06,d:0.04,big:0},{f:0.16,d:0.025,big:0.2},{f:0.32,d:0.015,big:0.5}];   // drift rate, stars per 1000px², share drawn 2px (low-res) instead of 1. ~0.08 in all: at or just under the immersive overview's ~0.1 visible
+    function cvRng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+    function cvTokColor(host,k){ var p=document.createElement('i'); p.style.color='var('+k+')'; host.appendChild(p); var c=getComputedStyle(p).color; p.remove(); return c; }   // a token as rgb(), so a canvas can use it
+    function cvPixel(){ return Math.max(1,Math.round((typeof params!=='undefined'&&params.pixel)||2)); }
+    function cvLevels(){ return Math.max(2,Math.round((typeof params!=='undefined'&&params.levels)||24)); }
+    function cvDrawSky(host){
+      var sky=host.querySelector('.cvl-sky'); if(!sky) return; sky.textContent='';
+      var P=cvPixel(), L=cvLevels(), w=host.clientWidth, h=host.clientHeight, travel=Math.max(0,host.scrollHeight-h);
+      var star=(typeof DARK!=='undefined'&&DARK.star!=null)?'#'+('00000'+DARK.star.toString(16)).slice(-6):cvTokColor(host,'--bric-content-primary');   // the scene's star colour (the route's stars use the same value)
+      CV_SKY.forEach(function(t,li){
+        var lh=Math.ceil(h+travel*t.f)+8, c=document.createElement('canvas'); c.className='cvl-stars';
+        c.width=Math.ceil(w/P); c.height=Math.ceil(lh/P); c.style.width=(c.width*P)+'px'; c.style.height=(c.height*P)+'px';
+        var g=c.getContext('2d'), r=cvRng(7+li*101), n=Math.round(w*lh/1000*t.d), k;
+        g.globalAlpha=Math.round(0.7*L)/L; g.fillStyle=star;   // the route's PointsMaterial opacity, posterized
+        for(k=0;k<n;k++){ var s=r()<t.big?2:1; g.fillRect(Math.floor(r()*c.width),Math.floor(r()*c.height),s,s); }
+        c._f=t.f; sky.appendChild(c);
+      });
+    }
+    // The timeline on its own low-res canvas: a dim rail between the first and last node, lit from the newest stop down to the card in
+    // focus; teal nodes (a branch = hollow ring with a spur to its card); the focus node gold with the route's pulse (cvPulseDur).
+    var _cvTlCol=null, _cvTlLoop=0;
+    function cvTlColors(host){ return _cvTlCol||(_cvTlCol={line:cvTokColor(host,'--bric-schematic-line'),dim:cvTokColor(host,'--bric-schematic-line-dim'),solid:cvTokColor(host,'--bric-schematic-solid'),fill:cvTokColor(host,'--bric-schematic-fill'),hot:cvTokColor(host,'--bric-register-amber-planet-hot'),glow:cvTokColor(host,'--bric-fx-glow-amber-near'),bg:cvTokColor(host,'--bric-surface-scene')}); }
+    function cvDrawTimeline(t){
+      var host=document.getElementById('cvList'); if(!host) return; var cvs=host.querySelector('.cvl-tl'), track=host.querySelector('.cvl-track'); if(!cvs||!track) return;
+      var P=cvPixel(), w=Math.ceil(host.clientWidth/P), h=Math.ceil(host.clientHeight/P); if(cvs.width!==w||cvs.height!==h){ cvs.width=w; cvs.height=h; cvs.style.width=(w*P)+'px'; cvs.style.height=(h*P)+'px'; }
+      var g=cvs.getContext('2d'), C=cvTlColors(host), ts=getComputedStyle(track), tr=track.getBoundingClientRect(), top=host.getBoundingClientRect().top;
+      var rx=(tr.left+parseFloat(ts.getPropertyValue('--cvl-rail-x')))/P, ny=parseFloat(ts.getPropertyValue('--cvl-node-y'));
+      var nodes=[].map.call(host.querySelectorAll('.cvl-item'),function(el){ var r=el.getBoundingClientRect(); return {y:(r.top-top+ny)/P,x:r.left/P,branch:el.classList.contains('branch'),focus:el.classList.contains('focus')}; });
+      g.clearRect(0,0,w,h); if(!nodes.length) return;
+      var fi=0, y0=nodes[0].y, y1=nodes[nodes.length-1].y, lw=Math.max(1,Math.round(2/P)), X=Math.round(rx-lw/2); nodes.forEach(function(n,i){ if(n.focus) fi=i; });
+      g.globalAlpha=0.5; g.fillStyle=C.dim; g.fillRect(X,Math.round(y0),lw,Math.round(y1-y0));
+      g.globalAlpha=1; g.fillStyle=C.line; g.fillRect(X,Math.round(y0),lw,Math.round(nodes[fi].y-y0));
+      var dot=function(x,y,r,c){ g.fillStyle=c; g.beginPath(); g.arc(x,y,r,0,6.2832); g.fill(); };
+      nodes.forEach(function(n){ if(n.y<-30||n.y>h+30) return; var x=rx, y=Math.round(n.y);
+        if(n.branch){ g.globalAlpha=1; g.fillStyle=C.dim; g.fillRect(Math.round(x+5/P),y-Math.floor(lw/2),Math.max(0,Math.round(n.x-x-5/P)),lw);   // spur to the card
+          if(n.focus){ dot(x,y,9/P,C.glow); dot(x,y,5/P,C.hot); } else { dot(x,y,5/P,C.solid); dot(x,y,3/P,C.bg); } return; }
+        if(n.focus){ dot(x,y,11/P,C.glow); dot(x,y,6/P,C.hot); } else { dot(x,y,11/P,C.fill); dot(x,y,6/P,C.solid); } });
+      if(t!=null){ var f=nodes[fi], ph=(t/1000/(typeof cvPulseDur!=='undefined'?cvPulseDur:1.6))%1;   // the route's pulse: a ring that grows and fades
+        g.globalAlpha=0.7*(1-ph); g.strokeStyle=C.hot; g.lineWidth=lw; g.beginPath(); g.arc(rx,Math.round(f.y),(7+16*ph)/P,0,6.2832); g.stroke(); g.globalAlpha=1; }
+    }
+    function cvTlTick(t){ _cvTlLoop=0; var host=document.getElementById('cvList'); if(!cvListOn||!cvScene.active||!host||!host.querySelector('.cvl-tl')) return; cvDrawTimeline(t); _cvTlLoop=requestAnimationFrame(cvTlTick); }
+    function cvTlStart(){ if(cvReduced()){ cvDrawTimeline(null); return; } if(!_cvTlLoop) _cvTlLoop=requestAnimationFrame(cvTlTick); }   // static under reduced motion (no pulse)
+    // the CV download, after the one-liner and again at the end: the newest stop's CTA when it links somewhere, else the first one that does
+    function cvCtaBtn(kind){ kind=kind||'primary';
+      var latest=cvNodeById(cvLatestId()), cands=cvData.filter(function(m){ return !m.ctaHidden; });
+      var real=function(m){ return m&&!m.ctaHidden&&m.ctaUrl&&m.ctaUrl!=='#'; };
+      var src=real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])); if(!src) return null;
+      var cd=cvDataForBooklet(src.id), on=(src.ctaActive==null?true:!!src.ctaActive), b;
+      if(real(src)&&on){ b=cvEl('a','bric-btn bric-btn--'+kind,cd.cta); b.href=cd.ctaUrl; b.target='_blank'; b.rel='noopener'; }
+      else { b=cvEl('button','bric-btn bric-btn--'+kind,cd.cta); b.type='button'; if(!on) b.disabled=true; else b.addEventListener('click',function(){ cd.onCta(); }); }
+      return b;
+    }
+    // the pitch: one line in the list's hero, three stacked lines (one per sentence) over the immersive overview
+    var CV_HEAD_LINES=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'], CV_LIST_HEAD=CV_HEAD_LINES.join(' ');
+    // Start a chat (primary) + Download CV (secondary). The chat button has no destination yet (waiting on a Mundane Workshop address); it is not HoloNet.
+    function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn('secondary');
+      var chat=cvEl('button','bric-btn bric-btn--primary','Start a chat'); chat.type='button'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
+      if(dl) row.appendChild(dl); return row; }
+    // Immersive overview hero: shown while no stop is open and the whole route is framed; decodes in line by line, fades out when a stop opens.
+    function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'&&!editMode; }
+    function cvHeroPlace(){ var h=document.getElementById('cvHero'), seg=document.getElementById('cvView'), bc=document.getElementById('breadcrumb'); if(!h) return;   // well clear of the top bar: 16% down, and never closer than 40px under the breadcrumb / toggle
+      var y=window.innerHeight*0.16; [seg,bc].forEach(function(e){ var r=e&&e.getBoundingClientRect(); if(r&&r.height) y=Math.max(y,r.bottom+40); }); h.style.top=Math.round(y)+'px'; }
+    function cvHeroSync(){
+      var h=document.getElementById('cvHero'); if(!h||!cvData) return; var want=cvHeroWanted(), was=h.classList.contains('on');
+      if(want&&!h.childElementCount){ CV_HEAD_LINES.forEach(function(t){ h.appendChild(cvEl('span','cvh-line',t)); }); h.appendChild(cvCtaRow()); }
+      if(want===was) return; h.classList.toggle('on',want); if(!want) return;
+      cvHeroPlace();
+      if(typeof GFX!=='undefined') [].forEach.call(h.querySelectorAll('.cvh-line'),function(l,i){ setTimeout(function(){ if(h.classList.contains('on')) GFX.decodeEl(l,'Lbl'); },i*120); });   // the site's glyph decode (off under reduced motion)
+    }
+    var cvListFocusId=null, _cvlRaf=0;
+    function cvRenderList(){
+      var host=document.getElementById('cvList'); if(!host||!cvData) return;
+      host.textContent=''; if(!cvSelId) host.scrollTop=0;   // nothing open (from the zoomed-out route): start at the top, not the last visit's scroll
+      cvListFocusId=null; _cvTlCol=null; var wrap=cvEl('div','cvl-wrap'), stops=cvListStops();
+      var sky=cvEl('div','cvl-sky'); sky.setAttribute('aria-hidden','true'); host.appendChild(sky);
+      var tl=cvEl('canvas','cvl-tl'); tl.setAttribute('aria-hidden','true'); host.appendChild(tl);
+      var hero=cvEl('header','cvl-hero');
+      hero.appendChild(cvEl('h1','cvl-head',CV_LIST_HEAD));
+      hero.appendChild(cvCtaRow());
+      wrap.appendChild(hero);
+      var track=cvEl('div','cvl-track');
+      stops.forEach(function(m){
+        var it=cvEl('article','cvl-item'+(m.branch?' branch':'')); it.id='cvl-'+m.id; it.setAttribute('data-id',m.id);
+        ['tl','tr','bl','br'].forEach(function(c){ it.appendChild(cvEl('div','mb-corner '+c)); });
+        it.appendChild(cvEl('h2','manual-title',m.title||''));
+        if(m.sub) it.appendChild(cvEl('div','manual-subtitle',m.sub));
+        if(m.body) it.appendChild(cvEl('div','manual-framing',m.body));
+        var tg=cvTagArr(m); if(tg.length){ var tw=cvEl('div','manual-tags'); tg.forEach(function(t){ tw.appendChild(cvEl('div','manual-tag bric-tag',t)); }); it.appendChild(tw); }
+        var sn=(m.snapshot||[]).filter(function(r){ return r&&(r.k||r.v); });
+        if(sn.length){ var g=cvEl('div','snap-grid'); sn.forEach(function(r){ var c=cvEl('div','snap-cell'); c.appendChild(cvEl('div','snap-cell-k',r.k||'')); var v=cvEl('div','snap-cell-v'+(r.amber?' amber':'')); v.innerHTML=r.v||''; c.appendChild(v); g.appendChild(c); }); it.appendChild(g); }   // values are author HTML (<br>, entities), rendered as the manual does
+        var ln=(m.links||[]).filter(function(l){ return l&&l.label; });
+        if(ln.length){ var lw=cvEl('div','manual-links'); ln.forEach(function(l){ var a=cvEl('a','manual-link bric-btn bric-btn--secondary bric-btn--sm'); a.appendChild(cvEl('span','ml-label',l.label)); if(l.url&&l.url!=='#'){ a.href=l.url; a.target='_blank'; a.rel='noopener'; } lw.appendChild(a); }); it.appendChild(lw); }
+        it.addEventListener('click',function(e){ if(e.target.closest('a,button')||m.id===cvListFocusId) return; cvUi('confirm'); selectCV(m.id); });   // another card: bring it into focus
+        it.addEventListener('pointerover',function(e){ if(e.pointerType!=='mouse'||m.id===cvListFocusId||it.contains(e.relatedTarget)||e.target.closest('a,button')) return; cvUi('hover'); });   // the site's hover tick (links/buttons inside tick on their own)
+        track.appendChild(it);
+      });
+      wrap.appendChild(track);
+      var end=cvEl('footer','cvl-end'); end.appendChild(cvCtaRow()); wrap.appendChild(end);
+      host.appendChild(wrap);
+      cvDrawSky(host); cvListFrame(); cvTlStart();
+    }
+    // One scroll frame: the sky layers and the title drift slower than the cards, and the card crossing the focus line takes focus.
+    // The line sits 40% down; at the top of the page it starts on the first card's middle and runs down to 40% as you scroll, so the
+    // newest stop is in focus on arrival however tall the window is. Reads first, then writes.
+    function cvListFrame(){
+      _cvlRaf=0; var host=document.getElementById('cvList'); if(!host||!cvListOn) return;
+      var st=host.scrollTop, still=cvReduced(), top=host.getBoundingClientRect().top;
+      var items=host.querySelectorAll('.cvl-item'), best=null, bd=1e9; if(!items.length) return;
+      var r0=items[0].getBoundingClientRect(), fy=Math.min(host.clientHeight*0.4, r0.top-top+st+r0.height/2+st);
+      [].forEach.call(items,function(el){ var r=el.getBoundingClientRect(), y=r.top-top, d=(y<=fy&&r.bottom-top>=fy)?0:Math.min(Math.abs(y-fy),Math.abs(r.bottom-top-fy));
+        if(d<bd){ bd=d; best=el; } });
+      [].forEach.call(host.querySelectorAll('.cvl-stars'),function(l){ l.style.transform=still?'':'translate3d(0,'+(-st*l._f).toFixed(1)+'px,0)'; });
+      var hero=host.querySelector('.cvl-hero'); if(hero){ hero.style.transform=still?'':'translate3d(0,'+(st*0.35).toFixed(1)+'px,0)'; hero.style.opacity=still?'':String(Math.max(0,1-st/420)); }
+      if(best) cvListFocus(best.getAttribute('data-id'));
+      if(still) cvDrawTimeline(null);   // otherwise the pulse loop redraws every frame
+    }
+    function cvListScrolled(){ if(!_cvlRaf) _cvlRaf=requestAnimationFrame(cvListFrame); }
+    // the card in focus is the active stop: gold node, breadcrumb, and where immersive opens if the visitor switches back.
+    // Every other card is a reticle target (▸ FOCUS): clicking it brings it into focus.
+    var _cvlQuiet=0;   // a click / arrow / entry scrolls the page itself: no detent ticks while it glides past other cards
+    function cvUi(k,o){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui(k,false,o||null); } }
+    function cvListFocus(id){ if(id===cvListFocusId) return; var prev=cvListFocusId; cvListFocusId=id;
+      if(prev&&performance.now()>_cvlQuiet){ var ids=cvListStops().map(function(n){ return n.id; }); cvUi('step',{dir:ids.indexOf(id)>ids.indexOf(prev)?1:-1}); }   // scrolling a new card into focus clicks like a detent
+      var host=document.getElementById('cvList'); [].forEach.call(host.querySelectorAll('.cvl-item'),function(el){ var f=el.getAttribute('data-id')===id; el.classList.toggle('focus',f);
+        if(f){ el.removeAttribute('data-bric-target'); el.removeAttribute('data-bric-label'); } else { el.setAttribute('data-bric-target',''); el.setAttribute('data-bric-label','▸ FOCUS'); } });
+      var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFrameMode='node'; cvMarkLabels();
+      if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);   // stops at CV, as in immersive
+    }
+    function cvListMark(scroll){   // a pick (click, arrow key, entering the page) moves that card onto the focus line; the scroll then focuses it
+      if(!cvListOn) return; var host=document.getElementById('cvList'); if(!host) return;
+      if(scroll&&!cvSelId){ host.scrollTop=0; cvListScrolled(); return; }   // coming from the zoomed-out route (nothing open): the top, newest first
+      if(!scroll){ cvListScrolled(); return; }
+      var el=document.getElementById('cvl-'+cvSelId); if(!el){ cvListScrolled(); return; }
+      var first=host.querySelector('.cvl-item')===el, y=first?0:el.getBoundingClientRect().top-host.getBoundingClientRect().top+host.scrollTop-(host.clientHeight*0.4-48);   // the newest stop = the top of the page, one-liner and all
+      _cvlQuiet=performance.now()+900; host.scrollTo({top:Math.max(0,y),behavior:cvReduced()?'auto':'smooth'}); cvListScrolled();
+    }
+    // Apply cvListOn to the page. persist=true when the user flipped the toggle (remembered); entering the route just applies the stored choice.
+    function cvApplyView(persist){
+      var on=cvListOn&&cvScene.active, cs=document.getElementById('cs-root');
+      document.body.classList.toggle('cv-list',on);
+      [].forEach.call(document.querySelectorAll('#cvView [data-cv-view]'),function(b){ var c=(b.getAttribute('data-cv-view')==='list')===cvListOn; b.setAttribute('aria-checked',String(c)); b.tabIndex=c?0:-1; });
+      if(persist){ try{ localStorage.setItem('mw_cvview',cvListOn?'list':'immersive'); }catch(e){} }
+      if(!cvScene.active) return;
+      if(on){ if(cs) cs.classList.remove('cs-focus-panel'); cvRenderList(); cvListMark(true); return; }
+      var lh=document.getElementById('cvList'); if(lh) lh.textContent='';
+      if(cvSelId) cvShipGoTo(cvSelId);   // the ship waits at the stop that was in focus in the list...
+      cvOverview();   // ...but immersive always comes back zoomed out on the whole route with the one-liner (Oct 27), never dollied into a stop
+      cvHeroSync(); cvReframeSoon();
+    }
+    function cvSetView(v){ if(v==='list'&&editMode) return; if((v==='list')===cvListOn) return; cvListOn=(v==='list'); cvApplyView(true); }
+    // arrow keys: previous / next stop (route order in 3D; in the list, the card above / below)
+    function cvStep(dir){
+      var st=cvListOn?cvListStops():cvStops(); if(!st.length) return false; var i=-1; st.forEach(function(n,j){ if(cvAtNode&&n.id===cvSelId) i=j; });
+      var j=(i<0)?(dir>0?0:st.length-1):Math.max(0,Math.min(st.length-1,i+dir)); if(j===i) return true;
+      if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
+      selectCV(st[j].id); return true;
+    }
+    function cvSetHover(id){ if(id===cvHoverId) return; cvHoverId=id;
+      cvNodes.forEach(function(n){ var on=(n.id===id); n.lbl.classList.toggle('hov',on); n.mesh.scale.setScalar(on?1.35:1); }); }   // (a static scale: no tween, so nothing to gate on reduced motion)
+    (function wireCVView(){
+      var seg=document.getElementById('cvView'), opts=seg?[].slice.call(seg.querySelectorAll('[data-cv-view]')):[];
+      // The whole control is the hit area (the cursor is hidden under the reticle, so nobody can aim at one half): a click on the other
+      // option picks it; a click anywhere else on the control (the checked option, the gap, the reticle's outset band, which the reticle
+      // passes on as seg.click()) flips to the other view. Keyboard activation of the checked option stays a no-op, as in any radiogroup.
+      if(seg) seg.addEventListener('click',function(e){ var opt=e.target.closest&&e.target.closest('[data-cv-view]');
+        if(opt&&opt.getAttribute('aria-checked')!=='true'){ cvSetView(opt.getAttribute('data-cv-view')); return; }
+        if(opt&&e.detail===0) return;
+        var other=opts.filter(function(b){ return b.getAttribute('aria-checked')!=='true'; })[0]; if(other) other.click(); });   // through the option, so it gets the press sound
+      // radiogroup keys: the arrows move between the options (and so never reach the stop stepping below while the toggle has focus)
+      if(seg) seg.addEventListener('keydown',function(e){ var k=e.key, d=(k==='ArrowRight'||k==='ArrowDown')?1:(k==='ArrowLeft'||k==='ArrowUp')?-1:0; if(!d) return;
+        e.preventDefault(); var i=opts.indexOf(document.activeElement), n=opts[(i+d+opts.length)%opts.length]; n.focus(); cvSetView(n.getAttribute('data-cv-view')); });
+      // beside the breadcrumb on its row (Secondary appearance, so it doesn't compete with the page CTAs); when a long stop title leaves
+      // no room before the right-hand controls (sound switch), it drops under the breadcrumb, left-aligned with it
+      var _pvRaf=0, cp=document.getElementById('crumbpath'), bc=document.getElementById('breadcrumb');
+      function placeView(){ _pvRaf=0; if(!seg||!bc) return; if(!cvScene.active){ seg.classList.remove('placed'); return; }
+        if(seg.matches(':hover')&&seg.classList.contains('placed')){ seg.addEventListener('pointerleave',placeViewSoon,{once:true}); return; }   // never slide out from under the pointer (switching views changes the breadcrumb); catch up once it leaves
+        var r=bc.getBoundingClientRect(), w=seg.offsetWidth, h=seg.offsetHeight, room=window.innerWidth-180;
+        if(!r.width){ seg.classList.remove('placed'); return; }
+        if(r.right+16+w<=room){ seg.style.left=Math.round(r.right+16)+'px'; seg.style.top=Math.round(r.top+(r.height-h)/2)+'px'; }
+        else { seg.style.left=Math.round(r.left)+'px'; seg.style.top=Math.round(r.bottom+10)+'px'; }
+        seg.classList.add('placed'); }
+      function placeViewSoon(){ if(!_pvRaf) _pvRaf=requestAnimationFrame(placeView); }
+      if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
+      window.addEventListener('resize',placeViewSoon);
+      var _pv=placeView; placeView=function(){ _pv(); cvHeroPlace(); };   // the hero sits under the toggle wherever the toggle lands
+      var lh=document.getElementById('cvList'); if(lh) lh.addEventListener('scroll',cvListScrolled,{passive:true});
+      var skyT=0; window.addEventListener('resize',function(){ if(!(cvListOn&&cvScene.active)) return; cvListScrolled(); clearTimeout(skyT); skyT=setTimeout(function(){ var h=document.getElementById('cvList'); if(h&&cvListOn) { cvDrawSky(h); cvListScrolled(); } },150); });   // the sky is redrawn at the new size once resizing settles
+      var cvc=renderer.domElement, _hm=new THREE.Vector2();
+      cvc.addEventListener('pointermove',function(e){ if(!cvScene.active||cvListOn||(e.pointerType&&e.pointerType!=='mouse')||mwPhase!=='docked'||editMode){ if(cvHoverId) cvSetHover(null); return; }
+        var list=cvNodes.map(function(n){ return n.hit||n.mesh; }); if(!list.length) return;
+        _hm.set((e.clientX/W)*2-1,-(e.clientY/H)*2+1); ray.setFromCamera(_hm,camera);
+        var h=ray.intersectObjects(list,false), id=null; if(h.length){ for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].hit===h[0].object||cvNodes[i].mesh===h[0].object){ id=cvNodes[i].id; break; } } }
+        cvSetHover(id); });
+      cvc.addEventListener('pointerleave',function(){ cvSetHover(null); });
+      window.addEventListener('keydown',function(e){
+        if(!cvScene.active||e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
+        if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight') return;
+        var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,[contenteditable=true],[contenteditable=""]')) return;   // typing / editing owns the arrows
+        if(window.__mwArcade||arcadeActive) return;
+        if(cvStep(e.key==='ArrowRight'?1:-1)) e.preventDefault(); });
+      // Edit Mode edits through the 3D scene's booklet: the list view is read-only, so entering Edit Mode returns to immersive (the saved choice is kept)
+      new MutationObserver(function(){ if(editMode&&cvListOn&&cvScene.active){ cvListOn=false; cvApplyView(false); } if(cvScene.active) cvHeroSync(); }).observe(document.body,{attributes:true,attributeFilter:['class']});   // Edit Mode hides the immersive one-liner too
+    })();
+
     (function wireCVRoute(){
       var vg=document.getElementById('cCvVariegate'); if(vg) vg.addEventListener('click',cvVariegate);
       var si=document.getElementById('cvShipInput'); if(si) si.addEventListener('change',function(){ var f=si.files[0]; if(!f) return;
@@ -14927,7 +15272,7 @@ f 2469//2469 2470//2470 2434//2434
     applyHiddenVisibility();                          // hide any soft-deleted planets in prod view
 
     var clock=new THREE.Clock(); var _animateErrLogged=false;
-    function animate(){ requestAnimationFrame(animate); if(csPaused) return;   // MERGE: freeze during case-study takeover
+    function animate(){ requestAnimationFrame(animate); if(csPaused||(cvListOn&&cvScene.active)) return;   // MERGE: freeze during case-study takeover
       // Everything below (camera/label/FX updates) is wrapped so a single bad frame — e.g. a projection
       // returning non-finite while the camera is mid-transition, the exact bug that broke a cold /cv load —
       // can never again silently skip renderer.render() for the rest of the session. Without this, a per-frame
@@ -15479,7 +15824,7 @@ f 2469//2469 2470//2470 2434//2434
     // The mode can be forced from the author-only switcher / Debug panel (window.__mwManualLayout).
     var ML_TOP=48;                 // px reserved along the top (breadcrumb row)
     var mlMode=null;
-    function mlIsProject(){ return document.body.classList.contains('mw-planet'); }
+    function mlIsProject(){ return document.body.classList.contains('mw-planet') || document.body.classList.contains('mw-cvroute'); }   // the CV route's node manual takes the same dock/drawer + MWStage as a project; the orbit camera frames itself into that rectangle (cvFrame)
     function mlPref(){ var p=window.__mwManualLayout; return (p==='dock'||p==='drawer')?p:'auto'; }
     function mlGap(){ return Math.round(Math.max(12,Math.min(28,window.innerWidth*0.016))); }
     function mlSetMode(m){
@@ -15500,8 +15845,10 @@ f 2469//2469 2470//2470 2434//2434
     }
     function mlPublish(st,mode){
       var root=document.documentElement;
-      if(!st){ window.MWStage=null; ['--stage-cx','--stage-cy','--stage-w','--stage-h'].forEach(function(k){ root.style.removeProperty(k); }); return; }
+      if(!st){ if(window.MWStage){ mlPublish._k=''; } window.MWStage=null; ['--stage-cx','--stage-cy','--stage-w','--stage-h'].forEach(function(k){ root.style.removeProperty(k); }); return; }
+      var _sk=[st.l,st.t,st.r,st.b,window.innerWidth,window.innerHeight].map(Math.round).join(',');
       window.MWStage={ l:st.l, t:st.t, r:st.r, b:st.b, mode:mode, W:window.innerWidth, H:window.innerHeight };
+      if(_sk!==mlPublish._k){ mlPublish._k=_sk; try{ window.dispatchEvent(new Event('mwstage')); }catch(e){} }   // orbit scenes (the CV route) re-frame into the new free rectangle
       root.style.setProperty('--stage-cx',((st.l+st.r)/2)+'px'); root.style.setProperty('--stage-cy',((st.t+st.b)/2)+'px');
       root.style.setProperty('--stage-w',(st.r-st.l)+'px');     root.style.setProperty('--stage-h',(st.b-st.t)+'px');
     }
