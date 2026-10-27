@@ -282,7 +282,7 @@
   /* SOURCE :root design tokens, scoped so they don't pollute the holotable globals */
   /* The manual keeps its own scope but no longer its own palette: it is a .bric-dark subtree (the screen stays dark in light mode)
      and every value below is a BRIC token. Text is the solid ladder (primary / secondary / tertiary). */
-  #cs-root, #cvList {
+  #cs-root, #cvList, #cvHero {
     --bg:         var(--bric-surface-base);
     --surface:    var(--bric-surface-raised);
     --amber:      var(--bric-register-amber-text);
@@ -631,6 +631,16 @@
   #cvList .cvl-hero{position:relative;margin:0 0 48px 56px;will-change:transform,opacity}
   #cvList .cvl-head{font-family:var(--f-d);font-size:32px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;color:var(--c-primary);margin:0 0 24px;max-width:680px;text-wrap:balance}
   #cvList .cvl-end{margin:48px 0 0 56px}
+  .cvl-ctas{display:flex;flex-wrap:wrap;gap:var(--bric-space-1-5-stud)}   /* Download CV (primary) + Start a chat (secondary) */
+  /* immersive: the same one-liner + buttons, centred under the view toggle while the whole route is in view (no stop open).
+     Glyph-decodes in line by line (GFX), fades out when a stop opens. Top is set under the toggle by cvHeroPlace. */
+  #cvHero{position:fixed;left:0;right:0;top:56px;margin-inline:auto;width:min(720px,calc(100% - 32px));z-index:20;display:none;text-align:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),visibility 0s linear var(--bric-float-duration-short)}
+  body.mw-cvroute:not(.cv-list) #cvHero{display:block}
+  #cvHero.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),visibility 0s}
+  #cvHero .cvh-line{display:block;font-family:var(--f-d);font-size:22px;font-weight:700;letter-spacing:-0.01em;line-height:1.3;color:var(--c-primary);margin-inline:auto;width:max-content;max-width:100%}
+  #cvHero .cvl-ctas{justify-content:center;margin-top:var(--bric-space-2-stud)}
+  @media (prefers-reduced-motion:reduce){ #cvHero,#cvHero.on{transition:none} }
+  @media (max-width:700px){ #cvHero .cvh-line{font-size:16px} }
   /* the timeline: the route's star path stood upright on the left. --cvl-rail-x / --cvl-node-y place the canvas-drawn rail and nodes against each card */
   #cvList .cvl-track{--cvl-rail-x:20px;--cvl-node-y:42px;position:relative;display:flex;flex-direction:column;gap:var(--bric-space-3-stud);padding-left:56px}
   #cvList .cvl-item{position:relative;padding:28px 30px;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--border-dim) 1px,transparent 1px);background-size:16px 16px;cursor:pointer;opacity:.42;transform:scale(.98);transform-origin:left center;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),transform var(--bric-float-duration-short) var(--bric-float-easing);--bric-ret-arm:16px}
@@ -1447,6 +1457,7 @@
     </div>
     <label class="cvr-pill glb-up" id="cvShipUp" data-bric-target data-bric-label="">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
   </div>
+  <div id="cvHero" class="bric-dark"></div>
   <div id="cvListBar"></div>
   <div id="cvList" class="bric-dark" aria-label="Career path, list view"></div>
 
@@ -11194,7 +11205,7 @@ f 2469//2469 2470//2470 2434//2434
       hitId:function(o){ for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].hit===o||cvNodes[i].mesh===o) return cvNodes[i].id; } return null; },
       onPick:function(id){ selectCV(id); },
       onBack:function(){ cvOverview(); },   // empty space: back to the overview AND re-centre the whole route in the free stage (also from the overview itself)
-      onExit:function(){ cvHoverId=null; document.body.classList.remove('cv-list'); window.MWStage=null; var ms=document.getElementById('manual-scene'); if(ms){ ms.removeAttribute('data-ml'); ms.style.removeProperty('--ml-gap'); } }   // hand the stage back (project focus publishes its own)
+      onExit:function(){ cvHoverId=null; document.body.classList.remove('cv-list'); var _h=document.getElementById('cvHero'); if(_h) _h.classList.remove('on'); window.MWStage=null; var ms=document.getElementById('manual-scene'); if(ms){ ms.removeAttribute('data-ml'); ms.style.removeProperty('--ml-gap'); } }   // hand the stage back (project focus publishes its own)
     });
     // Career nodes (tree): parent = the node this one connects from (null = root). branch=true for off-path nodes.
     var CV_DEFAULT=[
@@ -11395,7 +11406,7 @@ f 2469//2469 2470//2470 2434//2434
       var _latest=cvLatestId();
       if(_latest) selectCV(_latest);   // latest is the active node (booklet, breadcrumb, gold/pulse)
       cvFitOverview();   // ...but the DEFAULT CAMERA frames the WHOLE route (auto-fit), not dollied into the node
-      cvApplyView(false);
+      cvApplyView(false); cvHeroSync();
     }
     // ── Stage framing ──────────────────────────────────────────────────────────
     // The node manual is laid out by CS.layoutManual (dock, or the drawer on phones) and publishes the free
@@ -11408,7 +11419,8 @@ f 2469//2469 2470//2470 2434//2434
     function cvStageRect(){
       var W_=window.innerWidth, H_=window.innerHeight, st=window.MWStage;
       if(cvAtNode && !cvListOn && st && st.W===W_ && st.H===H_) return {l:st.l,t:st.t,r:st.r,b:st.b};
-      return {l:0,t:48,r:W_,b:H_};
+      var hr=document.getElementById('cvHero'), t=48; if(hr&&!cvListOn&&cvHeroWanted()){ var b=hr.getBoundingClientRect().bottom; if(b>t) t=Math.round(b); }   // the overview frames the route under the one-liner
+      return {l:0,t:t,r:W_,b:H_};
     }
     // pts: [[x,y,z]…]; opt.radius fixes the distance (node fly-to), opt.pad = px the labels need beyond the points
     function cvFrame(pts,opt){
@@ -11450,7 +11462,7 @@ f 2469//2469 2470//2470 2434//2434
       if(cvFrameMode==='node'&&cvSelId){ var sn=cvNodeById(cvSelId); if(sn) cvFlyTo(sn,true); } else cvFitOverview(true); }); }); }
     window.addEventListener('resize',cvReframeSoon);
     window.addEventListener('mwstage',cvReframeSoon);
-    function cvOverview(){ cvAtNode=false; cvSelId=null; cvFitOverview();   // frame the whole route (holds it in view regardless of variegation); cvAtNode=false first so the stage is the full viewport
+    function cvOverview(){ cvAtNode=false; cvSelId=null; cvFrameMode='overview'; cvHeroSync(); cvFitOverview();   // frame the whole route (holds it in view regardless of variegation); cvAtNode=false first so the stage is the full viewport
       cvMarkLabels(); cvListMark();
       var cs=document.getElementById('cs-root'); if(cs) cs.classList.remove('cs-focus-panel');   // hide the node booklet at overview level
       if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);
@@ -11461,6 +11473,7 @@ f 2469//2469 2470//2470 2434//2434
     }
     function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvShipGoTo(id); if(cvListOn){ cvFrameMode='node'; cvMarkLabels(); cvListMark(true); } else { cvFlyTo(n); cvShowBooklet(id); cvMarkLabels(); }
       if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level
+      cvHeroSync();
     }
     function cvUpdateShipUnderColor(){ if(!cvShipGroup) return;
       var shipOnSelected=(cvShipNodeId&&cvSelId&&cvShipNodeId===cvSelId);
@@ -11613,16 +11626,31 @@ f 2469//2469 2470//2470 2434//2434
       else { b=cvEl('button','bric-btn bric-btn--primary',cd.cta); b.type='button'; if(!on) b.disabled=true; else b.addEventListener('click',function(){ cd.onCta(); }); }
       return b;
     }
-    var CV_LIST_HEAD='Shipped to millions. Built systems for the world’s most exclusive properties. Designed funnels behind $4B+ in potential orders.';
+    // the pitch: one line in the list's hero, three stacked lines (one per sentence) over the immersive overview
+    var CV_HEAD_LINES=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'], CV_LIST_HEAD=CV_HEAD_LINES.join(' ');
+    // Download CV + Start a chat. The chat button has no destination yet (waiting on a Mundane Workshop address); it is not HoloNet.
+    function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn(); if(dl) row.appendChild(dl);
+      var chat=cvEl('button','bric-btn bric-btn--secondary','Start a chat'); chat.type='button'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
+      return row; }
+    // Immersive overview hero: shown while no stop is open and the whole route is framed; decodes in line by line, fades out when a stop opens.
+    function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'&&!editMode; }
+    function cvHeroPlace(){ var h=document.getElementById('cvHero'), seg=document.getElementById('cvView'); if(!h||!seg) return; var r=seg.getBoundingClientRect(); if(r.height) h.style.top=Math.round(r.bottom+16)+'px'; }
+    function cvHeroSync(){
+      var h=document.getElementById('cvHero'); if(!h||!cvData) return; var want=cvHeroWanted(), was=h.classList.contains('on');
+      if(want&&!h.childElementCount){ CV_HEAD_LINES.forEach(function(t){ h.appendChild(cvEl('span','cvh-line',t)); }); h.appendChild(cvCtaRow()); }
+      if(want===was) return; h.classList.toggle('on',want); if(!want) return;
+      cvHeroPlace();
+      if(typeof GFX!=='undefined') [].forEach.call(h.querySelectorAll('.cvh-line'),function(l,i){ setTimeout(function(){ if(h.classList.contains('on')) GFX.decodeEl(l,'Lbl'); },i*120); });   // the site's glyph decode (off under reduced motion)
+    }
     var cvListFocusId=null, _cvlRaf=0;
     function cvRenderList(){
       var host=document.getElementById('cvList'); if(!host||!cvData) return;
-      host.textContent=''; cvListFocusId=null; _cvTlCol=null; var wrap=cvEl('div','cvl-wrap'), stops=cvListStops(), cta;
+      host.textContent=''; cvListFocusId=null; _cvTlCol=null; var wrap=cvEl('div','cvl-wrap'), stops=cvListStops();
       var sky=cvEl('div','cvl-sky'); sky.setAttribute('aria-hidden','true'); host.appendChild(sky);
       var tl=cvEl('canvas','cvl-tl'); tl.setAttribute('aria-hidden','true'); host.appendChild(tl);
       var hero=cvEl('header','cvl-hero');
       hero.appendChild(cvEl('h1','cvl-head',CV_LIST_HEAD));
-      if((cta=cvCtaBtn())) hero.appendChild(cta);
+      hero.appendChild(cvCtaRow());
       wrap.appendChild(hero);
       var track=cvEl('div','cvl-track');
       stops.forEach(function(m){
@@ -11641,7 +11669,7 @@ f 2469//2469 2470//2470 2434//2434
         track.appendChild(it);
       });
       wrap.appendChild(track);
-      if((cta=cvCtaBtn())){ var end=cvEl('footer','cvl-end'); end.appendChild(cta); wrap.appendChild(end); }
+      var end=cvEl('footer','cvl-end'); end.appendChild(cvCtaRow()); wrap.appendChild(end);
       host.appendChild(wrap);
       cvDrawSky(host); cvListFrame(); cvTlStart();
     }
@@ -11689,7 +11717,7 @@ f 2469//2469 2470//2470 2434//2434
       if(on){ if(cs) cs.classList.remove('cs-focus-panel'); cvRenderList(); cvListMark(true); return; }
       var lh=document.getElementById('cvList'); if(lh) lh.textContent='';
       if(cvSelId&&cvAtNode){ cvShipGoTo(cvSelId); cvShowBooklet(cvSelId); cvFlyTo(cvNodeById(cvSelId)); }   // the stop in focus in the list opens in 3D: its manual up, the camera flown in beside it (re-fit once the manual has measured)
-      cvReframeSoon();
+      cvHeroSync(); cvReframeSoon();
     }
     function cvSetView(v){ if(v==='list'&&editMode) return; if((v==='list')===cvListOn) return; cvListOn=(v==='list'); cvApplyView(true); }
     // arrow keys: previous / next stop (route order in 3D; in the list, the card above / below)
@@ -11715,6 +11743,7 @@ f 2469//2469 2470//2470 2434//2434
       function placeViewSoon(){ if(!_pvRaf) _pvRaf=requestAnimationFrame(placeView); }
       if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
       window.addEventListener('resize',placeViewSoon);
+      var _pv=placeView; placeView=function(){ _pv(); cvHeroPlace(); };   // the hero sits under the toggle wherever the toggle lands
       var lh=document.getElementById('cvList'); if(lh) lh.addEventListener('scroll',cvListScrolled,{passive:true});
       var skyT=0; window.addEventListener('resize',function(){ if(!(cvListOn&&cvScene.active)) return; cvListScrolled(); clearTimeout(skyT); skyT=setTimeout(function(){ var h=document.getElementById('cvList'); if(h&&cvListOn) { cvDrawSky(h); cvListScrolled(); } },150); });   // the sky is redrawn at the new size once resizing settles
       var cvc=renderer.domElement, _hm=new THREE.Vector2();
@@ -11731,7 +11760,7 @@ f 2469//2469 2470//2470 2434//2434
         if(window.__mwArcade||arcadeActive) return;
         if(cvStep(e.key==='ArrowRight'?1:-1)) e.preventDefault(); });
       // Edit Mode edits through the 3D scene's booklet: the list view is read-only, so entering Edit Mode returns to immersive (the saved choice is kept)
-      new MutationObserver(function(){ if(editMode&&cvListOn&&cvScene.active){ cvListOn=false; cvApplyView(false); } }).observe(document.body,{attributes:true,attributeFilter:['class']});
+      new MutationObserver(function(){ if(editMode&&cvListOn&&cvScene.active){ cvListOn=false; cvApplyView(false); } if(cvScene.active) cvHeroSync(); }).observe(document.body,{attributes:true,attributeFilter:['class']});   // Edit Mode hides the immersive one-liner too
     })();
 
     (function wireCVRoute(){

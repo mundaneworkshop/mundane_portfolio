@@ -36,4 +36,7 @@
   - Card hover label is `▸ FOCUS` (the 3D node hover stays `▸ VIEW`). Snapshot rows lose the dashed rule, which fought the card's dot grid.
   - Entering the list on the newest stop scrolls to the very top, so the one-liner isn't half under the top bar.
   - Focused cards scale .98 → 1, so their text grows 2% too (transform scales everything); noted for the owner.
+- **Oct 27 round 5:**
+  - `cvCtaRow()`: Download CV (primary) + **Start a chat** (secondary). The chat button deliberately has no destination yet: the owner is setting up a Mundane Workshop email address, and it must NOT point at HoloNet. Wire it via `[data-cv-chat]` when the address exists. Used in the list hero, the list footer and the immersive hero.
+  - Immersive one-liner (`#cvHero`, `CV_HEAD_LINES`): the pitch as three stacked lines (one per sentence), centred under the view toggle (`cvHeroPlace`, follows the toggle when it drops under a long breadcrumb), with the button row. Shown only while no stop is open and the whole route is framed (`cvHeroWanted`: overview, not list, not Edit Mode), so on arrival (newest stop open) it is hidden until the visitor clicks empty space. Each line glyph-decodes in (`GFX.decodeEl(…,'Lbl')`, staggered 120ms; skipped under reduced motion); it fades out when a stop opens. While it shows, `cvStageRect` starts below it so the overview frames the route underneath. Token scope `#cs-root, #cvList, #cvHero`.
 - The render loop is paused while the list shows (`animate()` checks `cvListOn && cvScene.active`).
