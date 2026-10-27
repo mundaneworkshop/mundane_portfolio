@@ -621,60 +621,43 @@
   body.cv-list .glb-up, body.cv-list #cvRouteLayer, body.cv-list #cvFxCanvas, body.cv-list #cs-root.cs-focus-panel #manual-scene{display:none!important}
   #cvList{position:fixed;inset:0;z-index:15;display:none;overflow-y:auto;overscroll-behavior:contain;background:var(--bric-surface-scene);color:var(--c-primary);scrollbar-width:thin;scrollbar-color:var(--teal-dim) transparent}
   body.cv-list #cvList{display:block}
-  /* starfield: three tiled layers that drift at different rates as the page scrolls (transform only; still under reduced motion) */
+  /* starfield: three canvas layers (the galaxy's density and brightness spread, pixel-snapped and posterized when drawn) that drift at
+     different rates as the page scrolls (transform only; still under reduced motion) */
   #cvList .cvl-sky{position:fixed;inset:0;overflow:hidden;pointer-events:none}
-  #cvList .cvl-stars{position:absolute;left:0;right:0;top:0;background-repeat:repeat;will-change:transform}
+  #cvList .cvl-stars{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;will-change:transform}
+  /* the timeline (rail, nodes, the focus pulse) is drawn on a low-res canvas behind the cards: pixelated + posterized like the scene */
+  #cvList .cvl-tl{position:fixed;left:0;top:0;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
   #cvList .cvl-wrap{position:relative;max-width:820px;margin:0 auto;padding:128px 24px 50vh}
-  #cvList .cvl-hero{position:relative;margin:0 0 40px 56px;will-change:transform,opacity}
-  #cvList .cvl-eyebrow{font-family:var(--f-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--c-dim);margin:0 0 10px}
-  #cvList .cvl-head{font-family:var(--f-d);font-size:40px;font-weight:700;letter-spacing:-0.01em;line-height:1.05;color:var(--c-primary);margin:0 0 10px}
-  #cvList .cvl-sub{font-family:var(--f-b);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--c-dim);margin:0}
-  /* the timeline: the route's star path stood upright on the left. Rail = the immersive lane colour, the lit part runs from the newest stop down to the card in focus */
-  #cvList .cvl-track{position:relative;display:flex;flex-direction:column;gap:var(--bric-space-3-stud);padding-left:56px}
-  #cvList .cvl-rail{position:absolute;left:19px;width:2px;top:0;height:0;background:var(--bric-schematic-line-dim);opacity:.5;pointer-events:none}
-  #cvList .cvl-rail.on{background:var(--bric-schematic-line);opacity:1;transform-origin:top;transform:scaleY(0);transition:transform var(--bric-float-duration-short) var(--bric-snap-easing)}
-  #cvList .cvl-item{position:relative;padding:28px 30px;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--border-dim) 1px,transparent 1px);background-size:16px 16px;cursor:pointer;opacity:.42;transform:scale(.98);transform-origin:left center;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),transform var(--bric-float-duration-short) var(--bric-float-easing)}
+  #cvList .cvl-hero{position:relative;margin:0 0 48px 56px;will-change:transform,opacity}
+  #cvList .cvl-head{font-family:var(--f-d);font-size:32px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;color:var(--c-primary);margin:0 0 24px;max-width:680px;text-wrap:balance}
+  #cvList .cvl-end{margin:48px 0 0 56px}
+  /* the timeline: the route's star path stood upright on the left. --cvl-rail-x / --cvl-node-y place the canvas-drawn rail and nodes against each card */
+  #cvList .cvl-track{--cvl-rail-x:20px;--cvl-node-y:42px;position:relative;display:flex;flex-direction:column;gap:var(--bric-space-3-stud);padding-left:56px}
+  #cvList .cvl-item{position:relative;padding:28px 30px;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--border-dim) 1px,transparent 1px);background-size:16px 16px;cursor:pointer;opacity:.42;transform:scale(.98);transform-origin:left center;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),transform var(--bric-float-duration-short) var(--bric-float-easing);--bric-ret-arm:16px}
   #cvList .cvl-item.focus{opacity:1;transform:none;cursor:default}
   #cvList .cvl-item.focus .mb-corner{border-color:var(--amber)}
   #cvList .cvl-item.focus .manual-title{color:var(--amber-hot)}
+  @media (hover:hover){ #cvList .cvl-item:not(.focus):hover{opacity:.72;transform:none} #cvList .cvl-item:not(.focus):hover .manual-title{color:var(--amber-hot)} }   /* another card under the pointer: lifts toward focus while the reticle frames it (▸ VIEW) */
   #cvList .cvl-item.branch{margin-left:28px}
-  /* node on the rail, level with the card's title. Solid teal like the route's nodes; the one in focus is the active gold with the route's pulse */
-  #cvList .cvl-node{position:absolute;left:-43px;top:33px;width:12px;height:12px;border-radius:50%;background:var(--bric-schematic-solid);box-shadow:0 0 0 5px var(--bric-schematic-fill);transition:background-color var(--bric-snap-duration-normal) linear,box-shadow var(--bric-snap-duration-normal) linear}
-  #cvList .cvl-item.branch .cvl-node{left:-71px;width:10px;height:10px;top:34px;background:var(--bric-surface-scene);box-shadow:inset 0 0 0 2px var(--bric-schematic-solid)}   /* a side branch: hollow, with a short spur to its card */
-  #cvList .cvl-item.branch .cvl-node::before{content:'';position:absolute;left:10px;top:4px;width:61px;height:2px;background:var(--bric-schematic-line-dim)}
-  #cvList .cvl-item.focus .cvl-node{background:var(--bric-register-amber-planet-hot);box-shadow:0 0 0 5px var(--bric-fx-glow-amber-near)}
-  #cvList .cvl-item.branch.focus .cvl-node{background:var(--bric-register-amber-planet-hot);box-shadow:0 0 0 4px var(--bric-fx-glow-amber-near)}
-  #cvList .cvl-node::after{content:'';position:absolute;inset:-6px;border-radius:50%;box-shadow:0 0 0 2px var(--bric-register-amber-planet-hot);opacity:0;pointer-events:none}
-  #cvList .cvl-item.focus .cvl-node::after{animation:cvl-pulse 1.6s ease-out infinite}
-  @keyframes cvl-pulse{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.9);opacity:0}}
-  #cvList .cvl-kicker{font-family:var(--f-m);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-dim);margin-bottom:10px}
   #cvList .manual-title{font-size:22px;margin-bottom:12px;transition:color var(--bric-snap-duration-normal) linear}
   #cvList .manual-subtitle{margin:-4px 0 12px}
   #cvList .manual-framing{max-width:none}
-  #cvList .cvl-item .snap-cell{border-bottom:1px dashed var(--border-dim)}
+  #cvList .cvl-item .snap-cell{border-bottom:1px dashed var(--border-dim);gap:var(--bric-space-3-stud);align-items:baseline}   /* room between a label and a value that wraps */
   #cvList .cvl-item .mb-corner{transition:border-color var(--bric-snap-duration-normal) linear}
   #cvList .manual-link{max-width:100%;min-width:0}   /* a long link label truncates instead of pushing the page sideways on a phone */
   #cvList .manual-link .ml-label{overflow:hidden;text-overflow:ellipsis}
-  /* the one CV download, pinned (bottom right; a full-width bar on a phone) */
-  #cvListCta{position:fixed;right:24px;bottom:24px;z-index:17;display:none}
-  body.cv-list #cvListCta{display:block}
   @media (prefers-reduced-motion:reduce){
-    #cvList .cvl-item,#cvList .cvl-rail.on,#cvList .cvl-node,#cvList .manual-title,#cvList .cvl-item .mb-corner{transition:none}
-    #cvList .cvl-item.focus .cvl-node::after{animation:none}
+    #cvList .cvl-item,#cvList .manual-title,#cvList .cvl-item .mb-corner{transition:none}
   }
   @media (max-width:700px){
     #cvList .cvl-wrap{padding:120px 16px 50vh}
-    #cvList .cvl-hero{margin:0 0 28px 32px}
-    #cvList .cvl-head{font-size:30px}
-    #cvList .cvl-track{padding-left:32px;gap:var(--bric-space-2-stud)}
-    #cvList .cvl-rail{left:7px}
-    #cvList .cvl-node{left:-31px;top:27px}
+    #cvList .cvl-hero{margin:0 0 36px 32px}
+    #cvList .cvl-head{font-size:24px}
+    #cvList .cvl-end{margin:36px 0 0 32px}
+    #cvList .cvl-track{--cvl-rail-x:8px;--cvl-node-y:35px;padding-left:32px;gap:var(--bric-space-2-stud)}
     #cvList .cvl-item.branch{margin-left:14px}
-    #cvList .cvl-item.branch .cvl-node{left:-45px;top:28px}
-    #cvList .cvl-item.branch .cvl-node::before{width:35px}
     #cvList .cvl-item{padding:22px 20px}
-    #cvListCta{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom))}
-    #cvListCta .bric-btn{width:100%}
+    #cvList .cvl-item .snap-cell{gap:var(--bric-space-2-stud)}
   }
   .cvrlbl.dis .cvrlbl-t{color:#5a6f6b}
   .cvrlbl.dis .cvrlbl-s{color:#41524f}
@@ -1466,7 +1449,6 @@
   </div>
   <div id="cvListBar"></div>
   <div id="cvList" class="bric-dark" aria-label="Career path, list view"></div>
-  <div id="cvListCta"></div>
 
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
   <div id="contactFocus" class="altfocus">
@@ -11572,50 +11554,79 @@ f 2469//2469 2470//2470 2434//2434
     }
     function cvEl(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
     function cvReduced(){ return !!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches); }
-    // Starfield tiles for the list's parallax sky, drawn once in the BRIC star colours (read from the tokens, never hard-coded)
-    var cvSkyTiles=null;
-    function cvStarTile(size,count,px,alpha,cols){
-      var dpr=Math.min(2,window.devicePixelRatio||1), c=document.createElement('canvas'); c.width=c.height=Math.round(size*dpr);
-      var g=c.getContext('2d'); g.scale(dpr,dpr);
-      for(var i=0;i<count;i++){ g.globalAlpha=alpha*(0.45+Math.random()*0.55); g.fillStyle=cols[i%cols.length];
-        var s=px*(Math.random()<0.2?1.5:1); g.fillRect(Math.floor(Math.random()*size),Math.floor(Math.random()*size),s,s); }   // square, pixel-snapped: the scene's pixelated stars
-      return c.toDataURL();
+    // The list's parallax sky: three canvas layers at the galaxy's star density and brightness spread (most dim, a few bright),
+    // a little clumped so it doesn't read as a uniform sprinkle. Drawn at 1/params.pixel and scaled up nearest-neighbour, brightness
+    // posterized to params.levels, in the BRIC star colours (resolved from the tokens, never hard-coded). Each layer is tall enough
+    // for its whole drift, so nothing tiles or repeats.
+    var CV_SKY=[{f:0.06,d:0.17,big:0},{f:0.16,d:0.09,big:0.15},{f:0.32,d:0.035,big:0.6}];   // drift rate, stars per 1000px², share drawn 2px (low-res) instead of 1
+    function cvRng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+    function cvTokColor(host,k){ var p=document.createElement('i'); p.style.color='var('+k+')'; host.appendChild(p); var c=getComputedStyle(p).color; p.remove(); return c; }   // a token as rgb(), so a canvas can use it
+    function cvPixel(){ return Math.max(1,Math.round((typeof params!=='undefined'&&params.pixel)||2)); }
+    function cvLevels(){ return Math.max(2,Math.round((typeof params!=='undefined'&&params.levels)||24)); }
+    function cvDrawSky(host){
+      var sky=host.querySelector('.cvl-sky'); if(!sky) return; sky.textContent='';
+      var P=cvPixel(), L=cvLevels(), w=host.clientWidth, h=host.clientHeight, travel=Math.max(0,host.scrollHeight-h);
+      var cols=[cvTokColor(host,'--bric-content-primary'),cvTokColor(host,'--bric-content-primary'),cvTokColor(host,'--bric-content-primary'),cvTokColor(host,'--bric-schematic-solid')];
+      CV_SKY.forEach(function(t,li){
+        var lh=Math.ceil(h+travel*t.f)+8, c=document.createElement('canvas'); c.className='cvl-stars';
+        c.width=Math.ceil(w/P); c.height=Math.ceil(lh/P); c.style.width=(c.width*P)+'px'; c.style.height=(c.height*P)+'px';
+        var g=c.getContext('2d'), r=cvRng(7+li*101), n=Math.round(w*lh/1000*t.d), cl=[], k;
+        for(k=0;k<Math.max(3,Math.round(w*lh/400000));k++) cl.push([r()*c.width,r()*c.height,(60+r()*140)/P]);   // a few loose clumps
+        for(k=0;k<n;k++){ var x,y; if(r()<0.35){ var q=cl[Math.floor(r()*cl.length)], a=r()*6.2832, d=q[2]*Math.sqrt(-2*Math.log(1-r()*0.999))*0.6; x=q[0]+Math.cos(a)*d; y=q[1]+Math.sin(a)*d; } else { x=r()*c.width; y=r()*c.height; }
+          var b=(0.22+0.78*Math.pow(r(),1.7))*0.8; g.globalAlpha=Math.round(b*L)/L; g.fillStyle=cols[Math.floor(r()*cols.length)];   // the galaxy's brightness curve × its 0.8 opacity, posterized
+          var s=r()<t.big?2:1; g.fillRect(Math.floor(x),Math.floor(y),s,s); }
+        c._f=t.f; sky.appendChild(c);
+      });
     }
-    function cvSky(host){
-      if(!cvSkyTiles){ var cs=getComputedStyle(host), tok=function(k){ return cs.getPropertyValue(k).trim(); };
-        var cols=[tok('--bric-content-primary'),tok('--bric-schematic-solid'),tok('--bric-content-tertiary')].filter(Boolean);
-        cvSkyTiles=[{size:256,f:0.06,url:cvStarTile(256,60,1,0.38,cols)},{size:384,f:0.16,url:cvStarTile(384,34,1.5,0.6,cols)},{size:512,f:0.32,url:cvStarTile(512,14,2,0.9,cols)}]; }
-      var sky=cvEl('div','cvl-sky'); sky.setAttribute('aria-hidden','true');
-      cvSkyTiles.forEach(function(t){ var l=cvEl('div','cvl-stars'); l.style.height='calc(100% + '+t.size+'px)'; l.style.backgroundImage='url('+t.url+')'; l.style.backgroundSize=t.size+'px '+t.size+'px'; l._f=t.f; l._s=t.size; sky.appendChild(l); });
-      return sky;
+    // The timeline on its own low-res canvas: a dim rail between the first and last node, lit from the newest stop down to the card in
+    // focus; teal nodes (a branch = hollow ring with a spur to its card); the focus node gold with the route's pulse (cvPulseDur).
+    var _cvTlCol=null, _cvTlLoop=0;
+    function cvTlColors(host){ return _cvTlCol||(_cvTlCol={line:cvTokColor(host,'--bric-schematic-line'),dim:cvTokColor(host,'--bric-schematic-line-dim'),solid:cvTokColor(host,'--bric-schematic-solid'),fill:cvTokColor(host,'--bric-schematic-fill'),hot:cvTokColor(host,'--bric-register-amber-planet-hot'),glow:cvTokColor(host,'--bric-fx-glow-amber-near'),bg:cvTokColor(host,'--bric-surface-scene')}); }
+    function cvDrawTimeline(t){
+      var host=document.getElementById('cvList'); if(!host) return; var cvs=host.querySelector('.cvl-tl'), track=host.querySelector('.cvl-track'); if(!cvs||!track) return;
+      var P=cvPixel(), w=Math.ceil(host.clientWidth/P), h=Math.ceil(host.clientHeight/P); if(cvs.width!==w||cvs.height!==h){ cvs.width=w; cvs.height=h; cvs.style.width=(w*P)+'px'; cvs.style.height=(h*P)+'px'; }
+      var g=cvs.getContext('2d'), C=cvTlColors(host), ts=getComputedStyle(track), tr=track.getBoundingClientRect(), top=host.getBoundingClientRect().top;
+      var rx=(tr.left+parseFloat(ts.getPropertyValue('--cvl-rail-x')))/P, ny=parseFloat(ts.getPropertyValue('--cvl-node-y'));
+      var nodes=[].map.call(host.querySelectorAll('.cvl-item'),function(el){ var r=el.getBoundingClientRect(); return {y:(r.top-top+ny)/P,x:r.left/P,branch:el.classList.contains('branch'),focus:el.classList.contains('focus')}; });
+      g.clearRect(0,0,w,h); if(!nodes.length) return;
+      var fi=0, y0=nodes[0].y, y1=nodes[nodes.length-1].y, lw=Math.max(1,Math.round(2/P)), X=Math.round(rx-lw/2); nodes.forEach(function(n,i){ if(n.focus) fi=i; });
+      g.globalAlpha=0.5; g.fillStyle=C.dim; g.fillRect(X,Math.round(y0),lw,Math.round(y1-y0));
+      g.globalAlpha=1; g.fillStyle=C.line; g.fillRect(X,Math.round(y0),lw,Math.round(nodes[fi].y-y0));
+      var dot=function(x,y,r,c){ g.fillStyle=c; g.beginPath(); g.arc(x,y,r,0,6.2832); g.fill(); };
+      nodes.forEach(function(n){ if(n.y<-30||n.y>h+30) return; var x=rx, y=Math.round(n.y);
+        if(n.branch){ g.globalAlpha=1; g.fillStyle=C.dim; g.fillRect(Math.round(x+5/P),y-Math.floor(lw/2),Math.max(0,Math.round(n.x-x-5/P)),lw);   // spur to the card
+          if(n.focus){ dot(x,y,9/P,C.glow); dot(x,y,5/P,C.hot); } else { dot(x,y,5/P,C.solid); dot(x,y,3/P,C.bg); } return; }
+        if(n.focus){ dot(x,y,11/P,C.glow); dot(x,y,6/P,C.hot); } else { dot(x,y,11/P,C.fill); dot(x,y,6/P,C.solid); } });
+      if(t!=null){ var f=nodes[fi], ph=(t/1000/(typeof cvPulseDur!=='undefined'?cvPulseDur:1.6))%1;   // the route's pulse: a ring that grows and fades
+        g.globalAlpha=0.7*(1-ph); g.strokeStyle=C.hot; g.lineWidth=lw; g.beginPath(); g.arc(rx,Math.round(f.y),(7+16*ph)/P,0,6.2832); g.stroke(); g.globalAlpha=1; }
     }
-    // the one CV download for the whole page: the newest stop's CTA when it links somewhere, else the first one that does
-    function cvRenderCta(){
-      var host=document.getElementById('cvListCta'); if(!host) return; host.textContent='';
+    function cvTlTick(t){ _cvTlLoop=0; var host=document.getElementById('cvList'); if(!cvListOn||!cvScene.active||!host||!host.querySelector('.cvl-tl')) return; cvDrawTimeline(t); _cvTlLoop=requestAnimationFrame(cvTlTick); }
+    function cvTlStart(){ if(cvReduced()){ cvDrawTimeline(null); return; } if(!_cvTlLoop) _cvTlLoop=requestAnimationFrame(cvTlTick); }   // static under reduced motion (no pulse)
+    // the CV download, after the one-liner and again at the end: the newest stop's CTA when it links somewhere, else the first one that does
+    function cvCtaBtn(){
       var latest=cvNodeById(cvLatestId()), cands=cvData.filter(function(m){ return !m.ctaHidden; });
       var real=function(m){ return m&&!m.ctaHidden&&m.ctaUrl&&m.ctaUrl!=='#'; };
-      var src=real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])); if(!src) return;
+      var src=real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])); if(!src) return null;
       var cd=cvDataForBooklet(src.id), on=(src.ctaActive==null?true:!!src.ctaActive), b;
       if(real(src)&&on){ b=cvEl('a','bric-btn bric-btn--primary',cd.cta); b.href=cd.ctaUrl; b.target='_blank'; b.rel='noopener'; }
       else { b=cvEl('button','bric-btn bric-btn--primary',cd.cta); b.type='button'; if(!on) b.disabled=true; else b.addEventListener('click',function(){ cd.onCta(); }); }
-      host.appendChild(b);
+      return b;
     }
+    var CV_LIST_HEAD='Shipped to millions. Built systems for the world’s most exclusive properties. Designed funnels behind $4B+ in potential orders.';
     var cvListFocusId=null, _cvlRaf=0;
     function cvRenderList(){
       var host=document.getElementById('cvList'); if(!host||!cvData) return;
-      host.textContent=''; cvListFocusId=null; var wrap=cvEl('div','cvl-wrap'), stops=cvListStops();
-      host.appendChild(cvSky(host));
+      host.textContent=''; cvListFocusId=null; _cvTlCol=null; var wrap=cvEl('div','cvl-wrap'), stops=cvListStops(), cta;
+      var sky=cvEl('div','cvl-sky'); sky.setAttribute('aria-hidden','true'); host.appendChild(sky);
+      var tl=cvEl('canvas','cvl-tl'); tl.setAttribute('aria-hidden','true'); host.appendChild(tl);
       var hero=cvEl('header','cvl-hero');
-      hero.appendChild(cvEl('div','cvl-eyebrow',(cvRootLabel||'CV')+' · flight log'));
-      hero.appendChild(cvEl('h1','cvl-head','Career path'));
-      hero.appendChild(cvEl('div','cvl-sub',stops.length+(stops.length===1?' stop':' stops')+' · most recent first'));
+      hero.appendChild(cvEl('h1','cvl-head',CV_LIST_HEAD));
+      if((cta=cvCtaBtn())) hero.appendChild(cta);
       wrap.appendChild(hero);
-      var track=cvEl('div','cvl-track'); track.appendChild(cvEl('div','cvl-rail')); track.appendChild(cvEl('div','cvl-rail on'));
+      var track=cvEl('div','cvl-track');
       stops.forEach(function(m){
         var it=cvEl('article','cvl-item'+(m.branch?' branch':'')); it.id='cvl-'+m.id; it.setAttribute('data-id',m.id);
         ['tl','tr','bl','br'].forEach(function(c){ it.appendChild(cvEl('div','mb-corner '+c)); });
-        it.appendChild(cvEl('span','cvl-node'));
-        if(m.kicker) it.appendChild(cvEl('div','cvl-kicker',m.kicker));
         it.appendChild(cvEl('h2','manual-title',m.title||''));
         if(m.sub) it.appendChild(cvEl('div','manual-subtitle',m.sub));
         if(m.body) it.appendChild(cvEl('div','manual-framing',m.body));
@@ -11627,29 +11638,32 @@ f 2469//2469 2470//2470 2434//2434
         it.addEventListener('click',function(e){ if(e.target.closest('a,button')||m.id===cvListFocusId) return; selectCV(m.id); });   // another card: bring it into focus
         track.appendChild(it);
       });
-      wrap.appendChild(track); host.appendChild(wrap); cvRenderCta();
-      cvListFrame();
+      wrap.appendChild(track);
+      if((cta=cvCtaBtn())){ var end=cvEl('footer','cvl-end'); end.appendChild(cta); wrap.appendChild(end); }
+      host.appendChild(wrap);
+      cvDrawSky(host); cvListFrame(); cvTlStart();
     }
-    // One scroll frame: the sky layers and the title drift slower than the cards, the card crossing the focus line (40% down) takes focus,
-    // and the rail lights from the newest stop down to it. Reads first, then writes.
+    // One scroll frame: the sky layers and the title drift slower than the cards, and the card crossing the focus line takes focus.
+    // The line sits 40% down; at the top of the page it starts on the first card's middle and runs down to 40% as you scroll, so the
+    // newest stop is in focus on arrival however tall the window is. Reads first, then writes.
     function cvListFrame(){
       _cvlRaf=0; var host=document.getElementById('cvList'); if(!host||!cvListOn) return;
-      var st=host.scrollTop, still=cvReduced(), fy=host.clientHeight*0.4, top=host.getBoundingClientRect().top;
-      var items=host.querySelectorAll('.cvl-item'), best=null, bd=1e9, cy=[];
+      var st=host.scrollTop, still=cvReduced(), top=host.getBoundingClientRect().top;
+      var items=host.querySelectorAll('.cvl-item'), best=null, bd=1e9; if(!items.length) return;
+      var r0=items[0].getBoundingClientRect(), fy=Math.min(host.clientHeight*0.4, r0.top-top+st+r0.height/2+st);
       [].forEach.call(items,function(el){ var r=el.getBoundingClientRect(), y=r.top-top, d=(y<=fy&&r.bottom-top>=fy)?0:Math.min(Math.abs(y-fy),Math.abs(r.bottom-top-fy));
-        if(d<bd){ bd=d; best=el; } var nd=el.querySelector('.cvl-node'); cy.push(el.offsetTop+nd.offsetTop+nd.offsetHeight/2); });
-      [].forEach.call(host.querySelectorAll('.cvl-stars'),function(l){ l.style.transform=still?'':'translate3d(0,'+(-((st*l._f)%l._s)).toFixed(1)+'px,0)'; });
-      var hero=host.querySelector('.cvl-hero'); if(hero){ hero.style.transform=still?'':'translate3d(0,'+(st*0.35).toFixed(1)+'px,0)'; hero.style.opacity=still?'':String(Math.max(0,1-st/320)); }
-      var rails=host.querySelectorAll('.cvl-rail');
-      if(cy.length&&rails.length===2){ var h=Math.max(0,cy[cy.length-1]-cy[0]);
-        rails.forEach(function(r){ r.style.top=cy[0]+'px'; r.style.height=h+'px'; });
-        var fi=best?[].indexOf.call(items,best):0; rails[1].style.transform='scaleY('+(h?((cy[fi]-cy[0])/h):0).toFixed(4)+')'; }
+        if(d<bd){ bd=d; best=el; } });
+      [].forEach.call(host.querySelectorAll('.cvl-stars'),function(l){ l.style.transform=still?'':'translate3d(0,'+(-st*l._f).toFixed(1)+'px,0)'; });
+      var hero=host.querySelector('.cvl-hero'); if(hero){ hero.style.transform=still?'':'translate3d(0,'+(st*0.35).toFixed(1)+'px,0)'; hero.style.opacity=still?'':String(Math.max(0,1-st/420)); }
       if(best) cvListFocus(best.getAttribute('data-id'));
+      if(still) cvDrawTimeline(null);   // otherwise the pulse loop redraws every frame
     }
     function cvListScrolled(){ if(!_cvlRaf) _cvlRaf=requestAnimationFrame(cvListFrame); }
-    // the card in focus is the active stop: gold node, breadcrumb, and where immersive opens if the visitor switches back
+    // the card in focus is the active stop: gold node, breadcrumb, and where immersive opens if the visitor switches back.
+    // Every other card is a reticle target (▸ VIEW): clicking it brings it into focus.
     function cvListFocus(id){ if(id===cvListFocusId) return; cvListFocusId=id;
-      var host=document.getElementById('cvList'); [].forEach.call(host.querySelectorAll('.cvl-item'),function(el){ el.classList.toggle('focus',el.getAttribute('data-id')===id); });
+      var host=document.getElementById('cvList'); [].forEach.call(host.querySelectorAll('.cvl-item'),function(el){ var f=el.getAttribute('data-id')===id; el.classList.toggle('focus',f);
+        if(f){ el.removeAttribute('data-bric-target'); el.removeAttribute('data-bric-label'); } else { el.setAttribute('data-bric-target',''); el.setAttribute('data-bric-label','▸ VIEW'); } });
       var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFrameMode='node'; cvMarkLabels();
       if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);
     }
@@ -11697,7 +11711,7 @@ f 2469//2469 2470//2470 2434//2434
       if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
       window.addEventListener('resize',placeViewSoon);
       var lh=document.getElementById('cvList'); if(lh) lh.addEventListener('scroll',cvListScrolled,{passive:true});
-      window.addEventListener('resize',function(){ if(cvListOn&&cvScene.active) cvListScrolled(); });
+      var skyT=0; window.addEventListener('resize',function(){ if(!(cvListOn&&cvScene.active)) return; cvListScrolled(); clearTimeout(skyT); skyT=setTimeout(function(){ var h=document.getElementById('cvList'); if(h&&cvListOn) { cvDrawSky(h); cvListScrolled(); } },150); });   // the sky is redrawn at the new size once resizing settles
       var cvc=renderer.domElement, _hm=new THREE.Vector2();
       cvc.addEventListener('pointermove',function(e){ if(!cvScene.active||cvListOn||(e.pointerType&&e.pointerType!=='mouse')||mwPhase!=='docked'||editMode){ if(cvHoverId) cvSetHover(null); return; }
         var list=cvNodes.map(function(n){ return n.hit||n.mesh; }); if(!list.length) return;
