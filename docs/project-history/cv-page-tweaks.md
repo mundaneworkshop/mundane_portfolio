@@ -30,4 +30,10 @@
   - Starfield: three canvas layers (`cvDrawSky`, drift 0.06 / 0.16 / 0.32) drawn at 1/`params.pixel`, using the galaxy's brightness curve (`(0.22+0.78·r^1.7)·0.8`) posterized to `params.levels`. Density ≈ 0.3 stars per 1000px² in total (was ~1.2, far too dense), about a third of stars falling into loose clumps, and each layer is as tall as its own drift so nothing tiles or repeats. Colours resolved from the tokens via a probe element. Redrawn when a resize settles.
   - Hover: every card not in focus is a reticle target (`data-bric-target`, `▸ VIEW`, arm 16) and lifts to 72% opacity with an amber title; the card in focus drops the attribute.
   - Snapshot rows get `space-3-stud` (phone `space-2-stud`) between label and value, baseline-aligned for values that wrap.
+- **Oct 27 round 4:**
+  - Starfield measured against the galaxy (screenshot blob count): galaxy ≈ 0.33 visible stars per 1000px², the round-3 list ≈ 0.43 and read as dust. Now ≈ 0.11 in all (0.06 / 0.035 / 0.015 per layer), more of them 2px, in the galaxy's own star colour (`DARK.star`) with a few in `content-primary`.
+  - Sounds (the site's `MWAudio.ui` kit): hover tick on a card not in focus, `confirm` when clicking one, a `step` detent (with direction) each time scrolling moves focus to another card. Programmatic scrolls (click, arrows, entry) are quiet for 900ms (`_cvlQuiet`) so a glide past three cards doesn't rattle. Buttons and links inside already tick via the global handler.
+  - Card hover label is `▸ FOCUS` (the 3D node hover stays `▸ VIEW`). Snapshot rows lose the dashed rule, which fought the card's dot grid.
+  - Entering the list on the newest stop scrolls to the very top, so the one-liner isn't half under the top bar.
+  - Focused cards scale .98 → 1, so their text grows 2% too (transform scales everything); noted for the owner.
 - The render loop is paused while the list shows (`animate()` checks `cvListOn && cvScene.active`).

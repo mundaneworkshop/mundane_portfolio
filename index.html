@@ -637,12 +637,12 @@
   #cvList .cvl-item.focus{opacity:1;transform:none;cursor:default}
   #cvList .cvl-item.focus .mb-corner{border-color:var(--amber)}
   #cvList .cvl-item.focus .manual-title{color:var(--amber-hot)}
-  @media (hover:hover){ #cvList .cvl-item:not(.focus):hover{opacity:.72;transform:none} #cvList .cvl-item:not(.focus):hover .manual-title{color:var(--amber-hot)} }   /* another card under the pointer: lifts toward focus while the reticle frames it (▸ VIEW) */
+  @media (hover:hover){ #cvList .cvl-item:not(.focus):hover{opacity:.72;transform:none} #cvList .cvl-item:not(.focus):hover .manual-title{color:var(--amber-hot)} }   /* another card under the pointer: lifts toward focus while the reticle frames it (▸ FOCUS) */
   #cvList .cvl-item.branch{margin-left:28px}
   #cvList .manual-title{font-size:22px;margin-bottom:12px;transition:color var(--bric-snap-duration-normal) linear}
   #cvList .manual-subtitle{margin:-4px 0 12px}
   #cvList .manual-framing{max-width:none}
-  #cvList .cvl-item .snap-cell{border-bottom:1px dashed var(--border-dim);gap:var(--bric-space-3-stud);align-items:baseline}   /* room between a label and a value that wraps */
+  #cvList .cvl-item .snap-cell{gap:var(--bric-space-3-stud);align-items:baseline}   /* room between a label and a value that wraps; no row rule (it fought the card's dot grid) */
   #cvList .cvl-item .mb-corner{transition:border-color var(--bric-snap-duration-normal) linear}
   #cvList .manual-link{max-width:100%;min-width:0}   /* a long link label truncates instead of pushing the page sideways on a phone */
   #cvList .manual-link .ml-label{overflow:hidden;text-overflow:ellipsis}
@@ -11558,7 +11558,7 @@ f 2469//2469 2470//2470 2434//2434
     // a little clumped so it doesn't read as a uniform sprinkle. Drawn at 1/params.pixel and scaled up nearest-neighbour, brightness
     // posterized to params.levels, in the BRIC star colours (resolved from the tokens, never hard-coded). Each layer is tall enough
     // for its whole drift, so nothing tiles or repeats.
-    var CV_SKY=[{f:0.06,d:0.17,big:0},{f:0.16,d:0.09,big:0.15},{f:0.32,d:0.035,big:0.6}];   // drift rate, stars per 1000px², share drawn 2px (low-res) instead of 1
+    var CV_SKY=[{f:0.06,d:0.06,big:0.2},{f:0.16,d:0.035,big:0.5},{f:0.32,d:0.015,big:0.9}];   // drift rate, stars per 1000px², share drawn 2px (low-res) instead of 1. ~0.11 in all: a third of the galaxy's ~0.33 on screen, since the cards are busy enough
     function cvRng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
     function cvTokColor(host,k){ var p=document.createElement('i'); p.style.color='var('+k+')'; host.appendChild(p); var c=getComputedStyle(p).color; p.remove(); return c; }   // a token as rgb(), so a canvas can use it
     function cvPixel(){ return Math.max(1,Math.round((typeof params!=='undefined'&&params.pixel)||2)); }
@@ -11566,7 +11566,8 @@ f 2469//2469 2470//2470 2434//2434
     function cvDrawSky(host){
       var sky=host.querySelector('.cvl-sky'); if(!sky) return; sky.textContent='';
       var P=cvPixel(), L=cvLevels(), w=host.clientWidth, h=host.clientHeight, travel=Math.max(0,host.scrollHeight-h);
-      var cols=[cvTokColor(host,'--bric-content-primary'),cvTokColor(host,'--bric-content-primary'),cvTokColor(host,'--bric-content-primary'),cvTokColor(host,'--bric-schematic-solid')];
+      var star=(typeof DARK!=='undefined'&&DARK.star!=null)?'#'+('00000'+DARK.star.toString(16)).slice(-6):cvTokColor(host,'--bric-content-primary');   // the galaxy's own star colour
+      var cols=[star,star,star,cvTokColor(host,'--bric-content-primary')];
       CV_SKY.forEach(function(t,li){
         var lh=Math.ceil(h+travel*t.f)+8, c=document.createElement('canvas'); c.className='cvl-stars';
         c.width=Math.ceil(w/P); c.height=Math.ceil(lh/P); c.style.width=(c.width*P)+'px'; c.style.height=(c.height*P)+'px';
@@ -11635,7 +11636,8 @@ f 2469//2469 2470//2470 2434//2434
         if(sn.length){ var g=cvEl('div','snap-grid'); sn.forEach(function(r){ var c=cvEl('div','snap-cell'); c.appendChild(cvEl('div','snap-cell-k',r.k||'')); var v=cvEl('div','snap-cell-v'+(r.amber?' amber':'')); v.innerHTML=r.v||''; c.appendChild(v); g.appendChild(c); }); it.appendChild(g); }   // values are author HTML (<br>, entities), rendered as the manual does
         var ln=(m.links||[]).filter(function(l){ return l&&l.label; });
         if(ln.length){ var lw=cvEl('div','manual-links'); ln.forEach(function(l){ var a=cvEl('a','manual-link bric-btn bric-btn--secondary bric-btn--sm'); a.appendChild(cvEl('span','ml-label',l.label)); if(l.url&&l.url!=='#'){ a.href=l.url; a.target='_blank'; a.rel='noopener'; } lw.appendChild(a); }); it.appendChild(lw); }
-        it.addEventListener('click',function(e){ if(e.target.closest('a,button')||m.id===cvListFocusId) return; selectCV(m.id); });   // another card: bring it into focus
+        it.addEventListener('click',function(e){ if(e.target.closest('a,button')||m.id===cvListFocusId) return; cvUi('confirm'); selectCV(m.id); });   // another card: bring it into focus
+        it.addEventListener('pointerover',function(e){ if(e.pointerType!=='mouse'||m.id===cvListFocusId||it.contains(e.relatedTarget)||e.target.closest('a,button')) return; cvUi('hover'); });   // the site's hover tick (links/buttons inside tick on their own)
         track.appendChild(it);
       });
       wrap.appendChild(track);
@@ -11660,10 +11662,13 @@ f 2469//2469 2470//2470 2434//2434
     }
     function cvListScrolled(){ if(!_cvlRaf) _cvlRaf=requestAnimationFrame(cvListFrame); }
     // the card in focus is the active stop: gold node, breadcrumb, and where immersive opens if the visitor switches back.
-    // Every other card is a reticle target (▸ VIEW): clicking it brings it into focus.
-    function cvListFocus(id){ if(id===cvListFocusId) return; cvListFocusId=id;
+    // Every other card is a reticle target (▸ FOCUS): clicking it brings it into focus.
+    var _cvlQuiet=0;   // a click / arrow / entry scrolls the page itself: no detent ticks while it glides past other cards
+    function cvUi(k,o){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui(k,false,o||null); } }
+    function cvListFocus(id){ if(id===cvListFocusId) return; var prev=cvListFocusId; cvListFocusId=id;
+      if(prev&&performance.now()>_cvlQuiet){ var ids=cvListStops().map(function(n){ return n.id; }); cvUi('step',{dir:ids.indexOf(id)>ids.indexOf(prev)?1:-1}); }   // scrolling a new card into focus clicks like a detent
       var host=document.getElementById('cvList'); [].forEach.call(host.querySelectorAll('.cvl-item'),function(el){ var f=el.getAttribute('data-id')===id; el.classList.toggle('focus',f);
-        if(f){ el.removeAttribute('data-bric-target'); el.removeAttribute('data-bric-label'); } else { el.setAttribute('data-bric-target',''); el.setAttribute('data-bric-label','▸ VIEW'); } });
+        if(f){ el.removeAttribute('data-bric-target'); el.removeAttribute('data-bric-label'); } else { el.setAttribute('data-bric-target',''); el.setAttribute('data-bric-label','▸ FOCUS'); } });
       var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFrameMode='node'; cvMarkLabels();
       if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);
     }
@@ -11671,8 +11676,8 @@ f 2469//2469 2470//2470 2434//2434
       if(!cvListOn) return; var host=document.getElementById('cvList'); if(!host) return;
       if(!(scroll&&cvSelId)){ cvListScrolled(); return; }
       var el=document.getElementById('cvl-'+cvSelId); if(!el){ cvListScrolled(); return; }
-      var y=el.getBoundingClientRect().top-host.getBoundingClientRect().top+host.scrollTop-(host.clientHeight*0.4-48);
-      host.scrollTo({top:Math.max(0,y),behavior:cvReduced()?'auto':'smooth'}); cvListScrolled();
+      var first=host.querySelector('.cvl-item')===el, y=first?0:el.getBoundingClientRect().top-host.getBoundingClientRect().top+host.scrollTop-(host.clientHeight*0.4-48);   // the newest stop = the top of the page, one-liner and all
+      _cvlQuiet=performance.now()+900; host.scrollTo({top:Math.max(0,y),behavior:cvReduced()?'auto':'smooth'}); cvListScrolled();
     }
     // Apply cvListOn to the page. persist=true when the user flipped the toggle (remembered); entering the route just applies the stored choice.
     function cvApplyView(persist){
