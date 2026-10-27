@@ -11732,7 +11732,13 @@ f 2469//2469 2470//2470 2434//2434
       cvNodes.forEach(function(n){ var on=(n.id===id); n.lbl.classList.toggle('hov',on); n.mesh.scale.setScalar(on?1.35:1); }); }   // (a static scale: no tween, so nothing to gate on reduced motion)
     (function wireCVView(){
       var seg=document.getElementById('cvView'), opts=seg?[].slice.call(seg.querySelectorAll('[data-cv-view]')):[];
-      opts.forEach(function(b){ b.addEventListener('click',function(){ cvSetView(b.getAttribute('data-cv-view')); }); });
+      // The whole control is the hit area (the cursor is hidden under the reticle, so nobody can aim at one half): a click on the other
+      // option picks it; a click anywhere else on the control (the checked option, the gap, the reticle's outset band, which the reticle
+      // passes on as seg.click()) flips to the other view. Keyboard activation of the checked option stays a no-op, as in any radiogroup.
+      if(seg) seg.addEventListener('click',function(e){ var opt=e.target.closest&&e.target.closest('[data-cv-view]');
+        if(opt&&opt.getAttribute('aria-checked')!=='true'){ cvSetView(opt.getAttribute('data-cv-view')); return; }
+        if(opt&&e.detail===0) return;
+        var other=opts.filter(function(b){ return b.getAttribute('aria-checked')!=='true'; })[0]; if(other) other.click(); });   // through the option, so it gets the press sound
       // radiogroup keys: the arrows move between the options (and so never reach the stop stepping below while the toggle has focus)
       if(seg) seg.addEventListener('keydown',function(e){ var k=e.key, d=(k==='ArrowRight'||k==='ArrowDown')?1:(k==='ArrowLeft'||k==='ArrowUp')?-1:0; if(!d) return;
         e.preventDefault(); var i=opts.indexOf(document.activeElement), n=opts[(i+d+opts.length)%opts.length]; n.focus(); cvSetView(n.getAttribute('data-cv-view')); });
@@ -11740,6 +11746,7 @@ f 2469//2469 2470//2470 2434//2434
       // no room before the right-hand controls (sound switch), it drops under the breadcrumb, left-aligned with it
       var _pvRaf=0, cp=document.getElementById('crumbpath'), bc=document.getElementById('breadcrumb');
       function placeView(){ _pvRaf=0; if(!seg||!bc) return; if(!cvScene.active){ seg.classList.remove('placed'); return; }
+        if(seg.matches(':hover')&&seg.classList.contains('placed')){ seg.addEventListener('pointerleave',placeViewSoon,{once:true}); return; }   // never slide out from under the pointer (switching views changes the breadcrumb); catch up once it leaves
         var r=bc.getBoundingClientRect(), w=seg.offsetWidth, h=seg.offsetHeight, room=window.innerWidth-180;
         if(!r.width){ seg.classList.remove('placed'); return; }
         if(r.right+16+w<=room){ seg.style.left=Math.round(r.right+16)+'px'; seg.style.top=Math.round(r.top+(r.height-h)/2)+'px'; }
