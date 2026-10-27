@@ -613,8 +613,8 @@
   .cvrlbl:hover .cvrlbl-t,.cvrlbl.sel .cvrlbl-t{color:#F0D080}
   .cvrlbl.hov .cvrlbl-t{color:#F0D080}   /* node hovered in the scene (or its label): same highlight as the label's own :hover */
   /* ── CV view toggle (Immersive / List: the BRIC segmented toggle, assets/bric-components.css) at the top centre + the list view ── */
-  #cvView{position:fixed;top:16px;left:0;right:0;margin-inline:auto;width:max-content}   /* fixed to the viewport, so it ignores the right-hand control stack it lives in */
-  @media (max-width:700px){ #cvView{top:52px} }   /* under the breadcrumb on a phone */
+  #cvView{position:fixed;top:16px;left:22px;width:max-content;visibility:hidden}   /* fixed to the viewport, beside the breadcrumb (placed by placeView in wireCVView; hidden until placed) */
+  #cvView.placed{visibility:visible}
   #cvListBar{position:fixed;left:0;right:0;top:0;height:112px;z-index:16;display:none;pointer-events:none;background:linear-gradient(to bottom,var(--bric-surface-scene) 62%,transparent)}   /* the page's fixed chrome (breadcrumb, toggle, sound) sits on this, not on scrolling cards */
   body.cv-list #cvListBar{display:block}
   @media (max-width:700px){ #cvListBar{height:140px;background:linear-gradient(to bottom,var(--bric-surface-scene) 74%,transparent)} }   /* a wrapped breadcrumb + the toggle under it */
@@ -1451,7 +1451,7 @@
   </div>
   <div id="cvRouteLayer"></div>
   <div id="cvRouteCtl">
-    <div class="bric-seg bric-seg--sm" id="cvView" role="radiogroup" aria-label="CV view" data-bric-target>
+    <div class="bric-seg bric-seg--sm bric-seg--secondary" id="cvView" role="radiogroup" aria-label="CV view" data-bric-target>
       <button type="button" class="bric-seg__opt" role="radio" data-cv-view="immersive" aria-checked="true" tabindex="0">Immersive</button>
       <button type="button" class="bric-seg__opt" role="radio" data-cv-view="list" aria-checked="false" tabindex="-1">List</button>
     </div>
@@ -11404,8 +11404,8 @@ f 2469//2469 2470//2470 2434//2434
       cvScene.enter(grp);   // galaxy hides, route shows, camera handed to cvOrbit
       cvRootLabel=crumbTitle(grp,'CV');
       var _latest=cvLatestId();
-      if(_latest) selectCV(_latest);   // latest is the active node (booklet, breadcrumb, gold/pulse)
-      cvFitOverview();   // ...but the DEFAULT CAMERA frames the WHOLE route (auto-fit), not dollied into the node
+      if(_latest) cvShipGoTo(_latest);   // the ship parks at the newest stop...
+      cvOverview();   // ...but nothing is open: the whole route is framed and the one-liner shows (Oct 27; before, the newest stop opened with its booklet)
       cvApplyView(false); cvHeroSync();
     }
     // ── Stage framing ──────────────────────────────────────────────────────────
@@ -11617,24 +11617,25 @@ f 2469//2469 2470//2470 2434//2434
     function cvTlTick(t){ _cvTlLoop=0; var host=document.getElementById('cvList'); if(!cvListOn||!cvScene.active||!host||!host.querySelector('.cvl-tl')) return; cvDrawTimeline(t); _cvTlLoop=requestAnimationFrame(cvTlTick); }
     function cvTlStart(){ if(cvReduced()){ cvDrawTimeline(null); return; } if(!_cvTlLoop) _cvTlLoop=requestAnimationFrame(cvTlTick); }   // static under reduced motion (no pulse)
     // the CV download, after the one-liner and again at the end: the newest stop's CTA when it links somewhere, else the first one that does
-    function cvCtaBtn(){
+    function cvCtaBtn(kind){ kind=kind||'primary';
       var latest=cvNodeById(cvLatestId()), cands=cvData.filter(function(m){ return !m.ctaHidden; });
       var real=function(m){ return m&&!m.ctaHidden&&m.ctaUrl&&m.ctaUrl!=='#'; };
       var src=real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])); if(!src) return null;
       var cd=cvDataForBooklet(src.id), on=(src.ctaActive==null?true:!!src.ctaActive), b;
-      if(real(src)&&on){ b=cvEl('a','bric-btn bric-btn--primary',cd.cta); b.href=cd.ctaUrl; b.target='_blank'; b.rel='noopener'; }
-      else { b=cvEl('button','bric-btn bric-btn--primary',cd.cta); b.type='button'; if(!on) b.disabled=true; else b.addEventListener('click',function(){ cd.onCta(); }); }
+      if(real(src)&&on){ b=cvEl('a','bric-btn bric-btn--'+kind,cd.cta); b.href=cd.ctaUrl; b.target='_blank'; b.rel='noopener'; }
+      else { b=cvEl('button','bric-btn bric-btn--'+kind,cd.cta); b.type='button'; if(!on) b.disabled=true; else b.addEventListener('click',function(){ cd.onCta(); }); }
       return b;
     }
     // the pitch: one line in the list's hero, three stacked lines (one per sentence) over the immersive overview
     var CV_HEAD_LINES=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'], CV_LIST_HEAD=CV_HEAD_LINES.join(' ');
-    // Download CV + Start a chat. The chat button has no destination yet (waiting on a Mundane Workshop address); it is not HoloNet.
-    function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn(); if(dl) row.appendChild(dl);
-      var chat=cvEl('button','bric-btn bric-btn--secondary','Start a chat'); chat.type='button'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
-      return row; }
+    // Start a chat (primary) + Download CV (secondary). The chat button has no destination yet (waiting on a Mundane Workshop address); it is not HoloNet.
+    function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn('secondary');
+      var chat=cvEl('button','bric-btn bric-btn--primary','Start a chat'); chat.type='button'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
+      if(dl) row.appendChild(dl); return row; }
     // Immersive overview hero: shown while no stop is open and the whole route is framed; decodes in line by line, fades out when a stop opens.
     function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'&&!editMode; }
-    function cvHeroPlace(){ var h=document.getElementById('cvHero'), seg=document.getElementById('cvView'); if(!h||!seg) return; var r=seg.getBoundingClientRect(); if(r.height) h.style.top=Math.round(r.bottom+16)+'px'; }
+    function cvHeroPlace(){ var h=document.getElementById('cvHero'), seg=document.getElementById('cvView'), bc=document.getElementById('breadcrumb'); if(!h) return;   // well clear of the top bar: 16% down, and never closer than 40px under the breadcrumb / toggle
+      var y=window.innerHeight*0.16; [seg,bc].forEach(function(e){ var r=e&&e.getBoundingClientRect(); if(r&&r.height) y=Math.max(y,r.bottom+40); }); h.style.top=Math.round(y)+'px'; }
     function cvHeroSync(){
       var h=document.getElementById('cvHero'); if(!h||!cvData) return; var want=cvHeroWanted(), was=h.classList.contains('on');
       if(want&&!h.childElementCount){ CV_HEAD_LINES.forEach(function(t){ h.appendChild(cvEl('span','cvh-line',t)); }); h.appendChild(cvCtaRow()); }
@@ -11735,11 +11736,15 @@ f 2469//2469 2470//2470 2434//2434
       // radiogroup keys: the arrows move between the options (and so never reach the stop stepping below while the toggle has focus)
       if(seg) seg.addEventListener('keydown',function(e){ var k=e.key, d=(k==='ArrowRight'||k==='ArrowDown')?1:(k==='ArrowLeft'||k==='ArrowUp')?-1:0; if(!d) return;
         e.preventDefault(); var i=opts.indexOf(document.activeElement), n=opts[(i+d+opts.length)%opts.length]; n.focus(); cvSetView(n.getAttribute('data-cv-view')); });
-      // top centre unless a long breadcrumb (a stop's title) would run into it: then it drops just under the breadcrumb
-      var _pvRaf=0, cp=document.getElementById('crumbpath');
-      function placeView(){ _pvRaf=0; if(!seg) return; seg.style.top=''; if(!cvScene.active||!cp) return;
-        var r=cp.getBoundingClientRect(), s=seg.getBoundingClientRect();
-        if(r.width&&r.right+12>s.left&&r.left<s.right+12&&r.bottom+8>s.top&&r.top<s.bottom+8) seg.style.top=Math.round(r.bottom+10)+'px'; }
+      // beside the breadcrumb on its row (Secondary appearance, so it doesn't compete with the page CTAs); when a long stop title leaves
+      // no room before the right-hand controls (sound switch), it drops under the breadcrumb, left-aligned with it
+      var _pvRaf=0, cp=document.getElementById('crumbpath'), bc=document.getElementById('breadcrumb');
+      function placeView(){ _pvRaf=0; if(!seg||!bc) return; if(!cvScene.active){ seg.classList.remove('placed'); return; }
+        var r=bc.getBoundingClientRect(), w=seg.offsetWidth, h=seg.offsetHeight, room=window.innerWidth-180;
+        if(!r.width){ seg.classList.remove('placed'); return; }
+        if(r.right+16+w<=room){ seg.style.left=Math.round(r.right+16)+'px'; seg.style.top=Math.round(r.top+(r.height-h)/2)+'px'; }
+        else { seg.style.left=Math.round(r.left)+'px'; seg.style.top=Math.round(r.bottom+10)+'px'; }
+        seg.classList.add('placed'); }
       function placeViewSoon(){ if(!_pvRaf) _pvRaf=requestAnimationFrame(placeView); }
       if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
       window.addEventListener('resize',placeViewSoon);

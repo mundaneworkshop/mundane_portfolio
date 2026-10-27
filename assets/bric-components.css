@@ -85,6 +85,12 @@
 .bric-seg[aria-disabled="true"]{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled);pointer-events:none}
 .bric-seg[aria-disabled="true"] .bric-seg__opt{color:var(--bric-interactive-text-disabled);text-shadow:none;cursor:not-allowed}
 .bric-seg[aria-disabled="true"] .bric-seg__opt[aria-checked="true"]{background:var(--bric-interactive-fill-disabled)}
+/* Appearance=Secondary (Figma 14, Oct 27): no track; only the checked option carries the 1px outline, label stays text/idle.
+   Hover tints the option a click would pick (the rule above), like the secondary button; no track outline or glow. */
+.bric-seg--secondary,.bric-seg--secondary:not([aria-disabled="true"]):hover,.bric-seg--secondary[aria-disabled="true"]{box-shadow:none}
+.bric-seg--secondary::after{display:none}
+.bric-seg--secondary .bric-seg__opt[aria-checked="true"]{background:transparent;color:var(--bric-interactive-text-idle);text-shadow:0 0 6px var(--bric-fx-bloom-text);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
+.bric-seg--secondary[aria-disabled="true"] .bric-seg__opt[aria-checked="true"]{background:transparent;color:var(--bric-interactive-text-disabled);text-shadow:none;box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled)}
 .bric-seg__opt:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:1px}
 @media (pointer:coarse){ .bric-seg--sm .bric-seg__opt::before{content:'';position:absolute;left:0;right:0;top:-10px;bottom:-10px} }   /* 44px touch target, 24px look */
 
