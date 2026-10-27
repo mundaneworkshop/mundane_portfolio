@@ -11626,9 +11626,10 @@ f 2469//2469 2470//2470 2434//2434
     }
     // the pitch: one line in the list's hero, three stacked lines (one per sentence) over the immersive overview
     var CV_HEAD_LINES=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'], CV_LIST_HEAD=CV_HEAD_LINES.join(' ');
-    // Start a chat (primary) + Download CV (secondary). The chat button has no destination yet (waiting on a Mundane Workshop address); it is not HoloNet.
+    // Start a chat (primary) + Download CV (secondary). Start a chat books a 30-minute 1:1 on Calendly (new tab); it is not HoloNet.
+    var CV_CHAT_URL='https://calendly.com/jason-mundanework/30min';
     function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn('secondary');
-      var chat=cvEl('button','bric-btn bric-btn--primary','Start a chat'); chat.type='button'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
+      var chat=cvEl('a','bric-btn bric-btn--primary','Start a chat'); chat.href=CV_CHAT_URL; chat.target='_blank'; chat.rel='noopener'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
       if(dl) row.appendChild(dl); return row; }
     // Immersive overview hero: shown while no stop is open and the whole route is framed; decodes in line by line, fades out when a stop opens.
     function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'&&!editMode; }
