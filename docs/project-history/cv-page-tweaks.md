@@ -1,4 +1,4 @@
-# CV page tweaks (Oct 26 2026)
+# CV page tweaks (Oct 26–27 2026)
 
 > Branch `feat/cv-page-tweaks`. The CV route (`/cv`, `cvScene` in `index.html`, grep `CV — 3D HYPERSPACE ROUTE`) picked up the focus-view manual conventions, a re-centre click, node hover reticle, arrow-key stepping and a list view.
 
@@ -11,11 +11,17 @@
 
 ## Interaction
 - Clicking empty space (`onBack`) always goes to the overview and re-centres, including when already there.
-- Hover: a window-level raycast on the canvas sets `cvHoverId`; the reticle target (`targets()` in the reticle IIFE) frames the node sphere with `▸ OPEN`, the node scales 1.35 and its label takes the hover colour. The label stays its own DOM target.
-- ←/→ step through `cvStops()` (depth-first, main path before side branches; ends clamp). Ignored in input/textarea/select/contenteditable, with modifiers, in the arcade; in list view they move the page.
+- Hover (Oct 27): node + label are **one target**. A raycast on the canvas or `pointerenter` on the label sets `cvHoverId`; `targets()` returns one frame spanning the sphere and its label, labelled `▸ VIEW`. The node scales 1.35 and the label takes the hover colour. Labels no longer carry `data-bric-target`; `targets()` accepts a pointer on `.cvrlbl` as well as the canvas.
+- ←/→ step through `cvStops()` (depth-first, main path before side branches; ends clamp). Ignored in input/textarea/select/contenteditable, with modifiers, in the arcade; in list view they move to the card above / below (the list's own order). A focused segmented toggle keeps the arrows for itself (radiogroup).
 
 ## List view
-- `#cvView` toggle (right edge, under the sound switch). Choice is stored in `localStorage['mw_cvview']` (try/catch); default immersive. Edit Mode forces immersive (the list is read-only) without overwriting the stored choice.
-- `#cvList` is built from the manual's own classes (`manual-title`, `manual-tags`/`bric-tag`, `snap-cell`, `manual-link`, `bric-btn`, `mb-corner`) with the same scoped tokens (`#cs-root, #cvList`). Branches are indented, disabled stops dimmed, the active stop takes the amber title. `#cvListBar` keeps the fixed chrome off scrolling cards.
+- `#cvView` is the BRIC **Segmented Toggle** (Figma › Components › 14, signed off Oct 27; CSS `.bric-seg` in `assets/bric-components.css`), `role=radiogroup` with roving tabindex. Top centre, replacing the old controls legend; on a phone (and whenever the breadcrumb would run into it) it drops under the breadcrumb (`placeView` in `wireCVView`). Choice is stored in `localStorage['mw_cvview']` (try/catch); default immersive. Edit Mode forces immersive (the list is read-only) without overwriting the stored choice.
+- `#cvList` is built from the manual's own classes (`manual-title`, `manual-tags`/`bric-tag`, `snap-cell`, `manual-link`, `bric-btn`, `mb-corner`) with the same scoped tokens (`#cs-root, #cvList`). Snapshot values are author HTML, rendered with `innerHTML` like the manual. `#cvListBar` keeps the fixed chrome off scrolling cards.
+- **Oct 27 rework:**
+  - `cvListStops()`: solid stops only (disabled stops stay 3D-only), newest first. The route has no dates, so time = depth along it; at equal depth the main path comes before a branch.
+  - Title: eyebrow `CV · flight log`, heading "Career path", sub "N stops · most recent first".
+  - Timeline: a vertical rail on the left (`.cvl-rail`, lane colour) with a node per card (teal, branch = hollow ring with a spur). A second rail lights from the newest stop down to the card in focus (`scaleY`).
+  - Focus: the card crossing the line 40% down the viewport is in focus (`cvListFrame` on scroll, rAF-throttled): full opacity, amber corner marks and title, gold node with the route's pulse; other cards sit at 42% opacity. Focus also sets `cvSelId`, the breadcrumb and the 3D labels, so switching to immersive flies to that stop with its manual up.
+  - Parallax: three tiled starfield layers (drawn once on canvas in the token star colours) drift at 0.06 / 0.16 / 0.32 of the scroll; the title drifts at 0.35 and fades. Transform/opacity only; static under reduced motion (the pulse and transitions also stop).
+  - One sticky CTA (`#cvListCta`, bottom right; a full-width bar on phones) instead of a CTA per card: the newest stop's CTA if it links somewhere, else the first stop that does.
 - The render loop is paused while the list shows (`animate()` checks `cvListOn && cvScene.active`).
-- A node CTA is shown in the list only when it has a link or a custom label; the booklet's placeholder ("Download CV (PDF)", no URL) would otherwise repeat on every card.

@@ -13,7 +13,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Adding any new tunable/parameter → [maximize-customization.md](maximize-customization.md) (standing rule: expose it, don't bake it)
 - Verifying any HTML/JS change → [workflow-html-verification.md](workflow-html-verification.md)
 - Figma design system (tokens, components, color, spacing, type) → [foundation-docs.md](foundation-docs.md), [color-decisions.md](color-decisions.md), [spacing-decisions.md](spacing-decisions.md), [visual-language-direction.md](visual-language-direction.md), [star-wars-visual-dna.md](star-wars-visual-dna.md), [bric-build-progress.md](bric-build-progress.md), [bric-framer-translation.md](bric-framer-translation.md)
-- Button / tag / breadcrumb / interactive-text states, the `--bric-*` token file, or regenerating tokens from Figma → [interactive-states.md](interactive-states.md)
+- Button / segmented toggle / tag / breadcrumb / interactive-text states, the `--bric-*` token file, or regenerating tokens from Figma → [interactive-states.md](interactive-states.md)
 - Foundations vs prod audit, the register narrative (teal = hologram, amber = the work, purple = HoloNet), HUD vs Document tiers, and the prod-migration list → [foundations-audit.md](foundations-audit.md)
 - Touching the Arcade space battle (Fun zone planet, fleets, lasers, hero ships, minikits, lighting, exit) → [arcade-space-battle.md](arcade-space-battle.md)
 - Touching the hologram minifigure outfits (outfit GLBs, the ☺ outfits manager, export bundle, cycling) → [outfits.md](outfits.md)
@@ -37,7 +37,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [foundations-audit.md](foundations-audit.md) — Oct 2 2026: Figma Foundations audited against prod; decisions (prod neutrals, amber = the work, two tiers, retired 3px stair-step corner) and what was applied
 - [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
 - [hud-type-grotesk.md](hud-type-grotesk.md) — Oct 2 2026: HUD labels/body moved from Space Mono to Space Grotesk per the locked stack; what stays mono
-- [cv-page-tweaks.md](cv-page-tweaks.md) — Oct 2026: CV route on the shared manual stage (`MWStage`), re-centre click, node hover reticle, ←/→ stops, immersive/list toggle
+- [cv-page-tweaks.md](cv-page-tweaks.md) — Oct 2026: CV route on the shared manual stage (`MWStage`), re-centre click, node hover reticle, ←/→ stops, segmented immersive/list toggle, list view timeline with scroll focus + starfield parallax
 - [entry-gate-text.md](entry-gate-text.md) — Oct 22 2026: entry gate H1 (hover decode) + two-line Star Wars crawl under the monogram, fade-in/out timings, 3 s dock
 - [reticle-cursor.md](reticle-cursor.md) — Oct 7 2026: the targeting reticle cursor (one shared file with Framer), where it shows, how it hands the native cursor back
 - [type-floor.md](type-floor.md) — Oct 2 2026: mobile-legibility type floor (11 / 13 / 16 px), small-text contrast rule, what is exempt

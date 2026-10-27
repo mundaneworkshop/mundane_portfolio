@@ -39,6 +39,10 @@ Disabled is unchanged. Active (fill + inset keyline) keeps its off-white look at
 
 `.mw-sound-switch` (galaxy view = Small 34x16 track, arcade hero select = Large 52x24) follows the button language: hover = track stroke `interactive/outline/hover`, 22% tint `interactive/fill/hover-tint`, label `interactive/text/hover-accent`, On thumb `interactive/fill/hover`. Disabled uses the disabled tokens and never hovers. The thumb is centred in the track (travel 16 Small / 26 Large). **No new tokens.** The reticle locks onto the whole switch (arms 8, outset 4, no label), the same as `.bric-btn`, which also replaces the native pointer. Track glow was left out: the track is clipped by `--clip-step`, which would cut it.
 
+## Segmented toggle (Oct 27 2026, approved in Figma "14 · Segmented Toggle (PROPOSAL, for sign-off)", node 441:138, set 441:199)
+
+`.bric-seg` / `.bric-seg__opt` in `assets/bric-components.css`. Two (or more) options inside one track: the secondary button's 1px `interactive/outline/default` with `corner/step`, inset 3px (Large 40) / 2px (Small 24), the Active keyline's gap. The checked option (`aria-checked="true"`) is `interactive/fill/default` with `text/on-fill`; options are equal width (the widest label). Hover anywhere on the control: track `outline/hover` + the amber stroke glow (opacity on `::after`), the option a click would pick takes `fill/hover-tint` + `text/hover-accent`; the checked option is unchanged. Disabled (`aria-disabled` on the group) uses the disabled tokens. Markup is `role=radiogroup` with `role=radio` buttons and roving tabindex; the arrows move between options. The reticle locks onto the whole control (`data-bric-target`, arms 8, outset 4, no label). **No new tokens.** First use: the CV page's Immersive / List switch.
+
 Sound proposal (not wired to the site yet): `swDown` / `swOn` / `swOff` / `swDeny` in `assets/battle/audio.js`, auditioned against the current `on`/`off` in `tools/ui-sounds.html`.
 
 ## CRT effects (dark mode only)
