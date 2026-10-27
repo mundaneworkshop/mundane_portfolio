@@ -13567,6 +13567,7 @@ f 2469//2469 2470//2470 2434//2434
       var b=document.getElementById('editBtn'); if(b) b.classList.toggle('on',on);
       var banner=document.getElementById('editBanner'); if(banner) banner.style.display=on?'block':'none';
       document.body.classList.toggle('editing',on);   // reveals dimmed hidden items
+      if(window.__bricReticle&&window.__bricReticle.setEnabled) window.__bricReticle.setEnabled(!on);   // native cursor in Edit Mode: the reticle's frame is the hit area, too coarse for text fields and small tap targets
       if(typeof applyHiddenVisibility==='function') applyHiddenVisibility();
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
       if(typeof setInlineEditing==='function') setInlineEditing(on);
