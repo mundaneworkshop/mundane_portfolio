@@ -11472,7 +11472,7 @@ f 2469//2469 2470//2470 2434//2434
       cvFrame([node.pos],{radius:keepRadius?cvOrbit.radius:4.4,pad:{l:0,r:0,t:0,b:0}});
     }
     function selectCV(id){ var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvShipGoTo(id); if(cvListOn){ cvFrameMode='node'; cvMarkLabels(); cvListMark(true); } else { cvFlyTo(n); cvShowBooklet(id); cvMarkLabels(); }
-      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);   // active node = its own breadcrumb level
+      if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);   // the breadcrumb stops at CV (Oct 27): no stop level, so it never changes length and the view toggle beside it stays put
       cvHeroSync();
     }
     function cvUpdateShipUnderColor(){ if(!cvShipGroup) return;
@@ -11697,7 +11697,7 @@ f 2469//2469 2470//2470 2434//2434
       var host=document.getElementById('cvList'); [].forEach.call(host.querySelectorAll('.cvl-item'),function(el){ var f=el.getAttribute('data-id')===id; el.classList.toggle('focus',f);
         if(f){ el.removeAttribute('data-bric-target'); el.removeAttribute('data-bric-label'); } else { el.setAttribute('data-bric-target',''); el.setAttribute('data-bric-label','▸ FOCUS'); } });
       var n=cvNodeById(id); if(!n) return; cvSelId=id; cvAtNode=true; cvFrameMode='node'; cvMarkLabels();
-      if(typeof setCrumb==='function') setCrumb('cvnode:'+id,[{text:cvRootLabel||'CV'},{text:n.title||'node',bold:true}]);
+      if(typeof setCrumb==='function') setCrumb('case:cv',[{text:cvRootLabel||'CV',bold:true}]);   // stops at CV, as in immersive
     }
     function cvListMark(scroll){   // a pick (click, arrow key, entering the page) moves that card onto the focus line; the scroll then focuses it
       if(!cvListOn) return; var host=document.getElementById('cvList'); if(!host) return;
