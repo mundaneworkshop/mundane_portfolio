@@ -33,3 +33,6 @@ The MW monogram (`mwQuad`, the docked base emitter) stayed visible during projec
 
 ## Oct 9 2026 update
 Rail layout removed. `auto` = dock, falling back to drawer under 720px. Only dock/drawer remain.
+
+## Oct 27 2026 — wrap-to-content on every manual
+The About view's auto-width (PR #67, `data-about`) now applies to every manual in dock and drawer (CV nodes, projects, artifacts, case studies). `mlWrapFlags(data)` (end of `applyData`) sets `#manual-scene[data-wrap]` when a column would be empty: `s` snapshot only, `c` CTA/links only, `x` neither. CSS block "WRAP-TO-CONTENT for every manual" sets `width:max-content` (min 380px / 280px on phones, max unchanged), collapses the grid to the columns that exist and hides the empty blocks. A full manual has no `data-wrap` and is unchanged; Edit Mode and About never set it (empty columns stay reachable to add rows/tags/links). Width changes are picked up by the existing `ResizeObserver` → `layoutManual()` → `MWStage`, so the stage fit re-measures. Tags need no column (they sit under the title).

@@ -878,6 +878,17 @@
   #manual-scene[data-ml="dock"][data-about="plain"] .manual-page{ grid-template-columns:minmax(0,62ch); }
   #manual-scene[data-ml="dock"][data-about] .manual-cta{ grid-column:2; grid-row:1 / span 4; }
   #manual-scene[data-ml="dock"][data-about] .snap-grid, #manual-scene[data-ml="dock"][data-about] .manual-tags, #manual-scene[data-ml="dock"][data-about] .manual-extralinks, #manual-scene[data-ml="dock"][data-about] .manual-slug{ display:none!important }
+  /* WRAP-TO-CONTENT for every manual (CV nodes, projects, artifacts): same idea as ABOUT above, driven by data-wrap
+     (set in mlWrapFlags): s = snapshot only, c = CTA/links only, x = neither. Absent = full manual, unchanged. */
+  #manual-scene[data-ml="dock"][data-wrap], #manual-scene[data-ml="drawer"][data-wrap]{ width:max-content; min-width:min(380px,calc(100vw - 2 * var(--ml-gap,24px))); max-width:min(1280px,calc(100vw - 2 * var(--ml-gap,24px))); }
+  #manual-scene[data-ml="dock"][data-wrap="s"] .manual-page{ grid-template-columns:minmax(0,56ch) minmax(0,40ch); }
+  #manual-scene[data-ml="dock"][data-wrap="c"] .manual-page{ grid-template-columns:minmax(0,62ch) minmax(190px,auto); }
+  #manual-scene[data-ml="dock"][data-wrap="x"] .manual-page{ grid-template-columns:minmax(0,62ch); }
+  #manual-scene[data-ml="dock"][data-wrap="c"] .manual-cta, #manual-scene[data-ml="dock"][data-wrap="c"] .manual-extralinks{ grid-column:2; }
+  #manual-scene[data-ml="dock"][data-wrap="c"] .snap-grid, #manual-scene[data-ml="dock"][data-wrap="x"] .snap-grid, #manual-scene[data-ml="dock"][data-wrap="s"] .manual-extralinks, #manual-scene[data-ml="dock"][data-wrap="x"] .manual-extralinks{ display:none!important }
+  #manual-scene[data-ml="drawer"][data-wrap="x"] .manual-page, #manual-scene[data-ml="drawer"][data-wrap="s"] .manual-page{ grid-template-columns:minmax(0,56ch); }
+  #manual-scene[data-ml="drawer"][data-wrap="c"] .manual-page{ grid-template-columns:minmax(0,56ch) auto; }
+  @media (max-width:640px){ #manual-scene[data-ml="drawer"][data-wrap] .manual-page{ grid-template-columns:minmax(0,1fr); } #manual-scene[data-ml="drawer"][data-wrap]{ min-width:min(280px,calc(100vw - 2 * var(--ml-gap,24px))); } }
   /* OUTFITS MANAGER: same visual language as the Projects Manager */
   #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.oc-open #outfitMgr{display:flex}
@@ -15824,6 +15835,19 @@ f 2469//2469 2470//2470 2434//2434
           else if(cu){ cu.remove(); } }
         _wasArtifact=!!data.artifact;
       }
+      mlWrapFlags(data);
+    }
+    // Wrap-to-content (every manual, not just About): when the snapshot column or the CTA/links column would be
+    // empty, flag it so the CSS collapses that column and the panel shrinks to its content. Edit Mode never wraps
+    // (the empty blocks must stay reachable to add rows / tags / links), and a full manual keeps today's layout.
+    //   data-wrap="s" snapshot only · "c" CTA/links only · "x" neither — absent = both present (unchanged)
+    function mlWrapFlags(data){
+      if(data.aboutView || data.edit){ manualScene.removeAttribute('data-wrap'); return; }
+      var g=manualScene.querySelector('.snap-grid'), ex=manualScene.querySelector('.manual-extralinks'), cw=manualScene.querySelector('.manual-cta');
+      var snap=!!(g && g.querySelector('.snap-cell:not(.snap-filler), .manual-link'));
+      var side=!!(cw && cw.style.display!=='none') || !!(ex && ex.style.display!=='none' && ex.querySelector('.manual-link'));
+      if(snap && side) manualScene.removeAttribute('data-wrap');
+      else manualScene.setAttribute('data-wrap', snap?'s':(side?'c':'x'));
     }
 
     var BOOK_MIN_TOP_PCT=6;   // never let the book's top edge go above 6% of viewport height
