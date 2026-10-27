@@ -1,4 +1,4 @@
-/*! BRIC screen wipe, v1.0
+/*! BRIC screen wipe, v1.1
  *
  * The Star Wars page transition, split across two sites. ONE source file, loaded by the Vercel site
  * (<script src="assets/bric-wipe.js">) and by the Framer case-study pages (Custom Code, end of <body>).
@@ -9,6 +9,9 @@
  *   bricWipe.intercept(hosts)   wipe on ordinary link clicks that leave this site for one of hosts (used on Framer for the way back)
  *   bricWipe.play([variant], [mid])  in place: cover then uncover, no navigation; mid() runs while fully covered (view swaps)
  *   bricWipe.variants           list of ids
+ *   bricWipe.active()           true while the panel is up (covering or uncovering)
+ *   window 'bric:wipe-done'     fired when the page is fully uncovered again (play / enter), e.g. to start an intro that
+ *                               would otherwise run unseen under the panel
  *
  * Variants (all feathered): lr rl tb bt, diag-tl diag-tr diag-bl diag-br, clock, iris-in iris-out, oval-in oval-out.
  * One is picked at random on exit (never the same twice in a row), and its id rides along in the URL so the
@@ -94,7 +97,11 @@
     setTimeout(end, ms + 400);   // failsafe if the finish event never fires (background tab)
   }
 
-  function hide() { if (el) el.style.display = 'none'; var h = document.getElementById('bric-wipe-hold'); if (h) h.remove(); }
+  function hide() {
+    var was = !!el && el.style.display !== 'none';
+    if (el) el.style.display = 'none'; var h = document.getElementById('bric-wipe-hold'); if (h) h.remove();
+    if (was) { try { window.dispatchEvent(new Event('bric:wipe-done')); } catch (e) {} }
+  }
 
   function pick(forced) {
     if (forced && VARIANTS.indexOf(forced) > -1) return forced;
@@ -112,6 +119,7 @@
 
   var bricWipe = {
     variants: VARIANTS.slice(),
+    active: function () { return !!el && el.style.display === 'block'; },
     config: function (o) { for (var k in o) if (o[k] != null) cfg[k] = o[k]; return bricWipe; },
     go: function (url, variant) {
       if (reduced() || !supported()) { location.href = url; return; }

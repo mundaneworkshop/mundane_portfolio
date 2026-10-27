@@ -637,6 +637,7 @@
   #cvHero{position:fixed;left:0;right:0;top:56px;margin-inline:auto;width:min(720px,calc(100% - 32px));z-index:20;display:none;text-align:center;pointer-events:none;opacity:0;visibility:hidden;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),visibility 0s linear var(--bric-float-duration-short)}
   body.mw-cvroute:not(.cv-list) #cvHero{display:block}
   #cvHero.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity var(--bric-float-duration-short) var(--bric-snap-easing),visibility 0s}
+  #cvHero.on.wait{opacity:0;visibility:hidden;pointer-events:none}   /* held back under a screen wipe until the page is uncovered (cvHeroSync) */
   #cvHero .cvh-line{display:block;font-family:var(--f-d);font-size:22px;font-weight:700;letter-spacing:-0.01em;line-height:1.3;color:var(--c-primary);margin-inline:auto;width:max-content;max-width:100%}
   #cvHero .cvl-ctas{justify-content:center;margin-top:var(--bric-space-2-stud)}
   @media (prefers-reduced-motion:reduce){ #cvHero,#cvHero.on{transition:none} }
@@ -11636,9 +11637,14 @@ f 2469//2469 2470//2470 2434//2434
     function cvHeroSync(){
       var h=document.getElementById('cvHero'); if(!h||!cvData) return; var want=cvHeroWanted(), was=h.classList.contains('on');
       if(want&&!h.childElementCount){ CV_HEAD_LINES.forEach(function(t){ h.appendChild(cvEl('span','cvh-line',t)); }); h.appendChild(cvCtaRow()); }
-      if(want===was) return; h.classList.toggle('on',want); if(!want) return;
+      if(want===was) return; h.classList.toggle('on',want); if(!want){ h.classList.remove('wait'); return; }
       cvHeroPlace();
-      if(typeof GFX!=='undefined') [].forEach.call(h.querySelectorAll('.cvh-line'),function(l,i){ setTimeout(function(){ if(h.classList.contains('on')) GFX.decodeEl(l,'Lbl'); },i*120); });   // the site's glyph decode (off under reduced motion)
+      var decode=function(){ if(typeof GFX!=='undefined') [].forEach.call(h.querySelectorAll('.cvh-line'),function(l,i){ setTimeout(function(){ if(h.classList.contains('on')) GFX.decodeEl(l,'Lbl'); },i*120); }); };   // the site's glyph decode (off under reduced motion)
+      // Arriving through the screen wipe (from the galaxy, or the view toggle) this runs while the panel covers the page, so the decode
+      // would play out unseen. Hold the hero back until the page is uncovered, then fade it in and decode.
+      if(window.bricWipe&&bricWipe.active&&bricWipe.active()){ h.classList.add('wait'); var go=false, rel=function(){ if(go) return; go=true; window.removeEventListener('bric:wipe-done',rel); h.classList.remove('wait'); if(h.classList.contains('on')) decode(); };
+        window.addEventListener('bric:wipe-done',rel); setTimeout(rel,3000); return; }   // failsafe: never leave it hidden
+      decode();
     }
     var cvListFocusId=null, _cvlRaf=0;
     function cvRenderList(){
@@ -11711,7 +11717,7 @@ f 2469//2469 2470//2470 2434//2434
     function cvApplyView(persist){
       var on=cvListOn&&cvScene.active, cs=document.getElementById('cs-root');
       document.body.classList.toggle('cv-list',on);
-      [].forEach.call(document.querySelectorAll('#cvView [data-cv-view]'),function(b){ var c=(b.getAttribute('data-cv-view')==='list')===cvListOn; b.setAttribute('aria-checked',String(c)); b.tabIndex=c?0:-1; });
+      cvMarkToggle(cvListOn);
       if(persist){ try{ localStorage.setItem('mw_cvview',cvListOn?'list':'immersive'); }catch(e){} }
       if(!cvScene.active) return;
       if(on){ if(cs) cs.classList.remove('cs-focus-panel'); cvRenderList(); cvListMark(true); return; }
@@ -11720,7 +11726,13 @@ f 2469//2469 2470//2470 2434//2434
       cvOverview();   // ...but immersive always comes back zoomed out on the whole route with the one-liner (Oct 27), never dollied into a stop
       cvHeroSync(); cvReframeSoon();
     }
-    function cvSetView(v){ if(v==='list'&&editMode) return; if((v==='list')===cvListOn) return; cvListOn=(v==='list'); cvApplyView(true); }
+    // A view switch plays the site's screen wipe (assets/bric-wipe.js, random variant, never the same twice in a row): the toggle
+    // flips at once, the views swap while the panel covers the page. One switch at a time; reduced motion swaps with no wipe.
+    function cvMarkToggle(listOn){ [].forEach.call(document.querySelectorAll('#cvView [data-cv-view]'),function(b){ var c=(b.getAttribute('data-cv-view')==='list')===listOn; b.setAttribute('aria-checked',String(c)); b.tabIndex=c?0:-1; }); }
+    function cvSetView(v){ if(v==='list'&&editMode) return; if((v==='list')===cvListOn) return;
+      if(window.bricWipe&&bricWipe.active&&bricWipe.active()) return;
+      var on=(v==='list'); cvMarkToggle(on);
+      veilThen(function(){ cvListOn=on; cvApplyView(true); }); }
     // arrow keys: previous / next stop (route order in 3D; in the list, the card above / below)
     function cvStep(dir){
       var st=cvListOn?cvListStops():cvStops(); if(!st.length) return false; var i=-1; st.forEach(function(n,j){ if(cvAtNode&&n.id===cvSelId) i=j; });
