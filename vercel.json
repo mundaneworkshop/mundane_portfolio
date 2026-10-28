@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/:path((?!api/|assets/|vendor/|_vercel/).*)", "destination": "/index.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/:slug(cv|arcade|holonet)", "destination": "/index.html" },
+    { "source": "/:slug(cv|arcade|holonet)/", "destination": "/index.html" },
+    { "source": "/work/:path*", "destination": "/index.html" }
   ]
 }
