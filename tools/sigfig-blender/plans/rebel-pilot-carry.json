@@ -1,0 +1,17 @@
+{
+ "fig": "rebel-pilot",
+ "arm": [
+  -85.0,
+  0.0,
+  30.0
+ ],
+ "dist": 0.385,
+ "overlaps": {
+  "arm_r": 0,
+  "head": 0,
+  "torso": 0,
+  "acc_23186": 0,
+  "arm_l": 0
+ },
+ "clean_poses": 32
+}
