@@ -54,9 +54,10 @@
     var cv = document.createElement('canvas'), ctx = cv.getContext('2d');
     cv.setAttribute('aria-hidden', 'true');
     box.appendChild(cv);
-    var N = 260, stars = [], W = 0, H = 0, dpr = 1, ink = '#fff', tint = '#fff', raf = 0, last = 0, SPEED = 0.035;   // SPEED: depth units per second, a full pass takes ~28s
+    var N = 720, stars = [], W = 0, H = 0, P = 2, LEVELS = 24,   // P / LEVELS: the scene's pixelize and posterize (params.pixel, params.levels in index.html)
+       ink = '#fff', tint = '#fff', raf = 0, last = 0, SPEED = 0.035;   // SPEED: depth units per second, a full pass takes ~28s
     function seed(st, near) {
-      st.x = Math.random() * 2 - 1; st.y = Math.random() * 2 - 1;
+      st.x = (Math.random() * 2 - 1) * 1.8; st.y = (Math.random() * 2 - 1) * 1.8;
       st.z = near ? 0.05 + Math.random() * 0.95 : 1;
       st.b = 0.22 + 0.78 * Math.pow(Math.random(), 1.7);          // base brightness, as in the galaxy
       st.s = 0.5 + 2.2 * Math.pow(Math.random(), 3);              // base radius px: mostly pin-pricks, a few large
@@ -64,20 +65,20 @@
     }
     for (var i = 0; i < N; i++) { var st = {}; seed(st, true); stars.push(st); }
     function colors() { var cs = getComputedStyle(box); ink = cs.getPropertyValue('--bric-content-primary').trim() || ink; tint = cs.getPropertyValue('--bric-content-brand').trim() || tint; }
-    function size() { dpr = Math.min(2, window.devicePixelRatio || 1); W = box.clientWidth; H = box.clientHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; colors(); }
+    function size() { W = Math.ceil(box.clientWidth / P); H = Math.ceil(box.clientHeight / P); cv.width = W; cv.height = H; cv.style.width = '100%'; cv.style.height = '100%'; colors(); }   // low-res backing store, scaled up with image-rendering: pixelated
     function draw(dt) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      ctx.clearRect(0, 0, W, H);
       var cx = W / 2, cy = H / 2, f = Math.max(W, H) * 0.55;
       for (var i = 0; i < N; i++) {
         var st = stars[i]; st.z -= SPEED * dt;
         if (st.z < 0.04) seed(st, false);
-        var px = cx + st.x / st.z * f * 0.5, py = cy + st.y / st.z * f * 0.5;
-        if (px < -8 || px > W + 8 || py < -8 || py > H + 8) { if (st.z < 0.3) seed(st, false); continue; }
+        var px = Math.round(cx + st.x / st.z * f * 0.5), py = Math.round(cy + st.y / st.z * f * 0.5);
+        if (px < -4 || px > W + 4 || py < -4 || py > H + 4) { if (st.z < 0.3) seed(st, false); continue; }
         var near = 1 - st.z;
-        ctx.globalAlpha = Math.min(1, st.b * (0.35 + 0.9 * near));
+        ctx.globalAlpha = Math.round(Math.min(1, st.b * 1.5 * (0.6 + 0.8 * near)) * (LEVELS - 1)) / (LEVELS - 1);   // posterized brightness
         ctx.fillStyle = st.t ? tint : ink;
-        var r = st.s * (0.35 + 1.3 * near);
-        ctx.beginPath(); ctx.arc(px, py, r, 0, 6.2832); ctx.fill();
+        var r = Math.max(1, Math.round(st.s * (0.35 + 1.3 * near) / P * 2));   // whole pixels: a square 'pixel star', 1px minimum
+        ctx.fillRect(px - (r >> 1), py - (r >> 1), r, r);
       }
     }
     function tick(t) { raf = requestAnimationFrame(tick); var dt = Math.min(0.1, (t - last) / 1000 || 0); last = t; draw(dt); }
@@ -180,7 +181,7 @@
     var card = el('div', 'bric-error__card');
     ['tl', 'tr', 'bl', 'br'].forEach(function (p) { var m = el('span', 'bric-error__mark bric-error__mark--' + p); m.setAttribute('aria-hidden', 'true'); card.appendChild(m); });
     card.appendChild(el('p', 'bric-error__eyebrow', (c.code ? 'Error ' + c.code + ' · ' : '') + c.status));
-    if (c.code) { var code = el('p', 'bric-error__code', c.code); code.setAttribute('aria-hidden', 'true'); code.addEventListener('mouseenter', function () { decode(code); }); card.appendChild(code); }
+    if (c.code) { var code = el('p', 'bric-error__code', c.code); code.setAttribute('aria-hidden', 'true'); code.setAttribute('data-text', c.code); code.addEventListener('mouseenter', function () { decode(code); }); card.appendChild(code); }
     var h1 = el('h1', 'bric-error__title', c.title);
     h1.id = 'bricErrorTitle'; h1.tabIndex = -1;
     card.appendChild(h1);
