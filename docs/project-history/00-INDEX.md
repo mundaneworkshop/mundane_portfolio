@@ -31,6 +31,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [case-study-page-brief-jul8.md](case-study-page-brief-jul8.md) — confirmed case-study page direction, Framer/CMS build target
 - [color-decisions.md](color-decisions.md) — locked palette (B1 Vivid Gold), two-register color model, link color
 - [cv-contact-focus-views.md](cv-contact-focus-views.md) — CV hyperspace route + HoloNet comm console architecture
+- [favicon.md](favicon.md) — Oct 2026: 1-bit pixel favicon abstracted from the MW monogram; design sheets in `docs/favicon-design/`
 - [foundation-docs.md](foundation-docs.md) — design token architecture, Figma page structure
 - [galaxy-view-amend-jun23.md](galaxy-view-amend-jun23.md) — dynamic zone/planet model, per-zone FX, editable breadcrumb
 - [glb-texture-rendering.md](glb-texture-rendering.md) — INVARIANT rules for GLB decal/texture rendering, read before touching

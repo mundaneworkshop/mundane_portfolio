@@ -1,0 +1,189 @@
+<!doctype html><meta charset=utf-8><title>MW favicon directions — round 2</title>
+<style>
+body{margin:0;background:#16181b;color:#d8dde0;font:13px/1.4 system-ui,sans-serif;padding:20px}
+h1{font-size:15px;margin:0 0 4px}h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b949b;margin:22px 0 0}
+.sw{margin:8px 0 6px}.sw button{background:#262a2e;color:#d8dde0;border:1px solid #3a4046;padding:4px 10px;margin-right:6px;border-radius:4px;cursor:pointer}
+.sw button.on{border-color:#3fb5ab;color:#3fb5ab}
+.d{display:grid;grid-template-columns:150px repeat(4,auto) auto auto;gap:14px;align-items:center;padding:12px 0;border-top:1px solid #2a2e33}
+.d .n b{display:block;font-size:14px}.d .n span{color:#8b949b;font-size:11px}
+.t{padding:10px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.L{background:#f1f1f1}.D{background:#2a2c30}
+canvas{image-rendering:pixelated}
+</style>
+<h1>MW favicon directions — round 2 (A & B, depth, B/W)</h1>
+<div class=sw id=sw></div><div id=out></div>
+<script>
+const mix=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')};
+const BG='#070c0c';const PALS={teal:'#3fb5ab',blue:'#6a7ff0'};let pal='teal';
+const hx=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+
+// ---------- raycast iso renderer (point-sampled => crisp pixels) ----------
+const B=(x0,y0,z0,x1,y1,z1,tag)=>({x0,y0,z0,x1,y1,z1,tag});
+function cast(boxes,N,opt={}){ // N = canvas px; scale s = N/16
+  const s=N/16*(opt.k||1), zs=opt.zs||1, lo=[1e9,1e9],hi=[-1e9,-1e9];
+  for(const b of boxes)for(const x of [b.x0,b.x1])for(const y of [b.y0,b.y1])for(const z of [b.z0,b.z1]){
+    const sx=(x-y)*s,sy=(x+y)*s/2-z*zs*s;lo[0]=Math.min(lo[0],sx);hi[0]=Math.max(hi[0],sx);lo[1]=Math.min(lo[1],sy);hi[1]=Math.max(hi[1],sy)}
+  const ox=Math.round((N-(hi[0]-lo[0]))/2-lo[0]+(opt.dx||0)),oy=Math.round((N-(hi[1]-lo[1]))/2-lo[1]+(opt.dy||0));
+  const g=[];let lmin=1e9,lmax=-1e9;
+  for(let py=0;py<N;py++){g[py]=[];for(let px=0;px<N;px++){
+    const sx=px+.5-ox,sy=py+.5-oy;
+    const p=[(sx/s+2*sy/s)/2,(2*sy/s-sx/s)/2,0]; // z=0 base point
+    const d=[1,1,1/zs];let best=null;
+    boxes.forEach((b,i)=>{const mn=[b.x0,b.y0,b.z0],mx=[b.x1,b.y1,b.z1];let en=-1e9,ex=1e9,ax=0;
+      for(let a=0;a<3;a++){const l0=(mn[a]-p[a])/d[a],l1=(mx[a]-p[a])/d[a];if(l0>en)en=l0;if(l1<ex){ex=l1;ax=a}}
+      if(ex>en+1e-9&&(!best||ex>best.l))best={l:ex,face:['R','L','T'][ax],id:i,tag:b.tag,pt:[p[0]+ex*d[0],p[1]+ex*d[1],p[2]+ex*d[2]]}});
+    g[py][px]=best;if(best){lmin=Math.min(lmin,best.l);lmax=Math.max(lmax,best.l)}}}
+  return {g,lmin,lmax,N};
+}
+function paint(res,style,fg){ // returns ImageData-like array of colors or null
+  const {g,lmin,lmax,N}=res;const out=[];
+  for(let y=0;y<N;y++){out[y]=[];for(let x=0;x<N;x++){const h=g[y][x];if(!h){out[y][x]=null;continue}out[y][x]=style(h,x,y,{lmin,lmax,g,N})}}
+  return out;
+}
+// color style: 3 tones, depth fog toward BG (the mark's own depth fade)
+const colorStyle=(base,fog,edge)=>{const T=mix(base,'#ffffff',.5),L=base,R=mix(base,BG,.5);
+  return (h,x,y,c)=>{let col=h.face=='T'?T:h.face=='L'?L:R;const k=(c.lmax-h.l)/(c.lmax-c.lmin||1);col=mix(col,BG,Math.min(.85,k*fog));
+    if(edge){const nb=[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const q=(c.g[y+b]||[])[x+a];return q&&q.id!=h.id&&q.l<h.l-.4});if(nb)col=mix(col,BG,.45)}
+    return col}};
+// 1-bit style: fg on transparent. mode picks which face is paper/dither/solid
+const bwStyle=modes=>(h,x,y,c)=>{const m=modes[h.face];
+  // edge: depth step vs neighbour => outline
+  if(m=='solid')return 'FG';if(m=='paper')return edgeTest(h,x,y,c)?'FG':null;
+  if(m=='dither')return (x+y)%2==0?'FG':null; if(m=='sparse')return (x%2==0&&y%2==0)?'FG':null;return null};
+const edgeTest=(h,x,y,c)=>[[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const q=(c.g[y+b]||[])[x+a];return !q||q.id!=h.id||q.face!=h.face});
+
+// ---------- geometry ----------
+function plan5(Zh,tray){const b=[];const Y=7;
+  const wall=(x,ya,yb)=>b.push(B(x,ya,0,x+1,yb,Zh,'w'));
+  wall(0,0,Y);wall(2,1,Y);wall(4,0,Y);wall(6,0,Y-1);wall(8,0,Y);
+  b.push(B(1,0,0,4,1,Zh,'c'));b.push(B(5,Y-1,0,8,Y,Zh,'c'));
+  if(tray)b.push(B(0,0,-1,9,Y,0,'f'));return b}
+function comb(Y,H,opts={}){const b=[];const cap=opts.cap||1;
+  for(let i=0;i<5;i++){const z0=i==3?cap+1:0,z1=i==1?H-cap-1:H;b.push(B(2*i,0,z0,2*i+1,Y,z1,'f'))}
+  b.push(B(1,0,H-cap,4,Y,H,'c'));b.push(B(5,0,0,8,Y,cap,'c'));
+  if(opts.plate)b.push(B(0,0,-1,9,Y,0,'p'));
+  return b}
+// "cube" variant: fins live in a full-size cube envelope and the top/bottom caps are 2 thick
+function planY(Y,Zh,tray){const b=[];
+  const wall=(x,ya,yb)=>b.push(B(x,ya,0,x+1,yb,Zh,'w'));
+  wall(0,0,Y);wall(2,1,Y);wall(4,0,Y);wall(6,0,Y-1);wall(8,0,Y);
+  b.push(B(1,0,0,4,1,Zh,'c'));b.push(B(5,Y-1,0,8,Y,Zh,'c'));
+  if(tray)b.push(B(0,0,-1,9,Y,0,'f'));return b}
+const DIRS=[
+ {h:'A5e · textured right wall (1-bit)'},
+ {id:'A5a',name:'A5a · 9×7×7',note:'Plan deepened 5→7, walls 6→7. Fills the 16px frame at 1px per unit (crisp).',boxes:()=>planY(7,7,false),color:{fog:.5,edge:false}},
+ {id:'A5b',name:'A5b · 9×7×8',note:'Same plan, walls one unit taller — slightly tall cube.',boxes:()=>planY(7,8,false),color:{fog:.5,edge:false},k:.94},
+ {id:'A5c',name:'A5c · 9×9×9 true cube',note:'Exactly cubic, scaled to 0.89px per unit so it fits; a little softer/irregular.',boxes:()=>planY(9,9,false),color:{fog:.5,edge:false},k:16/18},
+
+ {id:'A5e',name:'A5e · mono solid (ref)',note:'All ink; gaps carry the fins.',boxes:()=>planY(7,7,false),bw:'c'},
+ {id:'A6a',name:'A6a · wall: dither fade down',note:'Bayer dither ≈70% under the top edge fading to ≈10% at the bottom. Edge lines kept.',boxes:()=>planY(7,7,false),bw:'g1'},
+ {id:'A6b',name:'A6b · wall: dither fade back',note:'Dense at the front corner, fading toward the back edge (depth cue).',boxes:()=>planY(7,7,false),bw:'g2'},
+ {id:'A6c',name:'A6c · wall: scanlines',note:'Alternate rows: even 50% texture, most graphic.',boxes:()=>planY(7,7,false),bw:'g3'},
+ {id:'A6d',name:'A6d · wall: iso lines',note:'Lines parallel to the wall’s top edge, so the texture follows the iso plane.',boxes:()=>planY(7,7,false),bw:'g4'},
+ {id:'A6e',name:'A6e · wall: light dither fade',note:'Lighter overall (≈45%→10%), fades down.',boxes:()=>planY(7,7,false),bw:'g5'},
+ {id:'A6f',name:'A6f · wall: iso lines thinning',note:'Iso lines that break up toward the bottom.',boxes:()=>planY(7,7,false),bw:'g6'},
+ {h:'A6d · refined (16px only changed)'},
+ {id:'A6dref',name:'A6d · ref',note:'Wall iso lines, everything else solid.',boxes:()=>planY(7,7,false),bw:'g4'},
+ {id:'A9a',name:'A9a · +front line (col 6), wall lines flipped',note:'16px: W-cap block split by a 1px line in its middle; wall line parity flipped so the bottom edge is solid. 32px unchanged.',boxes:()=>planY(7,7,false),bw:'t5'},
+ {id:'A9b',name:'A9b · +front line (col 5), wall lines flipped',note:'Same, extra line one pixel left (right beside fin 3).',boxes:()=>planY(7,7,false),bw:'t6'},
+ {id:'A9c',name:'A9a on dark tile',note:'Light-on-dark locked in with a #070c0c rounded tile, so it reads the same on light tabs.',boxes:()=>planY(7,7,false),bw:'t5',tile:true},
+ {h:'A5e · planes separated by 1px gaps'},
+ {id:'A8ref',name:'A5e · mono solid (ref)',note:'All ink; gaps carry the fins.',boxes:()=>planY(7,7,false),bw:'c'},
+ {id:'A8a',name:'A8a · all seams, cut low/right',note:'Every seam between top / front / right wall gets a 1px gap, carved from the lower-or-right plane.',boxes:()=>planY(7,7,false),bw:'s1'},
+ {id:'A8b',name:'A8b · all seams, cut high/left',note:'Same, carved from the upper-or-left plane (keeps the right wall at full size).',boxes:()=>planY(7,7,false),bw:'s2'},
+ {id:'A8c',name:'A8c · right wall cut free',note:'Only the right wall is separated; top + fin face stay joined.',boxes:()=>planY(7,7,false),bw:'s3'},
+ {id:'A8d',name:'A8d · top floats',note:'Only the top plane is lifted off the sides.',boxes:()=>planY(7,7,false),bw:'s4'},
+ {id:'A8e',name:'A8e · wall + top cut',note:'Right wall cut on its top/left, top cut along its bottom edge.',boxes:()=>planY(7,7,false),bw:'s5'},
+ {h:'A5e · front cap + right wall both textured'},
+ {id:'A7a',name:'A7a · cap 50% dither, wall solid',note:'Only the front (W-cap) face is broken up; right wall stays solid as the anchor.',boxes:()=>planY(7,7,false),bw:'k1'},
+ {id:'A7b',name:'A7b · cap 50%, wall fade',note:'Cap flat 50% dither, right wall dither fading down — two planes, two tones.',boxes:()=>planY(7,7,false),bw:'k2'},
+ {id:'A7c',name:'A7c · cap verticals, wall scanlines',note:'Cap gets vertical lines (echoing fins), wall horizontal scanlines.',boxes:()=>planY(7,7,false),bw:'k3'},
+ {id:'A7d',name:'A7d · cap 50%, wall iso lines',note:'Iso-lines on the wall follow its plane.',boxes:()=>planY(7,7,false),bw:'k4'},
+ {id:'A7e',name:'A7e · lightest',note:'Cap 25% dither, wall light fade — most air, weakest silhouette.',boxes:()=>planY(7,7,false),bw:'k5'},
+ {id:'A5d',name:'A5d · 9×7×7 mono',note:'A5a in 1-bit: top ink, glyph face dither, side solid.',boxes:()=>planY(7,7,false),bw:'m'},
+ {h:'B · Fin comb cube — camera / orientation study'},
+ {id:'B4a',name:'B4a · comb cube (ref)',note:'Round-1 pick, now ray-cast: M cap + short fin 2 on top, floating fin 4 over W cap. Glyph on left face.',boxes:()=>comb(7,8,{cap:2}),color:{fog:.45,edge:false}},
+ {id:'B4b',name:'B4b · mirrored',note:'Glyph on the right face, side wall on the left.',boxes:()=>comb(7,8,{cap:2}),color:{fog:.45,edge:false},mirror:true},
+ {id:'B4c',name:'B4c · higher camera',note:'zs 0.7: more top face, so fin tops and caps show as ridges.',boxes:()=>comb(7,10,{cap:2}),zs:.7,color:{fog:.45,edge:false}},
+ {id:'B4d',name:'B4d · lower camera',note:'zs 1.25: taller fins, less top.',boxes:()=>comb(7,6,{cap:1}),zs:1.25,color:{fog:.45,edge:false}},
+ {h:'A · Maze (plan) variants'},
+ {id:'A3a',name:'A3a · maze tall walls',note:'Plan maze with taller walls and shallower plan (9×5), so fins read as slabs and the stagger shows.',boxes:()=>planY(5,6,false),color:{fog:.5,edge:false}},
+ {id:'A3b',name:'A3b · maze, high camera',note:'Plan 9×5 viewed from higher (zs .6) so the maze top dominates.',boxes:()=>planY(5,5,true),zs:.6,color:{fog:.35,edge:false}},
+ {h:'Black & white (fg flips per tab theme)'},
+ {id:'W1',name:'W1 · B4a mono',note:'fins = ink, gaps = paper, top = ink, side = 50% dither.',boxes:()=>comb(7,8,{cap:2}),bw:'a'},
+ {id:'W2',name:'W2 · B4a mono, hollow side',note:'side wall left open (paper) with ink edge lines — lighter, more graphic.',boxes:()=>comb(7,8,{cap:2}),bw:'b'},
+ {id:'W3',name:'W3 · B4a mono, solid',note:'everything ink; only fin gaps and cap notches carry form. Strongest silhouette.',boxes:()=>comb(7,8,{cap:2}),bw:'c'},
+ {id:'W4',name:'W4 · B4b mono (mirrored)',note:'mirrored + dither side',boxes:()=>comb(7,8,{cap:2}),bw:'a',mirror:true},
+ {id:'W5',name:'W5 · A3a mono',note:'maze, top ink, sides dither/solid',boxes:()=>planY(5,6,false),bw:'m'},
+];
+
+// ---------- sheet ----------
+const out=document.getElementById('out');
+const BAYER=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+function wallBounds(c,id){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(let y=0;y<c.N;y++)for(let x=0;x<c.N;x++){const h=c.g[y][x];if(h&&h.id==id&&h.face=='R'){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}}return {x0,x1,y0,y1}}
+function wallTex(kind,x,y,b,N){const k=N/16;const qx=Math.floor(x/k),qy=Math.floor(y/k); // texture in 16-grid cells so 32px matches
+  const fx=(x-b.x0)/Math.max(1,b.x1-b.x0),fy=(y-b.y0)/Math.max(1,b.y1-b.y0);const th=BAYER[qy%4][qx%4]/16;
+  if(kind=='g1')return th<.7-fy*.6;            // dense at top -> sparse at bottom
+  if(kind=='g2')return th<.7-fx*.6;             // dense at front edge -> sparse toward back
+  if(kind=='g3')return qy%2==0;                // horizontal scanlines
+  if(kind=='g4')return (qy+Math.floor(qx/2))%2==0; // lines parallel to the face's top edge (iso)
+  if(kind=='g5')return th<.45-fy*.35;           // lighter overall, fades down
+  if(kind=='g6')return (qy+Math.floor(qx/2))%2==0 && th<1.1-fy*.9; // iso lines that thin out downward
+  return true}
+function bwFor(kind){
+  const edge=(h,x,y,c)=>edgeTest(h,x,y,c);
+  return (h,x,y,c)=>{
+    if(kind=='a'){ if(h.face=='T')return true; if(h.face=='L')return true; return h.id==4?((x+y)%2==0):false; }
+    if(kind=='b'){ if(h.face=='T')return true; if(h.face=='L')return true; return h.id==4?edge(h,x,y,c):false; }
+    if(kind=='c'){ if(h.face=='R'&&h.id!=4)return false; return true; }
+    if(kind=='t5'||kind=='t6'){ // A6d refined: 16px gets flipped wall lines + one extra front line
+      const sm=c.N==16;
+      if(h.face=='R'&&h.id==4){c._b=c._b||wallBounds(c,4);const b=c._b;const k=c.N/16,qx=Math.floor(x/k),qy=Math.floor(y/k);
+        const up=(c.g[y-1]||[])[x];const edge=x==b.x0||y==b.y1||!up||up.face=='T';
+        return edge||((qy+Math.floor(qx/2)+(sm?1:0))%2==0)}
+      if(h.face=='R')return false;
+      if(sm&&h.face=='L'&&h.id==6&&x==(kind=='t5'?6:5))return false;
+      return true}
+    if(kind.startsWith('s')){ // plane-separated solid
+      const E=.01,pl=q=>{if(!q)return null;const [px,py,pz]=q.pt;if(q.face=='T'&&pz>=6.99)return 'T';if(q.face=='L'&&py>=6.99)return 'F';if(q.face=='R'&&px>=8.99)return 'R';return q.face=='R'?null:'I'};
+      const me=pl(h);if(!me)return false;if(me=='I')return true;
+      const at=(a,b)=>{for(let t=1;t<=c.N/16;t++){const v=pl((c.g[y+b*t]||[])[x+a*t]);if(v&&v!='I'&&v!=me)return v}return null};
+      const diff0=v=>v&&v!='I'&&v!=me;const K=c.N/16; // gap = 1 unit of the 16 grid (2px at 32)
+      const diff=v=>v; // placeholder, real test below via at()
+      if(kind=='s1')return !(diff(at(-1,0))||diff(at(0,-1)));            // carve the lower/right side of every seam
+      if(kind=='s2')return !(diff(at(1,0))||diff(at(0,1)));              // carve the upper/left side
+      if(kind=='s3'){ if(me=='R')return !(diff(at(-1,0))||diff(at(0,-1))); return true }  // only the right wall is cut free
+      if(kind=='s4'){ if(me=='T')return !(diff(at(0,1))||diff(at(1,0))||diff(at(-1,0))); return true } // only the top floats
+      if(kind=='s5'){ const lr=me=='R'&&(diff(at(-1,0))||diff(at(0,-1))); const tp=me=='T'&&(diff(at(0,1))); return !(lr||tp) } // right wall + top both cut
+      return true}
+    if(kind.startsWith('k')){const [rk,lk]={k1:['c','b50'],k2:['g1','b50'],k3:['g3','v'],k4:['g4','b50'],k5:['g5','b25']}[kind];
+      const k=c.N/16,qx=Math.floor(x/k),qy=Math.floor(y/k),th=BAYER[qy%4][qx%4]/16;
+      if(h.face=='L'&&h.id==6){ if(edgeTest(h,x,y,c))return true; return lk=='b50'?th<.5:lk=='b25'?th<.25:lk=='v'?qx%2==0:true }
+      if(h.face=='R'&&h.id==4){ if(rk=='c')return true; c._b=c._b||wallBounds(c,4);const b=c._b;const edge=x==b.x0||y==b.y1||!((c.g[y-1]||[])[x])||(c.g[y-1][x].face=='T');return edge||wallTex(rk,x,y,b,c.N)}
+      if(h.face=='R')return false; return true; }
+    if(kind.startsWith('g')){ if(h.face=='R'&&h.id==4){c._b=c._b||wallBounds(c,4);const b=c._b;const edge=x==b.x0||y==b.y1||!((c.g[y-1]||[])[x])||((c.g[y-1]||[])[x]&&(c.g[y-1][x].face=='T'));return edge||wallTex(kind,x,y,b,c.N)} if(h.face=='R')return false; return true; }
+    if(kind=='m'){ if(h.face=='T')return true; if(h.face=='L')return (x+y)%2==0; return true; }
+    return true}}
+function draw(cv,N,d,bg,z){
+  const res=cast(d.boxes(),N,{zs:d.zs||1,k:d.k||1});let grid;
+  if(d.bw){const fg=(bg=='L'&&!d.tile)?'#0b0b0b':'#f1f1f1';const f=bwFor(d.bw);
+    grid=paint(res,(h,x,y,c)=>f(h,x,y,c)?fg:null)}
+  else grid=paint(res,colorStyle(PALS[pal],d.color.fog,d.color.edge));
+  if(d.mirror)grid=grid.map(r=>r.slice().reverse());
+  cv.width=cv.height=N;const x=cv.getContext('2d');
+  if(d.tile){x.fillStyle=BG;x.beginPath();x.roundRect(0,0,N,N,N*.2);x.fill()}
+  for(let j=0;j<N;j++)for(let i=0;i<N;i++){const c=grid[j][i];if(c){x.fillStyle=c;x.fillRect(i,j,1,1)}}
+  if(z){cv.style.width=N*z+'px';cv.style.height=N*z+'px'}
+}
+function render(){out.innerHTML='';
+  for(const d of DIRS){
+    if(d.h){const h=document.createElement('h2');h.textContent=d.h;out.appendChild(h);continue}
+    const row=document.createElement('div');row.className='d';
+    row.innerHTML=`<div class=n><b>${d.name}</b><span>${d.note}</span></div>`;
+    for(const [bg,N,z] of [['L',16,1],['D',16,1],['L',32,1],['D',32,1],['L',16,9],['D',16,9]]){
+      const t=document.createElement('div');t.className='t '+bg;const cv=document.createElement('canvas');t.appendChild(cv);row.appendChild(t);draw(cv,N,d,bg,z)}
+    out.appendChild(row)}}
+const sw=document.getElementById('sw');
+for(const k of Object.keys(PALS)){const b=document.createElement('button');b.textContent=k;b.onclick=()=>{pal=k;[...sw.children].forEach(c=>c.classList.toggle('on',c==b));render()};if(k==pal)b.className='on';sw.appendChild(b)}
+render();
+</script>
