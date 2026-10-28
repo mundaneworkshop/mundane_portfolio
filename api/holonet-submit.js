@@ -12,6 +12,7 @@ const ALERT_TO = process.env.HOLONET_ALERT_EMAIL || 'jason.hsin@gmail.com';
 
 const NAME_MAX = 40, MSG_MAX = 280;
 const URL_RE = /(https?:\/\/|www\.)/i;
+const MIN_ELAPSED_MS = 3000;   // a person can't open the console, write and send in under 3 s; form-filling bots usually do
 
 function isFiniteNum(n) { return typeof n === 'number' && Number.isFinite(n); }
 
@@ -21,6 +22,14 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = req.body || {};
+
+    // Bot checks. contact_url is a field people never see (off-screen in the console), so anything in it
+    // came from a bot that fills every input. elapsed is the ms between opening the console and sending;
+    // a missing value means the request didn't come from the console at all.
+    if (body.contact_url) { res.status(400).json({ error: 'transmission rejected' }); return; }
+    const elapsed = Number(body.elapsed);
+    if (!Number.isFinite(elapsed) || elapsed < MIN_ELAPSED_MS) { res.status(400).json({ error: 'too fast, wait a moment and transmit again' }); return; }
+
     const name = (body.name || 'Anonymous').toString().trim().slice(0, NAME_MAX) || 'Anonymous';
     const msg = (body.msg || '').toString().trim().slice(0, MSG_MAX);
 

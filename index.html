@@ -748,6 +748,7 @@
   @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr);gap:12px} .ct-scr{width:100%;margin:0} #ctMsg{min-height:132px} }
   .ct-links{display:flex;flex-wrap:wrap;gap:4px;margin-left:calc(var(--bric-space-2-stud) * -1)}
   .ct-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ct-trap{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}   /* bot trap: off-screen (not display:none, which some bots skip), unreachable by keyboard and screen readers */
   .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
   /* GLB upload affordances appear only in Edit Mode */
   .glb-up{display:none}
@@ -1550,6 +1551,7 @@
         <div class="ct-fields">
           <div class="ct-fld"><input id="ctName" type="text" placeholder="Callsign" aria-label="Callsign" aria-describedby="ctNameCount" autocomplete="off"><span class="ct-count" id="ctNameCount">40 / 40</span></div>
           <div class="ct-fld grow"><textarea id="ctMsg" rows="6" placeholder="Message" aria-label="Message" aria-describedby="ctMsgCount"></textarea><span class="ct-count" id="ctMsgCount">280 / 280</span></div>
+          <div class="ct-trap" aria-hidden="true"><label for="ctUrl">Leave this empty</label><input id="ctUrl" name="contact_url" type="text" tabindex="-1" autocomplete="off"></div>
         </div>
       </div>
       <div class="ct-actions">
@@ -12017,7 +12019,8 @@ f 2469//2469 2470//2470 2434//2434
     function ctStamp(){ var d=new Date(), p=function(n){ return (n<10?'0':'')+n; }, e=ctEl('ctAln');   // MMDD-HHMM, local date + 24h time
       if(e) e.textContent=p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes()); }
     function ctLayer(id){ ['ctAlign','ctRows'].forEach(function(k){ var e=ctEl(k); if(e) e.classList.toggle('on',k===id); }); }
-    function ctOpen(){ if(ctPhase!=='upload') ctReset(); ctStamp(); if(window.MWAudio&&MWAudio.sitePreload) MWAudio.sitePreload(['holoAlignStep','holoAligned','holoUplink','holoShot']); }
+    var ctOpenedAt=0;   // spam check: the server refuses a send that arrives under 3 s after the console opened
+    function ctOpen(){ if(ctPhase!=='upload') ctReset(); ctStamp(); ctOpenedAt=Date.now(); if(window.MWAudio&&MWAudio.sitePreload) MWAudio.sitePreload(['holoAlignStep','holoAligned','holoUplink','holoShot']); }
     function ctReset(){ ctPhase='compose'; ctLayer('ctAlign'); var l=ctEl('ctLost'); if(l) l.setAttribute('opacity',0);
       var sb=ctEl('ctSend'); if(sb) sb.textContent='Transmit'; ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e) e.disabled=false; }); ctAssess(); }
     var ctArmed=false, ctSat=0, ctWasLocked=false;
@@ -12069,7 +12072,7 @@ f 2469//2469 2470//2470 2434//2434
       ctPhase='upload'; ni.disabled=mi.disabled=true; sb.setAttribute('aria-disabled','true'); sb.textContent='Transmitting…';
       ctHint('Transmitting the tape','tx'); ctSay('Transmitting.'); ctRows(0); ctLayer('ctRows'); ctSnd('holoUplink');
       var res=null;
-      fetch('/api/holonet-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,msg:msg,x:pos.x,y:pos.y,z:pos.z})})
+      fetch('/api/holonet-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,msg:msg,x:pos.x,y:pos.y,z:pos.z,contact_url:(ctEl('ctUrl')||{}).value||'',elapsed:Date.now()-ctOpenedAt})})
         .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; },function(){ return {ok:false,body:{error:'HTTP '+r.status}}; }); })
         .then(function(x){ res=x; },function(e){ res={ok:false,body:{error:e.message}}; });
       ctTween(CT_UPLINK_MS-530,function(v){ ctRows(v*.95); })   // honest bar: holds at 95% until the server has answered; with the 180 ms finish and 350 ms beat it spans the uplink clip
