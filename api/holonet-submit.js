@@ -11,7 +11,9 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 const ALERT_TO = process.env.HOLONET_ALERT_EMAIL || 'jason.hsin@gmail.com';
 
 const NAME_MAX = 40, MSG_MAX = 280;
+const TABLE_MAX = 1000;   // keep the newest 1000 rows (Supabase's default per-request row cap); older ones are deleted on each submit. The galaxy shows the newest 30.
 const URL_RE = /(https?:\/\/|www\.)/i;
+const MIN_ELAPSED_MS = 3000;   // a person can't open the console, write and send in under 3 s; form-filling bots usually do
 
 function isFiniteNum(n) { return typeof n === 'number' && Number.isFinite(n); }
 
@@ -21,6 +23,14 @@ module.exports = async function handler(req, res) {
 
   try {
     const body = req.body || {};
+
+    // Bot checks. contact_url is a field people never see (off-screen in the console), so anything in it
+    // came from a bot that fills every input. elapsed is the ms between opening the console and sending;
+    // a missing value means the request didn't come from the console at all.
+    if (body.contact_url) { res.status(400).json({ error: 'transmission rejected' }); return; }
+    const elapsed = Number(body.elapsed);
+    if (!Number.isFinite(elapsed) || elapsed < MIN_ELAPSED_MS) { res.status(400).json({ error: 'too fast, wait a moment and transmit again' }); return; }
+
     const name = (body.name || 'Anonymous').toString().trim().slice(0, NAME_MAX) || 'Anonymous';
     const msg = (body.msg || '').toString().trim().slice(0, MSG_MAX);
 
@@ -45,6 +55,17 @@ module.exports = async function handler(req, res) {
       .single();
 
     if (error) { console.error('[holonet-submit] insert failed', error); res.status(500).json({ error: 'save failed' }); return; }
+
+    // Prune: find the TABLE_MAX-th newest row and delete everything older. Never fails the submission.
+    try {
+      const { data: cut } = await supabase.from('messages').select('created_at').order('created_at', { ascending: false }).range(TABLE_MAX - 1, TABLE_MAX - 1);
+      if (cut && cut.length) {
+        const { error: pruneErr } = await supabase.from('messages').delete().lt('created_at', cut[0].created_at);
+        if (pruneErr) console.error('[holonet-submit] prune failed', pruneErr);
+      }
+    } catch (e) {
+      console.error('[holonet-submit] prune failed', e);
+    }
 
     // Await the email before responding — a Vercel function's execution can be frozen right after the
     // response is sent, so a true fire-and-forget call after res.json() isn't reliable. A failed email
