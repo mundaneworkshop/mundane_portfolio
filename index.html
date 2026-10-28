@@ -724,16 +724,14 @@
   .msgbeacon .mb-dot,.msgbeacon .mb-ring{display:none}
   #msgHover{position:absolute;display:none;box-sizing:border-box;overflow:hidden;transform:translateY(-100%);white-space:nowrap;font-family:var(--grotesk);font-size:13px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:var(--bric-holonet-hot);background:rgba(10,8,18,.9);border:1px solid rgba(160,106,240,.45);padding:5px 9px;border-radius:2px;pointer-events:none;z-index:14}
   /* Contact comm console */
-  .ct-panel{width:460px;max-width:94vw;max-height:90vh;overflow:auto;background:color-mix(in srgb,var(--bric-surface-raised) 92%,transparent);border:1px solid var(--bric-border-default);border-radius:var(--bric-corner-step);padding:18px 18px 16px;font-family:var(--grotesk);backdrop-filter:blur(4px)}
-  .ct-head{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:3px;color:var(--bric-schematic-edge);text-transform:uppercase;margin-bottom:12px}
+  .ct-panel{width:min(820px,94vw);max-height:92vh;overflow:auto;background:color-mix(in srgb,var(--bric-surface-raised) 92%,transparent);border:1px solid var(--bric-border-default);border-radius:var(--bric-corner-step);padding:22px 22px 20px;font-family:var(--grotesk);backdrop-filter:blur(4px)}
+  .ct-head{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:3px;color:var(--bric-schematic-edge);text-transform:uppercase;margin-bottom:16px}
   .ct-rec{width:7px;height:7px;border-radius:50%;background:var(--bric-holonet-text);box-shadow:0 0 6px var(--bric-holonet-text)}
   /* Transmission screen: Rogue One's Scarif uplink. Compose = dish alignment (the dish levels as the fields fill; box + axis flash until it locks), send = the uplink bars */
-  .ct-chip{margin-left:auto;font-family:var(--grotesk);font-weight:500;font-size:10px;letter-spacing:2px;padding:3px 7px;border:1px solid currentColor;border-radius:2px;color:var(--bric-register-amber-text);white-space:nowrap}
-  .ct-chip[data-state=on]{color:var(--bric-register-teal-text)}
-  .ct-chip[data-state=over],.ct-chip[data-state=fail]{color:var(--bric-danger-text)}
-  .ct-chip[data-state=tx]{color:var(--bric-holonet-hot)}
-  .ct-con{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:start}
-  .ct-scr{position:relative;aspect-ratio:200/272;border-radius:9px;overflow:hidden;background:linear-gradient(160deg,rgba(12,10,22,.64),rgba(12,10,22,.3)),var(--bric-holonet-text);box-shadow:0 0 0 5px #07060c;margin:5px}
+  .ct-con{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:stretch}
+  .ct-fields{display:flex;flex-direction:column;gap:12px;min-height:0}
+  .ct-fld.grow{flex:1;display:flex;min-height:0}
+  .ct-scr{position:relative;aspect-ratio:200/272;border-radius:9px;overflow:hidden;background:linear-gradient(160deg,rgba(12,10,22,.64),rgba(12,10,22,.3)),var(--bric-holonet-text);box-shadow:0 0 0 5px #07060c;margin:5px;width:clamp(180px,min(26vw,calc((92vh - 170px) * 200 / 272)),280px)}
   .ct-scr svg{position:absolute;inset:0;width:100%;height:100%;display:block}
   .ct-ly{opacity:0;transition:opacity .2s linear}
   .ct-ly.on{opacity:1}
@@ -742,7 +740,7 @@
   .ct-scr.locked .ct-flash{animation:none}
   @keyframes ctFlash{0%{opacity:1}50%{opacity:.12}}
   @media (prefers-reduced-motion:reduce){ .ct-ly,.ct-rot{transition:none} .ct-flash{animation:none;opacity:.4} .ct-scr.locked .ct-flash{opacity:1} }
-  @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr)} .ct-scr{width:140px;margin:5px auto 10px} }
+  @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr);gap:12px} .ct-scr{width:140px;margin:5px auto 4px} #ctMsg{min-height:132px} }
   .ct-hint{font-family:var(--grotesk);font-size:12px;color:var(--bric-content-tertiary);min-height:16px}
   .ct-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
@@ -750,14 +748,16 @@
   .glb-up{display:none}
   body.editing .ct-glbname.glb-up{display:block}
   body.editing .ct-upload.glb-up{display:inline-flex;margin-bottom:10px}
-  .ct-fld{margin-bottom:11px}
-  .ct-fld label,.altfocus .ct-fld label{display:flex;justify-content:space-between;align-items:center;font-family:var(--grotesk);font-size:11px;letter-spacing:2px;color:var(--bric-content-tertiary);text-transform:uppercase;margin-bottom:6px}
-  .ct-count{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--bric-content-tertiary)}
+  .ct-fld{position:relative}
+  .ct-count{position:absolute;right:11px;bottom:10px;font-family:var(--mono);font-size:11px;line-height:16px;letter-spacing:1px;color:var(--bric-content-tertiary);pointer-events:none}
   .ct-count.low{color:var(--bric-register-amber-text)}
   .ct-count.zero{color:var(--bric-danger-solid)}
-  #ctName,#ctMsg{width:100%;background:var(--bric-surface-base);border:1px solid var(--bric-border-default);color:var(--bric-content-primary);font-family:var(--grotesk);font-size:13px;padding:9px 11px;border-radius:var(--bric-corner-step);outline:none;box-sizing:border-box}
+  #ctName,#ctMsg{width:100%;background:var(--bric-surface-base);border:1px solid var(--bric-border-default);color:var(--bric-content-primary);font-family:var(--grotesk);font-size:13px;padding:10px 11px;border-radius:var(--bric-corner-step);outline:none;box-sizing:border-box}
+  #ctName{padding-right:84px}
+  #ctMsg{display:block;flex:1;min-height:0;resize:none;padding-bottom:30px}
+  #ctName::placeholder,#ctMsg::placeholder{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bric-content-tertiary);opacity:1}
   #ctName:focus,#ctMsg:focus{border-color:var(--bric-schematic-line);box-shadow:inset 0 0 0 1px var(--bric-schematic-line)}
-  .ct-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
+  .ct-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
   .ct-upload{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:transparent;border:1px dashed rgba(90,191,184,.4);border-radius:2px;padding:8px 10px;cursor:pointer}
   .ct-upload:hover{border-color:#5ABFB8}
   .ct-send{margin-left:auto}
@@ -1498,7 +1498,7 @@
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
   <div id="contactFocus" class="altfocus">
     <div class="ct-panel bric-dark">
-      <div class="ct-head"><span class="ct-rec"></span> Initiate transmission <span class="ct-chip" id="ctChip">Dish misaligned</span></div>
+      <div class="ct-head"><span class="ct-rec"></span> Initiate transmission</div>
       <div class="ct-con">
         <div class="ct-scr" id="ctScr" aria-hidden="true">
           <svg class="ct-ly on" id="ctAlign" viewBox="0 0 200 272" fill="none">
@@ -1532,14 +1532,14 @@
             <text id="ctLost" x="100" y="258" text-anchor="middle" fill="#FF6B6B" font-family="Chakra Petch, sans-serif" font-weight="600" font-size="11" letter-spacing="3" opacity="0">SIGNAL LOST</text>
           </svg>
         </div>
-        <div>
-          <div class="ct-fld"><label for="ctName">Callsign <span class="ct-count" id="ctNameCount">40 / 40</span></label><input id="ctName" type="text" placeholder="who's transmitting?" autocomplete="off"></div>
-          <div class="ct-fld"><label for="ctMsg">Message <span class="ct-count" id="ctMsgCount">280 / 280</span></label><textarea id="ctMsg" rows="6" placeholder="transmit a signal — it'll hang among the stars…"></textarea></div>
+        <div class="ct-fields">
+          <div class="ct-fld"><input id="ctName" type="text" placeholder="Callsign" aria-label="Callsign" aria-describedby="ctNameCount" autocomplete="off"><span class="ct-count" id="ctNameCount">40 / 40</span></div>
+          <div class="ct-fld grow"><textarea id="ctMsg" rows="6" placeholder="Message" aria-label="Message" aria-describedby="ctMsgCount"></textarea><span class="ct-count" id="ctMsgCount">280 / 280</span></div>
         </div>
       </div>
       <div class="ct-actions">
         <span class="ct-hint" id="ctHint"></span>
-        <button class="ct-send bric-btn bric-btn--primary" id="ctSend" aria-disabled="true" aria-describedby="ctHint">Transmit ▸</button>
+        <button class="ct-send bric-btn bric-btn--primary" id="ctSend" aria-disabled="true" aria-describedby="ctHint">Transmit</button>
       </div>
       <div class="ct-sr" id="ctLive" aria-live="polite"></div>
     </div>
@@ -11995,14 +11995,13 @@ f 2469//2469 2470//2470 2434//2434
     var ctPhase='compose', ctLocked=false, ctOver=false, ctCool=false, ctSaid='';
     function ctEl(id){ return document.getElementById(id); }
     function ctSay(t){ if(t===ctSaid) return; ctSaid=t; var l=ctEl('ctLive'); if(l) l.textContent=t; }
-    function ctChip(text,state){ var c=ctEl('ctChip'); if(!c) return; c.textContent=text; c.setAttribute('data-state',state); }
     function ctHint(t){ var h=ctEl('ctHint'); if(h) h.textContent=t; }
     function ctStamp(){ var d=new Date(), p=function(n){ return (n<10?'0':'')+n; }, e=ctEl('ctAln');   // MMDD-HHMM, local date + 24h time
       if(e) e.textContent=p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes()); }
     function ctLayer(id){ ['ctAlign','ctRows'].forEach(function(k){ var e=ctEl(k); if(e) e.classList.toggle('on',k===id); }); }
     function ctOpen(){ if(ctPhase!=='upload') ctReset(); ctStamp(); }
     function ctReset(){ ctPhase='compose'; ctLayer('ctAlign'); var l=ctEl('ctLost'); if(l) l.setAttribute('opacity',0);
-      var sb=ctEl('ctSend'); if(sb) sb.textContent='Transmit ▸'; ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e) e.disabled=false; }); ctAssess(); }
+      var sb=ctEl('ctSend'); if(sb) sb.textContent='Transmit'; ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e) e.disabled=false; }); ctAssess(); }
     function ctAssess(){ if(ctPhase!=='compose') return;
       var ni=ctEl('ctName'), mi=ctEl('ctMsg'), sb=ctEl('ctSend'); if(!ni||!mi||!sb) return;
       var n=ni.value.trim().length, m=mi.value.trim().length, no=ni.value.length-CT_NAME_MAX, mo=mi.value.length-CT_MSG_MAX;
@@ -12012,9 +12011,9 @@ f 2469//2469 2470//2470 2434//2434
       var dg=ctEl('ctDish'); if(dg) dg.style.transform='rotate('+(ctOver?-CT_TILT*1.3:-CT_TILT*(1-p))+'deg)';   // static tilt that steps level as the fields fill; over cap tips past the start
       var sc=ctEl('ctScr'); if(sc) sc.classList.toggle('locked',ctLocked);
       sb.setAttribute('aria-disabled',String(!ctLocked||ctCool));
-      if(ctOver){ ctChip('Overload','over'); ctHint(no>0?'Trim the callsign by '+no+' to realign':'Trim the message by '+mo+' to realign'); ctSay('Overload. The dish fell out of alignment.'); }
-      else if(ctLocked){ ctChip('Dish aligned','on'); ctHint(ctCool?'Dish recharging, a moment…':'Locked on the fleet'); ctSay('Dish aligned. Ready to transmit.'); }
-      else { ctChip('Dish misaligned','off'); ctHint(n<CT_NAME_MIN&&m<CT_MSG_MIN?'Add a callsign and a message to align the dish':n<CT_NAME_MIN?'Add a callsign to finish aligning':'Write a message to finish aligning'); ctSay('Dish misaligned.'); }
+      if(ctOver){ ctHint(no>0?'Trim the callsign by '+no+' to realign':'Trim the message by '+mo+' to realign'); ctSay('Overload. The dish fell out of alignment.'); }
+      else if(ctLocked){ ctHint(ctCool?'Dish recharging, a moment…':'Locked on the fleet'); ctSay('Dish aligned. Ready to transmit.'); }
+      else { ctHint(n<CT_NAME_MIN&&m<CT_MSG_MIN?'Add a callsign and a message to align the dish':n<CT_NAME_MIN?'Add a callsign to finish aligning':'Write a message to finish aligning'); ctSay('Dish misaligned.'); }
     }
     // uplink bars, measured off the film's sender screen: 4 rows x 14 segments (wide ends, a thin cluster left of centre), pin, end caps, header ticks
     var CT_W=[24.2,18,10.8,8.8,6,3,1.6,1.8,1.8,6.9,6.9,10.4,17.3,26.5], CT_RD=[[.06,.94],[.12,1],[0,.86],[0,.78]], ctSegs=[];
@@ -12041,7 +12040,7 @@ f 2469//2469 2470//2470 2434//2434
       var ni=ctEl('ctName'), mi=ctEl('ctMsg'), sb=ctEl('ctSend'), name=ni.value.trim(), msg=mi.value.trim();
       var pos=msgScatterPos();   // suggested position — server sanity-checks and is the final authority on what's stored
       ctPhase='upload'; ni.disabled=mi.disabled=true; sb.setAttribute('aria-disabled','true'); sb.textContent='Transmitting…';
-      ctChip('Uplink','tx'); ctHint('Transmitting the tape'); ctSay('Transmitting.'); ctRows(0); ctLayer('ctRows');
+      ctHint('Transmitting the tape'); ctSay('Transmitting.'); ctRows(0); ctLayer('ctRows');
       var res=null;
       fetch('/api/holonet-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,msg:msg,x:pos.x,y:pos.y,z:pos.z})})
         .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; },function(){ return {ok:false,body:{error:'HTTP '+r.status}}; }); })
@@ -12053,8 +12052,8 @@ f 2469//2469 2470//2470 2434//2434
     }
     function ctLost(err){ ctPhase='fail'; var l=ctEl('ctLost'); if(l) l.setAttribute('opacity',1);
       ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e) e.disabled=false; });
-      var sb=ctEl('ctSend'); sb.textContent='Retry transmit ▸'; sb.setAttribute('aria-disabled','false');
-      ctChip('Signal lost','fail'); ctHint('Signal lost'+(err?' · '+err:'')+'. Your text is kept.'); ctSay('Signal lost. Your message was kept. Retry when ready.'); }
+      var sb=ctEl('ctSend'); sb.textContent='Retry transmit'; sb.setAttribute('aria-disabled','false');
+      ctHint('Signal lost'+(err?' · '+err:'')+'. Your text is kept.'); ctSay('Signal lost. Your message was kept. Retry when ready.'); }
     function ctDone(rec){
       if(window.MWOutfitEvent) MWOutfitEvent('holonet');   // unlock engine: a message was sent
       ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e){ e.value=''; e.dispatchEvent(new Event('input')); } });   // reset counters
