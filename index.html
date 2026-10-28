@@ -12136,7 +12136,10 @@ f 2469//2469 2470//2470 2434//2434
     // realtime INSERT event. De-duped by id since a submit response and its own realtime echo can both arrive.
     function pinMessage(d){ if(!d) return null; if(d.id && messages.some(function(m){return m.id===d.id;})) return null;
       var m={id:d.id,name:d.name,msg:d.msg,x:d.x,y:d.y,z:d.z,t:d.created_at?new Date(d.created_at).getTime():Date.now(),demo:!!d.demo};
-      messages.push(m); makeBeacon(m); return m; }
+      messages.push(m); makeBeacon(m); trimMessages(); return m; }
+    var MSG_SHOWN=30;   // the galaxy shows the newest 30 transmissions; a new one retires the oldest star (the table keeps up to 1000, pruned in api/holonet-submit.js)
+    function trimMessages(){ while(messages.length>MSG_SHOWN){ var o=0; for(var i=1;i<messages.length;i++) if(messages[i].t<messages[o].t) o=i;
+      var old=messages.splice(o,1)[0]; if(old&&old.el&&old.el.parentNode) old.el.parentNode.removeChild(old.el); } }
     function subscribeHoloNet(){ if(!_sb || !_sb.channel) return;
       _sb.channel('messages-inserts').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'approved=eq.true'},function(payload){
         var m=pinMessage(payload.new); if(m && typeof toast==='function') toast('new transmission received');
@@ -12144,9 +12147,9 @@ f 2469//2469 2470//2470 2434//2434
     }
     function loadMessages(){
       if(!_sb){ console.warn('[holonet] Supabase client unavailable — no messages loaded'); return; }
-      _sb.from('messages').select('*').eq('approved',true).order('created_at',{ascending:true}).then(function(res){
+      _sb.from('messages').select('*').eq('approved',true).order('created_at',{ascending:false}).limit(MSG_SHOWN).then(function(res){
         if(res.error){ console.error('[holonet] load failed',res.error); return; }
-        (res.data||[]).forEach(pinMessage);   // genuinely empty table = genuinely empty starfield, no fake placeholder messages
+        (res.data||[]).reverse().forEach(pinMessage);   // newest MSG_SHOWN, pinned oldest-first   // genuinely empty table = genuinely empty starfield, no fake placeholder messages
         subscribeHoloNet();
       });
     }
