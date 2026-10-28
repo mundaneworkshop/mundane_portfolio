@@ -62,6 +62,9 @@
 .bric-error__glyph{font-family:'Aurebesh','Space Mono',monospace;font-weight:700;font-size:.78em;line-height:0}
 .bric-error__title{margin:var(--bric-space-2-stud) 0 var(--bric-space-stud);color:var(--bric-content-primary);font:600 clamp(28px,5vw,40px)/1.15 'Chakra Petch',sans-serif;letter-spacing:.01em;outline:none}
 .bric-error__body{margin:0;max-width:52ch;color:var(--bric-content-secondary)}
+.bric-error__link{color:var(--bric-content-primary);text-decoration:underline;text-underline-offset:3px}
+.bric-error__link:hover{color:var(--bric-content-brand)}
+.bric-error__link:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:2px}
 .bric-error__path{margin:var(--bric-space-2-stud) 0 0;color:var(--bric-content-tertiary);overflow-wrap:anywhere;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase}
 .bric-error__path code{font:inherit;letter-spacing:.04em;text-transform:none;color:var(--bric-content-secondary)}
 .bric-error__actions{display:flex;flex-wrap:wrap;gap:var(--bric-space-2-stud);margin-top:var(--bric-space-4-stud)}

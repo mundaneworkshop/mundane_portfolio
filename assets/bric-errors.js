@@ -12,6 +12,7 @@
  *     status:    'Teapot',                    eyebrow: "Error <code> · <status>" (omit `code` to show just the status)
  *     title:     'Short headline',            becomes the page's <h1>, and receives focus
  *     body:      'One or two sentences.',     plain text
+ *     link:      { label:'Request access here', href:'mailto:…' }   optional inline link, appended to the body
  *     primary:   { label:'Back to the galaxy', href:'/' }        the one call to action: a link, or { label, action:'reload' | 'back' | function }
  *   }
  *
@@ -29,10 +30,10 @@
   var ERRORS = {
     '400': { code: '400', status: 'Bad request', title: 'Garbled transmission', body: 'That request came through scrambled. Check the address and send it again.', primary: HOME },
     '401': { code: '401', status: 'Unauthorized', title: 'Clearance required', body: 'This part of the workshop asks for credentials, and none came through.', primary: HOME },
-    '403': { code: '403', status: 'Forbidden', title: 'Restricted sector', body: 'You do not have clearance to enter. The doors stay sealed.', primary: HOME },
-    '404': { code: '404', status: 'Page not found', title: 'Lost in the void', body: 'There is nothing at this address. The page may have moved, or the link may be off by a few light-years.', primary: HOME },
+    '403': { code: '403', status: 'Forbidden', title: 'Restricted sector', body: 'This is not the page you are looking for. Your Jedi mind tricks do not work on me. Only correct credentials.', link: { label: 'Request access here', href: 'mailto:jason@mundanework.shop' }, primary: HOME },
+    '404': { code: '404', status: 'Page not found', title: 'Lost in the void', body: 'There is nothing at this address. The page may have moved, or the link may be off by a few parsecs.', primary: HOME },
     '408': { code: '408', status: 'Request timeout', title: 'Signal timed out', body: 'The transmission took too long and drifted off. Send it again.', primary: HOME },
-    '410': { code: '410', status: 'Gone', title: 'Gone from the map', body: 'This page was here once. It has since left the system for good.', primary: HOME },
+    '410': { code: '410', status: 'Gone', title: 'Gone from the map', body: 'I sense a great disturbance in the Force, as if millions of bytes suddenly cried out in terror and were suddenly silenced. I fear the content you are looking for no longer exists.', primary: HOME },
     '429': { code: '429', status: 'Too many requests', title: 'Comms array overloaded', body: 'Too many transmissions at once. Give it a moment, then try again.', primary: HOME },
     '500': { code: '500', status: 'Server error', title: 'Fault in the engine room', body: 'Something broke on our end. The workshop is on it.', primary: HOME },
     '502': { code: '502', status: 'Bad gateway', title: 'Relay misfire', body: 'A relay along the route sent back nonsense. Try again shortly.', primary: HOME },
@@ -185,7 +186,9 @@
     var h1 = el('h1', 'bric-error__title', c.title);
     h1.id = 'bricErrorTitle'; h1.tabIndex = -1;
     card.appendChild(h1);
-    card.appendChild(el('p', 'bric-error__body', c.body));
+    var bodyEl = el('p', 'bric-error__body', c.body);
+    if (c.link) { bodyEl.appendChild(document.createTextNode(' ')); var lk = el('a', 'bric-error__link', c.link.label); lk.href = c.link.href; bodyEl.appendChild(lk); bodyEl.appendChild(document.createTextNode('.')); }
+    card.appendChild(bodyEl);
     if (c.path) { var p = el('p', 'bric-error__path', 'Requested '); p.appendChild(el('code', null, c.path)); card.appendChild(p); }
     var actions = el('div', 'bric-error__actions');
     if (c.primary) actions.appendChild(actionNode(c.primary, 'primary', opts.navigate));
