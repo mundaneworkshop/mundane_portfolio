@@ -104,10 +104,10 @@
     chars.forEach(function (c, i) { settle[i] = ((n > 1 ? i / (n - 1) : 0) * (1 - SCATTER) + Math.random() * SCATTER) * span; });
     node.setAttribute('data-text', target);
     node.style.height = node.offsetHeight + 'px'; node.style.overflow = 'hidden';   // glyph metrics can never resize the box
-    var t0 = performance.now(), lastT = -TICK; node.__dec = true;
+    var t0 = performance.now(), lastT = -TICK; node.__dec = true; node.classList.add('is-decoding');
     (function step() {
       var el = performance.now() - t0, html = '';
-      if (el >= DUR) { node.textContent = target; node.style.height = ''; node.style.overflow = ''; node.__dec = false; return; }
+      if (el >= DUR) { node.textContent = target; node.style.height = ''; node.style.overflow = ''; node.__dec = false; node.classList.remove('is-decoding'); return; }
       if (el - lastT >= TICK) {
         lastT = el;
         for (var i = 0; i < n; i++) html += el >= settle[i] ? chars[i] : '<span class="bric-error__glyph">' + (aurOK ? (Math.random() < 0.3 ? pick(LETTERS) : chars[i]) : pick(FALLBACK + LETTERS)) + '</span>';
