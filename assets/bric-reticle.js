@@ -261,6 +261,7 @@ function bricReticle(options) {
     return !!b && x >= b.l && x <= b.r && y >= b.t && y <= b.b;
   }
   function update(target) {
+    if (off) return;
     var d = describe(target);
     if (!d && cur && inFrame(cur, lx, ly)) return; // in the outset band around the target: still locked
     if (d) { if (!cur || d.key !== cur.key) enter(d); }
@@ -269,6 +270,7 @@ function bricReticle(options) {
   }
 
   function onMove(e) {
+    if (off) return;
     if (e.pointerType && e.pointerType !== 'mouse') return;
     lx = e.clientX; ly = e.clientY;
     update(e.target);
@@ -278,7 +280,7 @@ function bricReticle(options) {
   // a click inside the frame but outside the element (or in a gap inside it that owns no click) goes to the target, unless
   // something clickable of its own is under the pointer
   function onClick(e) {
-    if (!cur || !cur.el || e.defaultPrevented || e.button > 0 || cur.el.contains(e.target)) return;
+    if (off || !cur || !cur.el || e.defaultPrevented || e.button > 0 || cur.el.contains(e.target)) return;
     if (!inFrame(cur, e.clientX, e.clientY)) return;
     var t = e.target && e.target.closest ? e.target.closest(o.selector + ',' + o.ignore) : null;
     if (t) return;
@@ -297,6 +299,7 @@ function bricReticle(options) {
       update(document.elementFromPoint(lx, ly));
     }, 120);
   }
+  var off = false; // setEnabled(false): the page asked for the native cursor (Edit Mode: aim at text fields and small tap targets)
   function drop() { if (root.classList.contains('on')) { leave(); hide(); } }
 
   document.addEventListener('pointermove', onMove, { passive: true });
@@ -311,6 +314,8 @@ function bricReticle(options) {
   var api = {
     refresh: function () { if (cur) { cur.g = geoOf(cur); applyGeo(cur.g); var b = frameOf(cur); if (b) jump(b); } },
     setTargets: function (fn) { o.targets = fn; },
+    // off: drop the brackets and give the native cursor back until it is switched on again
+    setEnabled: function (on) { off = !on; if (off) drop(); },
     // re-resolve the target without a pointer event (keyboard navigation moved the virtual target)
     retarget: function () { update(document.elementFromPoint(lx, ly)); },
     destroy: function () {

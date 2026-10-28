@@ -437,6 +437,7 @@
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") no-repeat center / contain;
   }
+  div.manual-link::before { pointer-events:none; }   /* Edit Mode row (a div): .bric-btn's ::before hit-extender sat over the label and URL field and swallowed their clicks; only the link itself (an <a>) needs the bigger hit area */
   .manual-link .ml-x { margin-left:4px; color:var(--c-dim); font-size:14px; cursor:pointer; opacity:0; }
   .manual-link:hover .ml-x { opacity:1; }
   .manual-extralinks { display:none; margin-top:18px; }
@@ -13572,6 +13573,7 @@ f 2469//2469 2470//2470 2434//2434
       var b=document.getElementById('editBtn'); if(b) b.classList.toggle('on',on);
       var banner=document.getElementById('editBanner'); if(banner) banner.style.display=on?'block':'none';
       document.body.classList.toggle('editing',on);   // reveals dimmed hidden items
+      if(window.__bricReticle&&window.__bricReticle.setEnabled) window.__bricReticle.setEnabled(!on);   // native cursor in Edit Mode: the reticle's frame is the hit area, too coarse for text fields and small tap targets
       if(typeof applyHiddenVisibility==='function') applyHiddenVisibility();
       renderer.domElement.style.cursor=on?'pointer':''; refreshEditPanel();
       if(typeof setInlineEditing==='function') setInlineEditing(on);
