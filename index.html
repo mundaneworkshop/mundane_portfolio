@@ -745,7 +745,7 @@
   .ct-scr.locked .ct-flash{animation:none}
   @keyframes ctFlash{0%{opacity:1}50%{opacity:.12}}
   @media (prefers-reduced-motion:reduce){ .ct-ly,.ct-rot{transition:none} .ct-flash{animation:none;opacity:.4} .ct-scr.locked .ct-flash{opacity:1} }
-  @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr);gap:12px} .ct-scr{width:140px;margin:0 auto} #ctMsg{min-height:132px} }
+  @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr);gap:12px} .ct-scr{width:100%;margin:0} #ctMsg{min-height:132px} }
   .ct-links{display:flex;flex-wrap:wrap;gap:4px;margin-left:calc(var(--bric-space-2-stud) * -1)}
   .ct-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
@@ -779,7 +779,7 @@
   @keyframes ctPop{0%{transform:scale(.94)}45%{transform:scale(1.06)}100%{transform:scale(1)}}
   @keyframes ctBreathe{0%{opacity:.4}100%{opacity:1}}
   @media (prefers-reduced-motion:reduce){ .ct-go.fire .ct-ring,.ct-go.fire .ct-send,.ct-go.armed .ct-send::after{animation:none} }
-  @media (max-width:520px){ .ct-actions{flex-direction:column;align-items:stretch} .ct-go{margin-left:0} .ct-go .ct-send{width:100%} .ct-links{justify-content:center;margin-left:0} }
+  @media (max-width:520px){ .ct-actions{flex-direction:column;align-items:stretch} .ct-go{margin-left:0} .ct-go .ct-send{width:100%} .ct-links{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-left:0} .ct-links .bric-btn{width:100%} }
   /* transmit (R2 trundle) + message modal */
   #r2Trundle{position:absolute;inset:0;z-index:19;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
   #r2Trundle.show{display:flex}
