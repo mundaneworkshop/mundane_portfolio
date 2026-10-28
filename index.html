@@ -723,13 +723,28 @@
   .msgbeacon{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;pointer-events:auto;cursor:pointer}
   .msgbeacon .mb-dot,.msgbeacon .mb-ring{display:none}
   #msgHover{position:absolute;display:none;box-sizing:border-box;overflow:hidden;transform:translateY(-100%);white-space:nowrap;font-family:var(--grotesk);font-size:13px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:var(--bric-holonet-hot);background:rgba(10,8,18,.9);border:1px solid rgba(160,106,240,.45);padding:5px 9px;border-radius:2px;pointer-events:none;z-index:14}
-  #txLaunch{position:absolute;inset:0;z-index:50;display:none;pointer-events:none}
-  #txLaunch.show{display:block}
   /* Contact comm console */
   .ct-panel{width:460px;max-width:94vw;max-height:90vh;overflow:auto;background:color-mix(in srgb,var(--bric-surface-raised) 92%,transparent);border:1px solid var(--bric-border-default);border-radius:var(--bric-corner-step);padding:18px 18px 16px;font-family:var(--grotesk);backdrop-filter:blur(4px)}
   .ct-head{display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:3px;color:var(--bric-schematic-edge);text-transform:uppercase;margin-bottom:12px}
   .ct-rec{width:7px;height:7px;border-radius:50%;background:var(--bric-holonet-text);box-shadow:0 0 6px var(--bric-holonet-text)}
-  .ct-fig{height:220px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+  /* Transmission screen: Rogue One's Scarif uplink. Compose = dish alignment (the dish levels as the fields fill; box + axis flash until it locks), send = the uplink bars */
+  .ct-chip{margin-left:auto;font-family:var(--grotesk);font-weight:500;font-size:10px;letter-spacing:2px;padding:3px 7px;border:1px solid currentColor;border-radius:2px;color:var(--bric-register-amber-text);white-space:nowrap}
+  .ct-chip[data-state=on]{color:var(--bric-register-teal-text)}
+  .ct-chip[data-state=over],.ct-chip[data-state=fail]{color:var(--bric-danger-text)}
+  .ct-chip[data-state=tx]{color:var(--bric-holonet-hot)}
+  .ct-con{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:start}
+  .ct-scr{position:relative;aspect-ratio:200/272;border-radius:9px;overflow:hidden;background:linear-gradient(160deg,rgba(12,10,22,.64),rgba(12,10,22,.3)),var(--bric-holonet-text);box-shadow:0 0 0 5px #07060c;margin:5px}
+  .ct-scr svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .ct-ly{opacity:0;transition:opacity .2s linear}
+  .ct-ly.on{opacity:1}
+  .ct-rot{transform-box:view-box;transform-origin:100px 143px;transition:transform .5s steps(5,end)}
+  .ct-flash{animation:ctFlash .34s steps(1,end) infinite}   /* ~3 flashes/s: under the WCAG 2.3.1 limit */
+  .ct-scr.locked .ct-flash{animation:none}
+  @keyframes ctFlash{0%{opacity:1}50%{opacity:.12}}
+  @media (prefers-reduced-motion:reduce){ .ct-ly,.ct-rot{transition:none} .ct-flash{animation:none;opacity:.4} .ct-scr.locked .ct-flash{opacity:1} }
+  @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr)} .ct-scr{width:140px;margin:5px auto 10px} }
+  .ct-hint{font-family:var(--grotesk);font-size:12px;color:var(--bric-content-tertiary);min-height:16px}
+  .ct-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
   /* GLB upload affordances appear only in Edit Mode */
   .glb-up{display:none}
@@ -747,6 +762,7 @@
   .ct-upload:hover{border-color:#5ABFB8}
   .ct-send{margin-left:auto}
   .ct-note{font-family:var(--grotesk);font-size:13px;color:var(--bric-content-tertiary);align-self:center}
+  .ct-send{flex:none}
   /* transmit (R2 trundle) + message modal */
   #r2Trundle{position:absolute;inset:0;z-index:19;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;pointer-events:none}
   #r2Trundle.show{display:flex}
@@ -1482,21 +1498,53 @@
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
   <div id="contactFocus" class="altfocus">
     <div class="ct-panel bric-dark">
-      <div class="ct-head"><span class="ct-rec"></span> Initiate transmission</div>
-      <div id="ctFigSlot" class="ct-fig"></div>
-      <div class="ct-fld"><label>Callsign <span class="ct-count" id="ctNameCount">40 / 40</span></label><input id="ctName" type="text" placeholder="who's transmitting?" maxlength="40"></div>
-      <div class="ct-fld"><label>Message <span class="ct-count" id="ctMsgCount">280 / 280</span></label><textarea id="ctMsg" rows="3" placeholder="transmit a signal — it'll hang among the stars…" maxlength="280"></textarea></div>
-      <label class="ct-upload glb-up">⬆ Upload HoloNet .glb<input type="file" id="ctGlbInput" accept=".glb,.gltf" hidden></label>
-      <div class="ct-glbname glb-up" id="ctGlbName"></div>
-      <div class="ct-actions">
-        <span class="ct-note">Pins to the galaxy as a star</span>
-        <button class="ct-send bric-btn bric-btn--primary" id="ctSend">Transmit ▸</button>
+      <div class="ct-head"><span class="ct-rec"></span> Initiate transmission <span class="ct-chip" id="ctChip">Dish misaligned</span></div>
+      <div class="ct-con">
+        <div class="ct-scr" id="ctScr" aria-hidden="true">
+          <svg class="ct-ly on" id="ctAlign" viewBox="0 0 200 272" fill="none">
+            <path d="M12.5 14.7V25.3M17.6 14.7V25.3" stroke="#8FE6DC" stroke-width="1.6"/>
+            <g stroke="#D8CDEC" stroke-width="1.3" stroke-linejoin="round">
+              <path d="M140 24V36M152.8 24V36M170.7 24V36M173.9 24V36"/>
+              <path d="M24.8 55.2L37.6 68.8M28.3 52.3L41.6 65.6"/>
+              <path d="M150.7 73.3L162.7 61.9M153.9 76.8L165.9 65.3"/>
+              <path d="M27.2 193.9L38.4 190.1L34.9 201.1Z"/>
+              <path d="M163.2 196.8L175 202.7L166.7 208Z"/>
+            </g>
+            <g class="ct-rot" id="ctDish">
+              <path class="ct-flash" d="M100 121V3" stroke="#D8CDEC" stroke-width="1.6"/>
+              <rect class="ct-flash" x="30.7" y="95.25" width="138.6" height="51.5" stroke="#D8CDEC" stroke-width="1.2"/>
+              <path d="M30.7 121C37 128 60 139 100 140C140 139 163 128 169.3 121M42 128.6H158M53 133.1H147" stroke="#D8CDEC" stroke-width="1.2"/>
+              <path d="M72.5 143.1H127.5" stroke="#D8CDEC" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M30.7 121H169.3" stroke="#8FE6DC" stroke-width="2.8"/>
+              <path d="M100 121V139M80 139.1H120" stroke="#8FE6DC" stroke-width="3"/>
+            </g>
+            <rect x="90.5" y="144.5" width="19" height="24.2" rx="3" stroke="#8FE6DC" stroke-width="2.2"/>
+            <path d="M99.3 148.7l1.9 1.9-1.9 1.9-1.9-1.9z" fill="#8FE6DC"/>
+            <rect x="97.3" y="157.6" width="4" height="8.8" stroke="#8FE6DC" stroke-width="1.4"/>
+            <rect x="103.4" y="155" width="2.2" height="12" fill="#8FE6DC"/>
+            <path d="M91.5 169L97.3 186V244M108.5 169L102.7 186V244" stroke="#D8CDEC" stroke-width="1.3"/>
+            <text id="ctAln" x="100" y="257" text-anchor="middle" fill="#D8CDEC" font-family="Space Mono, monospace" font-size="12">0000-0000</text>
+          </svg>
+          <svg class="ct-ly" id="ctRows" viewBox="0 0 200 272">
+            <g id="ctRowsG" transform="translate(0 6)"></g>
+            <text id="ctRowL" x="11" y="236" fill="#D8CDEC" font-family="Space Mono, monospace" font-size="7.5" letter-spacing="1.5">UPLINK</text>
+            <text id="ctRowC" x="182" y="236" text-anchor="end" fill="#D8CDEC" font-family="Space Mono, monospace" font-size="9" letter-spacing="1">000</text>
+            <text id="ctLost" x="100" y="258" text-anchor="middle" fill="#FF6B6B" font-family="Chakra Petch, sans-serif" font-weight="600" font-size="11" letter-spacing="3" opacity="0">SIGNAL LOST</text>
+          </svg>
+        </div>
+        <div>
+          <div class="ct-fld"><label for="ctName">Callsign <span class="ct-count" id="ctNameCount">40 / 40</span></label><input id="ctName" type="text" placeholder="who's transmitting?" autocomplete="off"></div>
+          <div class="ct-fld"><label for="ctMsg">Message <span class="ct-count" id="ctMsgCount">280 / 280</span></label><textarea id="ctMsg" rows="6" placeholder="transmit a signal — it'll hang among the stars…"></textarea></div>
+        </div>
       </div>
+      <div class="ct-actions">
+        <span class="ct-hint" id="ctHint"></span>
+        <button class="ct-send bric-btn bric-btn--primary" id="ctSend" aria-disabled="true" aria-describedby="ctHint">Transmit ▸</button>
+      </div>
+      <div class="ct-sr" id="ctLive" aria-live="polite"></div>
     </div>
   </div>
 
-  <!-- Transmit launch: uploaded model spins then flies up off-screen -->
-  <div id="txLaunch"></div>
 
   <!-- R@ trundle (fallback when no model uploaded) + message-read modal -->
   <div id="r2Trundle">
@@ -10254,7 +10302,8 @@ f 2469//2469 2470//2470 2434//2434
     var camUpV=new THREE.Vector3(0,1,0), arcRoll=0, arcRollT=0, arcDragSign=1;   // arcRoll = auto-right roll (radians) about the view axis: eases to π once the free pitch carries the camera upside down, so the hero ends up upright on screen
     var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
     var _arcFoc=new THREE.Vector3(), _arcF=new THREE.Vector3();
-    var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();   // message-star orbit state (used by the animate camera branch)
+    var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();
+    var _mwRM=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null; function mwReduced(){ return !!(_mwRM&&_mwRM.matches); }   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
     renderer.domElement.addEventListener('pointerdown',function(e){ arcReturn=false; if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
@@ -10966,7 +11015,7 @@ f 2469//2469 2470//2470 2434//2434
     })();
     window.addEventListener('keydown',function(e){ if((e.key==='m'||e.key==='M')&&arcadeActive&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!/^(INPUT|TEXTAREA)$/.test((e.target&&e.target.tagName)||'')&&window.MWAudio){ MWAudio.unlock(); MWAudio.toggle(); } });
     window.__mwPlanetScreen=function(id){ var g=planetById(id); if(!g) return null; var v=g.getWorldPosition(new THREE.Vector3()).project(camera); return {x:Math.round((v.x+1)/2*window.innerWidth),y:Math.round((1-v.y)/2*window.innerHeight)}; };   // dev/test helper: where a planet is on screen
-    function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); showContactFig(); setRoute('/'+holonetSlug); }
+    function openContact(id){ var grp=planetById(id); if(!grp) return; altFocusOpen(grp,grp.userData,contactFocusEl); setCrumb('case:'+id,[{text:crumbTitle(grp,'Contact'),bold:true}]); ctOpen(); setRoute('/'+holonetSlug); }
 
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -11923,7 +11972,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.BRICStore){ BRICStore.get('contact:r2:glb').then(function(rec){ if(rec&&rec.buffer){ contactGLBBuf=rec.buffer; mountGLBViewer(slot,contactGLBBuf); } else slot.innerHTML=r2SVG(1.2); }).catch(function(){ slot.innerHTML=r2SVG(1.2); }); }
       else slot.innerHTML=r2SVG(1.2); }
     function bindCount(inp,out,max){ var i=document.getElementById(inp), o=document.getElementById(out); if(!i||!o) return;
-      function upd(){ var r=max-i.value.length; o.textContent=r+' / '+max; o.classList.toggle('low',r<=20&&r>0); o.classList.toggle('zero',r<=0); }
+      function upd(){ var r=max-i.value.length; o.textContent=(r<0?'\u2212'+(-r):r)+' / '+max; o.classList.toggle('low',r<=20&&r>=0); o.classList.toggle('zero',r<0); }   // no maxlength: going over the cap is allowed and knocks the dish out of alignment (the server still enforces it)
       i.addEventListener('input',upd); upd(); }
     function wireContact(){
       contactFocusEl.addEventListener('click',function(e){ if(e.target===contactFocusEl) goHome(); });
@@ -11935,57 +11984,99 @@ f 2469//2469 2470//2470 2434//2434
           if(typeof toast==='function') toast('HoloNet model loaded ✓');
           mountGLBViewer(document.getElementById('ctFigSlot'),contactGLBBuf);
         }; r.readAsArrayBuffer(f); });
-      var sb=document.getElementById('ctSend'); if(sb) sb.addEventListener('click',sendTransmission);
-      bindCount('ctName','ctNameCount',40); bindCount('ctMsg','ctMsgCount',280);
+      var sb=document.getElementById('ctSend'); if(sb) sb.addEventListener('click',function(){ if(ctPhase==='fail') ctReset(); sendTransmission(); });
+      bindCount('ctName','ctNameCount',CT_NAME_MAX); bindCount('ctMsg','ctMsgCount',CT_MSG_MAX);
+      ['ctName','ctMsg'].forEach(function(id){ var e=document.getElementById(id); if(e) e.addEventListener('input',function(){ if(ctPhase==='fail') ctReset(); ctAssess(); }); });
+      ctBuildRows(); ctStamp(); setInterval(ctStamp,15000); ctAssess();
     }
-    // —— Transmit → R@ trundle → back to galaxy → pin message as a star ——
+    // —— Transmit: the dish levels as the fields fill → uplink bars while the server answers → console closes, the packet
+    // shoots from the HoloNet to its new star (the hover conduit visuals), then the camera orbits the pulsing star ——
+    var CT_NAME_MAX=40, CT_MSG_MAX=280, CT_NAME_MIN=1, CT_MSG_MIN=2, CT_TILT=12;   // caps match api/holonet-submit.js; "hi" is a whole message
+    var ctPhase='compose', ctLocked=false, ctOver=false, ctCool=false, ctSaid='';
+    function ctEl(id){ return document.getElementById(id); }
+    function ctSay(t){ if(t===ctSaid) return; ctSaid=t; var l=ctEl('ctLive'); if(l) l.textContent=t; }
+    function ctChip(text,state){ var c=ctEl('ctChip'); if(!c) return; c.textContent=text; c.setAttribute('data-state',state); }
+    function ctHint(t){ var h=ctEl('ctHint'); if(h) h.textContent=t; }
+    function ctStamp(){ var d=new Date(), p=function(n){ return (n<10?'0':'')+n; }, e=ctEl('ctAln');   // MMDD-HHMM, local date + 24h time
+      if(e) e.textContent=p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes()); }
+    function ctLayer(id){ ['ctAlign','ctRows'].forEach(function(k){ var e=ctEl(k); if(e) e.classList.toggle('on',k===id); }); }
+    function ctOpen(){ if(ctPhase!=='upload') ctReset(); ctStamp(); }
+    function ctReset(){ ctPhase='compose'; ctLayer('ctAlign'); var l=ctEl('ctLost'); if(l) l.setAttribute('opacity',0);
+      var sb=ctEl('ctSend'); if(sb) sb.textContent='Transmit ▸'; ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e) e.disabled=false; }); ctAssess(); }
+    function ctAssess(){ if(ctPhase!=='compose') return;
+      var ni=ctEl('ctName'), mi=ctEl('ctMsg'), sb=ctEl('ctSend'); if(!ni||!mi||!sb) return;
+      var n=ni.value.trim().length, m=mi.value.trim().length, no=ni.value.length-CT_NAME_MAX, mo=mi.value.length-CT_MSG_MAX;
+      ctOver=no>0||mo>0;
+      var p=ctOver?0:(Math.min(n,CT_NAME_MIN)+Math.min(m,CT_MSG_MIN))/(CT_NAME_MIN+CT_MSG_MIN);
+      ctLocked=!ctOver&&n>=CT_NAME_MIN&&m>=CT_MSG_MIN;
+      var dg=ctEl('ctDish'); if(dg) dg.style.transform='rotate('+(ctOver?-CT_TILT*1.3:-CT_TILT*(1-p))+'deg)';   // static tilt that steps level as the fields fill; over cap tips past the start
+      var sc=ctEl('ctScr'); if(sc) sc.classList.toggle('locked',ctLocked);
+      sb.setAttribute('aria-disabled',String(!ctLocked||ctCool));
+      if(ctOver){ ctChip('Overload','over'); ctHint(no>0?'Trim the callsign by '+no+' to realign':'Trim the message by '+mo+' to realign'); ctSay('Overload. The dish fell out of alignment.'); }
+      else if(ctLocked){ ctChip('Dish aligned','on'); ctHint(ctCool?'Dish recharging, a moment…':'Locked on the fleet'); ctSay('Dish aligned. Ready to transmit.'); }
+      else { ctChip('Dish misaligned','off'); ctHint(n<CT_NAME_MIN&&m<CT_MSG_MIN?'Add a callsign and a message to align the dish':n<CT_NAME_MIN?'Add a callsign to finish aligning':'Write a message to finish aligning'); ctSay('Dish misaligned.'); }
+    }
+    // uplink bars, measured off the film's sender screen: 4 rows x 14 segments (wide ends, a thin cluster left of centre), pin, end caps, header ticks
+    var CT_W=[24.2,18,10.8,8.8,6,3,1.6,1.8,1.8,6.9,6.9,10.4,17.3,26.5], CT_RD=[[.06,.94],[.12,1],[0,.86],[0,.78]], ctSegs=[];
+    function ctBuildRows(){ var g=ctEl('ctRowsG'); if(!g||ctSegs.length) return; var NS='http://www.w3.org/2000/svg', INK='#D8CDEC';
+      function el(t,a){ var e=document.createElementNS(NS,t); for(var k in a) e.setAttribute(k,a[k]); g.appendChild(e); return e; }
+      [[11.5,2.3,9],[14.8,1.1,9],[31.2,7.4,7,1],[48.5,1.1,9],[50.8,1.1,9],[63,1.3,9],[75.5,1.1,9],[90,4,8.5],[124.7,1.3,9],[143.9,1.1,9],[157.5,1,9],[176,1.1,9],[178.6,1.1,9]]
+        .forEach(function(h){ el('rect',{x:h[0],y:h[3]?26:24,width:h[1],height:h[2],fill:'#8FE6DC'}); });
+      [59,97,136,175].forEach(function(y){ var x=11.5, row=[];
+        [8,182.5].forEach(function(cx){ el('rect',{x:cx,y:y-4.5,width:1.6,height:1.8,fill:INK}); el('rect',{x:cx,y:y-1.5,width:1.6,height:16.5,fill:INK}); });
+        [59,134.5].forEach(function(cx){ el('circle',{cx:cx,cy:y-5,r:.9,fill:'#0c0a16','fill-opacity':.6}); });
+        CT_W.forEach(function(w,j){ row.push(el('rect',{x:x.toFixed(2),y:y,width:w,height:14}));
+          if(j===6){ el('rect',{x:x.toFixed(2),y:y-5,width:w,height:5,fill:'#8FE6DC'}); el('rect',{x:(x-.6).toFixed(2),y:y-8.5,width:w+1.2,height:2.6,rx:1,fill:'#8FE6DC'}); }
+          x+=w+1.84; });
+        ctSegs.push(row); }); }
+    function ctRows(v){ var N=CT_W.length;   // sender buffer drains from the left; each segment steps through a brighter tone as it goes
+      ctSegs.forEach(function(row,r){ var f=Math.max(0,Math.min(1,(v-CT_RD[r][0])/(CT_RD[r][1]-CT_RD[r][0]))), k=f*N, whole=Math.floor(k), part=k-whole>.35;
+        row.forEach(function(seg,j){ seg.setAttribute('fill',j<whole?'#0c0a16':(j===whole&&part?'#C8AAFF':'#8FE6DC')); }); });
+      var c=ctEl('ctRowC'); if(c) c.textContent=('00'+Math.round(v*100)).slice(-3); }
+    function ctTween(ms,fn){ return new Promise(function(res){ if(!ms||mwReduced()){ fn(1); res(); return; } var s0=performance.now();
+      (function f(now){ var v=Math.min(1,(now-s0)/ms); fn(v); if(v<1) requestAnimationFrame(f); else res(); })(s0); }); }
+    function ctWait(ms){ return new Promise(function(r){ setTimeout(r,mwReduced()?0:ms); }); }
     function sendTransmission(){
-      var name=(document.getElementById('ctName').value||'Anonymous').trim();
-      var msg=(document.getElementById('ctMsg').value||'').trim();
-      if(!msg){ if(typeof toast==='function') toast('add a message first'); return; }
-      var sb=document.getElementById('ctSend'); if(sb && sb.disabled) return;   // already sending / cooldown
-      if(sb) sb.disabled=true;
-      document.getElementById('ctName').value=''; document.getElementById('ctMsg').value='';
-      document.getElementById('ctName').dispatchEvent(new Event('input')); document.getElementById('ctMsg').dispatchEvent(new Event('input'));   // reset counters
+      if(ctPhase!=='compose'||!ctLocked||ctCool) return;   // aria-disabled: the hint already says what's missing
+      var ni=ctEl('ctName'), mi=ctEl('ctMsg'), sb=ctEl('ctSend'), name=ni.value.trim(), msg=mi.value.trim();
       var pos=msgScatterPos();   // suggested position — server sanity-checks and is the final authority on what's stored
-      goHome();   // exit console → galaxy; launch + reframe play over the starfield
-      launchTransmission(function(){
-        fetch('/api/holonet-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,msg:msg,x:pos.x,y:pos.y,z:pos.z})})
-          .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; }); })
-          .then(function(res){
-            if(!res.ok){ if(typeof toast==='function') toast('transmission failed · '+(res.body&&res.body.error||'try again')); return; }
-            if(window.MWOutfitEvent) MWOutfitEvent('holonet');   // unlock engine: a message was sent
-            var m=pinMessage(res.body.message);
-            if(typeof toast==='function') toast('transmission pinned ✓');
-            if(m) focusMessageStar(m);
-          })
-          .catch(function(e){ if(typeof toast==='function') toast('transmission failed · '+e.message); })
-          .then(function(){ setTimeout(function(){ if(sb) sb.disabled=false; },8000); });   // brief cooldown either way
-      });
+      ctPhase='upload'; ni.disabled=mi.disabled=true; sb.setAttribute('aria-disabled','true'); sb.textContent='Transmitting…';
+      ctChip('Uplink','tx'); ctHint('Transmitting the tape'); ctSay('Transmitting.'); ctRows(0); ctLayer('ctRows');
+      var res=null;
+      fetch('/api/holonet-submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,msg:msg,x:pos.x,y:pos.y,z:pos.z})})
+        .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,body:j}; },function(){ return {ok:false,body:{error:'HTTP '+r.status}}; }); })
+        .then(function(x){ res=x; },function(e){ res={ok:false,body:{error:e.message}}; });
+      ctTween(2200,function(v){ ctRows(v*.95); })   // honest bar: holds at 95% until the server has answered
+        .then(function hold(){ if(res) return; ctHint('Awaiting acknowledgement'); return new Promise(function(r){ setTimeout(r,80); }).then(hold); })
+        .then(function(){ if(!res.ok) return ctLost(res.body&&res.body.error);
+          return ctTween(180,function(v){ ctRows(.95+v*.05); }).then(function(){ return ctWait(350); }).then(function(){ ctDone(res.body.message); }); });
     }
-    // Spin the uploaded model fast around Y, then launch it up off-screen. Falls back to the R@ trundle if no model.
-    function launchTransmission(done){
-      if(!contactGLBBuf || !THREE.GLTFLoader){ var tr=document.getElementById('r2Trundle'); if(tr){ tr.classList.add('show'); setTimeout(function(){ tr.classList.remove('show'); done(); },1700); } else done(); return; }
-      var ov=document.getElementById('txLaunch'); if(!ov){ done(); return; }
-      ov.classList.add('show');
-      var w=window.innerWidth, h=window.innerHeight;
-      var rn=new THREE.WebGLRenderer({antialias:true,alpha:true}); rn.setPixelRatio(Math.min(2,window.devicePixelRatio||1)); rn.setSize(w,h);
-      ov.innerHTML=''; ov.appendChild(rn.domElement);
-      var sc=new THREE.Scene(), cam=new THREE.PerspectiveCamera(40,w/h,0.01,200);
-      sc.add(new THREE.AmbientLight(0xbfeee8,0.95)); var dl=new THREE.DirectionalLight(0xffffff,0.9); dl.position.set(2,4,3); sc.add(dl);
-      var holder=new THREE.Group(); sc.add(holder); var md=1;
-      loadGLBScene(contactGLBBuf,function(scene){ if(!scene) return;
-        var box=new THREE.Box3().setFromObject(scene), size=box.getSize(new THREE.Vector3()), c=box.getCenter(new THREE.Vector3());
-        scene.position.sub(c); holder.add(scene); md=Math.max(size.x,size.y,size.z)||1; cam.position.set(0,md*0.12,md*2.4); cam.lookAt(0,0,0);
-        if(glbHoloFx) scene.traverse(function(o){ if(o.isMesh) o.material=makeViewerHolo(); }); });
-      var t0=performance.now(), SPIN=850, LAUNCH=650, raf, alive=true;
-      (function loop(now){ if(!alive) return; var t=now-t0;
-        holder.rotation.y += 0.38;                                  // fast Y spin
-        if(t>SPIN){ var p=Math.min(1,(t-SPIN)/LAUNCH); holder.position.y = p*p*md*7; }   // launch up (ease-in)
-        rn.render(sc,cam);
-        if(t>SPIN+LAUNCH){ alive=false; ov.classList.remove('show'); ov.innerHTML=''; try{rn.dispose();}catch(e){} done(); return; }
-        raf=requestAnimationFrame(loop);
-      })(performance.now());
+    function ctLost(err){ ctPhase='fail'; var l=ctEl('ctLost'); if(l) l.setAttribute('opacity',1);
+      ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e) e.disabled=false; });
+      var sb=ctEl('ctSend'); sb.textContent='Retry transmit ▸'; sb.setAttribute('aria-disabled','false');
+      ctChip('Signal lost','fail'); ctHint('Signal lost'+(err?' · '+err:'')+'. Your text is kept.'); ctSay('Signal lost. Your message was kept. Retry when ready.'); }
+    function ctDone(rec){
+      if(window.MWOutfitEvent) MWOutfitEvent('holonet');   // unlock engine: a message was sent
+      ['ctName','ctMsg'].forEach(function(id){ var e=ctEl(id); if(e){ e.value=''; e.dispatchEvent(new Event('input')); } });   // reset counters
+      ctCool=true; setTimeout(function(){ ctCool=false; ctAssess(); },8000);   // brief cooldown before the next one
+      ctReset(); ctSay('Transmission received. Your message is on the HoloNet.');
+      var m=pinMessage(rec)||(rec&&messages.filter(function(x){ return x.id===rec.id; })[0]);   // its realtime echo may have pinned it first
+      if(typeof toast==='function') toast('transmission pinned ✓');
+      goHome();   // close the console; the packet flies over the galaxy as the camera comes home
+      if(m) holoShoot(m);
+    }
+    // the packet: same conduit + packet look as the HoloNet hover constellation, but one brighter conduit that grows to the new star
+    var holoShot=null;
+    function holoShoot(m){ if(mwReduced()){ focusMessageStar(m); return; } holoShot={m:m,t0:performance.now()*0.001+0.35,dur:1.3,land:0}; }
+    function drawHoloShot(ax,ay,bx,by,f,k){
+      var co=Math.max(0.45,(params.hnConduit!=null?params.hnConduit:0.16)*2), px=ax+(bx-ax)*f, py=ay+(by-ay)*f, f2=Math.max(0,f-0.12), qx=ax+(bx-ax)*f2, qy=ay+(by-ay)*f2;
+      msgCtx.lineWidth=1;
+      msgCtx.globalAlpha=Math.min(1,co)*k; msgCtx.strokeStyle='#A06AF0'; msgCtx.beginPath(); msgCtx.moveTo(ax,ay); msgCtx.lineTo(px,py); msgCtx.stroke();   // conduit, drawn up to the head
+      msgCtx.globalAlpha=k; msgCtx.strokeStyle='#C8AAFF'; msgCtx.beginPath(); msgCtx.moveTo(qx,qy); msgCtx.lineTo(px,py); msgCtx.stroke();   // packet trail
+      msgCtx.globalAlpha=0.5*k; msgCtx.fillStyle='#C8AAFF'; msgCtx.fillRect(Math.round(px)-2,Math.round(py)-2,4,4);   // packet glow
+      msgCtx.globalAlpha=k; msgCtx.fillStyle='#E6D6FF'; msgCtx.fillRect(Math.round(px)-1,Math.round(py)-1,2,2);   // packet head
+      var nph=0.5+0.5*Math.sin(performance.now()*0.003), nr=3+2*nph; msgCtx.globalAlpha=0.55*k; msgCtx.strokeStyle='#C8AAFF'; msgCtx.strokeRect(Math.round(ax-nr),Math.round(ay-nr),Math.round(nr*2),Math.round(nr*2));   // HoloNet node marker
+      msgCtx.globalAlpha=1;
     }
     // Dolly in close to the just-pinned star and slowly orbit it against the starfield until any click/tap. (state declared up top)
     function endMsgFocus(m){ if(!msgFocusActive) return; msgFocusActive=false; if(m&&m.el) m.el.classList.remove('mb-new'); autoRotate=params.autoRotate; }
@@ -12092,6 +12183,7 @@ f 2469//2469 2470//2470 2434//2434
       var links=!!(holonetT>0.02 && holonetNode && holonetNode.vis && msgCtx);
       for(var i=0;i<messages.length;i++){ var m=messages[i]; if(!m.el) continue;
         if(hide){ m.el.style.display='none'; if(m===hoveredMsg) hideMsgHover(); continue; }
+        if(holoShot&&holoShot.m===m&&!holoShot.land){ m.el.style.display='none'; continue; }   // the star lights up when its packet arrives
         var s=projLocal(m._v); if(!s.vis){ m.el.style.display='none'; if(m===hoveredMsg) hideMsgHover(); continue; }
         // occlusion: hide beacon if behind the logo
         var mOcc=false;
@@ -12101,6 +12193,10 @@ f 2469//2469 2470//2470 2434//2434
         if(m===hoveredMsg && msgHoverEl){ msgHoverEl.style.display='block'; msgHoverEl.style.left=(s.x-msgHoverFW/2)+'px'; msgHoverEl.style.top=(s.y-20)+'px'; }   // left edge fixed → grows rightward, ends centered
         if(links) drawHoloLink(holonetNode.x/P, holonetNode.y/P, s.x/P, s.y/P, t, i, holonetT);
         if(msgCtx) drawMsgDot(s.x/P, s.y/P, m.el.classList.contains('mb-new'), t); }
+      if(holoShot && msgCtx && !hide){ var _hp=planetById('contact'), _hs=_hp?projLocal(_hp.position):null, _ms=projLocal(holoShot.m._v), _hf=Math.max(0,Math.min(1,(t-holoShot.t0)/holoShot.dur));
+        if(_hf>=1&&!holoShot.land){ holoShot.land=t; focusMessageStar(holoShot.m); }
+        var _hk=holoShot.land?1-(t-holoShot.land)/0.6:1;   // conduit fades once the star is lit
+        if(_hk<=0||!_hs){ holoShot=null; } else if(_hs.vis&&_ms.vis) drawHoloShot(_hs.x/P,_hs.y/P,_ms.x/P,_ms.y/P,_hf,_hk); }
       if(links){ var nph=0.5+0.5*Math.sin(t*3), nr=3+2*nph; msgCtx.globalAlpha=0.55*holonetT; msgCtx.strokeStyle='#C8AAFF'; msgCtx.lineWidth=1; msgCtx.strokeRect(Math.round(holonetNode.x/P-nr),Math.round(holonetNode.y/P-nr),Math.round(nr*2),Math.round(nr*2)); msgCtx.globalAlpha=1; } }
     var modalMsg=null, modalOpenedAt=0;
     function openMsgModal(m){ modalMsg=m; document.getElementById('mmName').textContent=m.name||'Anonymous'; document.getElementById('mmBody').textContent=m.msg||''; document.getElementById('msgModal').classList.add('show'); modalOpenedAt=Date.now(); }
@@ -15340,7 +15436,7 @@ f 2469//2469 2470//2470 2434//2434
         if(_ca.yaw!=null){ var _yd=Math.atan2(Math.sin(_ca.yaw-manualRot),Math.cos(_ca.yaw-manualRot)); manualRot+=_yd*0.05; } }
       if(autoRotate&&!(arcadeActive&&arcadeStage==='play')) manualRot+=0.0011*params.spin*params.camRotDir;   /* no auto-revolve while the hero flies; hero select and the galaxy still drift */ galaxy.rotation.y=manualRot;
       if(MWSub.active){ MWSub.active.orbit.apply(camPos,camLook); }   // sub-scene owns the camera — orbit (drag/wheel); existing lerp smooths it
-      else if(msgFocusActive){ msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
+      else if(msgFocusActive){ if(!mwReduced()) msgFocusYaw+=0.004; var _mR=3.0,_mpt=0.34; camPos.set(msgFocusPos.x+Math.sin(msgFocusYaw)*_mR*Math.cos(_mpt), msgFocusPos.y+Math.sin(_mpt)*_mR, msgFocusPos.z+Math.cos(msgFocusYaw)*_mR*Math.cos(_mpt)); camLook.copy(msgFocusPos); }
       else if(!focused){ var _bp=(mwPhase==='entry')?ENTRY_POS:HOME_POS, _bl=(mwPhase==='entry')?ENTRY_LOOK:HOME_LOOK;
         var _az=_ca?_ca.zoom:1, oy=(_bp.y-_bl.y)*camZoom*_az, oz=(_bp.z-_bl.z)*camZoom*_az;
         if(arcReturn){ var _k=0.09; camZoom+=(arcEntryZoom-camZoom)*_k; camElev+=(0-camElev)*_k; arcPitch+=(0-arcPitch)*_k;   // back on the hero-select view: ease the camera home

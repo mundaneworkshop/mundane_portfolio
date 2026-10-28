@@ -22,11 +22,22 @@ CV and HoloNet planets get BESPOKE focus views (not the kit-box/booklet at their
 
 ## Contact / HoloNet
 
-`#contactFocus` is a dark holo console: name+message fields (maxlength 40/280, live remaining-character counters), a GLB upload slot (renders via its own mini WebGL renderer, own Holo FX/Pixelize/Posterize toggles), and a "transmit" action. Menu label renamed from "Contact" to "HoloNet" — the internal id stays `contact` (routing keys off the stable id).
+`#contactFocus` is a dark holo console: a transmission screen, callsign + message fields with live remaining-character counters, and a transmit action. (Before Oct 28 2026 it also had a GLB upload slot with its own mini WebGL renderer; that slot and the launch animation it fed were removed with the transmission rework below.) Menu label renamed from "Contact" to "HoloNet" — the internal id stays `contact` (routing keys off the stable id).
 
 **Accent = purple `#A06AF0`** (hot `#C8AAFF`) — deliberately maximally separated from amber (work) and teal (system). Applied to the message-star default, the modal, the HoloNet planet itself, the menu button, and a "constellation hover" effect (hovering the HoloNet node draws purple conduit lines to every message star).
 
-Transmit flow: send → go home → a full-screen launch animation (uploaded GLB spins then launches off-screen, falls back to a default ship SVG) → the message is added → camera focuses/dollies on the new star.
+Transmit flow (Oct 28 2026, replaces the GLB launch / R@ trundle). It follows Rogue One's Scarif uplink sequence, rebuilt from three film stills: the dish-alignment screen, the red sender bars and the blue receiver bars.
+
+- **Alignment is the compose state.** `#ctScr`'s `#ctAlign` SVG draws the film's side-on dish: bounding box, bowl curve, two rungs, the thick teal rim, the hub plate, the feed housing (diamond, slot, bar) and a two-line mast that narrows as it goes down. The corner furniture is the film's too: tick marks, two double-diagonal ticks and two outlined triangles. Line weights and positions were measured off the frames.
+- **Tilt.** The dish sits at a static tilt (`CT_TILT` = 12°) and steps level as the fields fill. Progress is `(min(callsign,1) + min(message,2)) / 3`, so one character plus "hi" locks it. There is no idle sway (an explicit call).
+- **Lock.** The primary axis is part of the dish group, so it is always perpendicular to the rim. The box and the axis flash at about 3 Hz (under the WCAG 2.3.1 three-flashes limit) until it locks, then go solid.
+- **Over the cap.** Either field over its cap tips the dish past its widest angle, and the counters go negative in danger red. `maxlength` was removed on purpose so this can happen. The server still enforces 40/280.
+- **Readout.** The footer digits are `MMDD-HHMM`: the local date plus the 24-hour time.
+- **TRANSMIT** uses `aria-disabled` (the BRIC button's disabled look). `#ctHint` says what's missing, and `#ctLive` announces state changes only.
+- **Upload.** One animation, the sender's bars (`#ctRows`). Four rows of 14 segments use the widths measured from the film. They empty from the left, each segment flashing brighter as it switches, and the rows run at slightly different rates. The bar holds at 95% until `/api/holonet-submit` answers, so it never fakes completion. The blue receiver screen was dropped (an explicit call).
+- **Failure** shows SIGNAL LOST, keeps the text, and the button becomes "Retry transmit".
+- **Success** clears the fields, starts the 8 s cooldown and pins the star. `goHome()` closes the console. `holoShoot(m)` then draws one conduit from the HoloNet planet to the new star using the hover-constellation look (`drawHoloShot`). It is brighter than the hover web because it's a single line. The star stays hidden until the packet lands, then `focusMessageStar(m)` orbits the camera around the pulsing star, as before.
+- **Reduced motion:** no flashing (dim, then solid on lock), instant tilt and bars, no packet flight, and the orbit camera holds still.
 
 ## Message stars (visitor transmissions)
 
