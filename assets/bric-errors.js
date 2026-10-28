@@ -12,12 +12,11 @@
  *     status:    'Teapot',                    eyebrow: "Error <code> · <status>" (omit `code` to show just the status)
  *     title:     'Short headline',            becomes the page's <h1>, and receives focus
  *     body:      'One or two sentences.',     plain text
- *     primary:   { label:'Back to the galaxy', href:'/' },        a link …
- *     secondary: { label:'Try again',         action:'reload' }   … or an action: 'reload' | 'back' | function
+ *     primary:   { label:'Back to the galaxy', href:'/' }        the one call to action: a link, or { label, action:'reload' | 'back' | function }
  *   }
  *
  * Show it from anywhere:  BRICError.show('my-key')   ·   remove it:  BRICError.hide()
- * Per-call overrides:     BRICError.show('500', { body:'The holonet relay is down.', secondary:null })
+ * Per-call overrides:     BRICError.show('500', { body:'The holonet relay is down.' })
  * Hosts can pass { navigate:function(href){…} } to route links client-side (index.html does), { mode:'page' } for the standalone page.
  * Extra: docs/project-history/error-pages.md
  */
@@ -25,19 +24,99 @@
   'use strict';
 
   var HOME = { label: 'Back to the galaxy', href: '/' };
-  var CV = { label: 'Open CV', href: '/cv' };
 
+  // Voice: ship-bridge and signal language, short sentences, no blame. Every entry has the one CTA.
   var ERRORS = {
-    '404': { code: '404', status: 'Page not found', title: 'Lost in the void', body: 'There is nothing at this address. The page may have moved, or the link may be off by a few light-years.', primary: HOME, secondary: CV },
-    '403': { code: '403', status: 'Restricted', title: 'This sector is off limits', body: 'You do not have clearance for this page.', primary: HOME, secondary: CV },
-    '500': { code: '500', status: 'Server error', title: 'Something broke on our end', body: 'The workshop hit a fault. Try again in a moment.', primary: { label: 'Try again', action: 'reload' }, secondary: HOME },
-    'offline': { code: 'OFFLINE', status: 'No signal', title: 'You are offline', body: 'The connection dropped. This page will work again once you are back online.', primary: { label: 'Try again', action: 'reload' }, secondary: HOME },
-    'load-failed': { code: '', status: 'Load failed', title: 'The galaxy would not load', body: 'Part of the scene failed to load. A refresh usually fixes it.', primary: { label: 'Reload', action: 'reload' }, secondary: CV },
-    'coming-soon': { code: '', status: 'Coming soon', title: 'Still under construction', body: 'This part of the workshop is not open yet. Check back soon.', primary: HOME, secondary: CV },
-    'generic': { code: '', status: 'Error', title: 'Something went wrong', body: 'An unexpected error occurred.', primary: HOME, secondary: null }
+    '400': { code: '400', status: 'Bad request', title: 'Garbled transmission', body: 'That request came through scrambled. Check the address and send it again.', primary: HOME },
+    '401': { code: '401', status: 'Unauthorized', title: 'Clearance required', body: 'This part of the workshop asks for credentials, and none came through.', primary: HOME },
+    '403': { code: '403', status: 'Forbidden', title: 'Restricted sector', body: 'You do not have clearance to enter. The doors stay sealed.', primary: HOME },
+    '404': { code: '404', status: 'Page not found', title: 'Lost in the void', body: 'There is nothing at this address. The page may have moved, or the link may be off by a few light-years.', primary: HOME },
+    '408': { code: '408', status: 'Request timeout', title: 'Signal timed out', body: 'The transmission took too long and drifted off. Send it again.', primary: HOME },
+    '410': { code: '410', status: 'Gone', title: 'Gone from the map', body: 'This page was here once. It has since left the system for good.', primary: HOME },
+    '429': { code: '429', status: 'Too many requests', title: 'Comms array overloaded', body: 'Too many transmissions at once. Give it a moment, then try again.', primary: HOME },
+    '500': { code: '500', status: 'Server error', title: 'Fault in the engine room', body: 'Something broke on our end. The workshop is on it.', primary: HOME },
+    '502': { code: '502', status: 'Bad gateway', title: 'Relay misfire', body: 'A relay along the route sent back nonsense. Try again shortly.', primary: HOME },
+    '503': { code: '503', status: 'Service unavailable', title: 'Docking bay closed', body: 'The workshop is down for repairs or overloaded. Check back soon.', primary: HOME },
+    '504': { code: '504', status: 'Gateway timeout', title: 'Relay went dark', body: 'A relay along the route never answered. Try again in a moment.', primary: HOME },
+    'offline': { code: '', status: 'No signal', title: 'You are drifting offline', body: 'The connection dropped. The galaxy will be here when you are back in range.', primary: HOME },
+    'load-failed': { code: '', status: 'Load failed', title: 'The galaxy would not load', body: 'Part of the scene failed to arrive. A refresh usually brings it back.', primary: HOME },
+    'coming-soon': { code: '', status: 'Coming soon', title: 'Still under construction', body: 'This part of the workshop is not open yet. Check back soon.', primary: HOME },
+    'generic': { code: '', status: 'Error', title: 'Something went wrong', body: 'An unexpected fault. Head back to known space.', primary: HOME }
   };
 
-  var host = null, prevFocus = null, prevTitle = null, robots = null, keyHandler = null, bodyAttr = null;
+
+  var reduce = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function reduced() { return !!(reduce && reduce.matches); }
+
+  // ── Starfield: perpetual forward flight. Same sky as the galaxy (index.html buildStars): most stars dim, a few bright (random^1.7),
+  //    now with a size spread too. Stars sit at depth z and fly toward the viewer; projected size and brightness grow as they near. ──
+  function starfield(box) {
+    var cv = document.createElement('canvas'), ctx = cv.getContext('2d');
+    cv.setAttribute('aria-hidden', 'true');
+    box.appendChild(cv);
+    var N = 260, stars = [], W = 0, H = 0, dpr = 1, ink = '#fff', tint = '#fff', raf = 0, last = 0, SPEED = 0.035;   // SPEED: depth units per second, a full pass takes ~28s
+    function seed(st, near) {
+      st.x = Math.random() * 2 - 1; st.y = Math.random() * 2 - 1;
+      st.z = near ? 0.05 + Math.random() * 0.95 : 1;
+      st.b = 0.22 + 0.78 * Math.pow(Math.random(), 1.7);          // base brightness, as in the galaxy
+      st.s = 0.5 + 2.2 * Math.pow(Math.random(), 3);              // base radius px: mostly pin-pricks, a few large
+      st.t = Math.random() < 0.12;                                // a few warm stars (brand token)
+    }
+    for (var i = 0; i < N; i++) { var st = {}; seed(st, true); stars.push(st); }
+    function colors() { var cs = getComputedStyle(box); ink = cs.getPropertyValue('--bric-content-primary').trim() || ink; tint = cs.getPropertyValue('--bric-content-brand').trim() || tint; }
+    function size() { dpr = Math.min(2, window.devicePixelRatio || 1); W = box.clientWidth; H = box.clientHeight; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; colors(); }
+    function draw(dt) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      var cx = W / 2, cy = H / 2, f = Math.max(W, H) * 0.55;
+      for (var i = 0; i < N; i++) {
+        var st = stars[i]; st.z -= SPEED * dt;
+        if (st.z < 0.04) seed(st, false);
+        var px = cx + st.x / st.z * f * 0.5, py = cy + st.y / st.z * f * 0.5;
+        if (px < -8 || px > W + 8 || py < -8 || py > H + 8) { if (st.z < 0.3) seed(st, false); continue; }
+        var near = 1 - st.z;
+        ctx.globalAlpha = Math.min(1, st.b * (0.35 + 0.9 * near));
+        ctx.fillStyle = st.t ? tint : ink;
+        var r = st.s * (0.35 + 1.3 * near);
+        ctx.beginPath(); ctx.arc(px, py, r, 0, 6.2832); ctx.fill();
+      }
+    }
+    function tick(t) { raf = requestAnimationFrame(tick); var dt = Math.min(0.1, (t - last) / 1000 || 0); last = t; draw(dt); }
+    function start() { cancelAnimationFrame(raf); if (reduced()) { draw(0); return; } last = performance.now(); raf = requestAnimationFrame(tick); }
+    var onResize = function () { size(); if (reduced()) draw(0); };
+    size(); window.addEventListener('resize', onResize); start();
+    var onMq = function () { start(); }; if (reduce && reduce.addEventListener) reduce.addEventListener('change', onMq);
+    return function stop() { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); if (reduce && reduce.removeEventListener) reduce.removeEventListener('change', onMq); };
+  }
+
+  // ── Aurebesh decode on hover: same behaviour as the site's GFX (index.html): each glyph scrambles, then settles left to right with scatter. ──
+  var FALLBACK = '⌖⍜⌿⍾⍍⍐⍙⊑⋔⋏☍⌰⟒⏃⏚⎅⟊⟟▞▚◢◣', LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', aurOK = false;
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load("700 20px 'Aurebesh'").then(function () {
+      try { var c = document.createElement('canvas').getContext('2d'); c.font = '40px monospace'; var w = c.measureText('MWAEIO').width; c.font = "40px 'Aurebesh', monospace"; aurOK = Math.abs(c.measureText('MWAEIO').width - w) > 0.5; } catch (e) {}
+    }, function () {});
+  }
+  function pick(str) { return str.charAt(Math.floor(Math.random() * str.length)); }
+  function decode(node) {
+    if (reduced() || node.__dec) return;
+    var target = node.getAttribute('data-text') || node.textContent, chars = Array.from(target), n = chars.length;
+    var DUR = 450, TICK = 35, SCATTER = 0.3, settle = [], span = Math.max(0, DUR - TICK);
+    chars.forEach(function (c, i) { settle[i] = ((n > 1 ? i / (n - 1) : 0) * (1 - SCATTER) + Math.random() * SCATTER) * span; });
+    node.setAttribute('data-text', target);
+    node.style.height = node.offsetHeight + 'px'; node.style.overflow = 'hidden';   // glyph metrics can never resize the box
+    var t0 = performance.now(), lastT = -TICK; node.__dec = true;
+    (function step() {
+      var el = performance.now() - t0, html = '';
+      if (el >= DUR) { node.textContent = target; node.style.height = ''; node.style.overflow = ''; node.__dec = false; return; }
+      if (el - lastT >= TICK) {
+        lastT = el;
+        for (var i = 0; i < n; i++) html += el >= settle[i] ? chars[i] : '<span class="bric-error__glyph">' + (aurOK ? (Math.random() < 0.3 ? pick(LETTERS) : chars[i]) : pick(FALLBACK + LETTERS)) + '</span>';
+        node.innerHTML = html;
+      }
+      requestAnimationFrame(step);
+    })();
+  }
+
+  var host = null, prevFocus = null, prevTitle = null, robots = null, keyHandler = null, stopStars = null;
 
   function el(tag, cls, text) {
     var n = document.createElement(tag);
@@ -69,6 +148,7 @@
   function hide() {
     if (!host) return;
     document.removeEventListener('keydown', keyHandler, true);
+    if (stopStars) { stopStars(); stopStars = null; }
     host.remove(); host = null;
     if (prevTitle != null) document.title = prevTitle;
     if (robots) { robots.remove(); robots = null; }
@@ -95,12 +175,12 @@
     host.setAttribute('data-error', key);
     host.setAttribute('role', 'region');
     host.setAttribute('aria-labelledby', 'bricErrorTitle');
-    if (opts.mode === 'page') host.appendChild(el('div', 'bric-error__stars'));
+    var sky = el('div', 'bric-error__stars'); host.appendChild(sky);
 
     var card = el('div', 'bric-error__card');
     ['tl', 'tr', 'bl', 'br'].forEach(function (p) { var m = el('span', 'bric-error__mark bric-error__mark--' + p); m.setAttribute('aria-hidden', 'true'); card.appendChild(m); });
     card.appendChild(el('p', 'bric-error__eyebrow', (c.code ? 'Error ' + c.code + ' · ' : '') + c.status));
-    if (c.code) { var code = el('p', 'bric-error__code', c.code); code.setAttribute('aria-hidden', 'true'); card.appendChild(code); }
+    if (c.code) { var code = el('p', 'bric-error__code', c.code); code.setAttribute('aria-hidden', 'true'); code.addEventListener('mouseenter', function () { decode(code); }); card.appendChild(code); }
     var h1 = el('h1', 'bric-error__title', c.title);
     h1.id = 'bricErrorTitle'; h1.tabIndex = -1;
     card.appendChild(h1);
@@ -108,10 +188,10 @@
     if (c.path) { var p = el('p', 'bric-error__path', 'Requested '); p.appendChild(el('code', null, c.path)); card.appendChild(p); }
     var actions = el('div', 'bric-error__actions');
     if (c.primary) actions.appendChild(actionNode(c.primary, 'primary', opts.navigate));
-    if (c.secondary) actions.appendChild(actionNode(c.secondary, 'secondary', opts.navigate));
     if (actions.childNodes.length) card.appendChild(actions);
     host.appendChild(card);
     document.body.appendChild(host);
+    stopStars = starfield(sky);
 
     // keep Tab inside the error card while it covers a live page
     keyHandler = function (e) {

@@ -10352,6 +10352,7 @@ f 2469//2469 2470//2470 2434//2434
         kb={key:'figure', label:(m&&ocLocked(m))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:f, open:ocClickFigure, init:performance.now()}; kbRetarget();
       },300);
       function targets(x,y,el){
+        if(window.BRICError&&BRICError.isOpen()) return null;   // error page up: no planet / keyboard-target lock under it
         if(kb){ var kl=kbList(), kt=kl&&kl.filter(function(t){ return t.key===kb.key; })[0]; if(kt){ return {key:kt.key, label:kt.label, rect:function(){ var f=(kt.key==='figure')?(ocFigObj()&&ocFigRectObj()):kt.obj; return f?rectOf(f):null; }}; } kb=null; }
         var cv=renderer&&renderer.domElement, _onLbl=!!(el&&el.closest&&el.closest('.cvrlbl'));
         if(!cv||(el!==cv&&!(_onLbl&&cvScene.active))) return null;   // pointer must be on the canvas itself, not a panel above it (a CV node's label is part of the node)
