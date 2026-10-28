@@ -10327,7 +10327,14 @@ f 2469//2469 2470//2470 2434//2434
         if(kb.grp) setHovered(kb.grp);
         kbRetarget(); return true;
       }
-      window.addEventListener('pointermove',function(e){ if(kb&&(!e.pointerType||e.pointerType==='mouse')){ if(kb.init&&performance.now()-kb.init<1800) return; kbClear(); } },{passive:true});   // (the first figure focus survives the pointer that is already moving as the page docks)
+      var kbPx=null, kbPy=null;   // last pointer position seen: a move event that repeats it is the browser re-hit-testing under a still cursor (page docking, layout change), not the user
+      window.addEventListener('pointermove',function(e){
+        var moved=e.movementX!==0||e.movementY!==0||(kbPx!==null&&(e.clientX!==kbPx||e.clientY!==kbPy));
+        kbPx=e.clientX; kbPy=e.clientY;
+        if(!kb||(e.pointerType&&e.pointerType!=='mouse')) return;
+        if(kb.init&&!moved) return;   // the first figure focus survives the synthetic move fired as the page docks, but any real movement, however small, releases it
+        kbClear();
+      },{passive:true});
       window.addEventListener('keydown',function(e){
         if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
         var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
