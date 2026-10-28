@@ -16,10 +16,11 @@
      copyOvr/content_overrides. Add new meta tags here as needed; nothing else references them. -->
 <title>Mundane Workshop · Jason Hsin · Product Designer</title>
 <meta name="description" content="Jason Hsin: staff product designer building delightful consumer experiences." />
-<!-- favicon: rendered from the MW monogram 3D model (isometric studio render, transparent bg) — assets/favicon/ -->
-<link rel="icon" href="assets/favicon/favicon.ico" sizes="48x48" />
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/icon-32.png" />
-<link rel="icon" type="image/png" sizes="192x192" href="assets/favicon/icon-192.png" />
+<!-- favicon: 1-bit pixel abstraction of the MW monogram (isometric 5-fin maze cube) — assets/favicon/.
+     favicon.svg flips ink dark→light under prefers-color-scheme: dark; favicon.ico (16/32/48, dark ink) is the fallback.
+     ico is declared 32x32 (not "any") so Chrome prefers the SVG. Touch icons are light ink on a #070c0c tile. -->
+<link rel="icon" href="assets/favicon/favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg" />
 <link rel="apple-touch-icon" href="assets/favicon/icon-180.png" />
 <meta name="theme-color" content="#070c0c" />
 <link rel="canonical" href="https://www.mundanework.shop/" />
