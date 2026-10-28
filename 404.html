@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>404 · Lost in the void — Jason Hsin</title>
+<meta name="robots" content="noindex" />
+<!-- Static fallback Vercel serves, with a real 404 status, for any path vercel.json does not rewrite to index.html. Same template as the in-app overlay: assets/bric-errors.js. -->
+<link rel="icon" href="/assets/favicon/favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/svg+xml" href="/assets/favicon/favicon.svg" />
+<link rel="stylesheet" href="/assets/tokens/bric-tokens.css" />
+<link rel="stylesheet" href="/assets/bric-components.css" />
+<link rel="stylesheet" href="/assets/bric-error.css" />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;background:var(--bric-surface-base);min-height:100%}</style>
+</head>
+<body>
+<noscript>
+  <main class="bric-error" data-mode="page"><div class="bric-error__card">
+    <p class="bric-error__eyebrow">Error 404 · Page not found</p>
+    <h1 class="bric-error__title">Lost in the void</h1>
+    <p class="bric-error__body">There is nothing at this address.</p>
+    <div class="bric-error__actions"><a class="bric-btn bric-btn--primary" href="/">Back to the galaxy</a> <a class="bric-btn bric-btn--secondary" href="/cv">Open CV</a></div>
+  </div></main>
+</noscript>
+<script src="/assets/bric-errors.js"></script>
+<script>
+  if (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) document.body.classList.add('light');
+  BRICError.show('404', { mode: 'page', path: location.pathname + location.search });
+</script>
+</body>
+</html>

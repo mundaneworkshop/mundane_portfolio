@@ -56,6 +56,7 @@
 <!-- BRIC DS tokens (generated from Figma; namespaced --bric-*, dark default on :root, light under body.light). Declarations only — nothing consumes them yet. See docs/project-history/interactive-states.md -->
 <link rel="stylesheet" href="assets/tokens/bric-tokens.css" />
 <link rel="stylesheet" href="assets/bric-components.css" />
+<link rel="stylesheet" href="assets/bric-error.css" />
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <!-- HoloNet backend: Supabase JS (UMD → window.supabase.createClient). Publishable key is safe to ship client-side by design; RLS on the messages table restricts it to read-only on approved rows. -->
 <!-- supabase-js — local copy first, CDN only if it is missing. Powers the HoloNet message
@@ -15496,9 +15497,27 @@ f 2469//2469 2470//2470 2434//2434
     // Click-driven navigation (activate/openCase/openCV/openContact/focusMoon/goHome) already calls setRoute()
     // itself via pushState, which does NOT fire popstate — so this listener only runs on deep links and
     // actual back/forward, never as a side-effect of in-app clicks. ──
+    // Unknown paths show the shared error template (assets/bric-errors.js) over the galaxy. Hosting returns a real 404 for most of them
+    // (vercel.json only rewrites known routes to index.html); /work/<unknown-slug> can only be judged here, so it is a soft 404.
+    function routeKnown(parts){
+      if(!parts.length || parts[0]==='index.html') return true;
+      var s0=parts[0];
+      if(s0===cvSlug || s0===arcadeSlug || s0===holonetSlug) return true;
+      if(s0!=='work') return false;
+      if(!parts[1]) return true;
+      return Object.keys(CASES).some(function(id){ var c=CASES[id]; return c && (c.slug||slugify(c.title||id))===parts[1]; });
+    }
+    function showRouteError(){
+      if(!window.BRICError) return;
+      if(arcadeActive) exitArcade(); else if(focused || cvScene.active || document.body.classList.contains('mw-altfocus')) goHomeV();
+      BRICError.show('404',{ path:location.pathname, navigate:function(href){ try{ history.pushState({},'',href); }catch(e){} applyRouteFromLocation(); } });
+    }
+    function hideRouteError(){ if(window.BRICError && BRICError.isOpen()) BRICError.hide(); }
     function applyRouteFromLocation(){
       try{
         var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean);
+        if(!routeKnown(parts)){ showRouteError(); return; }   // unknown path: error page (config table in assets/bric-errors.js)
+        hideRouteError();
         if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHomeV(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
@@ -16056,6 +16075,7 @@ f 2469//2469 2470//2470 2434//2434
   <script src="assets/battle/lightspeed.js"></script>
   <script src="assets/battle/reticle.js"></script>
   <script src="assets/battle/battle.js"></script>
+  <script src="assets/bric-errors.js"></script>
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
   <script src="assets/bric-wipe.js"></script>
