@@ -10404,7 +10404,7 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
-        if(!dragMoved&&Math.hypot(e.clientX-downX,e.clientY-downY)>dragSlop)dragMoved=true;   // a click is a drag only once the pointer has travelled dragSlop from where it went down (6px mouse, 12px touch/pen). The old test (any single move event over 2px) turned a click with a little hand wobble, or a fast trackpad tap, into a drag, and the planet click was dropped var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert
+        if(!dragMoved&&Math.hypot(e.clientX-downX,e.clientY-downY)>dragSlop)dragMoved=true; var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert. A click is a drag only once the pointer has travelled dragSlop from where it went down (6px mouse, 12px touch/pen). The old test (any single move event over 2px) turned a click with a little hand wobble, or a fast trackpad tap, into a drag, and the planet click was dropped
         if(MWSub.active){ MWSub.active.orbit.drag(dx,dy,e.shiftKey,sy); }   // sub-scene: drag orbits, SHIFT-drag pans Y
         else if(focused){
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
