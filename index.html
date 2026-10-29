@@ -11726,32 +11726,67 @@ f 2469//2469 2470//2470 2434//2434
     function cvTlTick(t){ _cvTlLoop=0; var host=document.getElementById('cvList'); if(!cvListOn||!cvScene.active||!host||!host.querySelector('.cvl-tl')) return; cvDrawTimeline(t); _cvTlLoop=requestAnimationFrame(cvTlTick); }
     function cvTlStart(){ if(cvReduced()){ cvDrawTimeline(null); return; } if(!_cvTlLoop) _cvTlLoop=requestAnimationFrame(cvTlTick); }   // static under reduced motion (no pulse)
     // the CV download, after the one-liner and again at the end: the newest stop's CTA when it links somewhere, else the first one that does
-    function cvCtaBtn(kind){ kind=kind||'primary';
+    function cvCtaSrc(edit){
       var latest=cvNodeById(cvLatestId()), cands=cvData.filter(function(m){ return !m.ctaHidden; });
       var real=function(m){ return m&&!m.ctaHidden&&m.ctaUrl&&m.ctaUrl!=='#'; };
-      var src=real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])); if(!src) return null;
+      return real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])||(edit?latest:null)); }
+    function cvCtaBtn(kind){ kind=kind||'primary';
+      var src=cvCtaSrc(false); if(!src) return null;
+      var real=function(m){ return m&&!m.ctaHidden&&m.ctaUrl&&m.ctaUrl!=='#'; };
       var cd=cvDataForBooklet(src.id), on=(src.ctaActive==null?true:!!src.ctaActive), b;
       if(real(src)&&on){ b=cvEl('a','bric-btn bric-btn--'+kind,cd.cta); b.href=cd.ctaUrl; b.target='_blank'; b.rel='noopener'; }
       else { b=cvEl('button','bric-btn bric-btn--'+kind,cd.cta); b.type='button'; if(!on) b.disabled=true; else b.addEventListener('click',function(){ cd.onCta(); }); }
       return b;
     }
     // the pitch: one line in the list's hero, three stacked lines (one per sentence) over the immersive overview
-    var CV_HEAD_LINES=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'], CV_LIST_HEAD=CV_HEAD_LINES.join(' ');
+    var CV_HEAD_DEFAULT=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
+    // The one-liner and the "Start a chat" CTA are editable copy (copyOvr['cvHero']: lines[], chatLabel/chatUrl/chatHidden). The Download CV button is the node CTA (cvCtaSrc), edited in place on the same source node.
+    function cvHeroOvr(){ return (typeof copyOvr!=='undefined'&&copyOvr['cvHero'])||{}; }
+    function cvHeroSet(k,v){ var o=copyOvr['cvHero']=copyOvr['cvHero']||{}; o[k]=v; if(typeof persistCopy==='function') persistCopy(); }
+    function cvHeadLines(){ var l=cvHeroOvr().lines; return CV_HEAD_DEFAULT.map(function(d,i){ return (l&&l[i]!=null&&l[i]!=='')?l[i]:d; }); }
+    function cvChat(){ var o=cvHeroOvr(); return { label:o.chatLabel!=null?o.chatLabel:'Start a chat', url:o.chatUrl!=null?o.chatUrl:CV_CHAT_URL, hidden:!!o.chatHidden }; }
     // Start a chat (primary) + Download CV (secondary). Start a chat books a 30-minute 1:1 on Calendly (new tab); it is not HoloNet.
     var CV_CHAT_URL='https://calendly.com/jason-mundanework/30min';
-    function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn('secondary');
-      var chat=cvEl('a','bric-btn bric-btn--primary','Start a chat'); chat.href=CV_CHAT_URL; chat.target='_blank'; chat.rel='noopener'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat);
+    function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn('secondary'), c=cvChat();
+      if(!c.hidden){ var chat=cvEl('a','bric-btn bric-btn--primary',c.label); chat.href=c.url||CV_CHAT_URL; chat.target='_blank'; chat.rel='noopener'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat); }
       if(dl) row.appendChild(dl); return row; }
+    // Edit Mode version: each CTA is a label you type into, plus its URL field and hide/show toggle (same affordances as the manual's CTA).
+    function cvEditCta(kind,cfg){
+      var cell=cvEl('div','cvl-cta-edit'); cell.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;max-width:260px';
+      var b=cvEl('span','bric-btn bric-btn--'+kind,cfg.label); b.setAttribute('role','button'); b.contentEditable='true'; b.classList.add('inline-edit-on'); b.style.opacity=cfg.hidden?0.4:1;
+      b.addEventListener('blur',function(){ var v=b.textContent.replace(/\s+$/,''); if(v) cfg.onLabel(v); });
+      b.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); b.blur(); } else if(e.key===' '){ e.preventDefault(); document.execCommand('insertText',false,' '); } });
+      cell.appendChild(b);
+      var u=cvEl('input','cta-url'); u.type='text'; u.placeholder='https://…  (CTA destination)'; u.value=cfg.url||'';
+      u.style.cssText="width:100%;font-family:'Space Mono',monospace;font-size:11px;color:var(--c-primary);background:rgba(240,237,232,.05);border:1px solid rgba(240,237,232,.22);padding:4px 7px;border-radius:2px";
+      u.addEventListener('input',function(){ cfg.onUrl(u.value); }); u.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); u.blur(); } });
+      cell.appendChild(u);
+      var h=cvEl('button','cta-hide manual-cta-note',cfg.hidden?'＋ show CTA':'⊘ hide CTA'); h.type='button'; h.style.cssText='cursor:pointer;background:none;border:1px dashed rgba(240,237,232,.35);padding:4px 8px';
+      h.addEventListener('click',function(e){ e.stopPropagation(); cfg.onHide(!cfg.hidden); }); cell.appendChild(h);
+      return cell; }
+    function cvCtaRowEdit(){ var row=cvEl('div','cvl-ctas'), c=cvChat(), src=cvCtaSrc(true); row.style.alignItems='flex-start';
+      row.appendChild(cvEditCta('primary',{label:c.label,url:c.url,hidden:c.hidden,
+        onLabel:function(v){ cvHeroSet('chatLabel',v); }, onUrl:function(v){ cvHeroSet('chatUrl',v); }, onHide:function(x){ cvHeroSet('chatHidden',x); cvHeroRender(); }}));
+      if(src) row.appendChild(cvEditCta('secondary',{label:src.cta==null?'Download CV (PDF)':src.cta,url:src.ctaUrl==null?'':(src.ctaUrl==='#'?'':src.ctaUrl),hidden:!!src.ctaHidden,
+        onLabel:function(v){ src.cta=v; cvPersist(); }, onUrl:function(v){ src.ctaUrl=v||'#'; cvPersist(); }, onHide:function(x){ src.ctaHidden=x; cvPersist(); cvHeroRender(); }}));
+      return row; }
+    function cvHeroRender(){ var h=document.getElementById('cvHero'); if(!h||!cvData) return; var em=!!editMode; h.textContent=''; h._em=em;
+      cvHeadLines().forEach(function(t,i){ var l=cvEl('span','cvh-line',t);
+        if(em){ l.contentEditable='true'; l.classList.add('inline-edit-on'); l.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); l.blur(); } });
+          l.addEventListener('blur',function(){ var v=l.textContent.trim(), cur=cvHeroOvr().lines, a=CV_HEAD_DEFAULT.map(function(d,j){ return (cur&&cur[j]!=null)?cur[j]:''; }); a[i]=(v===CV_HEAD_DEFAULT[i])?'':v; cvHeroSet('lines',a); }); }
+        h.appendChild(l); });
+      h.appendChild(em?cvCtaRowEdit():cvCtaRow());
+      if(typeof cvReframeSoon==='function'&&cvFrameMode==='overview') cvReframeSoon(); }   // the controls make the hero taller: re-frame the route under it
     // Immersive overview hero: shown while no stop is open and the whole route is framed; decodes in line by line, fades out when a stop opens.
-    function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'&&!editMode; }
+    function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'; }   // stays up in Edit Mode: its one-liner + CTAs are edited right here
     function cvHeroPlace(){ var h=document.getElementById('cvHero'), seg=document.getElementById('cvView'), bc=document.getElementById('breadcrumb'); if(!h) return;   // well clear of the top bar: 16% down, and never closer than 40px under the breadcrumb / toggle
       var y=window.innerHeight*0.16; [seg,bc].forEach(function(e){ var r=e&&e.getBoundingClientRect(); if(r&&r.height) y=Math.max(y,r.bottom+40); }); h.style.top=Math.round(y)+'px'; }
     function cvHeroSync(){
       var h=document.getElementById('cvHero'); if(!h||!cvData) return; var want=cvHeroWanted(), was=h.classList.contains('on');
-      if(want&&!h.childElementCount){ CV_HEAD_LINES.forEach(function(t){ h.appendChild(cvEl('span','cvh-line',t)); }); h.appendChild(cvCtaRow()); }
+      if(want&&(!h.childElementCount||h._em!==!!editMode)) cvHeroRender();
       if(want===was) return; h.classList.toggle('on',want); if(!want){ h.classList.remove('wait'); return; }
       cvHeroPlace();
-      var decode=function(){ if(typeof GFX!=='undefined') [].forEach.call(h.querySelectorAll('.cvh-line'),function(l,i){ setTimeout(function(){ if(h.classList.contains('on')) GFX.decodeEl(l,'Lbl'); },i*120); }); };   // the site's glyph decode (off under reduced motion)
+      var decode=function(){ if(!editMode&&typeof GFX!=='undefined') [].forEach.call(h.querySelectorAll('.cvh-line'),function(l,i){ setTimeout(function(){ if(h.classList.contains('on')) GFX.decodeEl(l,'Lbl'); },i*120); }); };   // the site's glyph decode (off under reduced motion)
       // Arriving through the screen wipe (from the galaxy, or the view toggle) this runs while the panel covers the page, so the decode
       // would play out unseen. Hold the hero back until the page is uncovered, then fade it in and decode.
       if(window.bricWipe&&bricWipe.active&&bricWipe.active()){ h.classList.add('wait'); var go=false, rel=function(){ if(go) return; go=true; window.removeEventListener('bric:wipe-done',rel); h.classList.remove('wait'); if(h.classList.contains('on')) decode(); };
@@ -11766,7 +11801,7 @@ f 2469//2469 2470//2470 2434//2434
       var sky=cvEl('div','cvl-sky'); sky.setAttribute('aria-hidden','true'); host.appendChild(sky);
       var tl=cvEl('canvas','cvl-tl'); tl.setAttribute('aria-hidden','true'); host.appendChild(tl);
       var hero=cvEl('header','cvl-hero');
-      hero.appendChild(cvEl('h1','cvl-head',CV_LIST_HEAD));
+      hero.appendChild(cvEl('h1','cvl-head',cvHeadLines().join(' ')));
       hero.appendChild(cvCtaRow());
       wrap.appendChild(hero);
       var track=cvEl('div','cvl-track');
