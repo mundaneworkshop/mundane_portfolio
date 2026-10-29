@@ -1,3 +1,11 @@
+# /about: the About text lives on the CV page (Oct 29 2026)
+
+**Current decision (Jason, same day, supersedes the "one shared /about page" sections below where they conflict):** `/about` is a permanent redirect to `/cv`, and the About text sits after the timeline in the CV list view. Bare `/about` is also redirected in-app (`applyRouteFromLocation` does `replaceState('/cv')`). `/about/<outfit-id>` stays the minifigure focus view (rewrite kept; head and canonical take the CV's, so it canonicalizes to `/cv`). `/about` is out of the sitemap; the bio, open-to-work line, alumniOf and sameAs are folded into the `/cv` description and ProfilePage JSON-LD.
+
+How it is built: the text is authored once, as `<section id="mw-about">` inside `#mw-seo` (so a no-JS fetch of any path, including `/cv`, contains it). The CV list builder clones that block after the timeline as `.cvl-about` (a card in the corner-mark language, no side stripe, no animation). Edit the text in `#mw-seo` only. The immersive (3D) CV view shows no About text. Screen-reader users get the text in `#mw-seo` and again in the visible card when the list view is open.
+
+---
+
 # /about: one shared, crawlable About page (Oct 29 2026)
 
 Decision (Jason): About is a single shared page. Crawlers, the future phone About tab and the desktop minifigure focus view all show the same content; desktop enhances it.
