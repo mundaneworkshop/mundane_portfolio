@@ -10552,7 +10552,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
-      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.open(_u,'_blank','noopener'); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
+      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.mwOpen(_u); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
       if(ud.id==='arcade'){ if(window.MWAudio) MWAudio.unlock();   /* keep the click's user gesture: the wipe delays the open */ veilThen(function(){ openArcade(ud.id); }); return; }
@@ -10683,7 +10683,7 @@ f 2469//2469 2470//2470 2434//2434
       return { artifact:true, title:meta.title, framing:meta.desc, tags:[], cta:meta.cta, ctaUrl:meta.ctaUrl, ctaHidden:!!meta.ctaHidden, ctaActive:(meta.ctaActive==null?true:!!meta.ctaActive), links:meta.links, edit:editMode,
         slug:(meta.slug||slugify(meta.title||'')), slugPrefix:'/work/'+_projSlug+'/',
         onEditSlug:function(v){ var s=uniqueSlug(v,takenMoonSlugs(focused,m)); meta.slug=s; persistCopy(); showMoonManual(m); if(focusedMoon===m) setRoute('/work/'+_projSlug+'/'+s); },
-        onCta:function(){ if(meta.ctaUrl && meta.ctaUrl!=='#') window.open(meta.ctaUrl,'_blank'); },
+        onCta:function(){ if(meta.ctaUrl && meta.ctaUrl!=='#') window.mwOpen(meta.ctaUrl); },
         onAddLink:function(){ meta.links.push({label:'New link',url:'#'}); persistCopy(); showMoonManual(m); },
         onDelLink:function(i){ meta.links.splice(i,1); persistCopy(); showMoonManual(m); },
         onEditLink:function(i,v){ if(meta.links[i]){ meta.links[i].label=v; persistCopy(); } },
@@ -11590,7 +11590,7 @@ f 2469//2469 2470//2470 2434//2434
       var em=(typeof editMode!=='undefined')&&editMode;
       return { artifact:false, kind:'util', kicker:m.kicker, title:m.title, subtitle:m.sub, framing:m.body,
         snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:(m.cta==null?'Download CV (PDF)':m.cta), ctaUrl:(m.ctaUrl==null?'#':m.ctaUrl), ctaHidden:!!m.ctaHidden, ctaActive:(m.ctaActive==null?true:!!m.ctaActive), external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
-        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.open(m.ctaUrl,'_blank','noopener'); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
+        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.mwOpen(m.ctaUrl); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
         onSubtitle:function(v){ m.sub=v; cvPersist(); cvRefreshNodeLabel(id); },
         onEditTag:function(i,v){ var t=cvTagArr(m); if(t[i]!=null){ t[i]=v; m.tags=t.join(' · '); cvPersist(); } },
         onAddTag:function(){ var t=cvTagArr(m); t.push('New tag'); m.tags=t.join(' · '); cvPersist(); cvShowBooklet(id); },
@@ -13968,7 +13968,7 @@ f 2469//2469 2470//2470 2434//2434
         onDelExtraLink:function(i){ if(c.extraLinks){ c.extraLinks.splice(i,1); saveCaseField(id,'extraLinks',c.extraLinks); reShowProject(id); } },
         onEditExtraLink:function(i,v){ if(c.extraLinks&&c.extraLinks[i]){ c.extraLinks[i].label=v; saveCaseField(id,'extraLinks',c.extraLinks); } },
         onEditExtraLinkUrl:function(i,v){ if(c.extraLinks&&c.extraLinks[i]){ c.extraLinks[i].url=v; saveCaseField(id,'extraLinks',c.extraLinks); } },
-        onCta:function(){ if(c.ctaUrl && c.ctaUrl!=='#') window.open(c.ctaUrl,'_blank','noopener'); },
+        onCta:function(){ if(c.ctaUrl && c.ctaUrl!=='#') window.mwOpen(c.ctaUrl); },
         onCtaLabel:function(v){ saveCaseField(id,'cta',v); },
         onCtaUrl:function(v){ saveCaseField(id,'ctaUrl',v); },
         onCtaHide:function(h){ saveCaseField(id,'ctaHidden',h); reShowProject(id); },
@@ -15179,6 +15179,8 @@ f 2469//2469 2470//2470 2434//2434
       if(focused===aboutGrp) veilThen(function(){ goHome(); go(); }); else veilThen(go);
       return true;
     }
+    // mailto:/tel: hand off to the mail/phone app in place; window.open(...,'_blank') on them leaves a blank tab behind
+    window.mwOpen=function(url){ if(/^(mailto|tel):/i.test(url)) location.href=url; else window.open(url,'_blank','noopener'); };
     function ocOpenCtaUrl(url,target,o){
       try{ var u=new URL(url,location.href); if((u.hostname===location.hostname||/(^|\.)mundanework\.shop$/i.test(u.hostname))&&u.pathname.replace(/\/+$/,'')==='/arcade'){ ocGoArcade(); return; } }catch(e){}
       if(ocGoCase(o)) return;
@@ -15187,7 +15189,7 @@ f 2469//2469 2470//2470 2434//2434
       // visit. It counts for the outfit's own case study, and for whichever planet's slug the link ends in.
       try{ if(o&&o.unlock&&o.unlock.type==='caseStudy') ocNote('caseStudy',o.unlock.target||'w0');
         var seg=new URL(url,location.href).pathname.split('/').filter(Boolean).pop(); if(seg) Object.keys(CASES).forEach(function(k){ var c=CASES[k]; if(c&&c.title&&slugify(c.title)===seg) ocNote('caseStudy',k); }); }catch(e){}
-      if(target==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(url); else location.href=url; } else window.open(url,'_blank','noopener');
+      if(target==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(url); else location.href=url; } else window.mwOpen(url);
     }
     function ocAboutLinks(id){ var o=ocFind(id); return ((o&&o.about&&o.about.extraLinks)||[]).slice(); }   // current links (a render's `a` goes stale as edits land)
     function aboutData(o){
@@ -15902,7 +15904,7 @@ f 2469//2469 2470//2470 2434//2434
           var ul=document.createElement('div'); ul.className='manual-links';
           data.links.forEach(function(l,i){
             var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
-            if(!data.edit){ row.href=l.url||'#'; row.target='_blank'; row.rel='noopener'; }
+            if(!data.edit){ row.href=l.url||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
               sp.addEventListener('blur',function(){ if(data.onEditLink) data.onEditLink(i,sp.textContent.replace(/\s+$/,'')); });
@@ -15933,7 +15935,7 @@ f 2469//2469 2470//2470 2434//2434
           var exUl=document.createElement('div'); exUl.className='manual-links';
           data.extraLinks.forEach(function(l,i){
             var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
-            if(!data.edit){ row.href=l.url||'#'; row.target='_blank'; row.rel='noopener'; }
+            if(!data.edit){ row.href=l.url||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
               sp.addEventListener('blur',function(){ if(data.onEditExtraLink) data.onEditExtraLink(i,sp.textContent.replace(/\s+$/,'')); });
@@ -15972,7 +15974,7 @@ f 2469//2469 2470//2470 2434//2434
         if(locked){ ctaBtn.onclick=null; }
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
-            if(data.ctaUrl && data.ctaUrl!=='#'){ if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.open(data.ctaUrl,'_blank','noopener'); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
+            if(data.ctaUrl && data.ctaUrl!=='#'){ if(/^(mailto|tel):/i.test(data.ctaUrl)) location.href=data.ctaUrl; else if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.mwOpen(data.ctaUrl); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
             else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
