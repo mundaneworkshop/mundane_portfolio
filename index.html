@@ -919,7 +919,9 @@
   #manual-scene[data-ml="dock"][data-about] .manual-page{ grid-template-columns:minmax(0,62ch) auto; }
   #manual-scene[data-ml="dock"][data-about="plain"] .manual-page{ grid-template-columns:minmax(0,62ch); }
   #manual-scene[data-ml="dock"][data-about] .manual-cta{ grid-column:2; grid-row:1 / span 4; }
-  #manual-scene[data-ml="dock"][data-about] .snap-grid, #manual-scene[data-ml="dock"][data-about] .manual-tags, #manual-scene[data-ml="dock"][data-about] .manual-extralinks, #manual-scene[data-ml="dock"][data-about] .manual-slug{ display:none!important }
+  #manual-scene[data-ml="dock"][data-about] .snap-grid, #manual-scene[data-ml="dock"][data-about] .manual-tags, #manual-scene[data-ml="dock"][data-about] .manual-slug{ display:none!important }
+  #manual-scene[data-ml="dock"][data-about] .manual-extralinks{ grid-column:2; grid-row:5; margin-top:12px }   /* About keeps its optional extra links (empty = display:none from JS) under the CTA */
+  #manual-scene[data-ml="dock"][data-about="plain"] .manual-extralinks{ grid-column:1; grid-row:auto }
   /* WRAP-TO-CONTENT for every manual (CV nodes, projects, artifacts): same idea as ABOUT above, driven by data-wrap
      (set in mlWrapFlags): s = snapshot only, c = CTA/links only, x = neither. Absent = full manual, unchanged. */
   #manual-scene[data-ml="dock"][data-wrap], #manual-scene[data-ml="drawer"][data-wrap]{ width:max-content; min-width:min(380px,calc(100vw - 2 * var(--ml-gap,24px))); max-width:min(1280px,calc(100vw - 2 * var(--ml-gap,24px))); }
@@ -15187,6 +15189,7 @@ f 2469//2469 2470//2470 2434//2434
         var seg=new URL(url,location.href).pathname.split('/').filter(Boolean).pop(); if(seg) Object.keys(CASES).forEach(function(k){ var c=CASES[k]; if(c&&c.title&&slugify(c.title)===seg) ocNote('caseStudy',k); }); }catch(e){}
       if(target==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(url); else location.href=url; } else window.open(url,'_blank','noopener');
     }
+    function ocAboutLinks(id){ var o=ocFind(id); return ((o&&o.about&&o.about.extraLinks)||[]).slice(); }   // current links (a render's `a` goes stale as edits land)
     function aboutData(o){
       var a=o.about||{}, id=o.id, base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){},aboutView:true};
       if(!editMode&&ocLocked(o)){   // (Edit Mode shows the real copy even for a locked outfit, so it can be edited)
@@ -15202,6 +15205,11 @@ f 2469//2469 2470//2470 2434//2434
         onCtaLabel:function(v){ ocSetAbout(id,{ctaText:v}); },
         onCtaUrl:function(v){ ocSetAbout(id,{ctaUrl:v}); },
         onCtaHide:function(hide){ ocSetAbout(id,{ctaShow:!hide}); ocRefreshAbout(); },
+        extraLinks:(a.extraLinks||[]),
+        onAddExtraLink:function(){ ocSetAbout(id,{extraLinks:ocAboutLinks(id).concat([{label:'New link',url:'#'}])}); ocRefreshAbout(); },
+        onDelExtraLink:function(i){ var L=ocAboutLinks(id); L.splice(i,1); ocSetAbout(id,{extraLinks:L}); ocRefreshAbout(); },
+        onEditExtraLink:function(i,v){ var L=ocAboutLinks(id); if(L[i]){ L[i]=Object.assign({},L[i],{label:v}); ocSetAbout(id,{extraLinks:L}); } },
+        onEditExtraLinkUrl:function(i,v){ var L=ocAboutLinks(id); if(L[i]){ L[i]=Object.assign({},L[i],{url:v}); ocSetAbout(id,{extraLinks:L}); } },
         onCta:function(){ if(a.ctaShow&&a.ctaText&&ocCaseTarget(o)&&ocGoCase(o)) return; if(_cta) ocOpenCtaUrl(a.ctaUrl,a.ctaTarget,o); }});
     }
     function ocRefreshAbout(){ var o=outfitCur&&ocFind(outfitCur.id); if(!o||!window.CS) return;
@@ -15798,7 +15806,7 @@ f 2469//2469 2470//2470 2434//2434
     function setText(sel,val){ if(val==null) return; var el=manualScene.querySelector(sel); if(el) el.textContent=val; }
     function applyData(data){
       if(!data) return;
-      if(data.aboutView) manualScene.setAttribute('data-about',(data.ctaHidden&&!data.edit)?'plain':'cta'); else manualScene.removeAttribute('data-about');   // About: the manual wraps its content (CSS)
+      if(data.aboutView) manualScene.setAttribute('data-about',(data.ctaHidden&&!data.edit&&!(data.extraLinks&&data.extraLinks.length))?'plain':'cta'); else manualScene.removeAttribute('data-about');   // About: the manual wraps its content (CSS)
       setText('.manual-title', data.title);
       var _subEl=manualScene.querySelector('.manual-subtitle');
       if(_subEl){ var _subEdit=!!(data.edit && data.onSubtitle);
@@ -15991,9 +15999,10 @@ f 2469//2469 2470//2470 2434//2434
           if(data.edit && data.onCtaUrl){
             if(!cu){ cu=document.createElement('input'); cu.type='text'; cu.className='cta-url'; cu.placeholder='https://…  (CTA destination)';
               cu.style.cssText='flex:1 0 100%;margin-top:6px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:var(--c-primary);background:rgba(240,237,232,.05);border:1px solid rgba(240,237,232,.22);padding:4px 7px;border-radius:2px';
-              cu.addEventListener('input',function(){ if(data.onCtaUrl) data.onCtaUrl(cu.value); });
+              cu.addEventListener('input',function(){ if(cu._onUrl) cu._onUrl(cu.value); });   // reads the CURRENT manual's saver: cu is reused across renders, so closing over this render's `data` saved edits to whichever manual was opened first
               cu.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); cu.blur(); } });
               ctaWrap.appendChild(cu); }
+            cu._onUrl=data.onCtaUrl;
             if(document.activeElement!==cu) cu.value=data.ctaUrl||''; }
           else if(cu){ cu.remove(); } }
         _wasArtifact=!!data.artifact;
