@@ -10,7 +10,7 @@ Run (from repo root):
   voxel_frac   voxel size as a fraction of the model's longest side (default 0.012; bigger = blobbier)
   target_faces face budget after decimation (default 4000)
 Used for:
-  assets/battle/models/nano-n1.glb -> assets/models/arcade/nano-n1-planet.glb (manifest mesh:arcade)
+  assets/battle/models/nano-n1.glb -> assets/models/arcade/nano-n1-planet-v2.glb (manifest mesh:arcade)
 """
 import bpy, bmesh, sys, os, collections
 from mathutils.bvhtree import BVHTree

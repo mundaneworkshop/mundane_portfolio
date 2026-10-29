@@ -7,8 +7,8 @@ face that no ray from outside can reach, keeping per-face colours. Source files 
 Run (from repo root):
   /Applications/Blender.app/Contents/MacOS/Blender -b --python tools/build-exterior-shell.py -- <src.glb> <out.glb> [rays] [eps_frac]
 Used for:
-  assets/battle/models/nano-n1.glb            -> assets/models/arcade/nano-n1-planet.glb   (manifest mesh:arcade)
-  assets/models/holonet/endor-shield.glb      -> assets/models/holonet/endor-shield-planet.glb (manifest mesh:contact)
+  assets/battle/models/nano-n1.glb            -> assets/models/arcade/nano-n1-planet-v2.glb   (manifest mesh:arcade)
+  assets/models/holonet/endor-shield.glb      -> assets/models/holonet/endor-shield-planet-v2.glb (manifest mesh:contact)
 """
 import bpy, bmesh, sys, os, math, time, collections
 from mathutils import Vector
