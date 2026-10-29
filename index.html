@@ -1914,9 +1914,9 @@
         if(t) decodeEl(t,'Lbl',lb); if(s) decodeEl(s,'Lbl',lb); }
       var BTN_SEL='button, [role="button"], .bric-btn';
       document.addEventListener('mouseover',function(e){ var b=e.target&&e.target.closest?e.target.closest(BTN_SEL):null;
-        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],:disabled,.disabled')||document.body.classList.contains('editing')) return; decodeEl(b,'Btn'); });   // no decode in Debug or Edit Mode
+        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],[aria-current="page"],:disabled,.disabled')||document.body.classList.contains('editing')) return; decodeEl(b,'Btn'); });   // no decode in Debug or Edit Mode
       // BRIC buttons: click ignites the glow (220ms stepped pulse, see assets/bric-components.css); keyboard activation for role=button spans
-      document.addEventListener('click',function(e){ var b=e.target&&e.target.closest?e.target.closest('.bric-btn'):null; if(!b||reduced()) return;
+      document.addEventListener('click',function(e){ var b=e.target&&e.target.closest?e.target.closest('.bric-btn'):null; if(!b||reduced()||b.matches('[aria-current="page"]')) return;   // the current-page crumb is a label, not a control: no ignite
         b.classList.remove('is-ignite'); void b.offsetWidth; b.classList.add('is-ignite'); setTimeout(function(){ b.classList.remove('is-ignite'); },240); });
       document.addEventListener('keydown',function(e){ var b=e.target&&e.target.matches&&e.target.matches('span.bric-btn[role="button"]')?e.target:null;
         if(b&&!b.isContentEditable&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); b.click(); } });
@@ -10620,6 +10620,7 @@ f 2469//2469 2470//2470 2434//2434
       if(v==null){ _veilBusy=false; return; }   // reduced motion / no mask support: fn already ran, no wipe
       setTimeout(function(){ _veilBusy=false; },2500);
     }
+    window.addEventListener('bric:wipe-done',function(){ _veilBusy=false; });   // the panel is gone: the next view change gets its own wipe (registered before the CV toggle's queued switch runs on the same event)
     function goHomeV(){ veilThen(goHome); }
     function activate(ud){
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
@@ -11936,9 +11937,15 @@ f 2469//2469 2470//2470 2434//2434
     }
     // A view switch plays the site's screen wipe (assets/bric-wipe.js, random variant, never the same twice in a row): the toggle
     // flips at once, the views swap while the panel covers the page. One switch at a time; reduced motion swaps with no wipe.
-    function cvMarkToggle(listOn){ [].forEach.call(document.querySelectorAll('#cvView [data-cv-view]'),function(b){ var c=(b.getAttribute('data-cv-view')==='list')===listOn; b.setAttribute('aria-checked',String(c)); b.tabIndex=c?0:-1; }); }
-    function cvSetView(v){ if(v==='list'&&editMode) return; if((v==='list')===cvListOn) return;
-      if(window.bricWipe&&bricWipe.active&&bricWipe.active()) return;
+    function cvMarkToggle(listOn){ if(cvPendingView!=null) listOn=(cvPendingView==='list');   /* a switch queued behind the running wipe: the toggle keeps showing it */ [].forEach.call(document.querySelectorAll('#cvView [data-cv-view]'),function(b){ var c=(b.getAttribute('data-cv-view')==='list')===listOn; b.setAttribute('aria-checked',String(c)); b.tabIndex=c?0:-1; }); }
+    // A click while a wipe is still up (the uncover of the last switch: the view is visible and takes clicks) used to be dropped, which read as an
+    // empty click. Now the toggle answers at once and the view follows as soon as the panel is gone.
+    var cvPendingView=null;
+    window.addEventListener('bric:wipe-done',function(){ if(cvPendingView==null) return; var v=cvPendingView; cvPendingView=null; cvSetView(v); });
+    function cvSetView(v){ if(v==='list'&&editMode) return;
+      if(window.bricWipe&&bricWipe.active&&bricWipe.active()){ cvPendingView=v; cvMarkToggle(v==='list'); return; }
+      cvPendingView=null;
+      if((v==='list')===cvListOn){ cvMarkToggle(cvListOn); return; }
       var on=(v==='list'); cvMarkToggle(on);
       veilThen(function(){ cvListOn=on; cvApplyView(true); }); }
     // arrow keys: previous / next stop (route order in 3D; in the list, the card above / below)
@@ -11960,6 +11967,11 @@ f 2469//2469 2470//2470 2434//2434
         if(opt&&opt.getAttribute('aria-checked')!=='true'){ cvSetView(opt.getAttribute('data-cv-view')); return; }
         if(opt&&e.detail===0) return;
         var other=opts.filter(function(b){ return b.getAttribute('aria-checked')!=='true'; })[0]; if(other) other.click(); });   // through the option, so it gets the press sound
+      // A press on the toggle in the first ~1s after a switch lands on the screen wipe, which still covers the page and takes presses so the old view
+      // can't be clicked. Read it as picking the option under the pointer (cvSetView queues it until the panel is gone) instead of dropping it.
+      if(seg) document.addEventListener('pointerdown',function(e){ if(e.button>0||!seg.classList.contains('placed')||seg.contains(e.target)||!(window.bricWipe&&bricWipe.active())) return;
+        var r=seg.getBoundingClientRect(), m=8; if(e.clientX<r.left-m||e.clientX>r.right+m||e.clientY<r.top-m||e.clientY>r.bottom+m) return;
+        var o=e.clientX<opts[0].getBoundingClientRect().right?opts[0]:opts[opts.length-1]; cvSetView(o.getAttribute('data-cv-view')); },true);
       // radiogroup keys: the arrows move between the options (and so never reach the stop stepping below while the toggle has focus)
       if(seg) seg.addEventListener('keydown',function(e){ var k=e.key, d=(k==='ArrowRight'||k==='ArrowDown')?1:(k==='ArrowLeft'||k==='ArrowUp')?-1:0; if(!d) return;
         e.preventDefault(); var i=opts.indexOf(document.activeElement), n=opts[(i+d+opts.length)%opts.length]; n.focus(); cvSetView(n.getAttribute('data-cv-view')); });
@@ -16288,6 +16300,6 @@ f 2469//2469 2470//2470 2434//2434
   <script src="assets/bric-reticle.js"></script>
   <!-- Screen wipe (Star Wars page transition) to the Framer case studies. Same file loads on Framer. Docs: docs/project-history/screen-wipe.md -->
   <script src="assets/bric-wipe.js"></script>
-  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, ignore:'a,button,input,textarea,select,summary,label,[role=button],[contenteditable=true],[data-mw-reticle="arcade"]', selector:'[data-bric-media],[data-bric-target],.mw-sound-switch:not([aria-disabled="true"]),.bric-btn:not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
+  <script>try{ var _ret=bricReticle({ scope:'page', zIndex:2147483000, ignore:'a,button,input,textarea,select,summary,label,[role=button],[contenteditable=true],[data-mw-reticle="arcade"]', selector:'[data-bric-media],[data-bric-target],.mw-sound-switch:not([aria-disabled="true"]),.bric-btn:not([aria-current="page"]):not([aria-disabled="true"]):not(:disabled):not(.disabled)' }); if(window.__bricReticleTargets) _ret.setTargets(window.__bricReticleTargets); }catch(err){ console.warn('[reticle] not started', err); }</script>
 </body>
 </html>
