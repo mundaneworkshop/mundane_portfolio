@@ -158,5 +158,5 @@ def comms_dish():
         parts.append(lathe('Ring%d' % i, [(0.30 - i * 0.05, 0.0), (0.34 - i * 0.05, 0.0), (0.34 - i * 0.05, 0.05), (0.30 - i * 0.05, 0.05)], LIGHT, loc=(-0.8, 0.9, zc), steps=16, closed=True))
     export(os.path.join(ROOT, 'assets/models/holonet/comms-dish.glb'), [union_all(parts, 'CommsDish')])
 
-starfighter()
+# starfighter()  # unused: Arcade planet uses nano-n1-planet.glb (see build-nano-n1-planet.py)
 comms_dish()
