@@ -11031,6 +11031,7 @@ f 2469//2469 2470//2470 2434//2434
       else if(fitOn){ params.focusZoom=STAGE_ZOOM_REF; }   // no saved view → exactly "fill" (don't inherit the last project's wheel zoom)
       setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
     function saveCamView(){
+      if(MWSub.active===cvScene){ if(typeof toast==='function') toast('the CV overview frames itself (auto-fit)'); return; }   // cvFitOverview owns the CV default view; a saved one never applied
       if(MWSub.active){ MWSub.active.orbit.saveView(); if(typeof toast==='function') toast('default view saved'); return; }
       var k=camViewKey(); if(!k) return; copyOvr[k]={yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,panY:focusPanY,fit:(params.stageFit!==false?1:0),rev:ABOUT_REV}; persistCopy(); if(typeof toast==='function') toast('default view saved'); }
     function resetCamView(){
@@ -11856,13 +11857,117 @@ f 2469//2469 2470//2470 2434//2434
         look.addScaledVector(_cvR,-ex*wpp).addScaledVector(_cvU,ey*wpp); }
       o.look.copy(look); o.radius=rad;   // animate() eases the real camera toward this, so a re-frame glides
     }
-    // Camera-only: frame the whole route in the free stage. keepAngle (resize / stage change) leaves the user's
-    // orbit angle alone; an explicit re-centre resets to the home angle — or the author's saved default angle
-    // (Save default view still stores yaw/pitch; zoom and pan are always re-solved so the route fits any window).
+    // ── Overview auto-fit (Oct 29) ──
+    // The overview is solved, never saved: it is the single source of truth for the default CV view. (Before, Set default
+    // view stored yaw/pitch/radius/lookY under 'cvview' but the fit kept only the angle and re-solved zoom + pan, so a
+    // saved framing never stuck. 'cvview' is now ignored here and Set default view is a no-op on /cv.)
+    // 1. Candidates: an orthographic sweep of yaw × pitch keeps the angles where the main path's principal axis reads
+    //    level with the oldest stop on the left, ranked by scale and label overlap.
+    // 2. Solve: each candidate gets the real perspective fit, radius + look, with every node AND its label box (measured,
+    //    hung below the node exactly as cvUpdateLabels draws it) inside the free stage, margins even on all sides.
+    // 3. Labels that still touch move above or beside their node (rec.side), then the fit is re-solved with those boxes.
+    var CV_PITCH=[0.18,1.25], cvAutoYP=null, _cvQ=new THREE.Vector3();
+    function cvLblSize(rec){ var w=rec.lbl?rec.lbl.offsetWidth:0, h=rec.lbl?rec.lbl.offsetHeight:0;
+      if(!(w>0&&h>0)){ var d=rec.data||{}; w=Math.max((d.title||'').length*8.6,(d.sub||'').length*7.4)+12; h=40; }   // hidden (first frame): estimate from the copy
+      return {w:w,h:h}; }
+    function cvMainIdx(){ var main=cvNodes.map(function(r,i){ return i; }).filter(function(i){ return !cvNodes[i].data.branch; });
+      main.sort(function(a,b){ return cvNodeDepth(cvNodes[a].data)-cvNodeDepth(cvNodes[b].data); });
+      return main.length>1?main:cvNodes.map(function(r,i){ return i; }); }
+    function cvStageInner(){ var rc=cvStageRect(), M=Math.round(Math.max(20,Math.min(64,Math.min(rc.r-rc.l,rc.b-rc.t)*0.07)));
+      return {l:rc.l+M,t:rc.t+M,r:rc.r-M,b:rc.b-M}; }
+    // Perspective solve at one orbit angle: places cvFrameCam, returns the radius/look and each node's screen boxes.
+    function cvSolve(P,S,ups,yaw,pitch,box){
+      var W_=window.innerWidth, H_=window.innerHeight, cam=cvFrameCam, fov=camera.fov*Math.PI/180, n=P.length;
+      cam.fov=camera.fov; cam.aspect=W_/H_; cam.up.set(0,1,0); cam.updateProjectionMatrix();
+      var cp=Math.cos(pitch), sp=Math.sin(pitch), look=new THREE.Vector3(), X=new Array(n), Y=new Array(n), O=new Array(n);
+      P.forEach(function(p){ look.add(p); }); look.multiplyScalar(1/n);
+      function place(rad){ cam.position.set(look.x+Math.sin(yaw)*cp*rad, look.y+sp*rad, look.z+Math.cos(yaw)*cp*rad); cam.lookAt(look); cam.updateMatrixWorld(true); }
+      function proj(){ var u={l:1e9,t:1e9,r:-1e9,b:-1e9};
+        for(var i=0;i<n;i++){ _cvV.copy(P[i]).project(cam); if(_cvV.z>1) return null; var x=(_cvV.x+1)/2*W_, y=(1-_cvV.y)/2*H_;
+          _cvQ.set(P[i].x,P[i].y+0.34,P[i].z).project(cam); var off=Math.max(18,Math.abs(y-(1-_cvQ.y)/2*H_)+14), nr=off-14, w2=S[i].w/2;   // label offset = cvUpdateLabels'
+          X[i]=x; Y[i]=y; O[i]=off;
+          var q=cvLblBox(x,y,off,S[i],ups[i]);
+          u.l=Math.min(u.l,q.l,x-nr); u.r=Math.max(u.r,q.r,x+nr); u.t=Math.min(u.t,q.t,y-nr); u.b=Math.max(u.b,q.b,y+nr); }
+        return u; }
+      var lo=2.5, hi=120, u;
+      for(var k=0;k<22;k++){ var mid=(lo+hi)/2; place(mid); u=proj(); if(u&&u.r-u.l<=box.r-box.l&&u.b-u.t<=box.b-box.t) hi=mid; else lo=mid; }
+      var rad=hi;
+      for(var j=0;j<6;j++){ place(rad); u=proj(); if(!u) return null;   // slide the look target so the drawn bounds centre on the stage
+        var ex=(box.l+box.r)/2-(u.l+u.r)/2, ey=(box.t+box.b)/2-(u.t+u.b)/2, wpp=2*rad*Math.tan(fov/2)/H_;
+        _cvR.setFromMatrixColumn(cam.matrixWorld,0); _cvU.setFromMatrixColumn(cam.matrixWorld,1);
+        look.addScaledVector(_cvR,-ex*wpp).addScaledVector(_cvU,ey*wpp); }
+      place(rad); u=proj(); if(!u) return null;
+      return {yaw:yaw,pitch:pitch,rad:rad,look:look,x:X,y:Y,off:O,u:u}; }
+    // Label placement round its node: 0 below (default), 1 above, 2 right, 3 left — the same box cvUpdateLabels draws.
+    function cvLblBox(x,y,off,s,side){ var w2=s.w/2, h2=s.h/2;
+      if(side===1) return {l:x-w2,r:x+w2,t:y-off-s.h,b:y-off};
+      if(side===2) return {l:x+off-4,r:x+off-4+s.w,t:y-h2,b:y+h2};
+      if(side===3) return {l:x-off+4-s.w,r:x-off+4,t:y-h2,b:y+h2};
+      return {l:x-w2,r:x+w2,t:y+off,b:y+off+s.h}; }
+    function cvLblRect(f,S,ups,i){ return cvLblBox(f.x[i],f.y[i],f.off[i],S[i],ups[i]); }
+    function cvOverlap(f,S,ups){ var a=0, n=S.length, R=[];
+      for(var i=0;i<n;i++) R.push(cvLblRect(f,S,ups,i));
+      for(i=0;i<n;i++) for(var j=0;j<n;j++){ if(i===j) continue; var A=R[i], nr=f.off[j]-14;
+        if(j>i){ var ox=Math.min(A.r,R[j].r)-Math.max(A.l,R[j].l), oy=Math.min(A.b,R[j].b)-Math.max(A.t,R[j].t); if(ox>0&&oy>0) a+=ox*oy; }   // label on label
+        var nx=Math.min(A.r,f.x[j]+nr)-Math.max(A.l,f.x[j]-nr), ny=Math.min(A.b,f.y[j]+nr)-Math.max(A.t,f.y[j]-nr); if(nx>0&&ny>0) a+=nx*ny; }   // label over another node
+      return a; }
+    // Move labels off the default (below) where that clears them: hill-climb over each label's four placements, keeping
+    // any move that lowers the total overlap (label on label, label over a node), until a full pass changes nothing.
+    // Above is tried first, beside only when it still helps (short stages, dense clusters).
+    function cvFlip(f,S){ var n=S.length, ups=new Array(n).fill(0), cur=cvOverlap(f,S,ups);
+      for(var pass=0;pass<5&&cur>0;pass++){ var moved=false;
+        for(var i=0;i<n&&cur>0;i++){ var was=ups[i], bi=was;
+          for(var sd=0;sd<4;sd++){ if(sd===was) continue; ups[i]=sd; var v=cvOverlap(f,S,ups); if(v<cur-0.5-(sd>1?40:0)){ cur=v; bi=sd; } }   // a side placement must win clearly
+          ups[i]=bi; if(bi!==was) moved=true; }
+        if(!moved) break; }
+      return ups; }
+    function cvAutoFit(){
+      if(!cvNodes.length) return null;
+      var box=cvStageInner(), aw=box.r-box.l, ah=box.b-box.t, P=cvNodes.map(function(r){ return r.pos.clone(); }), S=cvNodes.map(cvLblSize), main=cvMainIdx(), n=P.length;
+      var area=S.reduce(function(a,s){ return a+s.w*s.h; },0), f0=main[0], f1=main[main.length-1];
+      function tiltOf(xs,ys){ var mx=0,my=0; main.forEach(function(k){ mx+=xs[k]; my+=ys[k]; }); mx/=main.length; my/=main.length;
+        var sxx=0,syy=0,sxy=0; main.forEach(function(k){ var dx=xs[k]-mx, dy=ys[k]-my; sxx+=dx*dx; syy+=dy*dy; sxy+=dx*dy; });
+        return Math.abs(0.5*Math.atan2(2*sxy,sxx-syy)); }
+      var cand=[], xs=new Array(n), ys=new Array(n);
+      for(var yi=0;yi<96;yi++){ var yaw=yi/96*Math.PI*2, sy=Math.sin(yaw), cy=Math.cos(yaw);   // 1. orthographic sweep
+        for(var pi=0;pi<=16;pi++){ var pitch=CV_PITCH[0]+(CV_PITCH[1]-CV_PITCH[0])*pi/16, sp=Math.sin(pitch), cp=Math.cos(pitch);
+          for(var i=0;i<n;i++){ var p=P[i]; xs[i]=p.x*cy-p.z*sy; ys[i]=-(p.y*cp-sp*(p.x*sy+p.z*cy)); }
+          if(xs[f1]<=xs[f0]) continue; var tilt=tiltOf(xs,ys); if(tilt>0.35) continue;
+          var L=1e9,R=-1e9,T=1e9,B=-1e9; for(i=0;i<n;i++){ L=Math.min(L,xs[i]); R=Math.max(R,xs[i]); T=Math.min(T,ys[i]); B=Math.max(B,ys[i]); }
+          var sc=Math.min(aw/Math.max(1e-3,R-L),ah/Math.max(1e-3,B-T));
+          cand.push({yaw:yaw,pitch:pitch,s:sc*(1-tilt/0.35)}); } }
+      cand.sort(function(a,b){ return b.s-a.s; }); cand=cand.slice(0,60);
+      var noUp=new Array(n).fill(0), best=null;
+      function score(yaw,pitch){   // 2–3. perspective solve, flip, re-solve, score
+        var f=cvSolve(P,S,noUp,yaw,pitch,box); if(!f) return null;
+        var ups=cvFlip(f,S); if(ups.some(Boolean)){ var g=cvSolve(P,S,ups,yaw,pitch,box); if(g) f=g; }
+        if(f.x[f1]<=f.x[f0]) return null;
+        var tilt=tiltOf(f.x,f.y), ov=cvOverlap(f,S,ups), dmin=1e9, dmax=0;
+        for(var i=0;i<n;i++){ var d=cvFrameCam.position.distanceTo(P[i]); dmin=Math.min(dmin,d); dmax=Math.max(dmax,d); }
+        var nl=1e9,nr_=-1e9,nt=1e9,nb=-1e9; for(i=0;i<n;i++){ nl=Math.min(nl,f.x[i]); nr_=Math.max(nr_,f.x[i]); nt=Math.min(nt,f.y[i]); nb=Math.max(nb,f.y[i]); }
+        var use=Math.hypot(nr_-nl,nb-nt)/Math.hypot(aw,ah);   // how much of the stage the route itself spans (labels are fixed px)
+        f.ups=ups; f.ov=ov; f.tilt=tilt;
+        f.score=use*Math.max(0,1-tilt/0.3)/(1+40*ov/area)*Math.sqrt(dmin/dmax)*(1-0.3*Math.abs(pitch-0.5));   // a clash costs far more than a little scale
+        return f; }
+      cand.forEach(function(c){ var f=score(c.yaw,c.pitch); if(f&&(!best||f.score>best.score)) best=f; });
+      if(!best) return null;
+      [0.03,0.012].forEach(function(st){ for(var a=-1;a<=1;a++) for(var b=-1;b<=1;b++){ if(!a&&!b) continue;   // polish around the winner
+        var pt=Math.max(CV_PITCH[0],Math.min(CV_PITCH[1],best.pitch+b*st)), f=score(best.yaw+a*st*2,pt); if(f&&f.score>best.score) best=f; } });
+      return best; }
+    function cvApplyUps(ups){ cvNodes.forEach(function(r,i){ var z=cvLblSize(r); r.side=(ups&&ups[i])||0; r.lblW=z.w; r.lblH=z.h; }); }
+    // Camera-only: frame the whole route in the free stage. keepAngle (resize / stage change) keeps a hand-orbited
+    // angle; an angle still at the last auto value is re-solved, since the free stage's shape may have changed.
     function cvFitOverview(keepAngle){ cvFrameMode='overview';
-      if(!(cvData&&cvData.length)){ cvOrbit.fitPoints(null); return; }
-      if(!keepAngle){ var o=cvOrbit, sv=(typeof copyOvr!=='undefined')&&o.viewKey&&copyOvr[o.viewKey]; o.yaw=o.home.yaw; o.pitch=o.home.pitch; if(sv){ if(sv.yaw!=null)o.yaw=sv.yaw; if(sv.pitch!=null)o.pitch=sv.pitch; } }
-      cvFrame(cvData.map(function(n){ return n.pos; }));
+      if(!(cvData&&cvData.length)||!cvNodes.length){ cvOrbit.fitPoints(null); return; }
+      var o=cvOrbit, f=null, auto=!keepAngle||(cvAutoYP&&Math.abs(o.yaw-cvAutoYP.yaw)<1e-4&&Math.abs(o.pitch-cvAutoYP.pitch)<1e-4);
+      if(auto) f=cvAutoFit();
+      if(!f){ var P=cvNodes.map(function(r){ return r.pos.clone(); }), S=cvNodes.map(cvLblSize), box=cvStageInner();   // a hand-set angle (or no level angle): same solve at that angle
+        if(!auto){ f=cvSolve(P,S,new Array(P.length).fill(0),o.yaw,o.pitch,box); if(f){ var u=cvFlip(f,S); f=cvSolve(P,S,u,o.yaw,o.pitch,box)||f; f.ups=u; } }
+        if(!f){ f=cvSolve(P,S,new Array(P.length).fill(0),o.home.yaw,o.home.pitch,box); } }
+      if(!f){ cvOrbit.fitPoints(null); return; }
+      o.yaw=f.yaw; o.pitch=f.pitch; o.radius=f.rad; o.look.copy(f.look); if(auto) cvAutoYP={yaw:f.yaw,pitch:f.pitch};   // animate() eases the real camera toward this
+      cvApplyUps(f.ups);
+      if(cvReduced()){ o.apply(camPos,camLook); camera.position.copy(camPos); lookNow.copy(camLook); camera.lookAt(lookNow); }   // reduced motion: cut, don't glide
     }
     // A resize, or the manual changing height / mode, moves the free rectangle: glide back into it.
     var _cvReRaf=0;
@@ -11925,7 +12030,8 @@ f 2469//2469 2470//2470 2434//2434
       cvNodes.forEach(function(n){ var s=projWorld(n.pos); if(!s.vis){ n.lbl.style.display='none'; return; }
         _cvUp.set(n.pos.x,n.pos.y+0.34,n.pos.z); var st=projWorld(_cvUp);   // project the node's radius → on-screen size, so the label clears the sphere at any zoom
         var off=Math.max(18, Math.abs(s.y-st.y)+14);
-        n.lbl.style.display='flex'; n.lbl.style.left=s.x+'px'; n.lbl.style.top=(s.y+off)+'px';
+        var sd=n.side||0, lw=n.lblW||0, lh=n.lblH||34;   // n.side: moved round the node by cvFlip to clear a neighbour (0 below, 1 above, 2 right, 3 left)
+        n.lbl.style.display='flex'; n.lbl.style.left=(sd===2?s.x+off-4+lw/2:sd===3?s.x-off+4-lw/2:s.x)+'px'; n.lbl.style.top=(sd===1?s.y-off-lh:sd>1?s.y-lh/2:s.y+off)+'px';
       });
     }
     // Per-node glimmer — oscillates HSL lightness + halo opacity independently per node via random phase offset.
