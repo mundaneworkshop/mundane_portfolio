@@ -13158,6 +13158,25 @@ f 2469//2469 2470//2470 2434//2434
       // material is left untouched on purpose → the planet keeps its amber holo FX
       fitHitProxy(grp);
     }
+    // GLB planets: depth-only twin of the planet mesh, drawn in the opaque pass (before the additive,
+    // double-sided, no-depth-write holo material). The holo then shows ONLY the front-most surface,
+    // so a model's far side / inner walls no longer stack up as busy outlines (same idea as the logo's
+    // depth pre-pass and the locked-figure ghostDepth). polygonOffset pushes the twin back a hair so the
+    // holo's own front surface still passes the depth test. The twin reads its geometry live from `hit`
+    // and only counts while the planet is in its galaxy shape (not the focus-view kit box, _geoBak) and
+    // mostly opaque (opBase), so a faded or focused planet never cuts holes in what's behind it.
+    var PLANET_DEPTH_MAT=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+    function setPlanetDepthPass(id,on){
+      var grp=planetById(id); if(!grp) return; var hit=grp.userData.hit, dm=hit.userData.depthTwin;
+      if(dm&&dm.parent!==hit) dm=hit.userData.depthTwin=null;   // dropped by applyFocusedPlanetGeo's child sweep
+      if(!on){ if(dm){ hit.remove(dm); hit.userData.depthTwin=null; } return; }
+      if(dm) return;
+      dm=new THREE.Mesh(hit.geometry,PLANET_DEPTH_MAT); dm.raycast=function(){}; dm.userData.depthTwin=true;
+      Object.defineProperty(dm,'geometry',{get:function(){ return hit.geometry; },set:function(){}});
+      Object.defineProperty(dm,'visible',{get:function(){ var u=hit.material&&hit.material.uniforms&&hit.material.uniforms.opBase;
+        return !grp.userData._geoBak && !!u && u.value>0.45; },set:function(){}});
+      hit.add(dm); hit.userData.depthTwin=dm;
+    }
     function updateCpMeshUI(){}   // panel retired — no-op kept for existing callers
 
     // ══════ FOCUS-VIEW BOX REPLACEMENT ════════════════════════════════════════
@@ -13576,7 +13595,7 @@ f 2469//2469 2470//2470 2434//2434
               BRICStore.set('mesh:'+id,{kind:'glb',buffer:e.target.result,name:file.name}); toast('artifact mesh ✓'); refreshEditPanel(); });
           } else {
             parseGLBGeo(e.target.result,meshRadiusFor(id),function(geo,err,mat){ if(!geo){toast(err||'glb error');return;}
-              applyMeshTo(id,geo,mat); planetMeshOvr[id]={kind:'glb',name:file.name};
+              applyMeshTo(id,geo,mat); setPlanetDepthPass(id,true); planetMeshOvr[id]={kind:'glb',name:file.name};
               BRICStore.set('mesh:'+id,{kind:'glb',buffer:e.target.result,name:file.name}); toast('mesh applied ✓'); refreshEditPanel(); });
           }
         };
@@ -14151,7 +14170,7 @@ f 2469//2469 2470//2470 2434//2434
           // monogram replaced the head. It no longer does — the monogram lives at the base emitter,
           // the head/uploaded logo always lives in the beam — so a custom logo restores normally.
           if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } }); }
-          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
+          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); setPlanetDepthPass(id,true); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
         }
         else if(rec.kind==='step'){ parseSTEP(rec.buffer,function(group){ if(!group) return;
           if(id==='logo'){ applyTexturedGLBToLogo(group); planetMeshOvr.logo={kind:'step',name:rec.name}; }
