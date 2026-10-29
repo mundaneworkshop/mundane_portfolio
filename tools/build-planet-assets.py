@@ -47,13 +47,14 @@ def cyl(name, r, depth, loc, m, rot=(0, 0, 0), verts=12, r2=None):
     o = bpy.context.object; o.name = name
     return finish(o, m)
 
-def lathe(name, profile, m, loc=(0, 0, 0), rot=(0, 0, 0), steps=24):
+def lathe(name, profile, m, loc=(0, 0, 0), rot=(0, 0, 0), steps=24, closed=False):
     """Revolve (r, z) profile around Z."""
     me = bpy.data.meshes.new(name); o = bpy.data.objects.new(name, me)
     bpy.context.collection.objects.link(o)
     bm = bmesh.new()
     vs = [bm.verts.new((r, 0, z)) for r, z in profile]
     edges = [bm.edges.new((vs[i], vs[i + 1])) for i in range(len(vs) - 1)]
+    if closed: edges.append(bm.edges.new((vs[-1], vs[0])))
     bmesh.ops.spin(bm, geom=vs + edges, cent=(0, 0, 0), axis=(0, 0, 1), angle=math.tau, steps=steps)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
@@ -75,6 +76,21 @@ def export(path, objs):
                               export_apply=True, export_yup=True, export_cameras=False,
                               export_lights=False)
     print('WROTE', path, os.path.getsize(path))
+
+def union_all(parts, name='Solid'):
+    """Boolean-union every part into one watertight mesh (no interior/intersecting faces), keeping per-part materials."""
+    base = parts[0]
+    for o in parts[1:]:
+        for ob in bpy.data.objects: ob.select_set(False)
+        bpy.context.view_layer.objects.active = base; base.select_set(True)
+        for m in o.data.materials:
+            if m.name not in [x.name for x in base.data.materials if x]: base.data.materials.append(m)
+        md = base.modifiers.new('u', 'BOOLEAN'); md.operation = 'UNION'; md.object = o; md.solver = 'EXACT'
+        if hasattr(md, 'material_mode'): md.material_mode = 'TRANSFER'
+        bpy.ops.object.modifier_apply(modifier=md.name)
+        bpy.data.objects.remove(o, do_unlink=True)
+    base.name = name
+    return base
 
 # ───────────── Arcade: starfighter (X-wing-style silhouette, nose +X) ─────────────
 def starfighter():
@@ -123,10 +139,10 @@ def comms_dish():
         r = 1.9 * i / n
         z = 0.32 * r * r / 1.9  # depth
         pts.append((r, z))
-    shell = pts + [(r - 0.06, z + 0.0) for r, z in reversed(pts)]
-    parts.append(lathe('Dish', shell, LIGHT, loc=(0.25, 0, 2.85), rot=(0, math.radians(-50), 0), steps=24))
+    shell = pts + [(r, z - 0.09) for r, z in reversed(pts)]   # closed, solid (thickness along the dish axis)
+    parts.append(lathe('Dish', shell, LIGHT, loc=(0.25, 0, 2.85), rot=(0, math.radians(-50), 0), steps=24, closed=True))
     # rim ring
-    parts.append(lathe('Rim', [(1.9, 0.3), (1.97, 0.3), (1.97, 0.37), (1.9, 0.37)], DARK, loc=(0.25, 0, 2.85), rot=(0, math.radians(-50), 0), steps=24))
+    parts.append(lathe('Rim', [(1.9, 0.3), (1.97, 0.3), (1.97, 0.37), (1.9, 0.37)], DARK, loc=(0.25, 0, 2.85), rot=(0, math.radians(-50), 0), steps=24, closed=True))
     # feed boom + horn along dish axis
     ax = Vector((math.sin(math.radians(50)), 0, math.cos(math.radians(50))))
     base = Vector((0.25, 0, 2.85))
@@ -139,8 +155,8 @@ def comms_dish():
     # antenna mast beside the dish with signal rings
     parts.append(cyl('Mast', 0.05, 2.6, (-0.8, 0.9, 1.6), MID, verts=6))
     for i, zc in enumerate((2.3, 2.7, 3.1)):
-        parts.append(lathe('Ring%d' % i, [(0.30 - i * 0.05, 0.0), (0.34 - i * 0.05, 0.0), (0.34 - i * 0.05, 0.05), (0.30 - i * 0.05, 0.05)], LIGHT, loc=(-0.8, 0.9, zc), steps=16))
-    export(os.path.join(ROOT, 'assets/models/holonet/comms-dish.glb'), parts)
+        parts.append(lathe('Ring%d' % i, [(0.30 - i * 0.05, 0.0), (0.34 - i * 0.05, 0.0), (0.34 - i * 0.05, 0.05), (0.30 - i * 0.05, 0.05)], LIGHT, loc=(-0.8, 0.9, zc), steps=16, closed=True))
+    export(os.path.join(ROOT, 'assets/models/holonet/comms-dish.glb'), [union_all(parts, 'CommsDish')])
 
 starfighter()
 comms_dish()
