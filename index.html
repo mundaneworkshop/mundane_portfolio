@@ -288,7 +288,7 @@
   /* SOURCE :root design tokens, scoped so they don't pollute the holotable globals */
   /* The manual keeps its own scope but no longer its own palette: it is a .bric-dark subtree (the screen stays dark in light mode)
      and every value below is a BRIC token. Text is the solid ladder (primary / secondary / tertiary). */
-  #cs-root, #cvList, #cvHero {
+  #cs-root, #cvList, #cvHero, .ct-panel {
     --bg:         var(--bric-surface-base);
     --surface:    var(--bric-surface-raised);
     --amber:      var(--bric-register-amber-text);
@@ -327,7 +327,8 @@
     perspective-origin: 50% 0%;
   }
   #manual-scene.visible { opacity: 1; pointer-events: auto; }
-  #manual-book {
+  /* #manual-book and the HoloNet panel (.ct-panel) share one surface: translucent base + BRIC dot matrix + corner marks */
+  #manual-book, .ct-panel {
     width: 60vw;
     max-width: 1040px;
     min-width: 580px;
@@ -339,7 +340,8 @@
     transform: rotateX(20deg);
     transform-origin: top center;
   }
-  #manual-book::after {
+  .ct-panel { width: min(820px, 94vw); min-width: 0; max-width: none; transform: none; isolation: isolate; }
+  #manual-book::after, .ct-panel::after {
     content: '';
     position: absolute; inset: 6% 2% -6% 2%;
     box-shadow: 0 40px 70px rgba(0,0,0,0.55);
@@ -725,8 +727,13 @@
   .msgbeacon .mb-dot,.msgbeacon .mb-ring{display:none}
   #msgHover{position:absolute;display:none;box-sizing:border-box;overflow:hidden;transform:translateY(-100%);white-space:nowrap;font-family:var(--grotesk);font-size:13px;line-height:1.4;letter-spacing:1px;text-transform:uppercase;color:var(--bric-holonet-hot);background:rgba(10,8,18,.9);border:1px solid rgba(160,106,240,.45);padding:5px 9px;border-radius:2px;pointer-events:none;z-index:14}
   /* Contact comm console */
-  .ct-panel{width:min(820px,94vw);max-height:92vh;overflow:auto;background:color-mix(in srgb,var(--bric-surface-raised) 92%,transparent);border:1px solid var(--bric-border-default);border-radius:var(--bric-corner-step);padding:22px 22px 20px;font-family:var(--grotesk);backdrop-filter:blur(4px)}
-  .ct-head{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:12px;line-height:16px;letter-spacing:2px;color:var(--bric-schematic-edge);text-transform:uppercase;margin:-6px -8px 16px 0;min-height:32px}
+  /* HoloNet panel = the manual container: surface, dot grid, shadow and corner marks come from the shared #manual-book/.ct-panel and .mb-corner rules above;
+     the padded content box is .manual-page (+ .ct-scroll, which owns the scrolling so the corner marks stay pinned to the panel). */
+  .ct-panel{max-height:92vh;display:flex;flex-direction:column;font-family:var(--grotesk)}
+  .ct-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--teal-dim) transparent;padding:30px 34px 28px}
+  .ct-title{margin-bottom:6px}
+  @media (max-width:520px){ .ct-scroll{padding:20px 18px 18px} .ct-title{font-size:22px} }
+  .ct-head{display:flex;align-items:center;gap:10px;font-family:var(--f-b);font-weight:400;font-size:12px;line-height:16px;letter-spacing:1px;color:var(--c-dim);text-transform:uppercase;margin:0 0 16px;min-height:32px}   /* manual-subtitle type */
   .ct-head .ct-hint{flex:1;min-width:0;font:inherit;color:inherit}
   .ct-close{flex:none;margin-left:auto}
   .ct-rec{flex:none;width:7px;height:7px;border-radius:50%;background:var(--bric-danger-solid);box-shadow:0 0 6px var(--bric-danger-solid)}   /* status dot: red misaligned/over/lost, teal aligned, amber recharging, purple uplink */
@@ -747,7 +754,7 @@
   @keyframes ctFlash{0%{opacity:1}50%{opacity:.12}}
   @media (prefers-reduced-motion:reduce){ .ct-ly,.ct-rot{transition:none} .ct-flash{animation:none;opacity:.4} .ct-scr.locked .ct-flash{opacity:1} }
   @media (max-width:520px){ .ct-con{grid-template-columns:minmax(0,1fr);gap:12px} .ct-scr{width:100%;margin:0} #ctMsg{min-height:132px} }
-  .ct-links{display:flex;flex-wrap:wrap;gap:4px;margin-left:calc(var(--bric-space-2-stud) * -1)}
+  .ct-links{display:flex;flex-wrap:wrap;gap:4px}
   .ct-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ct-trap{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}   /* bot trap: off-screen (not display:none, which some bots skip), unreachable by keyboard and screen readers */
   .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
@@ -1517,6 +1524,9 @@
   <!-- ░░ Contact / HoloNet focus view — comm console ░░ -->
   <div id="contactFocus" class="altfocus">
     <div class="ct-panel bric-dark">
+      <div class="mb-corner tl"></div><div class="mb-corner tr"></div><div class="mb-corner bl"></div><div class="mb-corner br"></div>
+      <div class="ct-scroll manual-page">
+      <div class="manual-title ct-title">HoloNet</div>
       <div class="ct-head" id="ctHead" data-state="off"><span class="ct-rec"></span><span class="ct-hint" id="ctHint"></span><button type="button" class="ct-close bric-btn bric-btn--sm" id="ctClose" aria-label="Close HoloNet">✕</button></div>
       <div class="ct-con">
         <div class="ct-scr" id="ctScr" aria-hidden="true">
@@ -1560,6 +1570,7 @@
         <span class="ct-go" id="ctGo"><span class="ct-ring"></span><span class="ct-ring"></span><button class="ct-send bric-btn bric-btn--primary" id="ctSend" aria-disabled="true" aria-describedby="ctHint">Transmit</button></span>
       </div>
       <div class="ct-sr" id="ctLive" aria-live="polite"></div>
+      </div>
     </div>
   </div>
 
