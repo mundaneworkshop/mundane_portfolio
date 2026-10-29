@@ -1065,11 +1065,28 @@
      callbacks, no motion. The delayed visibility flip lets the fade-OUT actually play. */
   #cascade.reduced     { background: var(--bg); transition: opacity 0.42s ease, visibility 0s linear 0.42s; }
   #cascade.reduced.run { opacity: 1; visibility: visible; transition: opacity 0.42s ease; }
+  .mw-sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
 </style>
 <link rel="stylesheet" href="assets/bric-author.css" />
 </head>
 <body>
-  <div id="scene"></div>
+  <!-- Crawler / no-JS / screen-reader content. The galaxy is a WebGL canvas, so this is the readable outline of the same site. Visually hidden for sighted JS users. -->
+  <main id="mw-seo" class="mw-sr-only">
+    <h1>Jason Hsin · Staff Product Designer</h1>
+    <p>Mundane Workshop is the portfolio of Jason Hsin, a staff product designer building delightful consumer experiences. The site is an interactive 3D galaxy; each planet is a project.</p>
+    <nav aria-label="Portfolio">
+      <ul>
+        <li><a href="/work/meta-horizon-worlds">Meta Horizon Worlds</a></li>
+        <li><a href="/work/slate-auto">Slate Auto</a></li>
+        <li><a href="/work/josh-ai">Josh.ai</a></li>
+        <li><a href="/cv">CV</a></li>
+        <li><a href="/holonet">Contact (HoloNet)</a></li>
+        <li><a href="https://www.linkedin.com/in/jason-hsin-00378837/">Jason Hsin on LinkedIn</a></li>
+      </ul>
+    </nav>
+  </main>
+  <noscript><p style="position:fixed;inset:auto 16px 16px;color:#cfe;font:14px/1.4 system-ui">This portfolio is an interactive 3D scene and needs JavaScript. The links above work without it.</p></noscript>
+  <div id="scene" role="img" aria-label="Interactive 3D galaxy of Jason Hsin's projects. Drag to rotate, click a planet to travel."></div>
   <div id="labels"></div>
 
   <!-- EDIT MODE: shared hidden file input + active-mode banner -->
@@ -1521,8 +1538,8 @@
   </div>
 
   <!-- ░░ Message stars (visitor transmissions pinned in the galaxy) ░░ -->
-  <canvas id="msgCanvas"></canvas>
-  <canvas id="cvFxCanvas"></canvas>
+  <canvas id="msgCanvas" aria-hidden="true"></canvas>
+  <canvas id="cvFxCanvas" aria-hidden="true"></canvas>
   <div id="msgStars"></div>
 
 
@@ -10183,7 +10200,31 @@ f 2469//2469 2470//2470 2434//2434
     // picks a slug that doesn't collide with `taken` (sibling slugs at the same URL level) — appends -2, -3, … as needed
     function uniqueSlug(base,taken){ var s=slugify(base)||'untitled', n=2;
       while(taken.indexOf(s)>=0){ s=(slugify(base)||'untitled')+'-'+n; n++; } return s; }
-    function setRoute(path){ try{ if(location.pathname!==path) history.pushState({},'',path); }catch(e){} }
+    function setRoute(path){ try{ if(location.pathname!==path) history.pushState({},'',path); }catch(e){} try{ syncRouteHead(); }catch(e){} }
+    // SEO: keep <title>, description, canonical, og:/twitter: and robots in step with the SPA route (index.html is served for every path,
+    // so crawlers that run JS would otherwise see the home head everywhere). Unknown routes get noindex (the in-app 404 overlay is a 200).
+    var _headDefault=null;
+    function syncRouteHead(){
+      var H=document.head, q=function(sel){ return H.querySelector(sel); };
+      if(!_headDefault) _headDefault={ title:document.title, desc:(q('meta[name="description"]')||{}).content||'', robots:(q('meta[name="robots"]')||{}).content||'' };
+      var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), t=_headDefault.title, d=_headDefault.desc, robots=_headDefault.robots;
+      if(!routeKnown(parts)){ t='Page not found · Jason Hsin'; robots='noindex'; }
+      else if(parts[0]===cvSlug){ t='CV · Jason Hsin · Staff Product Designer'; d='Experience, skills and selected work for Jason Hsin, staff product designer building delightful consumer experiences.'; }
+      else if(parts[0]===holonetSlug){ t='HoloNet · Contact Jason Hsin'; d='Send Jason Hsin a message through the HoloNet.'; }
+      else if(parts[0]===arcadeSlug){ t='Arcade · Mundane Workshop'; d='A tiny space-battle arcade game on the Mundane Workshop portfolio.'; }
+      else if(parts[0]==='work' && parts[1]){
+        var pid=null; Object.keys(CASES).forEach(function(id){ var c=CASES[id]; if(!pid && c && (c.slug||slugify(c.title||id))===parts[1]) pid=id; });
+        var ct=pid&&CASES[pid]&&(CASES[pid].title||'');
+        if(ct){ t=ct+' · Jason Hsin · Product Designer'; d=ct+': a case study by Jason Hsin, staff product designer.'; }
+      }
+      var url=(location.hostname==='www.mundanework.shop')?'https://www.mundanework.shop'+(parts.length?'/'+parts.join('/'):'/'):null;   // previews/localhost keep the production canonical already in the head
+      document.title=t;
+      var set=function(sel,attr,v){ var el=q(sel); if(el&&v!=null) el.setAttribute(attr,v); };
+      set('meta[name="description"]','content',d); set('meta[property="og:title"]','content',t); set('meta[property="og:description"]','content',d);
+      set('meta[name="twitter:title"]','content',t); set('meta[name="twitter:description"]','content',d);
+      if(url){ set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
+      var rb=q('meta[name="robots"]'); if(!rb&&robots){ rb=document.createElement('meta'); rb.name='robots'; H.appendChild(rb); } if(rb) rb.setAttribute('content',robots||'index, follow');
+    }
     // every OTHER project's current slug (auto-assigning one to any project that doesn't have one yet, same rule applyData/edit uses) — used to keep a manually-typed slug unique
     function takenProjectSlugs(excludeId){ var out=[];
       Object.keys(CASES).forEach(function(pid){ if(pid===excludeId) return; var c=CASES[pid]; if(!c) return; out.push(c.slug||slugify(c.title||pid)); });
@@ -15827,8 +15868,8 @@ f 2469//2469 2470//2470 2434//2434
         } else if(focusedMoon){ unfocusMoon(); }
       }catch(e){ console.warn('[route]',e); }
     }
-    applyRouteFromLocation();
-    window.addEventListener('popstate',applyRouteFromLocation);
+    applyRouteFromLocation(); syncRouteHead();
+    window.addEventListener('popstate',function(){ applyRouteFromLocation(); syncRouteHead(); });
 
     // Entry gate: hide everything but the starfield + the monogram mount until it's clicked (startDock
     // reveals the rest via setSiteVisible once docked). A deep link / ?edit=1 / reduced-motion already
