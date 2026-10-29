@@ -1,0 +1,7 @@
+# Repo-only files: keep them out of the deployed site (they were publicly served).
+CLAUDE.md
+docs
+tools
+.claude
+.github
+*.sql
