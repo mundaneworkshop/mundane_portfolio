@@ -1687,7 +1687,9 @@
        (IndexedDB) that Edit Mode already reads from — so the deployed site shows the real
        models/photos without anyone having to manually upload them in a browser first.
        Idempotent: skips any key that's already populated (e.g. an author edit made live in
-       Edit Mode), so it never clobbers real changes on repeat visits. Defines window.BRICStore
+       Edit Mode), so it never clobbers real changes on repeat visits. Exception: a manifest
+       entry's "replaces" list names older seeded files it supersedes, and only those get
+       swapped for the new file (see seedOne). Defines window.BRICStore
        early (same shape as the later EDIT MODE block) so both this script and the rest of the
        page can use it; resolves window.__mwSeedReady, which bootHolotable() waits on before
        rendering, so visitors never see an empty/placeholder flash on first load. -->
@@ -1714,7 +1716,12 @@
     }
     function seedOne(entry,asBlob){
       return BRICStore.get(entry.key).then(function(existing){
-        if(existing!=null) return null;   // already populated — never overwrite
+        // already populated — never overwrite, UNLESS the stored record is an older seeded file this
+        // entry supersedes (manifest "replaces": [old filenames]). Seeded records carry the manifest
+        // file's name, so returning visitors get a re-made model once; an author's Edit Mode upload
+        // (any other file name) is still left alone, and the new record's name ends the upgrade.
+        var stale = existing!=null && entry.replaces && existing.name && entry.replaces.indexOf(existing.name)>=0;
+        if(existing!=null && !stale) return null;
         var isSvg = entry.kind==='svg';
         return fetch(entry.path).then(function(r){ if(!r.ok) throw new Error('fetch failed: '+entry.path);
           if(asBlob) return r.blob();
