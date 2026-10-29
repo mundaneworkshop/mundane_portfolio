@@ -1,9 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    { "source": "/about", "destination": "/cv", "permanent": true },
+    { "source": "/about/", "destination": "/cv", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/:slug(cv|arcade|holonet)", "destination": "/index.html" },
     { "source": "/:slug(cv|arcade|holonet)/", "destination": "/index.html" },
+    { "source": "/about/:path+", "destination": "/index.html" },
     { "source": "/work/:path*", "destination": "/index.html" }
   ],
   "headers": [

@@ -663,6 +663,15 @@
   #cvList .cvl-hero{position:relative;margin:0 0 48px 56px;will-change:transform,opacity}
   #cvList .cvl-head{font-family:var(--f-d);font-size:32px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;color:var(--c-primary);margin:0 0 40px;max-width:680px;text-wrap:balance}
   #cvList .cvl-end{margin:48px 0 0 56px}
+  /* About text after the timeline: a plain card in the corner-mark language (full outline, no side stripe); a clone of the #mw-about outline block */
+  #cvList .cvl-about{position:relative;margin:56px 0 0 56px;padding:28px 30px;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--border-dim) 1px,transparent 1px);background-size:16px 16px}
+  #cvList .cvl-about h2{font-family:var(--f-d);font-size:22px;font-weight:700;line-height:1.2;color:var(--c-primary);margin:0 0 14px}
+  #cvList .cvl-about h3{font-family:var(--f-d);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--c-dim);margin:28px 0 10px}
+  #cvList .cvl-about h4{font-family:var(--f-d);font-size:16px;font-weight:600;color:var(--c-primary);margin:18px 0 6px}
+  #cvList .cvl-about p,#cvList .cvl-about li{font-family:var(--f-b);font-size:13px;line-height:1.6;color:var(--c-secondary);margin:0 0 12px}
+  #cvList .cvl-about strong{color:var(--c-primary);font-weight:600}
+  #cvList .cvl-about ol{margin:0 0 12px;padding-left:20px}
+  #cvList .cvl-about a{color:var(--c-primary);text-decoration:underline;text-underline-offset:3px}
   .cvl-ctas{display:flex;flex-wrap:wrap;gap:var(--bric-space-1-5-stud)}   /* Download CV (primary) + Start a chat (secondary) */
   /* immersive: the same one-liner + buttons, centred under the view toggle while the whole route is in view (no stop open).
      Glyph-decodes in line by line (GFX), fades out when a stop opens. Top is set under the toggle by cvHeroPlace. */
@@ -698,6 +707,7 @@
     #cvList .cvl-hero{margin:0 0 36px 32px}
     #cvList .cvl-head{font-size:24px}
     #cvList .cvl-end{margin:36px 0 0 32px}
+    #cvList .cvl-about{margin:36px 0 0 32px;padding:22px 20px}
     #cvList .cvl-track{--cvl-rail-x:8px;--cvl-node-y:35px;padding-left:32px;gap:var(--bric-space-2-stud)}
     #cvList .cvl-item.branch{margin-left:14px}
     #cvList .cvl-item{padding:22px 20px}
@@ -1073,6 +1083,33 @@
         <li><a href="https://www.linkedin.com/in/jason-hsin-00378837/">Jason Hsin on LinkedIn</a></li>
       </ul>
     </nav>
+    <!-- ABOUT: the one shared About text. Real HTML so crawlers and no-JS readers see it without WebGL. /about is a permanent redirect to /cv (vercel.json); the CV list view
+         clones this block after the timeline (cvList builder, .cvl-about), so edit the text HERE only. The desktop minifigure focus view (aboutData() / ocOpenAboutRoute,
+         /about/<outfit-id>) keeps its own per-outfit copy; a future phone About tab can reuse this block with the current outfit still.
+         COPY STATUS: written with Jason (Oct 29 2026 interview) from his answers plus the Josh.ai case study. Final unless he edits it.
+         Keep the CV head description in syncRouteHead() in step with the lede. No build step: this block does not regenerate from the CMS or outfits.json. -->
+    <section id="mw-about" data-outfit="work" aria-labelledby="mw-about-h">
+      <h2 id="mw-about-h">About Jason Hsin</h2>
+      <p><strong>Jason Hsin is a staff product designer building delightful consumer experiences.</strong> Based in Los Angeles, he is currently working independently as Mundane Workshop, creating digital products that solve everyday problems.</p>
+      <p>He has over ten years of experience across social media, entertainment, AR and VR, voice control, IoT, AI and automotive. He studied illustration and entertainment design at Art Center College of Design.</p>
+      <h3>How he designs</h3>
+      <ol>
+        <li>Design should serve a purpose: to entertain, educate, alleviate or empower.</li>
+        <li>Design should delight, whether it is a utility, a lesson or a game.</li>
+        <li>Design should be obsessive. If he isn't engrossed by the problem, he won't work on it.</li>
+      </ol>
+      <h3>Selected work</h3>
+      <h4>Josh.ai: Founding Designer, 2015 to 2022</h4>
+      <p>Jason built the brand and product line from zero to segment leadership. The company reached $10M+ in annual revenue and 30+ full-time employees, and 70% of luxury smart home installations include Josh.ai. He designed for homeowners and for the B2B partners who installed the products: small business owners and technicians. He holds two patents on Josh Micro (US D855,583 and US 10,345,773). <a href="https://case.mundanework.shop/josh-ai">Read the Josh.ai case study</a>.</p>
+      <h4>Meta Horizon Worlds: Product Design Lead, 2.5 years</h4>
+      <p>Jason led design for seasonal quests in Horizon Worlds, working with a cross-functional team across engineering, research, art, QA and management. He shipped a quest system adopted by both first-party and third-party developers, and an Avatar inventory for owned items. He defined the north star for platform monetization and presented to VP-level leadership to steer Metaverse initiatives. He also worked on player experience and the Meta Quest operating system. <a href="https://case.mundanework.shop/meta-horizon">Read the Meta Horizon Worlds case study</a>.</p>
+      <h4>Slate Auto: UX Designer, 6 months</h4>
+      <p>Jason owned the UX and UI of Slatemaker, the online car configurator behind more than 160,000 paid reservations and over $4B in potential order value. He worked with research, art, engineering and a third-party vendor. <a href="https://case.mundanework.shop/slate-auto">Read the Slate Auto case study</a>.</p>
+      <h3>Beyond product</h3>
+      <p>Jason mentors students at Art Center College of Design and has given talks at Meta on LEGO and design systems. He organized TEDxACCD: Systems by Design, a conference on the dissolving borders between disciplines, created by a 23-student studio course. He drove creative direction and onboarded the keynote speakers.</p>
+      <h3>Work with Jason</h3>
+      <p>Jason is looking for full-time and contract roles on ambitious projects in tech, entertainment, media, industry, defense, transportation, consumer and growth markets. <a href="https://calendly.com/jason-mundanework/30min" target="_blank" rel="noopener">Schedule a call</a> or email <a href="mailto:jason@mundanework.shop">jason@mundanework.shop</a>. You can also <a href="https://www.linkedin.com/in/jason-hsin-00378837/">connect on LinkedIn</a> or send a message through the <a href="/holonet">HoloNet</a>.</p>
+    </section>
   </main>
   <noscript><p style="position:fixed;inset:auto 16px 16px;color:#cfe;font:14px/1.4 system-ui">This portfolio is an interactive 3D scene and needs JavaScript. The links above work without it.</p></noscript>
   <div id="scene" role="img" aria-label="Interactive 3D galaxy of Jason Hsin's projects. Drag to rotate, click a planet to travel."></div>
@@ -10145,8 +10182,9 @@ f 2469//2469 2470//2470 2434//2434
       var H=document.head, q=function(sel){ return H.querySelector(sel); };
       if(!_headDefault) _headDefault={ title:document.title, desc:(q('meta[name="description"]')||{}).content||'', robots:(q('meta[name="robots"]')||{}).content||'' };
       var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), t=_headDefault.title, d=_headDefault.desc, robots=_headDefault.robots;
-      if(!routeKnown(parts)){ t='Page not found · Jason Hsin'; robots='noindex'; }
-      else if(parts[0]===cvSlug){ t='CV · Jason Hsin · Staff Product Designer'; d='Experience, skills and selected work for Jason Hsin, staff product designer building delightful consumer experiences.'; }
+      var known=routeKnown(parts); if(parts[0]==='about') parts=[cvSlug];   // the About copy lives on the CV page: /about/<outfit-id> (the focus view's URLs) takes the CV's head and canonicalizes to /cv
+      if(!known){ t='Page not found · Jason Hsin'; robots='noindex'; }
+      else if(parts[0]===cvSlug){ t='CV · Jason Hsin · Staff Product Designer'; d='CV and about Jason Hsin, a staff product designer in Los Angeles: Josh.ai founding designer, Meta Horizon Worlds design lead, Slate Auto. Open to full-time and contract work.'; }
       else if(parts[0]===holonetSlug){ t='HoloNet · Contact Jason Hsin'; d='Send Jason Hsin a message through the HoloNet.'; }
       else if(parts[0]===arcadeSlug){ t='Arcade · Mundane Workshop'; d='A tiny space-battle arcade game on the Mundane Workshop portfolio.'; }
       else if(parts[0]==='work' && parts[1]){
@@ -10162,7 +10200,7 @@ f 2469//2469 2470//2470 2434//2434
       if(url){ set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
       // structured data for the current route (replaces the previous route's block; the static Person/WebSite blocks in the head stay)
       var ld=document.getElementById('mw-route-ld'), pageUrl=url||location.href.split('#')[0].split('?')[0], person={ '@type':'Person', name:'Jason Hsin', url:'https://www.mundanework.shop/' }, graph=null;
-      if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:person };
+      if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:Object.assign({},person,{ jobTitle:'Staff Product Designer', alumniOf:{ '@type':'CollegeOrUniversity', name:'Art Center College of Design' }, sameAs:['https://www.linkedin.com/in/jason-hsin-00378837/','https://www.instagram.com/jas0n_0n_a_bike/'] }) };
       else if(robots!=='noindex' && parts[0]==='work' && parts[1] && t!==_headDefault.title) graph={ '@context':'https://schema.org', '@graph':[
         { '@type':'CreativeWork', name:t.split(' · ')[0], url:pageUrl, author:person },
         { '@type':'BreadcrumbList', itemListElement:[ { '@type':'ListItem', position:1, name:'Mundane Workshop', item:'https://www.mundanework.shop/' }, { '@type':'ListItem', position:2, name:t.split(' · ')[0], item:pageUrl } ] } ] };
@@ -11839,6 +11877,9 @@ f 2469//2469 2470//2470 2434//2434
       });
       wrap.appendChild(track);
       var end=cvEl('footer','cvl-end'); end.appendChild(cvCtaRow()); wrap.appendChild(end);
+      var abSrc=document.getElementById('mw-about');   // the About text is authored once, in the #mw-seo outline; show a copy after the CTA row
+      if(abSrc){ var ab=abSrc.cloneNode(true); ab.className='cvl-about'; ['id','aria-labelledby','data-outfit'].forEach(function(a){ ab.removeAttribute(a); }); [].forEach.call(ab.querySelectorAll('[id]'),function(n){ n.removeAttribute('id'); });
+        ab.setAttribute('aria-label','About Jason Hsin'); ['tl','tr','bl','br'].forEach(function(c){ ab.appendChild(cvEl('div','mb-corner '+c)); }); wrap.appendChild(ab); }
       host.appendChild(wrap);
       cvDrawSky(host); cvListFrame(); cvTlStart();
     }
@@ -15663,6 +15704,7 @@ f 2469//2469 2470//2470 2434//2434
       if(!parts.length || parts[0]==='index.html') return true;
       var s0=parts[0];
       if(s0===cvSlug || s0===arcadeSlug || s0===holonetSlug) return true;
+      if(s0==='about') return parts.length<=2;   // /about/<outfit-id> is the focus view; a bare /about is redirected to /cv by vercel.json and in-app (applyRouteFromLocation)
       if(s0!=='work') return false;
       if(!parts[1]) return true;
       return Object.keys(CASES).some(function(id){ var c=CASES[id]; return c && (c.slug||slugify(c.title||id))===parts[1]; });
@@ -15682,7 +15724,8 @@ f 2469//2469 2470//2470 2434//2434
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
         if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData); return; }
-        if(seg0==='about'){ if(!focused||focused!==aboutGrp) ocOpenAboutRoute(parts[1]); return; }
+        if(seg0==='about'){ if(!parts[1]){ try{ history.replaceState({},'','/'+cvSlug); }catch(e){} var gab=planetById('cv'); if(gab) activate(gab.userData); return; }   /* bare /about lands on the CV, where the About text lives */
+          if(!focused||focused!==aboutGrp) ocOpenAboutRoute(parts[1]); return; }
         if(seg0===holonetSlug){ var gho=planetById('contact'); if(gho) activate(gho.userData); return; }
         if(seg0!=='work' || !parts[1]) return;   // only /work/<slug>[/<moon-slug>] resolves beyond this point
         var projSeg=parts[1], moonSeg=parts[2];

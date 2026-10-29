@@ -23,6 +23,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 
 **Full file list:**
 
+- [about-page.md](about-page.md) — Oct 29 2026: `/about` shared crawlable page: rewrites, routeKnown, head/JSON-LD, static #mw-about copy, open copy questions
 - [archive-case-study-deck.md](archive-case-study-deck.md) — Oct 2026: mothballed brick cascade / chapter ring / Figma deck, preserved at git tag `archive/case-study-deck`
 - [box-replacement-focus.md](box-replacement-focus.md) — "Replace box" upload, swap the kit box for a custom asset per project
 - [bric-build-progress.md](bric-build-progress.md) — Figma DS component build state, button state model, token API gotchas
