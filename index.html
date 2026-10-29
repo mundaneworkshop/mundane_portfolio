@@ -10408,7 +10408,10 @@ f 2469//2469 2470//2470 2434//2434
       },{passive:true});
       window.addEventListener('keydown',function(e){
         if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
-        var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
+        var t=e.target, typing=t&&t.closest&&t.closest('input,textarea,select,[contenteditable=true],[contenteditable=""]');
+        // a focused button / link / role=button (the CTA, the breadcrumb, anything just clicked) keeps focus in the About view and must not stop the outfit arrows: arrows do nothing on them natively
+        if(typeof aboutGrp!=='undefined'&&focused===aboutGrp&&!typing&&!window.__mwArcade&&!(typeof csScene!=='undefined'&&csScene.active)&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } outfitLastSwitch=performance.now(); ocNext(e.key==='ArrowRight'?1:-1); return; }
+        if(t&&t.closest&&t.closest('button,a,summary,[role=button]')||typing) return;
         if(typeof csScene!=='undefined'&&csScene.active) return;   // case-study ring owns the arrows
         if(window.__mwArcade) return;                                // arcade: arrows/WASD fly the hero ship
         var k=e.key;
