@@ -11752,7 +11752,7 @@ f 2469//2469 2470//2470 2434//2434
     function cvCtaRow(){ var row=cvEl('div','cvl-ctas'), dl=cvCtaBtn('secondary'), c=cvChat();
       if(!c.hidden){ var chat=cvEl('a','bric-btn bric-btn--primary',c.label); chat.href=c.url||CV_CHAT_URL; chat.target='_blank'; chat.rel='noopener'; chat.setAttribute('data-cv-chat',''); row.appendChild(chat); }
       if(dl) row.appendChild(dl);
-      var m=cvMail(); if(!m.hidden){ var t=cvEl('div','cvl-ctas-t'), a=cvEl('a','bric-btn',m.label); a.href=m.url||'#'; a.setAttribute('data-cv-mail',''); t.appendChild(a); row.appendChild(t); }
+      var m=cvMail(); if(!m.hidden){ var t=cvEl('div','cvl-ctas-t'), a=cvEl('a','bric-btn',m.label); a.href=m.url||'#'; a.setAttribute('data-cv-mail',''); a.addEventListener('click',function(e){ if(/^mailto:/i.test(m.url||'')&&window.mwOpen){ e.preventDefault(); window.mwOpen(m.url); } }); t.appendChild(a); row.appendChild(t); }
       return row; }
     // Edit Mode version: each CTA is a label you type into, plus its URL field and hide/show toggle (same affordances as the manual's CTA).
     function cvEditCta(kind,cfg){
@@ -12550,7 +12550,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.CS) CS.reset();   // MERGE Stage 2: reset box+booklet
       goHome();
     }
-    var toastT; function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200); }
+    var toastT; window.mwToast=toast; function toast(msg){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200); }
 
     document.getElementById('homeBtn').addEventListener('click',function(){ if(editMode) return; goHomeV(); });   // in Edit Mode the root is click-to-edit, not navigate
     document.getElementById('cpBack').addEventListener('click',goHome);
@@ -15247,8 +15247,8 @@ f 2469//2469 2470//2470 2434//2434
       location.href=url;
       setTimeout(function(){ window.removeEventListener('blur',gone); document.removeEventListener('visibilitychange',gone);
         if(left||!addr) return;
-        var done=function(){ if(typeof toast==='function') toast('Email address copied: '+addr); };
-        try{ navigator.clipboard.writeText(addr).then(done,function(){ if(typeof toast==='function') toast(addr); }); }catch(e){ if(typeof toast==='function') toast(addr); } },900); }
+        var done=function(){ if(window.mwToast) window.mwToast('Email address copied: '+addr); };
+        try{ navigator.clipboard.writeText(addr).then(done,function(){ if(window.mwToast) window.mwToast(addr); }); }catch(e){ if(window.mwToast) window.mwToast(addr); } },900); }
     function ocOpenCtaUrl(url,target,o){
       try{ var u=new URL(url,location.href); if((u.hostname===location.hostname||/(^|\.)mundanework\.shop$/i.test(u.hostname))&&u.pathname.replace(/\/+$/,'')==='/arcade'){ ocGoArcade(); return; } }catch(e){}
       if(ocGoCase(o)) return;
