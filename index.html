@@ -23,10 +23,14 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon/favicon.svg" />
 <link rel="apple-touch-icon" href="assets/favicon/icon-180.png" />
 <meta name="theme-color" content="#070c0c" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
 <link rel="canonical" href="https://www.mundanework.shop/" />
 <meta property="og:title" content="Mundane Workshop · Jason Hsin · Product Designer" />
 <meta property="og:description" content="Jason Hsin: staff product designer building delightful consumer experiences." />
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="Mundane Workshop" />
+<meta property="og:locale" content="en_US" />
 <meta property="og:url" content="https://www.mundanework.shop/" />
 <meta property="og:site_name" content="Mundane Workshop" />
 <meta property="og:image" content="https://www.mundanework.shop/assets/og/mundane-workshop-og.png" />
@@ -35,6 +39,8 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="A glowing teal holographic galaxy: colorful project icons float around a central beam ringed by circular marquee text, against a starfield." />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Mundane Workshop · Jason Hsin · Product Designer" />
+<meta name="twitter:description" content="Jason Hsin: staff product designer building delightful consumer experiences." />
 <meta name="twitter:image" content="https://www.mundanework.shop/assets/og/mundane-workshop-og.png" />
 <meta name="twitter:image:alt" content="A glowing teal holographic galaxy: colorful project icons float around a central beam ringed by circular marquee text, against a starfield." />
 <script type="application/ld+json">
@@ -51,11 +57,19 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Mundane Workshop",
+  "url": "https://www.mundanework.shop/",
+  "author": { "@type": "Person", "name": "Jason Hsin" }
+}
+</script>
 
 <!-- HIGH PRIORITY TODO (manual — needs Jason's input/visuals, do not fill with placeholder copy):
      (share image done: assets/og/mundane-workshop-og.png, galaxy screenshot, no UI, 1200x630)
-     - robots meta (index, follow): explicit opt-in once ready to be publicly indexed.
-     - twitter:title / twitter:description: explicit X/Twitter card copy (currently falls back to og:*). -->
+     (robots meta, robots.txt, sitemap.xml, manifest, twitter:title/description, WebSite JSON-LD: done, see PR for audit item 2) -->
 <!-- /SITE METADATA -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
