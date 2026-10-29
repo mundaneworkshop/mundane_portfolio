@@ -11364,7 +11364,7 @@ f 2469//2469 2470//2470 2434//2434
       id:'cvroute', bodyClass:'mw-cvroute', layerId:'cvRouteLayer', ctlId:'cvRouteCtl', orbit:cvOrbit,
       hits:function(){ return cvNodes.map(function(n){ return n.hit||n.mesh; }); },
       hitId:function(o){ for(var i=0;i<cvNodes.length;i++){ if(cvNodes[i].hit===o||cvNodes[i].mesh===o) return cvNodes[i].id; } return null; },
-      onPick:function(id){ selectCV(id); },
+      onPick:function(id){ cvUi('confirm'); selectCV(id); },   // 3D node click: same confirm as the galaxy planets and the arrow keys
       onBack:function(){ cvOverview(); },   // empty space: back to the overview AND re-centre the whole route in the free stage (also from the overview itself)
       onExit:function(){ cvHoverId=null; document.body.classList.remove('cv-list'); var _h=document.getElementById('cvHero'); if(_h) _h.classList.remove('on'); window.MWStage=null; var ms=document.getElementById('manual-scene'); if(ms){ ms.removeAttribute('data-ml'); ms.style.removeProperty('--ml-gap'); } }   // hand the stage back (project focus publishes its own)
     });
@@ -11507,7 +11507,7 @@ f 2469//2469 2470//2470 2434//2434
         (function(node){ lbl.addEventListener('click',function(e){
           var b=e.target.closest&&e.target.closest('[data-act]');
           if(b){ e.stopPropagation(); var a=b.getAttribute('data-act'); if(a==='linear')cvAddLinear(node.id); else if(a==='branch')cvAddBranch(node.id); else if(a==='convert')cvToggleBranch(node.id); else if(a==='disable')cvToggleDisabled(node.id); else if(a==='del')cvDeleteNode(node.id); return; }
-          selectCV(node.id); });
+          cvUi('confirm'); selectCV(node.id); });
           lbl.addEventListener('pointerenter',function(e){ if(!e.pointerType||e.pointerType==='mouse') cvSetHover(node.id); }); lbl.addEventListener('pointerleave',function(){ cvSetHover(null); }); })(n);
         layer.appendChild(lbl);
         var hit=new THREE.Mesh(new THREE.SphereGeometry(0.55,10,10),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,fog:false}));   // generous invisible click target (sphere is tiny at overview zoom)
@@ -11946,6 +11946,7 @@ f 2469//2469 2470//2470 2434//2434
       selectCV(st[j].id); return true;
     }
     function cvSetHover(id){ if(id===cvHoverId) return; cvHoverId=id;
+      if(id&&!editMode) cvUi('hover');   // once per node entry (same id returns above); the site's hover tick
       cvNodes.forEach(function(n){ var on=(n.id===id); n.lbl.classList.toggle('hov',on); n.mesh.scale.setScalar(on?1.35:1); }); }   // (a static scale: no tween, so nothing to gate on reduced motion)
     (function wireCVView(){
       var seg=document.getElementById('cvView'), opts=seg?[].slice.call(seg.querySelectorAll('[data-cv-view]')):[];
