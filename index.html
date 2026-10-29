@@ -10309,7 +10309,8 @@ f 2469//2469 2470//2470 2434//2434
 
     // ---------- projection ----------
     function projLocal(v3){ var v=v3.clone(); galaxy.localToWorld(v); v.project(camera); return {x:(v.x*0.5+0.5)*W,y:(-v.y*0.5+0.5)*H,vis:v.z<1}; }
-    function projWorld(v3){ var v=v3.clone().project(camera); return {x:(v.x*0.5+0.5)*W,y:(-v.y*0.5+0.5)*H,vis:v.z<1}; }
+    var _pjV=new THREE.Vector3();   // scratch for projWorld (per-frame callers: no clone per call)
+    function projWorld(v3){ var v=_pjV.copy(v3).project(camera); return {x:(v.x*0.5+0.5)*W,y:(-v.y*0.5+0.5)*H,vis:v.z<1}; }
 
     // ---------- interaction ----------
     // HIT PROXY: each planet gets an invisible, axis-aligned bounding box sized to
@@ -15614,6 +15615,7 @@ f 2469//2469 2470//2470 2434//2434
     applyHiddenVisibility();                          // hide any soft-deleted planets in prod view
 
     var clock=new THREE.Clock(); var _animateErrLogged=false;
+    var _aMw=new THREE.Vector3(), _aFwp=new THREE.Vector3(), _aPw=new THREE.Vector3(), _aWp=new THREE.Vector3(), _aBelow=new THREE.Vector3(), _aLw=new THREE.Vector3();   // per-frame scratch vectors (animate allocated six+ per frame)
     function animate(){ requestAnimationFrame(animate); if(csPaused||(cvListOn&&cvScene.active)) return;   // MERGE: freeze during case-study takeover
       // Everything below (camera/label/FX updates) is wrapped so a single bad frame — e.g. a projection
       // returning non-finite while the camera is mid-transition, the exact bug that broke a cold /cv load —
@@ -15663,7 +15665,7 @@ f 2469//2469 2470//2470 2434//2434
           if(_pn&&(_pn.x||_pn.y)){ var _rc=Math.cos(arcRoll); camLook.x+=_pn.x*_rc; camLook.addScaledVector(camUpV,_pn.y*_rc); } }   // _rc: screen-right / up flip with the auto-right roll
         if(_ca&&_ca.fk>0.001&&_ca.focus){ _arcFoc.copy(_ca.focus).sub(_bl); camPos.addScaledVector(_arcFoc,_ca.fk); camLook.lerp(_ca.focus,_ca.fk); } }   // hero death: the camera pivots onto the dying ship and dives in
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
-        if(focusedMoon){ var _mw=new THREE.Vector3(); focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
+        if(focusedMoon){ var _mw=_aMw; focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
         // self-heal: a stage measured for a different window size (missed/ignored resize event) is re-laid-out now
         if(window.MWStage && (window.MWStage.W!==window.innerWidth || window.MWStage.H!==window.innerHeight) && window.CS && CS.relayout) CS.relayout();
@@ -15721,8 +15723,8 @@ f 2469//2469 2470//2470 2434//2434
       camera.position.lerp(camPos,_ck); lookNow.lerp(camLook,_ck); camera.lookAt(lookNow);
       stageLens();
 
-      if(focused){ var fwp=new THREE.Vector3(); focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
-        planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } if(!planetShown(p)){ p.visible=false; return; } var pw=new THREE.Vector3(); p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
+      if(focused){ var fwp=_aFwp; focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
+        planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } if(!planetShown(p)){ p.visible=false; return; } var pw=_aPw; p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
       else if(mwPhase==='docked'){ for(var pv=0;pv<planets.length;pv++) planets[pv].visible=(bootPlanetGate?bootPlanetGate[pv]:true) && planetShown(planets[pv]) && !arcadeActive; }   // entry gate/docking: hidden (setSiteVisible/updateBootReveal own them until the site boots)
 
       // LOGO bottom clip (stud): position a world-space plane at a fraction up the logo's bounds.
@@ -15743,7 +15745,7 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof csUpdateLabels==='function') csUpdateLabels();   // ...and the case-study chapter ring's
       if(typeof cvDrawPulse==='function') cvDrawPulse(t);        // draw active-node pulse on the low-res pixelated canvas
       if(typeof cvUpdateNodes==='function') cvUpdateNodes(t);    // node glimmer (HSL oscillation per node)
-      planets.forEach(function(p,pi){ var wp=new THREE.Vector3(); p.getWorldPosition(wp); var below=wp.clone(); below.y-=0.62*galaxy.scale.x; var s=projWorld(below);
+      planets.forEach(function(p,pi){ var wp=_aWp; p.getWorldPosition(wp); var below=_aBelow.copy(wp); below.y-=0.62*galaxy.scale.x; var s=projWorld(below);
         p.userData.label.style.left=s.x+'px'; p.userData.label.style.top=s.y+'px';
         // DEPTH OCCLUSION: ray from camera to the label anchor; if a closer object blocks it, hide the label.
         var dir=below.clone().sub(camera.position), dist=dir.length(); dir.normalize();
@@ -15758,7 +15760,7 @@ f 2469//2469 2470//2470 2434//2434
         var zOcc=false;
         if(s.vis && !focused && _logoOccMeshes.length){ var zw=z.anchor.clone(); galaxy.localToWorld(zw); var zd=zw.clone().sub(camera.position),zdist=zd.length(); zd.normalize(); occRay.set(camera.position,zd); var zh=occRay.intersectObjects(_logoOccMeshes,false); if(zh.length&&zh[0].distance<zdist-0.1) zOcc=true; }
         z.label.style.opacity=(focused?0:(s.vis&&!zOcc?bootGridVal:0)); });   // cascade with the grid, not ahead of it
-      var lw=new THREE.Vector3(); logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
+      var lw=_aLw; logo.getWorldPosition(lw); var ls=projWorld(lw); logoLabel.style.left=ls.x+'px'; logoLabel.style.top=ls.y+'px'; logoLabel.style.opacity=(!focused&&ls.vis)?1:0;
 
       if(window.MWBattle && MWBattle.isActive()) MWBattle.update(t);   // arcade space battle (assets/battle/battle.js) — also runs its hyperspace exit
       mwUpdate(1-focusAmount);   // eases out as a project focuses, back in as it exits (was a hard pop on exit)
