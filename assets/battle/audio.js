@@ -75,7 +75,12 @@ var SITE_EVENTS={
   bootHead:[],      // gatekeeper (head / logo) appears in the beam
   bootGrid:[],      // grid plate flickers on
   planetLoad:['holo-planet-1','holo-planet-2','holo-planet-3','holo-planet-4','holo-planet-5','holo-planet-6'],   // each planet appears: six short pings (0.06-0.25 s, 10 ms attack) so eight at 30 ms spacing stay distinct
-  planetsDone:[]    // the last planet is in: the galaxy is live
+  planetsDone:[],   // the last planet is in: the galaxy is live
+  // HoloNet console (Oct 28 2026, cut from the Death Star SFX reel): index.html ctAssess / sendTransmission / holoShoot
+  holoAlignStep:['holo-align-step'],   // a field meets its minimum and the dish steps toward alignment (elevator-01, 1.3 s)
+  holoAligned:['holo-aligned'],       // both fields meet their minimums: the dish locks (elevator-02, 2.8 s)
+  holoUplink:['holo-uplink'],         // TRANSMIT: the uplink bars run for this clip's length (tractor-beam-01-trim, 6.0 s)
+  holoShot:['holo-shot']              // the message shoots from the HoloNet planet to its star (weapons-firing-10, 6.0 s)
 };
 /* Game over: a sting that plays once, as the game over modal pops up after the hero's death (battle.js finishHeroDeath → MWAudio.gameOver). One of these at random (shuffle bag).
    Filled from the Site Sound Review's "Game over" card (Oct 22 2026: four Squadrons soundtrack bites, trimmed and faded). */
@@ -405,6 +410,8 @@ var MWAudio={
     load(k).then(function(b){ if(b) oneShot(k,{gain:LEVEL.site*num(SITE_GAIN[name],1)*num(o.gain,1),rate:o.rate,delay:Math.max(0,num(o.delay,0)-(now()-t0))}); });
     return true;
   },
+  /* decode a site event's clips ahead of time, so a cue that must land on a keystroke has no first-use lag */
+  sitePreload:function(names){ if(!ensure()) return; names.forEach(function(n){ (SITE_EVENTS[n]||[]).forEach(function(k){ load(k); }); }); },
   uiKinds:function(){ return Object.keys(UI); },
   /* call from any user gesture; safe to call repeatedly */
   unlock:function(){ if(!ensure()) return; started=true; preload(['ambSelA','ambSelB','ambPlay','hsEnter','hsLoop','hsExit','capArrive','kitOpen']); },

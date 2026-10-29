@@ -1,4 +1,4 @@
-/*! BRIC targeting reticle cursor, v1.4
+/*! BRIC targeting reticle cursor, v1.5
  *
  * ONE source file, used by both the Vercel site (<script src="assets/bric-reticle.js">) and Framer
  * (framer-code/sync-reticle.js in the bric-ds folder pastes this file verbatim into the ReticleCursor.tsx code component).
@@ -29,6 +29,10 @@
  *   2. Virtual: things that are not DOM (a WebGL planet). Pass `targets: function (x, y, el) {}` returning
  *      { key, rect: function () { return { left, top, right, bottom }; }, label?, n?, N?, labelAt?, arm?, weight?, outset?, glow? } or null. `rect` is read every
  *      frame, so the brackets follow a moving object. api.setTargets(fn) swaps the resolver after start.
+ *
+ * The frame is the hit area (v1.5): the native cursor is hidden, so the visitor aims with the brackets. While locked onto a DOM
+ * target the reticle stays locked as long as the pointer is inside the frame (the element plus its outset), and a click there
+ * that lands on nothing clickable of its own is passed to the target (target.click()). Virtual targets keep their own hit tests.
  *
  * The page keeps its own click handling (open the lightbox, etc.). While the reticle is up the native cursor
  * is hidden and <html data-bric-ret="hot"> is set; <html data-bric-reticle> is set for as long as the module runs,
@@ -250,19 +254,38 @@ function bricReticle(options) {
     place(around(lx, ly));
   }
 
+  // is the pointer inside the locked DOM target's frame (the element + its outset)? That frame is what the visitor aims with.
+  function inFrame(c, x, y) {
+    if (!c || !c.el || !c.el.isConnected) return false;
+    var b = frameOf(c);
+    return !!b && x >= b.l && x <= b.r && y >= b.t && y <= b.b;
+  }
   function update(target) {
+    if (off) return;
     var d = describe(target);
+    if (!d && cur && inFrame(cur, lx, ly)) return; // in the outset band around the target: still locked
     if (d) { if (!cur || d.key !== cur.key) enter(d); }
     else if (cur) leave();
     else if (o.scope === 'page') follow(target);
   }
 
   function onMove(e) {
+    if (off) return;
     if (e.pointerType && e.pointerType !== 'mouse') return;
     lx = e.clientX; ly = e.clientY;
     update(e.target);
     // a virtual target's own hover state (a WebGL raycast) is usually updated by the page's listener after this one
     if (o.targets && !syncRaf) syncRaf = window.requestAnimationFrame(function () { syncRaf = 0; update(document.elementFromPoint(lx, ly)); });
+  }
+  // a click inside the frame but outside the element (or in a gap inside it that owns no click) goes to the target, unless
+  // something clickable of its own is under the pointer
+  function onClick(e) {
+    if (off || !cur || !cur.el || e.defaultPrevented || e.button > 0 || cur.el.contains(e.target)) return;
+    if (!inFrame(cur, e.clientX, e.clientY)) return;
+    var t = e.target && e.target.closest ? e.target.closest(o.selector + ',' + o.ignore) : null;
+    if (t) return;
+    e.preventDefault(); e.stopPropagation();
+    cur.el.click();
   }
   function onOut(e) { if (!e.relatedTarget) { if (cur || root.classList.contains('on')) { leave(); hide(); } } }
   function onScroll() {
@@ -276,10 +299,12 @@ function bricReticle(options) {
       update(document.elementFromPoint(lx, ly));
     }, 120);
   }
+  var off = false; // setEnabled(false): the page asked for the native cursor (Edit Mode: aim at text fields and small tap targets)
   function drop() { if (root.classList.contains('on')) { leave(); hide(); } }
 
   document.addEventListener('pointermove', onMove, { passive: true });
   document.addEventListener('pointerout', onOut, { passive: true });
+  document.addEventListener('click', onClick, true);
   window.addEventListener('scroll', onScroll, { passive: true, capture: true });
   window.addEventListener('resize', onScroll, { passive: true });
   window.addEventListener('blur', drop);
@@ -289,11 +314,14 @@ function bricReticle(options) {
   var api = {
     refresh: function () { if (cur) { cur.g = geoOf(cur); applyGeo(cur.g); var b = frameOf(cur); if (b) jump(b); } },
     setTargets: function (fn) { o.targets = fn; },
+    // off: drop the brackets and give the native cursor back until it is switched on again
+    setEnabled: function (on) { off = !on; if (off) drop(); },
     // re-resolve the target without a pointer event (keyboard navigation moved the virtual target)
     retarget: function () { update(document.elementFromPoint(lx, ly)); },
     destroy: function () {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerout', onOut);
+      document.removeEventListener('click', onClick, true);
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onScroll);
       window.removeEventListener('blur', drop);

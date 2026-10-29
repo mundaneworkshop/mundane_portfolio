@@ -1,0 +1,109 @@
+<!doctype html><meta charset=utf-8><title>MW favicon directions</title>
+<style>
+body{margin:0;background:#16181b;color:#d8dde0;font:13px/1.4 system-ui,sans-serif;padding:20px}
+h1{font-size:15px;margin:0 0 4px}
+.sw{margin:8px 0 18px}.sw button{background:#262a2e;color:#d8dde0;border:1px solid #3a4046;padding:4px 10px;margin-right:6px;border-radius:4px;cursor:pointer}
+.sw button.on{border-color:#3fb5ab;color:#3fb5ab}
+.d{display:grid;grid-template-columns:130px repeat(2,auto) repeat(2,auto) auto auto;gap:14px;align-items:center;padding:12px 0;border-top:1px solid #2a2e33}
+.d .n b{display:block;font-size:14px}.d .n span{color:#8b949b;font-size:11px}
+.t{padding:10px;display:flex;align-items:center;justify-content:center;border-radius:4px}
+.L{background:#f1f1f1}.D{background:#2a2c30}.K{background:#070c0c}
+canvas.m{image-rendering:pixelated}
+</style>
+<h1>MW favicon directions — drawn at 16×16 grid</h1>
+<div class=sw id=sw></div><div id=out></div>
+<script>
+const mix=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const A=p(a),B=p(b);return '#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')};
+const BG='#070c0c';
+const PALS={teal:'#3fb5ab',blue:'#6a7ff0'};
+let pal='teal';
+const mk=(base)=>({top:mix(base,'#ffffff',.5),left:base,right:mix(base,BG,.55),line:BG});
+
+// --- tiny iso renderer ---------------------------------------------------
+function scene(boxes,flat,P,o={}){
+  const polys=[];const pts=[];
+  const u=1,I=(x,y,z)=>[(x-y)*u,(x+y)*u/2-z*(o.zs||1)*u];
+  const add=(arr,fill,extra='')=>{polys.push({arr,fill,extra});pts.push(...arr)};
+  boxes.sort((a,b)=>(a.x0+a.y0)-(b.x0+b.y0)||a.z0-b.z0);
+  for(const b of boxes){
+    const {x0,y0,z0,x1,y1,z1}=b;const T=b.P||P;
+    add([I(x0,y0,z1),I(x1,y0,z1),I(x1,y1,z1),I(x0,y1,z1)].map(q=>q),T.top);
+    add([I(x1,y0,z0),I(x1,y1,z0),I(x1,y1,z1),I(x1,y0,z1)],T.right);
+    add([I(x0,y1,z0),I(x1,y1,z0),I(x1,y1,z1),I(x0,y1,z1)],T.left);
+  }
+  for(const f of flat||[]){add([I(f.x0,f.y0,f.z),I(f.x1,f.y0,f.z),I(f.x1,f.y1,f.z),I(f.x0,f.y1,f.z)],f.fill)}
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+  const w=maxx-minx,h=maxy-miny,fit=o.fit||15,s=fit/Math.max(w,h);
+  const ox=(16-w*s)/2-minx*s,oy=(16-h*s)/2-miny*s;
+  const S=q=>`${(q[0]*s+ox).toFixed(2)},${(q[1]*s+oy).toFixed(2)}`;
+  return polys.map(p=>`<polygon points="${p.arr.map(S).join(' ')}" fill="${p.fill}" stroke="${p.fill}" stroke-width=".3" stroke-linejoin="round"/>`).join('');
+}
+function maze(n){ // returns cell list [x,y]
+  const c=[];
+  if(n==3){for(const x of [0,2,4])for(let y=0;y<5;y++)c.push([x,y]);c.push([1,0],[3,4]);}
+  else{const w=[[0,0,8],[2,1,8],[4,0,8],[6,0,7],[8,0,8]];for(const[x,a,b]of w)for(let y=a;y<=b;y++)c.push([x,y]);for(let x=1;x<=3;x++)c.push([x,0]);for(let x=5;x<=7;x++)c.push([x,8]);}
+  return c;
+}
+const PL=()=>{const P=mk(PALS[pal]);return [P.top,P.left,P.right,P.line]};
+const wrap=inner=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">${inner}</svg>`;
+
+// --- directions ----------------------------------------------------------
+const DIRS=[
+ {id:'A',name:'Snake block',note:'3-wall version of the mark (mark.json keepWalls 1·3·5) extruded in iso. Maze path + 3-tone solid.',
+  svg:()=>{const P=mk(PALS[pal]);return wrap(scene(maze(3).map(([x,y])=>({x0:x,y0:y,z0:0,x1:x+1,y1:y+1,z1:3,P})),[],P,{zs:1}))}},
+ {id:'B',name:'Fin comb (pixel)',note:'5 fins, 2px wide, stepping down the iso slope. Top cap joins fins 1–3 (fin 2 stops short), bottom cap joins 3–5 (fin 4 floats above it).',
+  svg:()=>{const P=mk(PALS[pal]);const px=[];const R=(x,y,f)=>px.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`);
+    const Y=i=>i; // slope: each fin steps down 1px
+    for(let i=0;i<5;i++){const x=1+3*i;const top=2+Y(i)+(i==1?3:0),bot=11+Y(i)-(i==3?3:0);
+      for(let y=top;y<=bot;y++){R(x,y,P.left);R(x+1,y,P.right)}}
+    // top cap: 2-row bar over fins 0-2, following the slope
+    for(let x=1;x<=8;x++){const y=2+Math.floor((x-1)/3);R(x,y,P.top);R(x,y+1,P.left)}
+    // bottom cap: 2-row bar under fins 2-4
+    for(let x=7;x<=14;x++){const y=11+Math.floor((x-1)/3);R(x,y,P.left);R(x,y+1,P.right)}
+    return wrap(`<g shape-rendering="crispEdges">${px.join('')}</g>`)}},
+ {id:'C',name:'Slit cube',note:'Solid 16px iso cube (2:1 pixel iso); fins carved as 1px vertical slits with top/bottom offsets so they stagger like the M/W.',
+  svg:()=>{const P=mk(PALS[pal]);const px=[];const R=(x,y,f)=>px.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${f}"/>`);
+    const tw=[4,8,12,16,16,12,8,4];tw.forEach((w,r)=>{for(let x=8-w/2;x<8+w/2;x++)R(x,r,P.top)});
+    const sl={2:[1,7],5:[3,7],10:[3,7],13:[1,7]};
+    for(let x=0;x<16;x++){const xp=x<8?x:15-x,s=5+Math.floor(xp/2),f=x<8?P.left:P.right;
+      for(let k=0;k<8;k++){let c=f;const q=sl[x];if(q&&k>=q[0]&&k<=q[1])c=P.line;R(x,s+k,c)}}
+    return wrap(`<g shape-rendering="crispEdges">${px.join('')}</g>`)}},
+ {id:'D1',name:'Maze-top cube (3-wall)',note:'Plain iso cube; the snake maze is the groove on the top face. Fins implied by the path.',
+  svg:()=>{const P=mk(PALS[pal]);const N=5;const flat=maze(3).map(([x,y])=>({x0:x,y0:y,x1:x+1,y1:y+1,z:N*.5,fill:P.line}));
+    return wrap(scene([{x0:0,y0:0,z0:0,x1:N,y1:N,z1:N*.5,P}],flat,P,{}))}},
+ {id:'F',pl:()=>[BG,...PL().slice(0,3)],name:'Tile + snake block',note:'Dark rounded tile (theme-color #070c0c) holds the mark → guaranteed contrast on any tab, cost is a flat container.',
+  svg:()=>{const P=mk(PALS[pal]);return wrap(`<rect width="16" height="16" rx="3.5" fill="${BG}"/><g transform="translate(2 2) scale(.75)">${scene(maze(3).map(([x,y])=>({x0:x,y0:y,z0:0,x1:x+1,y1:y+1,z1:1.5,P})),[],P,{zs:1})}</g>`)}},
+];
+
+// --- sheet ---------------------------------------------------------------
+const out=document.getElementById('out');
+function hx(h){return [1,3,5].map(i=>parseInt(h.slice(i,i+2),16))}
+function rast(svg,n,cv,pl){return new Promise(r=>{const i=new Image();i.onload=()=>{
+  cv.width=cv.height=n;const x=cv.getContext('2d');x.clearRect(0,0,n,n);
+  const S=64,t=document.createElement('canvas');t.width=t.height=S;const tx=t.getContext('2d');tx.drawImage(i,0,0,S,S);
+  const d=tx.getImageData(0,0,S,S).data;const P=(pl||[]).map(hx);const out=x.createImageData(16,16);
+  for(let by=0;by<16;by++)for(let bx=0;bx<16;bx++){const cnt={};let op=0;
+    for(let y=0;y<4;y++)for(let xx=0;xx<4;xx++){const o=((by*4+y)*S+bx*4+xx)*4;if(d[o+3]<128)continue;op++;let bi=0,bd=1e9;P.forEach((c,k)=>{const e=(c[0]-d[o])**2+(c[1]-d[o+1])**2+(c[2]-d[o+2])**2;if(e<bd){bd=e;bi=k}});cnt[bi]=(cnt[bi]||0)+1}
+    if(op<8)continue;const k=+Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0];const o=(by*16+bx)*4;out.data.set([...P[k],255],o)}
+  const c16=document.createElement('canvas');c16.width=c16.height=16;c16.getContext('2d').putImageData(out,0,0);
+  x.imageSmoothingEnabled=false;x.drawImage(c16,0,0,n,n);r()};i.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)})}
+async function render(){
+  out.innerHTML='';
+  for(const d of DIRS){
+    const row=document.createElement('div');row.className='d';
+    row.innerHTML=`<div class=n><b>${d.id} · ${d.name}</b><span>${d.note}</span></div>`;
+    const cells=[['L',16,1],['D',16,1],['L',32,1],['D',32,1],['L',16,10],['D',16,10]];
+    for(const [bg,n,z] of cells){
+      const t=document.createElement('div');t.className='t '+bg;const cv=document.createElement('canvas');
+      if(z>1){cv.className='m';cv.style.width=n*z+'px';cv.style.height=n*z+'px'}
+      t.appendChild(cv);row.appendChild(t);await rast(d.svg(bg),n,cv,(d.pl||PL)(bg));
+    }
+    out.appendChild(row);
+  }
+}
+const sw=document.getElementById('sw');
+for(const k of Object.keys(PALS)){const b=document.createElement('button');b.textContent=k;b.onclick=()=>{pal=k;[...sw.children].forEach(c=>c.classList.toggle('on',c==b));render()};if(k==pal)b.className='on';sw.appendChild(b)}
+render();
+window.DIRS=DIRS;
+</script>

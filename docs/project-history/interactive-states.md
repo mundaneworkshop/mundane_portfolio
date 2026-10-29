@@ -39,6 +39,16 @@ Disabled is unchanged. Active (fill + inset keyline) keeps its off-white look at
 
 `.mw-sound-switch` (galaxy view = Small 34x16 track, arcade hero select = Large 52x24) follows the button language: hover = track stroke `interactive/outline/hover`, 22% tint `interactive/fill/hover-tint`, label `interactive/text/hover-accent`, On thumb `interactive/fill/hover`. Disabled uses the disabled tokens and never hovers. The thumb is centred in the track (travel 16 Small / 26 Large). **No new tokens.** The reticle locks onto the whole switch (arms 8, outset 4, no label), the same as `.bric-btn`, which also replaces the native pointer. Track glow was left out: the track is clipped by `--clip-step`, which would cut it.
 
+## Segmented toggle (Oct 27 2026, approved in Figma "14 · Segmented Toggle (PROPOSAL, for sign-off)", node 441:138, set 441:199)
+
+`.bric-seg` / `.bric-seg__opt` in `assets/bric-components.css`. Two (or more) options inside one track: the secondary button's 1px `interactive/outline/default` with `corner/step`, inset 3px (Large 40) / 2px (Small 24), the Active keyline's gap. The checked option (`aria-checked="true"`) is `interactive/fill/default` with `text/on-fill`; options are equal width (the widest label). Hover anywhere on the control: track `outline/hover` + the amber stroke glow (opacity on `::after`), the option a click would pick takes `fill/hover-tint` + `text/hover-accent`; the checked option is unchanged. Disabled (`aria-disabled` on the group) uses the disabled tokens. Markup is `role=radiogroup` with `role=radio` buttons and roving tabindex; the arrows move between options. The reticle locks onto the whole control (`data-bric-target`, arms 8, outset 4, no label). **No new tokens.** First use: the CV page's Immersive / List switch.
+
+**Whole control is the hit area** (Oct 27): the reticle hides the cursor, so nobody can aim at one half. A click on the other option picks it; a click anywhere else on the control (the checked option, the inset gap, the reticle's outset band) flips to the other option. Keyboard activation of the checked option stays a no-op. On the CV page the toggle also holds its position while hovered, so a view switch (which changes the breadcrumb it sits beside) never slides it out from under the pointer.
+
+**Reticle frame = hit area, site-wide** (`assets/bric-reticle.js` v1.5): while the reticle is locked onto a DOM target it stays locked as long as the pointer is inside the frame (element + outset), and a click in that band that lands on nothing clickable of its own is passed to the target (`target.click()`, which the site's UI sounds and BRIC ignite treat like any click). Virtual (WebGL) targets keep their own hit tests. Framer gets this on its next reticle sync.
+
+**Appearance=Secondary** (Oct 27, Figma: `Appearance` variant property on the same set, Primary = the original): `.bric-seg--secondary`. No track outline or glow; only the checked option carries the 1px `interactive/outline/default` (inside its 2px radius), label `text/idle` with the text bloom. Hover: the option a click would pick gets `fill/hover-tint` + `text/hover-accent` (the secondary button hover). Disabled: checked option `outline/disabled` + `text/disabled`. Use it where the filled Primary would compete with nearby CTAs; first use is the CV view switch beside the breadcrumb. No new tokens.
+
 Sound proposal (not wired to the site yet): `swDown` / `swOn` / `swOff` / `swDeny` in `assets/battle/audio.js`, auditioned against the current `on`/`off` in `tools/ui-sounds.html`.
 
 ## CRT effects (dark mode only)
@@ -152,6 +162,10 @@ Validated in a browser against the real token file in both themes. Roles: defaul
 .bric-tag{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);border-radius:var(--bric-corner-step);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-tag);color:var(--bric-interactive-text-idle);cursor:default;user-select:none;white-space:nowrap;text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em}
 @media (prefers-reduced-motion:reduce){.bric-btn::after{transition:none}}
 ```
+
+## Disabled over imagery (added Oct 23 2026)
+
+The disabled tokens assume a calm opaque surface: primary disabled = `interactive/fill/disabled` (`border/subtle`, a 14% translucent teal tint) + `interactive/text/disabled` (`content/disabled`, deliberately <3:1). Over the 3D scene (e.g. the arcade hero-select LOCKED button) the tint is invisible and the label disappears. Don't invent a new disabled colour and don't use the amber/teal hover registers (they read as interactive): keep the tokens and seat the control on the surface they were designed for, `surface/scene` (`background: linear-gradient(fill/disabled, fill/disabled), surface/scene`). Same principle as `#bt-hints` (panel over the scene) and "overlays separate via scrim + border".
 
 ## Known contrast notes
 

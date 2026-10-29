@@ -1,0 +1,78 @@
+/* BRIC error page — one template for 404, 403, 500, offline, load failure, coming soon, … Config table + renderer: assets/bric-errors.js.
+ * Built only from --bric-* tokens (assets/tokens/bric-tokens.css) and the .bric-btn component (assets/bric-components.css).
+ * Two hosts: an overlay on the live galaxy (index.html, [data-mode="overlay"]) and the static 404.html fallback ([data-mode="page"], own starfield).
+ * Corner marks (four L brackets) frame the card; no side stripes. Motion is transform/opacity only (starfield: canvas); prefers-reduced-motion removes all of it.
+ */
+.bric-error{position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:var(--bric-space-4-stud) var(--bric-space-2-stud);box-sizing:border-box;overflow:auto;color:var(--bric-content-primary);font:400 15px/24px 'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased}
+.bric-error{background:var(--bric-surface-base)}
+
+/* starfield: a canvas drawn by assets/bric-errors.js (perpetual forward flight, sized stars, pixelated + posterized like the scene; static under prefers-reduced-motion) */
+.bric-error__stars{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+.bric-error__stars canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+
+.bric-error__card{--mark:16px;position:relative;width:100%;max-width:640px;padding:var(--bric-space-6-stud) var(--bric-space-4-stud);box-sizing:border-box;text-align:left;animation:bric-error-in 320ms cubic-bezier(.2,.8,.2,1) both}
+@keyframes bric-error-in{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
+
+/* corner marks: four L brackets, amber like the targeting reticle */
+.bric-error__mark{position:absolute;width:var(--mark);height:var(--mark);pointer-events:none;border:0 solid var(--bric-border-brand)}
+.bric-error__mark--tl{top:0;left:0;border-top-width:2px;border-left-width:2px}
+.bric-error__mark--tr{top:0;right:0;border-top-width:2px;border-right-width:2px}
+.bric-error__mark--bl{bottom:0;left:0;border-bottom-width:2px;border-left-width:2px}
+.bric-error__mark--br{bottom:0;right:0;border-bottom-width:2px;border-right-width:2px}
+
+.bric-error__eyebrow{margin:0 0 var(--bric-space-stud);color:var(--bric-content-secondary);text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em}
+.bric-error__code{margin:0;color:var(--bric-content-brand);font:600 clamp(88px,22vw,176px)/1 'Chakra Petch',sans-serif;letter-spacing:.02em;user-select:none}
+@font-face{font-family:'Aurebesh';src:url('fonts/aurebesh/aurebesh-bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+/* decode-on-hover (the numeral): scramble glyphs use Aurebesh once it has loaded, like the GFX decode in index.html */
+.bric-error__code{position:relative;cursor:default}
+/* glitch (borrowed from the zone-label hover glitch in index.html, zg-jitter / zg-slice-r / zg-slice-b): RGB-split copies of the numeral jitter and
+   clip in short bursts against a mostly still base. Copies read data-text; colours are tokens. None under prefers-reduced-motion. */
+@media (prefers-reduced-motion:no-preference){
+  .bric-error__code{animation:bric-error-jitter 2.6s infinite steps(1)}
+  .bric-error__code::before,.bric-error__code::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%;pointer-events:none}
+  .bric-error__code::before{color:var(--bric-schematic-line);animation:bric-error-slice-r 2.6s infinite steps(1)}
+  .bric-error__code::after{color:var(--bric-content-brand);animation:bric-error-slice-b 2.6s infinite steps(1)}
+}
+/* while the Aurebesh decode runs the split copies step aside (they hold the final Latin text and would sit on top of the scramble) */
+.bric-error__code.is-decoding::before,.bric-error__code.is-decoding::after{content:none}
+@keyframes bric-error-jitter{
+  0%,7%,9.5%,34%,37%,62%,64%,100%{transform:translate(0,0);opacity:1}
+  8%{transform:translate(-3px,0);opacity:.7}
+  9%{transform:translate(2px,0);opacity:1}
+  35%{transform:translate(-4px,0);opacity:.5}
+  36%{transform:translate(3px,0);opacity:1}
+  63%{transform:translate(-2px,0);opacity:.6}
+}
+@keyframes bric-error-slice-r{
+  0%,7%,9.5%,34%,37%,62%,64%,100%{clip-path:inset(0 0 0 0);transform:translate(0,0)}
+  8%{clip-path:inset(20% 0 40% 0);transform:translate(3px,0)}
+  9%{clip-path:inset(60% 0 10% 0);transform:translate(-2px,0)}
+  35%{clip-path:inset(10% 0 65% 0);transform:translate(-4px,0)}
+  36%{clip-path:inset(0 0 0 0)}
+  63%{clip-path:inset(45% 0 15% 0);transform:translate(2px,0)}
+}
+@keyframes bric-error-slice-b{
+  0%,7%,9.5%,34%,37%,62%,64%,100%{clip-path:inset(0 0 0 0);transform:translate(0,0)}
+  8%{clip-path:inset(55% 0 5% 0);transform:translate(-3px,0)}
+  9%{clip-path:inset(15% 0 55% 0);transform:translate(2px,0)}
+  35%{clip-path:inset(60% 0 5% 0);transform:translate(4px,0)}
+  36%{clip-path:inset(0 0 0 0)}
+  63%{clip-path:inset(5% 0 50% 0);transform:translate(-2px,0)}
+}
+.bric-error__glyph{font-family:'Aurebesh','Space Mono',monospace;font-weight:700;font-size:.78em;line-height:0}
+.bric-error__title{margin:var(--bric-space-2-stud) 0 var(--bric-space-stud);color:var(--bric-content-primary);font:600 clamp(28px,5vw,40px)/1.15 'Chakra Petch',sans-serif;letter-spacing:.01em;outline:none}
+.bric-error__body{margin:0;max-width:52ch;color:var(--bric-content-secondary)}
+.bric-error__link{color:var(--bric-content-primary);text-decoration:underline;text-underline-offset:3px}
+.bric-error__link:hover{color:var(--bric-content-brand)}
+.bric-error__link:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:2px}
+.bric-error__path{margin:var(--bric-space-2-stud) 0 0;color:var(--bric-content-tertiary);overflow-wrap:anywhere;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.bric-error__path code{font:inherit;letter-spacing:.04em;text-transform:none;color:var(--bric-content-secondary)}
+.bric-error__actions{display:flex;flex-wrap:wrap;gap:var(--bric-space-2-stud);margin-top:var(--bric-space-4-stud)}
+
+@media (max-width:480px){
+  .bric-error{align-items:flex-start}
+  .bric-error__card{padding:var(--bric-space-4-stud) var(--bric-space-2-stud)}
+  .bric-error__actions{flex-direction:column;align-items:stretch}
+  .bric-error__actions .bric-btn{display:flex;width:100%}
+}
+@media (prefers-reduced-motion:reduce){.bric-error__card{animation:none}}
