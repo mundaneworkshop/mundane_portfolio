@@ -15227,7 +15227,7 @@ f 2469//2469 2470//2470 2434//2434
         onCta:function(){ if(a.ctaShow&&a.ctaText&&ocCaseTarget(o)&&ocGoCase(o)) return; if(_cta) ocOpenCtaUrl(a.ctaUrl,a.ctaTarget,o); }});
     }
     function ocRefreshAbout(){ var o=outfitCur&&ocFind(outfitCur.id); if(!o||!window.CS) return;
-      var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:d.kicker||'About Jason',bold:true},{text:o.name}]);   /* the outfit's kicker is the first breadcrumb word (the booklet itself has no kicker node) */ setRoute('/about/'+o.id); }
+      var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:'About Jason',bold:true}]);   /* the trail ends at About Jason for every outfit, locked or not (no outfit name, no per-outfit kicker) */ setRoute('/about/'+o.id); }
     function openAbout(){
       var o=outfitCur&&ocFind(outfitCur.id); if(!o||focused===aboutGrp) return;
       if(focused) goHome();
