@@ -122,6 +122,9 @@
   #topbar{position:absolute;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px 22px;pointer-events:none}
   #breadcrumb{pointer-events:auto;transition:opacity .5s ease}
   body.mw-entrygate #breadcrumb{opacity:0;pointer-events:none}   /* the entry gate shows no nav: it comes in once the dock completes and mw-entrygate is removed */
+  /* Before boot has decided gate vs no gate (body.mw-preboot, in the markup and removed in bootHolotable where mw-entrygate is set), the galaxy chrome
+     must not show at all: without this the breadcrumb, the bottom hint and the status line painted for the first ~0.5 s and then faded out under the gate. */
+  body.mw-preboot #breadcrumb, body.mw-preboot #hint, body.mw-preboot #status{opacity:0!important;transition:none!important;pointer-events:none!important}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
   /* ARCADE mode: the exit button takes the breadcrumb's place, with the ESC hint right beside it */
   #arcadeExit{display:none;flex-direction:row;align-items:center;gap:8px;pointer-events:auto;transition:opacity .25s ease}
@@ -852,6 +855,8 @@
   #mwLoad.on-gate .mwl-inner>*{pointer-events:auto}
   #mwLoad.out{opacity:0;pointer-events:none}
   #mwLoad [hidden]{display:none!important}   /* .bric-btn sets display:inline-flex, which would otherwise beat the hidden attribute */
+  #mwLoad:not(.on-gate) .mwl-inner{animation:mwl-in .3s ease .8s both}   /* the cover's text only appears if loading is slow: a fast load shows nothing before the cube */
+  @keyframes mwl-in{from{opacity:0}to{opacity:1}}
   #mwLoad .mwl-inner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 16px;text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
   #mwLoad .mwl-bar{width:180px;max-width:60vw;height:2px;background:var(--bric-border-subtle);overflow:hidden}
   #mwLoad .mwl-fill{display:block;height:100%;background:var(--holo);transform:scaleX(0);transform-origin:0 50%;transition:transform .3s ease}
@@ -861,7 +866,7 @@
   @keyframes mwl-nudge{0%,100%{opacity:1}35%{opacity:.25}}
   #mwLoad .mwl-sro{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
   #mwLoad .mwl-sro.mwl-focusable:focus{position:static;width:auto;height:var(--bric-space-3-stud);margin:0;padding:0 var(--bric-space-stud);overflow:visible;clip:auto;clip-path:none}
-  @media (prefers-reduced-motion:reduce){ #mwLoad,#mwLoad .mwl-fill{transition:none} #mwLoad .mwl-why.nudge{animation:none} }
+  @media (prefers-reduced-motion:reduce){ #mwLoad,#mwLoad .mwl-fill{transition:none} #mwLoad .mwl-why.nudge{animation:none} #mwLoad:not(.on-gate) .mwl-inner{animation-duration:0s} }
   #hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:1}
   /* Entry gate instruction, top centre: same type as #hint. Only while the gate is up (body.mw-entrygate); fades in a beat after the monogram, out as soon as it is clicked (mw-gate-out). */
   #gateHint{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:15;max-width:calc(100vw - 44px);text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:0;transition:opacity .3s ease}
@@ -1093,7 +1098,7 @@
 </style>
 <link rel="stylesheet" href="assets/bric-author.css" />
 </head>
-<body>
+<body class="mw-preboot">
   <!-- Crawler / no-JS / screen-reader content. The galaxy is a WebGL canvas, so this is the readable outline of the same site. Visually hidden for sighted JS users. -->
   <main id="mw-seo" class="mw-sr-only">
     <h1>Jason Hsin · Staff Product Designer</h1>
@@ -15949,6 +15954,7 @@ f 2469//2469 2470//2470 2434//2434
     // reveals the rest via setSiteVisible once docked). A deep link / ?edit=1 / reduced-motion already
     // forced mwPhase to 'docked' above, before routing ran, so this is a no-op in those cases.
     if(mwPhase==='entry'){ document.body.classList.add('mw-entrygate'); setSiteVisible(false); } else setSiteVisible(true);
+    document.body.classList.remove('mw-preboot');   // the gate (or the galaxy) now owns the chrome's visibility
     if(window.MWAssets) MWAssets.emit();   // the loader switches between cover and gate mode on this class
 
     animate();
