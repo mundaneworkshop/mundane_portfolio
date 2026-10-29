@@ -852,8 +852,9 @@
   #status{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;padding:12px 22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none}
   #hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:1}
   /* Entry gate instruction, top centre: same type as #hint. Only while the gate is up (body.mw-entrygate); fades in a beat after the monogram, out as soon as it is clicked (mw-gate-out). */
-  #gateHint{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:15;max-width:calc(100vw - 44px);text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:0;transition:opacity .3s ease}
+  #gateHint{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:15;max-width:calc(100vw - 44px);text-align:center;font-size:11px;line-height:16px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:0;transition:opacity .3s ease}
   body.mw-entrygate #gateHint{opacity:1;transition:opacity 1.2s ease 1.2s}
+  @media (min-width:701px){ #gateHint{top:28px} }   /* centred on the top bar row: 16px + half the row (Large 40px on desktop; the Small 24px row on phones keeps top:20px) */
   body.author-mode #gateHint{top:64px}   /* the author toolbar occupies the top row */
   body.mw-entrygate.mw-gate-out #gateHint{opacity:0;transition:opacity .3s ease}
   @media (prefers-reduced-motion:reduce){ body.mw-entrygate #gateHint{transition:none} }
