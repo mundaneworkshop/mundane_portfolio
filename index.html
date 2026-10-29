@@ -156,7 +156,7 @@
   body.mw-entrygate #mwNav, body.mw-preboot #mwNav{opacity:0;pointer-events:none}
   body.mw-preboot #mwNav{transition:none}
   body.mw-arcade #mwNav{display:none}   /* the arcade's exit row takes the bar's place; leaving the arcade brings the menu back */
-  /* depth crumb: under the bar, Small, no home root (the wordmark is home) */
+  /* the old breadcrumb: hidden for visitors (the menu bar's current item says where you are); Edit Mode shows it under the bar, Small, to edit its labels */
   #breadcrumb{position:absolute;left:22px;top:var(--mw-crumb-top,64px)}
   #breadcrumb.mw-crumb-off{display:none}
   #crumbpath>.bric-crumb__sep:first-child{display:none}
@@ -14308,7 +14308,7 @@ f 2469//2469 2470//2470 2434//2434
         s.setAttribute('data-ci',i); crumbPathEl.appendChild(s);
       });
       syncCrumbSize(); syncCrumbEdit();
-      var em=(typeof editMode!=='undefined')&&editMode; crumbBarEl.classList.toggle('mw-crumb-off',!crumbSegs.length||(!em&&/^(case:(cv|contact)|about)$/.test(crumbCtx)));
+      var em=(typeof editMode!=='undefined')&&editMode; crumbBarEl.classList.toggle('mw-crumb-off',!crumbSegs.length||!em);   // visitors never see it (the menu bar and the Work dropdown say where you are); Edit Mode keeps it, as that is where its labels are edited
       if(typeof mwNavLayout==='function') mwNavLayout();
     }
     // Size: the top bar (breadcrumb or the arcade's exit row, CV view toggle, sound switch) is Large on desktop (the Small 24px controls were hard to land a click on), Small on phones
