@@ -133,7 +133,7 @@
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
 
   /* ── MENU BAR (Direction A, Figma BRIC DS › 15 · Menu Bar): a plain site menu beside the galaxy. The wordmark (#homeBtn) is home; Work opens a dropdown of the
-     case studies; About (the CV page), HoloNet, Arcade are links; LinkedIn / Instagram logo buttons, the CV view toggle (CV page only) and the sound switch sit on the right.
+     case studies; About (the CV page), Jason (the minifigure focus view), HoloNet, Arcade are links; LinkedIn / Instagram logo buttons, the CV view toggle (CV page only) and the sound switch sit on the right.
      Items are built from galaxyModel (buildMwNav), so a new case study appears here as soon as it exists as a planet. The breadcrumb stays as a small depth
      crumb under the bar (project, case chapter, artifact) and is hidden where the bar already says where you are. */
   #mwNav{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-stud);flex:1 1 auto;min-width:0;pointer-events:auto;transition:opacity .5s ease}
@@ -16044,6 +16044,7 @@ f 2469//2469 2470//2470 2434//2434
       li:'<svg viewBox="0 0 27 27" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M1.91 0h22.363a1.91 1.91 0 011.909 1.91v22.363a1.91 1.91 0 01-1.91 1.909H1.91A1.91 1.91 0 010 24.272V1.91A1.91 1.91 0 011.91 0zm1.908 22.364h3.818V9.818H3.818zM8.182 5.727a2.455 2.455 0 10-4.91 0 2.455 2.455 0 004.91 0zm2.182 4.091v12.546h3.818v-6.077c0-2.037.75-3.332 2.553-3.332 1.3 0 1.81 1.201 1.81 3.332v6.077h3.819v-6.93c0-3.74-.895-5.78-4.667-5.78-1.967 0-3.277.921-3.788 1.946V9.818z"/></svg>',
       ig:'<svg viewBox="0 0 1000 1000" aria-hidden="true" focusable="false"><path transform="translate(-2.5 -2.5)" d="M295.42,6c-53.2,2.51-89.53,11-121.29,23.48-32.87,12.81-60.73,30-88.45,57.82S40.89,143,28.17,175.92c-12.31,31.83-20.65,68.19-23,121.42S2.3,367.68,2.56,503.46,3.42,656.26,6,709.6c2.54,53.19,11,89.51,23.48,121.28,12.83,32.87,30,60.72,57.83,88.45S143,964.09,176,976.83c31.8,12.29,68.17,20.67,121.39,23s70.35,2.87,206.09,2.61,152.83-.86,206.16-3.39S799.1,988,830.88,975.58c32.87-12.86,60.74-30,88.45-57.84S964.1,862,976.81,829.06c12.32-31.8,20.69-68.17,23-121.35,2.33-53.37,2.88-70.41,2.62-206.17s-.87-152.78-3.4-206.1-11-89.53-23.47-121.32c-12.85-32.87-30-60.7-57.82-88.45S862,40.87,829.07,28.19c-31.82-12.31-68.17-20.7-121.39-23S637.33,2.3,501.54,2.56,348.75,3.4,295.42,6m5.84,903.88c-48.75-2.12-75.22-10.22-92.86-17-23.36-9-40-19.88-57.58-37.29s-28.38-34.11-37.5-57.42c-6.85-17.64-15.1-44.08-17.38-92.83-2.48-52.69-3-68.51-3.29-202s.22-149.29,2.53-202c2.08-48.71,10.23-75.21,17-92.84,9-23.39,19.84-40,37.29-57.57s34.1-28.39,57.43-37.51c17.62-6.88,44.06-15.06,92.79-17.38,52.73-2.5,68.53-3,202-3.29s149.31.21,202.06,2.53c48.71,2.12,75.22,10.19,92.83,17,23.37,9,40,19.81,57.57,37.29s28.4,34.07,37.52,57.45c6.89,17.57,15.07,44,17.37,92.76,2.51,52.73,3.08,68.54,3.32,202s-.23,149.31-2.54,202c-2.13,48.75-10.21,75.23-17,92.89-9,23.35-19.85,40-37.31,57.56s-34.09,28.38-57.43,37.5c-17.6,6.87-44.07,15.07-92.76,17.39-52.73,2.48-68.53,3-202.05,3.29s-149.27-.25-202-2.53m407.6-674.61a60,60,0,1,0,59.88-60.1,60,60,0,0,0-59.88,60.1M245.77,503c.28,141.8,115.44,256.49,257.21,256.22S759.52,643.8,759.25,502,643.79,245.48,502,245.76,245.5,361.22,245.77,503m90.06-.18a166.67,166.67,0,1,1,167,166.34,166.65,166.65,0,0,1-167-166.34"/></svg>' };
     var mwNavMain=document.getElementById('mwNavMain'), mwNavSocial=document.getElementById('mwNavSocial'), mwWorkBtn=null, mwWorkDd=null;
+    function mwJasonHref(){ var c=window.MWOutfits&&MWOutfits.cur&&MWOutfits.cur(); return '/about/'+((c&&c.id)||'work'); }   // the outfit standing on the hologram now (a bare /about redirects to the CV)
     function mwCaseSlug(id){ var c=CASES[id]||{}; return c.slug||slugify(c.title||id); }
     function mwPlanet(id){ var p=null; galaxyModel.forEach(function(z){ (z.planets||[]).forEach(function(q){ if(q.id===id) p={z:z,p:q}; }); }); return p; }
     function mwShown(id){ var e=mwPlanet(id); return !!e && ((!e.z.hidden&&!e.p.hidden) || !!editMode); }
@@ -16064,15 +16065,16 @@ f 2469//2469 2470//2470 2434//2434
         dd.appendChild(ul); li.appendChild(dd); mwNavMain.appendChild(li); mwWorkBtn=b; mwWorkDd=dd; }
       else { mwWorkBtn=null; mwWorkDd=null; }
       if(mwShown('cv')) mwNavMain.appendChild(mwLink('About','/'+cvSlug,'about'));   // one About item for the CV page (the About text lives there since PR #103)
+      mwNavMain.appendChild(mwLink('Jason',mwJasonHref(),'jason'));   // the minifigure focus view on the hologram: the unlockable outfits
       if(mwShown('contact')) mwNavMain.appendChild(mwLink('HoloNet','/'+holonetSlug,'holonet'));
       if(mwShown('arcade')) mwNavMain.appendChild(mwLink('Arcade','/'+arcadeSlug,'arcade'));
       [['li','LinkedIn'],['ig','Instagram']].forEach(function(s){ if(!mwShown(s[0])) return; var u=CASES[s[0]]&&CASES[s[0]].ctaUrl; if(!u||u==='#') return;
         var li=document.createElement('li'), a=document.createElement('a'); a.className='bric-btn mw-logo'; a.href=u; a.target='_blank'; a.rel='noopener';
         a.setAttribute('aria-label',s[1]+', opens in a new tab'); a.title=s[1]; a.setAttribute('data-mw-nav',s[0]); a.innerHTML=MW_LOGO[s[0]]; li.appendChild(a); mwNavSocial.appendChild(li); });
       mwNavSync(); mwNavFit(); }
-    // current item from the URL: Work while a case study (or its artifacts / chapters) is open, About on the CV and the minifigure About view, HoloNet on HoloNet
+    // current item from the URL: Work while a case study (or its artifacts / chapters) is open, About on the CV, Jason on the minifigure focus view (/about/<outfit>), HoloNet on HoloNet
     function mwNavSync(){ if(!mwNavMain) return; var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), s0=parts[0]||'', cur='';
-      if(s0==='work') cur='work'; else if(s0===cvSlug||s0==='about') cur='about'; else if(s0===holonetSlug) cur='holonet'; else if(s0===arcadeSlug) cur='arcade';
+      if(s0==='work') cur='work'; else if(s0===cvSlug) cur='about'; else if(s0==='about') cur='jason'; else if(s0===holonetSlug) cur='holonet'; else if(s0===arcadeSlug) cur='arcade';
       [].forEach.call(document.querySelectorAll('#mwNav [data-mw-nav]'),function(a){ var k=a.getAttribute('data-mw-nav'), on=(k===cur);
         if(k==='work'){ a.classList.toggle('is-active',on||a.getAttribute('aria-expanded')==='true'); a.classList.toggle('mw-current',on); return; }
         a.classList.toggle('is-active',on); if(on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
@@ -16108,6 +16110,7 @@ f 2469//2469 2470//2470 2434//2434
         var k=a.getAttribute('data-mw-nav');
         if(k==='li'||k==='ig'){ e.preventDefault(); var g=planetById(k); if(g) activate(g.userData); else window.mwOpen(a.href); return; }   // activate: opens the profile and counts the visit for the outfit unlocks
         e.preventDefault(); if(a.getAttribute('aria-current')==='page'){ mwWorkOpen(false); return; }
+        if(k==='jason'){ a.href=mwJasonHref(); }
         mwNavigate(new URL(a.href,location.href).pathname); });
       navEl.addEventListener('keydown',function(e){ if(!mwWorkDd) return; var open=mwWorkBtn.getAttribute('aria-expanded')==='true';
         if(e.key==='Escape'&&open){ e.preventDefault(); e.stopPropagation(); mwWorkOpen(false); mwWorkBtn.focus(); return; }
