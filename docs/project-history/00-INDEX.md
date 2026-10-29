@@ -40,6 +40,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [glyph-decode.md](glyph-decode.md) — Oct 1 2026: Aurebesh → Latin decode on the ring, planet labels, buttons and zone names; bundled Aurebesh font + its license note
 - [hud-type-grotesk.md](hud-type-grotesk.md) — Oct 2 2026: HUD labels/body moved from Space Mono to Space Grotesk per the locked stack; what stays mono
 - [cv-page-tweaks.md](cv-page-tweaks.md) — Oct 2026: CV route on the shared manual stage (`MWStage`), re-centre click, node hover reticle, ←/→ stops, segmented immersive/list toggle, list view: one-liner hero + CV download top and bottom, pixelated canvas timeline with scroll focus, sparse starfield parallax, reticle card hover
+- [first-visit-loading.md](first-visit-loading.md) — Oct 29 2026: entry gate "LOADING ASSETS XX%" band, gate locked until every model is built, retries, why PR #92's lazy seed showed placeholders
 - [entry-gate-text.md](entry-gate-text.md) — Oct 22 2026: entry gate H1 (hover decode) + two-line Star Wars crawl under the monogram, fade-in/out timings, 3 s dock
 - [reticle-cursor.md](reticle-cursor.md) — Oct 7 2026: the targeting reticle cursor (one shared file with Framer), where it shows, how it hands the native cursor back
 - [type-floor.md](type-floor.md) — Oct 2 2026: mobile-legibility type floor (11 / 13 / 16 px), small-text contrast rule, what is exempt

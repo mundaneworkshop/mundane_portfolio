@@ -7,6 +7,12 @@
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
      would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
 <base href="/" />
+  <!-- First-visit loading (PR #106): the 3D engine and the entry-gate monogram start downloading with the HTML instead of after it (their script tags sit
+       at the end of a ~1 MB file), so the cube appears sooner; the models then load behind the gate's "LOADING ASSETS" band. -->
+  <link rel="preload" href="vendor/three.min.js" as="script" />
+  <link rel="preload" href="vendor/GLTFLoader.js" as="script" />
+  <link rel="preload" href="vendor/DRACOLoader.js" as="script" />
+  <link rel="preload" href="assets/mw-monogram/mw-monogram.js" as="script" />
 <!-- Screen wipe entry hold: when arriving with ?wipe=, paint the panel colour before first paint (assets/bric-wipe.js takes over, removes it). Keep the colour in sync with the panel. -->
 <script>(function(){try{if(/[?&]wipe=/.test(location.search)){var s=document.createElement('style');s.id='bric-wipe-hold';s.textContent='html::before{content:"";position:fixed;inset:0;z-index:2147483646;background:#070C0C}';document.head.appendChild(s);setTimeout(function(){var e=document.getElementById('bric-wipe-hold');if(e)e.remove()},6000)}}catch(e){}})()</script>
 
@@ -838,9 +844,24 @@
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   #status{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;padding:12px 22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none}
-  #mwLoad{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:15;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:1;transition:opacity .3s ease}
-  #mwLoad.out{opacity:0}
-  @media (prefers-reduced-motion:reduce){ #mwLoad{transition:none} }
+  /* First-visit asset loader (PR #106). Without the gate (deep links, reduced motion) it covers the page until every model is in. On the gate the
+     visible progress is the "LOADING ASSETS XX%" marquee band, and this only keeps the screen-reader progress, the focus-visible Enter button and,
+     if loading fails, visible Retry / Enter anyway under the cube. */
+  #mwLoad{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:var(--bg);opacity:1;transition:opacity .4s ease}
+  #mwLoad.on-gate{inset:auto 0 10vh 0;background:transparent;pointer-events:none}
+  #mwLoad.on-gate .mwl-inner>*{pointer-events:auto}
+  #mwLoad.out{opacity:0;pointer-events:none}
+  #mwLoad [hidden]{display:none!important}   /* .bric-btn sets display:inline-flex, which would otherwise beat the hidden attribute */
+  #mwLoad .mwl-inner{display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 16px;text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  #mwLoad .mwl-bar{width:180px;max-width:60vw;height:2px;background:var(--bric-border-subtle);overflow:hidden}
+  #mwLoad .mwl-fill{display:block;height:100%;background:var(--holo);transform:scaleX(0);transform-origin:0 50%;transition:transform .3s ease}
+  #mwLoad .mwl-why{letter-spacing:1px;text-transform:none}
+  #mwLoad .mwl-actions{display:flex;gap:8px}
+  #mwLoad .mwl-why.nudge{animation:mwl-nudge .6s ease}
+  @keyframes mwl-nudge{0%,100%{opacity:1}35%{opacity:.25}}
+  #mwLoad .mwl-sro{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+  #mwLoad .mwl-sro.mwl-focusable:focus{position:static;width:auto;height:var(--bric-space-3-stud);margin:0;padding:0 var(--bric-space-stud);overflow:visible;clip:auto;clip-path:none}
+  @media (prefers-reduced-motion:reduce){ #mwLoad,#mwLoad .mwl-fill{transition:none} #mwLoad .mwl-why.nudge{animation:none} }
   #hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:15;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:1}
   /* Entry gate instruction, top centre: same type as #hint. Only while the gate is up (body.mw-entrygate); fades in a beat after the monogram, out as soon as it is clicked (mw-gate-out). */
   #gateHint{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:15;max-width:calc(100vw - 44px);text-align:center;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none;opacity:0;transition:opacity .3s ease}
@@ -1664,6 +1685,18 @@
        now (✎ edit → click an object). Geometry builders/slot vars remain in JS. -->
   <div id="box-hover-label"></div>
   <div id="gateHint">click anywhere for sound • click holocron to enter</div>
+  <div id="mwLoad" aria-busy="true">
+    <div class="mwl-inner">
+      <div class="mwl-text" id="mwLoadText">Loading</div>
+      <div class="mwl-bar" role="progressbar" aria-labelledby="mwLoadText" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="mwl-fill"></span></div>
+      <div class="mwl-why" id="mwLoadWhy" hidden>Enter unlocks once every asset has loaded</div>
+      <div class="mwl-actions">
+        <button type="button" class="bric-btn bric-btn--primary bric-btn--sm mwl-retry" hidden>Retry</button>
+        <button type="button" class="bric-btn bric-btn--secondary bric-btn--sm mwl-enter" aria-describedby="mwLoadWhy" aria-disabled="true" hidden>Enter</button>
+      </div>
+      <div class="mwl-live mwl-sro" aria-live="polite"></div>
+    </div>
+  </div>
   <div id="hint">drag to rotate · click a planet to travel</div>
   <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
   <div id="soundToggle" class="sw mw-sound-switch on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
@@ -1720,19 +1753,26 @@
         setCopy:function(obj){ try{ localStorage.setItem('bric_copy',JSON.stringify(obj)); return true; }catch(e){ console.warn('copy save failed',e); return false; } }
       };
     }
-    // FIRST-VISIT ASSETS (fixed Oct 29 2026): every manifest key gets a promise in __mwPending the moment the manifest is
-    // read, and BRICStore.get(key) waits on its own key's seed before reading IndexedDB. Anything the scene asks for that
-    // hasn't landed yet (the "lazy" moons/ship/present, or anything still in flight when the boot cap below fires) is then
-    // applied the moment it arrives: the placeholder swaps in place, no refresh. PR #92 put this wait in the SECOND
-    // BRICStore definition (~line 15830), which never installs because this one always runs first, so boot read the lazy
-    // moons before they were seeded, got undefined, and they stayed spheres until a refresh. The wait has to live here.
-    // Seeding itself reads through rawGet (waiting on its own key would wait forever).
-    var rawGet=window.BRICStore.get;
-    window.__mwPending={};   // key -> promise that always resolves (seeded, already cached, or given up after retries)
-    window.__mwSeedLog={};   // key -> {state:'cached'|'seeded'|'failed', tries, ms} — inspect in devtools when an asset looks wrong
+    // FIRST-VISIT ASSETS (Oct 29 2026, PR #106). Read this before touching the seed.
+    // Rule: a visitor never sees a placeholder. Every model in assets/manifest.json is downloaded AND built into the scene
+    // before the entry gate can be clicked. Meanwhile the gate's marquee reads "LOADING ASSETS XX%" (gateBandsFrame) and
+    // the two text marquees take over once MWAssets is ready; deep links and reduced-motion visits skip the gate, so they
+    // get a cover (#mwLoad) that lifts when everything is in. History: PR #92 let boot run ahead of the seed and put the
+    // "wait for my own key" logic in the SECOND BRICStore definition (~line 15990), which never installs because this one
+    // always runs first, so the scene read moons that weren't seeded yet, got undefined, and showed spheres until a refresh.
+    // Mechanics: each manifest key has a deferred (__mwPending) and the live BRICStore.get(key) waits on it, so the scene's
+    // restore pass simply waits for each model. A key's deferred resolves when its record is stored (or was already
+    // cached), never on failure: a failed key holds the gate until Retry succeeds or the visitor picks "Enter anyway"
+    // (MWAssets.release). The scene reports each restore it starts and finishes (MWAssets.applyBegin), so ready means
+    // bytes stored AND geometry built. Seeding reads through rawGet (waiting on its own key would wait forever).
+    var rawGet=window.BRICStore.get, rawSet=window.BRICStore.set;
+    window.__mwPending={};   // key -> promise the live get() waits on
+    window.__mwSeedLog={};   // key -> {state:'pending'|'cached'|'seeded'|'failed', tries, ms}: inspect in devtools
+    var DEF={};              // key -> {p, resolve}
     window.BRICStore.get=function(key){ var p=window.__mwPending[key]; return p ? p.then(function(){ return rawGet.call(window.BRICStore,key); }) : rawGet.call(window.BRICStore,key); };
-    // fetch with retries + backoff (1s, 3s, 9s). A stalled attempt is aborted after 90s. Retries bypass the HTTP cache so
-    // a bad cached response can't be served back four times.
+    window.BRICStore.set=function(key,val){ return rawSet.call(window.BRICStore,key,val).then(function(v){ if(DEF[key]) DEF[key].resolve(); return v; }); };   // a stored record (seed or Edit Mode upload) releases that key's waiters
+    // fetch with retries + backoff (1s, 3s, 9s). A stalled attempt is aborted after 90s, and retries bypass the HTTP cache
+    // so a bad cached response can't be served back four times.
     var RETRY_WAIT=[1000,3000,9000];
     var inflight={};   // path -> download promise, so two manifest keys pointing at one file fetch it once
     function fetchRetry(path,read,log){
@@ -1749,48 +1789,91 @@
       }
       return go();
     }
-    function seedOne(entry,asBlob){
-      var log=window.__mwSeedLog[entry.key]={state:'pending',tries:0,ms:0}, t0=performance.now();
+    // Progress is real bytes: EXP is each file's expected size (the manifest's "bytes", corrected by Content-Length when the
+    // response has one) and GOT what has arrived (GLBs stream, so a big model moves the number while it downloads).
+    var EXP={}, GOT={}, KEYPATHS={}, JOB={}, _emitT=0, startNet, netP=new Promise(function(r){ startNet=r; });   // netP: downloads wait for MWAssets.start(); cache checks don't
+    function onBytes(path){ return function(n){ GOT[path]=n; MWA.lastProgress=performance.now(); MWA.stalled=false; var t=performance.now(); if(t-_emitT>100){ _emitT=t; MWA.emit(); } }; }
+    function readBuf(r,cb){
+      if(!r.body||!r.body.getReader) return r.arrayBuffer();
+      var rd=r.body.getReader(), chunks=[], n=0;
+      return (function pump(){ return rd.read().then(function(x){
+        if(x.done){ var out=new Uint8Array(n), o=0; chunks.forEach(function(c){ out.set(c,o); o+=c.length; }); return out.buffer; }
+        chunks.push(x.value); n+=x.value.length; cb(n); return pump(); }); })();
+    }
+    function sizeFrom(r,path){ var cl=+r.headers.get('content-length'); if(cl>0&&!r.headers.get('content-encoding')) EXP[path]=cl; }
+    var MWA=window.MWAssets={
+      total:0, done:0, failed:{}, applying:0, kicked:false, started:false, released:false, manifestFailed:false, ready:false, stalled:false, lastProgress:0, subs:[],
+      on:function(fn){ this.subs.push(fn); try{ fn(this); }catch(e){ console.error('[mw-assets]',e); } },
+      emit:function(){ var s=this; s.subs.forEach(function(fn){ try{ fn(s); }catch(e){ console.error('[mw-assets]',e); } }); },
+      percent:function(){ if(this.ready) return 100; var e=0,g=0; for(var p in EXP){ e+=EXP[p]; g+=Math.min(GOT[p]||0,EXP[p]); } return Math.min(99,Math.floor((e?g/e:0)*100)); },   // 100 only once the scene has built everything
+      failedKeys:function(){ return Object.keys(this.failed); },
+      missingKeys:function(){ return Object.keys(DEF).filter(function(k){ var l=window.__mwSeedLog[k]; return !l||(l.state!=='seeded'&&l.state!=='cached'); }); },
+      canEnter:function(){ return this.ready||this.released; },
+      state:function(){ if(this.ready) return 'ready'; if(this.released) return 'released';
+        if(this.manifestFailed||this.stalled||(this.failedKeys().length&&this.done+this.failedKeys().length>=this.total)) return 'failed'; return 'loading'; },
+      applyBegin:function(key){ if(!DEF[key]) return function(){}; var s=this, ended=false; s.applying++;
+        var t=setTimeout(function(){ console.error('[mw-assets] '+key+' took over 20s to build; not holding the gate for it'); end(); },20000);
+        function end(){ if(ended) return; ended=true; clearTimeout(t); s.applying--; s.check(); }
+        return end; },
+      kick:function(){ this.kicked=true; this.check(); },   // the scene's restore pass has started (every applyBegin for it is registered)
+      check:function(){ var s=this; if(!s.ready&&s.kicked&&s.applying===0&&s.done>=s.total&&!s.manifestFailed){ s.ready=true; s.readyAt=performance.now(); } s.emit(); },
+      start:function(){ if(this.started) return; this.started=true; this.startedAt=this.lastProgress=performance.now(); startNet(); this.emit(); },
+      retry:function(){ var s=this; if(s.manifestFailed){ location.reload(); return; } s.stalled=false; s.lastProgress=performance.now(); s.failedKeys().forEach(function(k){ delete s.failed[k]; run(k); }); s.emit(); },
+      release:function(){ var s=this; if(s.ready||s.released) return; s.released=true; console.error('[mw-assets] entered before every asset loaded; these may show as placeholders:',s.missingKeys()); Object.keys(DEF).forEach(function(k){ DEF[k].resolve(); }); s.emit(); }
+    };
+    // 30s with no byte arriving and nothing finishing = stalled: show the honest failure state (loading carries on behind it)
+    setInterval(function(){ if(MWA.started&&!MWA.ready&&!MWA.released&&!MWA.stalled&&performance.now()-MWA.lastProgress>30000){ MWA.stalled=true; console.error('[mw-assets] no progress for 30s; still missing:',MWA.missingKeys()); MWA.emit(); } },2000);
+    function addJob(key,paths,bytes,job){ var d={}; d.p=new Promise(function(r){ d.resolve=r; }); DEF[key]=d; window.__mwPending[key]=d.p; JOB[key]=job; KEYPATHS[key]=paths;
+      paths.forEach(function(p,i){ if(EXP[p]==null){ EXP[p]=bytes[i]||200000; GOT[p]=0; } }); }
+    function run(key){
+      JOB[key]().then(function(ok){
+        if(ok){ MWA.done++; DEF[key].resolve(); KEYPATHS[key].forEach(function(p){ GOT[p]=EXP[p]; }); if(MWA.done>=MWA.total) MWA.seededAt=performance.now(); }
+        else MWA.failed[key]=true;
+        MWA.lastProgress=performance.now(); MWA.check();
+      });
+    }
+    function seedOne(entry,asBlob){   // -> Promise<true when the record is stored or already cached, false after retries fail>
+      var log=window.__mwSeedLog[entry.key]={state:'pending',tries:0,ms:0}, t0=performance.now(), fk=null;
       return rawGet.call(window.BRICStore,entry.key).then(function(existing){
         // already populated — never overwrite, UNLESS the stored record is an older seeded file this
         // entry supersedes (manifest "replaces": [old filenames]). Seeded records carry the manifest
         // file's name, so returning visitors get a re-made model once; an author's Edit Mode upload
         // (any other file name) is still left alone, and the new record's name ends the upgrade.
         var stale = existing!=null && entry.replaces && existing.name && entry.replaces.indexOf(existing.name)>=0;
-        if(existing!=null && !stale){ log.state='cached'; return null; }
-        var isSvg = entry.kind==='svg', fk=entry.path+(asBlob?'#blob':isSvg?'#text':'#buf');
-        // keys that share a file (mesh:p0 + boxmesh:p0 are both nanofig.glb) share one download
-        return (inflight[fk]=inflight[fk]||fetchRetry(entry.path,function(r){
-          if(asBlob) return r.blob();
-          return isSvg ? r.text() : r.arrayBuffer();
-        },log)).then(function(data){
+        if(existing!=null && !stale){ log.state='cached'; return true; }
+        var isSvg = entry.kind==='svg';
+        fk=entry.path+(asBlob?'#blob':isSvg?'#text':'#buf');
+        // keys that share a file (mesh:p0 + boxmesh:p0 are both nanofig.glb) share one download; downloads wait for start()
+        if(!inflight[fk]){ var dl=inflight[fk]=netP.then(function(){ return fetchRetry(entry.path,function(r){
+            sizeFrom(r,entry.path);
+            if(asBlob) return r.blob();
+            return isSvg ? r.text() : readBuf(r,onBytes(entry.path));
+          },log); }); dl.then(function(){ delete inflight[fk]; },function(){ delete inflight[fk]; }); }
+        return inflight[fk].then(function(data){
           var val = asBlob ? data
             : isSvg ? {kind:'svg', text:data, depth:0.3, axis:'z', name:entry.path.split('/').pop()}
             : {kind:'glb', buffer:data, name:entry.path.split('/').pop(), textured:!!entry.textured};
-          return BRICStore.set(entry.key,val).then(function(){ log.state='seeded'; log.ms=Math.round(performance.now()-t0); });
+          return BRICStore.set(entry.key,val).then(function(){ log.state='seeded'; log.ms=Math.round(performance.now()-t0); return true; });
         });
-      }).catch(function(err){ log.state='failed'; console.error('[mw-seed] gave up on '+entry.key+' after '+log.tries+' tries; it stays a placeholder this visit',err); });
+      }).catch(function(err){ log.state='failed'; console.error('[mw-seed] gave up on '+entry.key+' after '+log.tries+' tries',err); return false; });
     }
     // Box-face textures (boxtex:<id>) are ONE record per project holding a {front,back,...}
     // map of data URLs — not one-file-per-key like everything else — so they need their own
     // fetch→dataURL→assemble step instead of seedOne().
     function fetchAsDataURL(path){
-      return fetchRetry(path,function(r){ return r.blob(); })
+      return fetchRetry(path,function(r){ sizeFrom(r,path); return r.blob(); })
         .then(function(blob){ return new Promise(function(res,rej){
           var fr=new FileReader(); fr.onload=function(){ res(fr.result); }; fr.onerror=rej; fr.readAsDataURL(blob);
         }); });
     }
-    function seedBoxTex(entries){
-      var byId={}; (entries||[]).forEach(function(e){ (byId[e.id]=byId[e.id]||[]).push(e); });
-      return Promise.all(Object.keys(byId).map(function(id){
-        var key='boxtex:'+id, log=window.__mwSeedLog[key]={state:'pending'};
-        return window.__mwPending[key]=rawGet.call(window.BRICStore,key).then(function(existing){
-          if(existing!=null){ log.state='cached'; return null; }   // already populated — never overwrite
-          return Promise.all(byId[id].map(function(e){ return fetchAsDataURL(e.path).then(function(url){ return [e.face,url]; }); }))
-            .then(function(pairs){ var rec={}; pairs.forEach(function(p){ rec[p[0]]=p[1]; }); return BRICStore.set(key,rec); })
-            .then(function(){ log.state='seeded'; });
-        }).catch(function(err){ log.state='failed'; console.error('[mw-seed] gave up on '+key+'; those box faces stay blank this visit',err); });
-      }));
+    function seedBoxTex(id,faces){   // -> Promise<boolean>, like seedOne
+      var key='boxtex:'+id, log=window.__mwSeedLog[key]={state:'pending'};
+      return rawGet.call(window.BRICStore,key).then(function(existing){
+        if(existing!=null){ log.state='cached'; return true; }   // already populated — never overwrite
+        return netP.then(function(){ return Promise.all(faces.map(function(e){ return fetchAsDataURL(e.path).then(function(url){ GOT[e.path]=EXP[e.path]; return [e.face,url]; }); }))
+          .then(function(pairs){ var rec={}; pairs.forEach(function(p){ rec[p[0]]=p[1]; }); return BRICStore.set(key,rec); })
+          .then(function(){ log.state='seeded'; return true; }); });
+      }).catch(function(err){ log.state='failed'; console.error('[mw-seed] gave up on '+key,err); return false; });
     }
     // Pre-seed the real case-study copy (titles, snapshots, tags, marquee, moon counts, artifact
     // metadata, camera angles, CV timeline — everything authored in Edit Mode) so first-time
@@ -1844,52 +1927,65 @@
         }).catch(function(err){ clearTimeout(timer); console.warn('[mw-seed] content reconcile failed',err); done(); });
       });
     }
-    // Pre-boot progress line: appears only once the page has waited 800ms, counts the boot-critical files plus the 3D
-    // engine (the last step), and fades out when bootHolotable() actually starts (window.__mwLoadDone, called from boot()).
-    function loadProgress(jobs){
-      var n=0, total=jobs.length+1, shown=false, el=document.createElement('div'), t=setTimeout(function(){ shown=true; document.body.appendChild(el); },800);
-      el.id='mwLoad'; el.setAttribute('role','status');
-      function paint(){ el.textContent='loading '+n+' / '+total; }
-      paint(); jobs.forEach(function(j){ j.then(function(){ n++; paint(); }); });
-      window.__mwLoadDone=function(){ window.__mwLoadDone=null; clearTimeout(t); if(!shown) return; n=total; paint(); el.classList.add('out'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },400); };
-    }
-    var lazyDone=[];   // resolvers for the lazy entries' pending promises — released on any failure so no get() waits forever
-    window.__mwSeedReady = fetch('assets/manifest.json').then(function(r){ return r.ok ? r.json() : null; })
+    // The gate route downloads the models only once the monogram cube is up (mwLoad calls MWAssets.start()), so the cube
+    // isn't competing with 7 MB of models for the connection; the timer is a backstop. Deep links and reduced-motion visits
+    // never show the gate, so they start straight away.
+    var NO_GATE=(function(){ try{ return location.pathname.replace(/^\/+|\/+$/g,'').length>0||!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return true; } })();
+    window.__mwSeedReady = fetchRetry('assets/manifest.json',function(r){ return r.json(); })
       .then(function(manifest){
-        if(!manifest) return reconcileServerContent();
-        var jobs=[];
-        var lazyQ=[];
-        (manifest.models||[]).forEach(function(e){
-          if(e.lazy){ e._p=new Promise(function(res){ e._done=res; }); lazyDone.push(e._done); window.__mwPending[e.key]=e._p; lazyQ.push(e); }
-          else jobs.push(window.__mwPending[e.key]=seedOne(e,false));
-        });
-        (manifest.images||[]).forEach(function(e){ jobs.push(window.__mwPending[e.key]=seedOne(e,true)); });
-        jobs.push(seedBoxTex(manifest.boxtex));
-        // Lazy entries download after the boot-critical ones, galaxy-visible moons first, three at a time. Every lazy
-        // promise resolves (seedOne never rejects), so nothing waiting on one can hang.
-        var LAZY_RANK=function(k){ return /^mesh:moon:/.test(k)?0:/^mesh:/.test(k)?1:2; };
-        lazyQ.sort(function(a,b){ return LAZY_RANK(a.key)-LAZY_RANK(b.key); });
-        var lazyStarted=false;
-        function startLazy(){ if(lazyStarted) return; lazyStarted=true;
-          function worker(){ var e=lazyQ.shift(); if(!e) return; seedOne(e,false).then(function(){ e._done(); worker(); }); }
-          worker(); worker(); worker();
-        }
-        loadProgress(jobs);
+        (manifest.models||[]).forEach(function(e){ addJob(e.key,[e.path],[e.bytes],function(){ return seedOne(e,false); }); });
+        (manifest.images||[]).forEach(function(e){ addJob(e.key,[e.path],[e.bytes],function(){ return seedOne(e,true); }); });
+        var byId={}; (manifest.boxtex||[]).forEach(function(e){ (byId[e.id]=byId[e.id]||[]).push(e); });
+        Object.keys(byId).forEach(function(id){ var f=byId[id]; addJob('boxtex:'+id,f.map(function(e){ return e.path; }),f.map(function(e){ return e.bytes; }),function(){ return seedBoxTex(id,f); }); });
+        MWA.total=Object.keys(JOB).length;
+        Object.keys(JOB).forEach(run);   // cached keys settle now; the rest wait for start() to download
+        if(NO_GATE) MWA.start(); else setTimeout(function(){ MWA.start(); },30000);
+        MWA.emit();
         // Copy must land in localStorage before bootHolotable() reads it synchronously — do it first: the
         // static seed baseline, then reconcile against the server (which overrides it once real
         // server-side content exists, or pulls this browser's local edits up if it's the admin's own).
-        // Boot then waits for the boot-critical models, capped at BOOT_CAP_MS so one slow or failing file can't hold
-        // the page: anything still in flight at the cap swaps in when it lands (BRICStore.get waits on it).
-        var BOOT_CAP_MS=12000;
-        return seedCopy(manifest.copySeed).then(reconcileServerContent).then(function(){
-          var all=Promise.all(jobs);
-          return Promise.race([all,new Promise(function(res){ setTimeout(function(){ res('cap'); },BOOT_CAP_MS); })]).then(function(r){
-            if(r==='cap') console.warn('[mw-seed] boot cap reached; remaining models swap in as they arrive');
-            startLazy();
-          });
-        });
+        // Boot does NOT wait for the models: the gate (or the cover) holds the visitor until MWAssets is ready.
+        return seedCopy(manifest.copySeed).then(reconcileServerContent);
       })
-      .catch(function(err){ lazyDone.forEach(function(d){ d(); }); console.warn('[mw-seed] manifest load failed — continuing without pre-seeded assets', err); return reconcileServerContent(); });
+      .catch(function(err){ MWA.manifestFailed=true; MWA.emit(); console.error('[mw-seed] manifest failed to load; the gate stays locked (Retry reloads)',err); return reconcileServerContent(); });
+    // The loader's DOM half: the cover for gate-less visits, the screen-reader progress + live region, the keyboard Enter
+    // button (visible when focused) and, if loading fails, visible Retry / Enter anyway. On the gate the visible progress is
+    // the marquee band; this element only shows itself there when something failed.
+    (function(){
+      var root=document.getElementById('mwLoad'); if(!root) return;
+      document.body.insertBefore(root,document.body.firstChild);   // first in the tab order: on the gate, Tab lands on Enter before anything else
+      var q=function(s){ return root.querySelector(s); };
+      var txt=q('.mwl-text'), bar=q('.mwl-bar'), fill=q('.mwl-fill'), why=q('.mwl-why'), live=q('.mwl-live'), enter=q('.mwl-enter'), retry=q('.mwl-retry');
+      var hint=document.getElementById('gateHint'), hintText=hint?hint.textContent:'', lastSt='', lastQ=-1, gone=false;
+      function vis(el,m){ el.hidden=(m==='none'); el.classList.toggle('mwl-sro',m==='sro'||m==='focus'); el.classList.toggle('mwl-focusable',m==='focus'); }
+      function say(s){ if(live.textContent!==s) live.textContent=s; }
+      function hide(){ if(gone) return; gone=true; root.classList.add('out'); setTimeout(function(){ if(root.parentNode) root.parentNode.removeChild(root); },450); }
+      window.__mwLoadHide=hide;
+      window.__mwLoadNudge=function(){ if(gone) return; why.classList.remove('nudge'); void why.offsetWidth; why.classList.add('nudge'); say(why.textContent); };
+      MWA.on(function(s){
+        if(gone) return;
+        var st=s.state(), pct=s.percent(), g=document.body.classList.contains('mw-entrygate'), failed=st==='failed', nf=s.failedKeys().length;
+        root.classList.toggle('on-gate',g); root.classList.toggle('failed',failed);
+        root.setAttribute('aria-busy',st==='loading'?'true':'false');
+        bar.setAttribute('aria-valuenow',pct); fill.style.transform='scaleX('+(pct/100)+')';
+        txt.textContent=failed?(s.manifestFailed?'Assets didn’t load':nf?(nf===1?'1 asset didn’t load':nf+' assets didn’t load'):'Loading stalled'):st==='loading'?(s.started?'Loading assets '+pct+'%':'Loading'):'Assets loaded';
+        why.textContent=failed?'Retry, or enter without them (missing models show as placeholders)':'Enter unlocks once every asset has loaded';
+        enter.textContent=failed?'Enter anyway':'Enter';
+        enter.setAttribute('aria-disabled',st==='loading'?'true':'false');
+        vis(txt,g&&!failed?'sro':'show'); vis(bar,g?'sro':st==='loading'?'show':'none'); vis(why,failed?'show':g&&st==='loading'?'sro':'none');
+        vis(enter,failed?'show':g?'focus':'none'); vis(retry,failed?'show':'none');
+        if(hint) hint.textContent=(g&&!s.canEnter())?hintText.split('•')[0].trim():hintText;   // "click holocron to enter" only once it can
+        if(st!==lastSt){ lastSt=st; say(txt.textContent+(st==='ready'&&g?'. Enter is available.':'')); }
+        else if(st==='loading'&&s.started&&Math.floor(pct/25)!==lastQ){ lastQ=Math.floor(pct/25); say(txt.textContent); }   // announce every 25%, not every byte
+        if((st==='ready'||st==='released')&&!g) hide();   // the cover lifts by itself; on the gate it goes when the dock starts
+      });
+      enter.addEventListener('click',function(){
+        if(enter.getAttribute('aria-disabled')==='true'){ window.__mwLoadNudge(); return; }
+        if(!MWA.ready) MWA.release();
+        if(document.body.classList.contains('mw-entrygate')&&window.__mwEnterGate) window.__mwEnterGate(); else hide();
+      });
+      retry.addEventListener('click',function(){ MWA.retry(); });
+    })();
   })();
   </script>
 
@@ -9857,7 +9953,8 @@ f 2469//2469 2470//2470 2434//2434
       function fail(err){ mwState='failed'; console.error('[mw-monogram]',err);
         // Nothing will ever appear to click on the entry gate if the bundle can't load — skip straight
         // to the galaxy rather than stranding the visitor on a bare starfield.
-        if(mwPhase==='entry'){ mwPhase='docked'; document.body.classList.remove('mw-entrygate'); setSiteVisible(true); } }
+        if(mwPhase==='entry'){ mwPhase='docked'; document.body.classList.remove('mw-entrygate'); setSiteVisible(true); }
+        if(window.MWAssets){ MWAssets.start(); MWAssets.emit(); } }   // no gate after all: the loader becomes the cover until the models are in
       var el=document.createElement('script'); el.src=MW_DIR+'mw-monogram.js';
       el.onerror=function(){ fail('bundle failed to load'); };
       el.onload=function(){
@@ -9890,6 +9987,7 @@ f 2469//2469 2470//2470 2434//2434
             };
             mwQuad=new THREE.Mesh(new THREE.PlaneGeometry(1,1), qm);
             mwQuad.frustumCulled=false; mwQuad.visible=false; scene.add(mwQuad); mwState='ready';
+            if(window.MWAssets) MWAssets.start();   // the cube is up: now the models download (see NO_GATE in the seed script)
           }).catch(fail);
       };
       document.head.appendChild(el);
@@ -9910,6 +10008,16 @@ f 2469//2469 2470//2470 2434//2434
       { axis:'y', textKeys:['gateH1Text'], font:'600 {S}px "Chakra Petch"', track:.34, dir:1, delayKey:'gateH1Delay', liftKey:'gateH1Lift', sizeKey:'gateH1Size', segKey:'gateH1Seg', colorKey:'gateH1Color', flipKey:'gateH1Flip', revKey:'gateH1Rev' },
       { axis:'x', textKeys:['gateH2Text'], font:'500 {S}px "Space Grotesk"', track:.14, dir:-1, delayKey:'gateH2Delay', liftKey:'gateH2Lift', sizeKey:'gateH2Size', segKey:'gateH2Seg', colorKey:'gateH2Color', flipKey:'gateH2Flip', revKey:'gateH2Rev' }
     ];
+    // First-visit loader band (PR #106): while MWAssets isn't ready, ONE band on the H1 loop reads "LOADING ASSETS XX%"; when everything is loaded and
+    // built it fades out and the two text bands fade in, and only then can the monogram be clicked (startDock). Warm visits (all cached) never show it.
+    // Its tile is laid out for the longest text it can show and redrawn in place (gbLoaderDraw), so the percentage changes without a rebuild.
+    var GB_LOADER=Object.assign({},GB_BANDS[0],{loader:true,textKeys:[],track:.14,minReps:2}), GB_LOADER_LONGEST='LOADING ASSETS 100%';   // tighter tracking + at least 2 repeats: the whole phrase, number included, is always on the front of the loop
+    function gbLoaderText(){ var A=window.MWAssets; if(!A) return ''; return A.state()==='failed'?'ASSETS DIDN\u2019T LOAD':'LOADING ASSETS '+A.percent()+'%'; }
+    function gbLoaderDraw(bd,text){ var t=bd.tile, x=t.canvas.getContext('2d'), H=t.canvas.height;
+      x.clearRect(0,0,t.canvas.width,H); x.font=t.font; if(t.hasLS) x.letterSpacing=t.ls+'px';
+      x.fillStyle='#fff'; x.textBaseline='middle'; x.fillText(text,0,H/2+t.S*.04); x.fillRect(t.sqX,(H-t.sq)/2,t.sq,t.sq);
+      bd.maps[0].needsUpdate=true; bd.mapsB[0].needsUpdate=true; bd.text=text; }
+    var _gReadyAt=null, _gLoaderUsed=false;
     var GB_TEXT_DEFAULTS={gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin'};
     function gbTexts(def){ var t=def.textKeys.map(function(k){ return (params[k]!=null?String(params[k]):GB_TEXT_DEFAULTS[k]).trim(); }).filter(Boolean); return t.length?t:[GB_TEXT_DEFAULTS[def.textKeys[0]]]; }   // blank fields are skipped; all blank falls back to the default line
     var _gbColor='#AAF5EE';
@@ -9927,8 +10035,8 @@ f 2469//2469 2470//2470 2434//2434
       if(hasLS&&extra>0){ ls+=extra*.5/Math.max(1,text.length); x.letterSpacing=ls+'px'; tw=Math.ceil(x.measureText(text).width); }
       cv.width=Math.min(W,8192); cv.height=H; x=cv.getContext('2d'); x.font=font; if(hasLS) x.letterSpacing=ls+'px';
       x.fillStyle='#fff'; x.textBaseline='middle'; x.fillText(text,0,H/2+S*.04);
-      x.fillRect(tw+Math.round((W-tw-sq)/2),(H-sq)/2,sq,sq);
-      return {canvas:cv,w:W,h:H};
+      var sqX=tw+Math.round((W-tw-sq)/2); x.fillRect(sqX,(H-sq)/2,sq,sq);
+      return {canvas:cv,w:W,h:H,font:font,ls:ls,hasLS:hasLS,S:S,sq:sq,sqX:sqX};
     }
     // Regular N-gon loop (N >= 3) of apothem rho, one flat edge facing +u, as samples {p:[u,v], n:[nu,nv]} (n = the edge's outward normal), counter-clockwise, ~ds apart.
     function gbPoly(N,rho,ds){
@@ -9947,7 +10055,7 @@ f 2469//2469 2470//2470 2434//2434
       var h=mwMono.radius/Math.sqrt(3);   // the cube's half-side in monogram units (its bounding sphere is the cube's circumsphere)
       var group=new THREE.Group(); group.matrixAutoUpdate=false; group.visible=false;
       var box=new THREE.Mesh(new THREE.BoxGeometry(2*h,2*h,2*h), new THREE.MeshBasicMaterial({colorWrite:false, depthWrite:true, transparent:true, fog:false})); box.renderOrder=40; box.frustumCulled=false; group.add(box);
-      var bands=GB_BANDS.map(function(def){
+      var bands=GB_BANDS.concat([GB_LOADER]).map(function(def){
         var lift=h*(params[def.liftKey]/100), N=Math.max(3,Math.round(params[def.segKey]||4)), hReq=2*h*(params[def.sizeKey]/100);
         // apothem: the smallest N-gon that clears the cube's edges (the square's corners in the loop plane) by `lift`; for N = 4 that is exactly the face offset h + lift, for more segments it grows toward the circle through the corners
         var rho=0; for(var k=0;k<N;k++){ var th=2*Math.PI*k/N; for(var cx=-1;cx<=1;cx+=2) for(var cy=-1;cy<=1;cy+=2) rho=Math.max(rho,h*(cx*Math.cos(th)+cy*Math.sin(th))); } rho+=lift;
@@ -9961,8 +10069,8 @@ f 2469//2469 2470//2470 2434//2434
         var cum=[0]; for(var i=1;i<=n;i++) cum.push(cum[i-1]+P[i%n].distanceTo(P[i-1]));
         Ltot=cum[n];
         // The text size is the ribbon height (hReq). Each line is one tile repeated a whole number of times round the loop so the marquee wraps with no seam (see gbTile for where the leftover length goes).
-        var texts=gbTexts(def), asp=texts.map(function(tx){ var t=gbTile(tx,def.font,def.track); return t.w/t.h; });
-        var reps=asp.map(function(r){ return Math.max(1,Math.round(Ltot/(r*hReq))); });   // nearest whole number of repeats to the requested size
+        var texts=def.loader?[GB_LOADER_LONGEST]:gbTexts(def), asp=texts.map(function(tx){ var t=gbTile(tx,def.font,def.track); return t.w/t.h; });
+        var reps=asp.map(function(r){ return Math.max(def.minReps||1,Math.round(Ltot/(r*hReq))); });   // nearest whole number of repeats to the requested size
         var hBand=Math.min.apply(null,[hReq].concat(asp.map(function(r,i){ return Ltot/reps[i]/r; })));   // a tile that would be too long shrinks the type a little (every line fits)
         var tiles=texts.map(function(tx,i){ var H=Math.round(72*1.5); return gbTile(tx,def.font,def.track,Ltot/reps[i]/hBand*H); });
         var flip=!!params[def.flipKey];   // baseline flip: the text turned 180 degrees (upside down), still reading outward
@@ -9979,7 +10087,7 @@ f 2469//2469 2470//2470 2434//2434
         var mapsB=maps.map(function(m){ var c=m.clone(); c.needsUpdate=true; return c; });
         var matB=new THREE.MeshBasicMaterial({map:mapsB[0], color:_gbColor, transparent:true, opacity:0, depthWrite:false, side:THREE.BackSide, fog:false, toneMapped:false});
         var meshB=new THREE.Mesh(geoB,matB); meshB.renderOrder=41; meshB.frustumCulled=false; group.add(meshB);
-        return { def:def, mesh:mesh, mat:mat, matB:matB, mapsB:mapsB, maps:maps, reps:reps, cur:0, scroll:0, colStr:'', flip:flip };
+        return { def:def, mesh:mesh, mat:mat, matB:matB, mapsB:mapsB, maps:maps, reps:reps, cur:0, scroll:0, colStr:'', flip:flip, tile:tiles[0], text:'' };
       });
       scene.add(group); gateBands={ group:group, box:box, bands:bands };
     }
@@ -9995,10 +10103,18 @@ f 2469//2469 2470//2470 2434//2434
       gateBands.group.matrix.copy(M); gateBands.group.matrixWorldNeedsUpdate=true; gateBands.group.visible=true;
       var inMs=Math.max(1,params.gateIn!=null?params.gateIn:2000), outMs=Math.max(1,params.gateFade!=null?params.gateFade:380);
       var rate=GB_REDUCED?0:(params.gateSpeed!=null?params.gateSpeed:6)/100;   // loops per second
+      var A=window.MWAssets, canEnter=!A||A.canEnter();
+      if(canEnter&&_gReadyAt==null) _gReadyAt=nowMs;
+      if(_gShown&&!canEnter) _gLoaderUsed=true;
+      var textOn=_gLoaderUsed?Math.max(_gOnAt,(_gReadyAt||0)+outMs):_gOnAt;   // after the loader band, the text bands start once it has faded out
       gateBands.bands.forEach(function(bd){
         var a=0;
-        if(_gOutAt) a=Math.max(0,1-(nowMs-_gOutAt)/outMs);
-        else if(_gShown){ var u=(nowMs-_gOnAt-(params[bd.def.delayKey]||0))/inMs; u=Math.max(0,Math.min(1,u)); a=u*u*(3-2*u); }
+        if(bd.def.loader){
+          if(_gLoaderUsed&&!_gOutAt){ var ul=Math.max(0,Math.min(1,(nowMs-_gOnAt)/inMs)); a=ul*ul*(3-2*ul); if(_gReadyAt!=null) a=Math.min(a,Math.max(0,1-(nowMs-_gReadyAt)/outMs)); }
+          if(a>0){ var lt=gbLoaderText(); if(lt!==bd.text) gbLoaderDraw(bd,lt); }
+        }
+        else if(_gOutAt) a=Math.max(0,1-(nowMs-_gOutAt)/outMs);
+        else if(_gShown&&canEnter){ var u=(nowMs-textOn-(params[bd.def.delayKey]||0))/inMs; u=Math.max(0,Math.min(1,u)); a=u*u*(3-2*u); }
         bd.mat.opacity=a; bd.matB.opacity=a;
         var col=params[bd.def.colorKey]||_gbColor; if(bd.colStr!==col){ bd.colStr=col; bd.mat.color.set(col); bd.matB.color.set(col); }   // '' = follow the theme's --holo
         var step=rate*dt*bd.def.dir*(params[bd.def.revKey]?-1:1)*(bd.flip?-1:1);   // reverse toggle = the marquee runs the other way on screen, whatever the baseline flip
@@ -10024,10 +10140,13 @@ f 2469//2469 2470//2470 2434//2434
     window.__mwGate=function(){ return { hover:mwHover, hk:+mwHoverK.toFixed(2), hit:_mwHit&&{cx:Math.round(_mwHit.cx),cy:Math.round(_mwHit.cy),R:Math.round(_mwHit.R)}, qo:(mwQuad&&mwQuad.material?+mwQuad.material.opacity.toFixed(2):null), dbg:_gDbg, shown:_gShown, stillForMs:Math.round(performance.now()-_gSince), onAtMs:Math.round(_gOnAt), bands:!!gateBands, phase:mwPhase, quadVisible:!!(mwQuad&&mwQuad.visible), dockAt:_dockAt }; };   // dev/test helper
     function startDock(){
       if(mwPhase!=='entry'||_dockAt!=null) return;
+      if(window.MWAssets&&!MWAssets.canEnter()){ if(window.__mwLoadNudge) __mwLoadNudge(); return; }   // locked until every asset is loaded and built (PR #106)
+      if(window.__mwLoadHide) __mwLoadHide();
       document.body.classList.add('mw-gate-out'); _gShown=true; _gOutAt=performance.now();   // the gate bands fade out (params.gateFade) while the monogram holds
       if(window.MWAudio){ MWAudio.uiReady(); if(!MWAudio.site('gateClick')) MWAudio.ui('click'); MWAudio.site('dockClick'); MWAudio.gateStop(); }   // the monogram click plays SITE_EVENTS.gateClick clips, or the site's default UI 'click' when there are none; dockClick is an extra layer; the gate's idle loop fades out as the dock starts
       _dockAt=clock.getElapsedTime()+(params.dockHold!=null?params.dockHold:0.7);   // the monogram holds (still spinning) until the text has gone, then beginDock runs from mwUpdate
     }
+    window.__mwEnterGate=function(){ startDock(); };   // the loader's keyboard Enter button
     function beginDock(){
       if(mwPhase!=='entry') return;
       mwPhase='docking'; mwDockStart=clock.getElapsedTime();
@@ -10563,7 +10682,7 @@ f 2469//2469 2470//2470 2434//2434
         if(!cv||(el!==cv&&!(_onLbl&&cvScene.active))) return null;   // pointer must be on the canvas itself, not a panel above it (a CV node's label is part of the node)
         if(arcadeActive) return null;
         if(mwPhase==='entry'){   // the entry monogram: while the pointer is over the mark (mwHover) the corner marks expand round it and show ENTER at its top-left corner
-          if(!mwHover||!_mwHit) return null;
+          if(!mwHover||!_mwHit||(window.MWAssets&&!MWAssets.canEnter())) return null;   // no ENTER frame while the gate is locked
           return {key:'monogram', label:'ENTER', arm:params.mwRetArm||28, weight:3, glow:true, outset:params.mwRetOutset!=null?params.mwRetOutset:6,
                   rect:function(){ if(!_mwHit) return null; var r=_mwHit.R*.92; return {left:_mwHit.cx-r,top:_mwHit.cy-r,right:_mwHit.cx+r,bottom:_mwHit.cy+r}; }};
         }
@@ -14181,42 +14300,52 @@ f 2469//2469 2470//2470 2434//2434
     // Every catch now logs id + error so the real failure (if any) is visible in devtools on next load.
     function restorePlanetOverrides(id){
       if(!window.BRICStore) return;
-      BRICStore.get('mesh:'+id).then(function(rec){ if(!rec) return;
-        if(rec.kind==='obj'){ applyMeshTo(id,parseUploadedOBJ(rec.text,meshRadiusFor(id))); planetMeshOvr[id]={kind:'obj',name:rec.name}; }
-        else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,meshRadiusFor(id),rec.depth||0.3,rec.axis||'z'); if(g){ applyMeshTo(id,g); planetMeshOvr[id]={kind:'svg',name:rec.name}; } else { console.warn('[mw-restore] parseSVGGeo returned null for',id,rec.name); } }
+      // MWApply(key) tells the first-visit loader a manifest model is being built and returns the call that marks it done;
+      // the entry gate stays locked until every one has ended (see MWAssets in the seed script). Every path must end it.
+      var endM=MWApply('mesh:'+id);
+      BRICStore.get('mesh:'+id).then(function(rec){ if(!rec){ endM(); return; }
+        if(rec.kind==='obj'){ applyMeshTo(id,parseUploadedOBJ(rec.text,meshRadiusFor(id))); planetMeshOvr[id]={kind:'obj',name:rec.name}; endM(); }
+        else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,meshRadiusFor(id),rec.depth||0.3,rec.axis||'z'); if(g){ applyMeshTo(id,g); planetMeshOvr[id]={kind:'svg',name:rec.name}; } else { console.warn('[mw-restore] parseSVGGeo returned null for',id,rec.name); } endM(); }
         else if(rec.kind==='glb'){
           // NOTE: this used to be held back (mwHeldLogo) while the monogram was on, back when the
           // monogram replaced the head. It no longer does — the monogram lives at the base emitter,
           // the head/uploaded logo always lives in the beam — so a custom logo restores normally.
-          if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } }); }
-          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); setPlanetDepthPass(id,true); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
+          if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ try{ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } } finally{ endM(); } }); }
+          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ try{ if(g2){ applyMeshTo(id,g2); setPlanetDepthPass(id,true); planetMeshOvr[id]={kind:'glb',name:rec.name}; } } finally{ endM(); } }); }
         }
-        else if(rec.kind==='step'){ parseSTEP(rec.buffer,function(group){ if(!group) return;
+        else if(rec.kind==='step'){ parseSTEP(rec.buffer,function(group){ try{ if(!group) return;
           if(id==='logo'){ applyTexturedGLBToLogo(group); planetMeshOvr.logo={kind:'step',name:rec.name}; }
           else { var g3=mergeGroupGeo(group,meshRadiusFor(id)); if(g3){ applyMeshTo(id,g3); planetMeshOvr[id]={kind:'step',name:rec.name}; } }
-        }); }
-      }).catch(function(err){ console.error('[mw-restore] mesh:'+id,err); });
+        } finally{ endM(); } }); }
+        else endM();
+      }).catch(function(err){ endM(); console.error('[mw-restore] mesh:'+id,err); });
       BRICStore.get('tex:'+id).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(id,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] tex:'+id,err); });
-      BRICStore.get('boxtex:'+id).then(function(rec){ if(rec){ BOX_FACES.forEach(function(f){ if(rec[f]) applyTextureTo(id,rec[f],true,f); }); } }).catch(function(err){ console.error('[mw-restore] boxtex:'+id,err); });
+      var endT=MWApply('boxtex:'+id);
+      BRICStore.get('boxtex:'+id).then(function(rec){ try{ if(rec){ BOX_FACES.forEach(function(f){ if(rec[f]) applyTextureTo(id,rec[f],true,f); }); } } finally{ endT(); } }).catch(function(err){ endT(); console.error('[mw-restore] boxtex:'+id,err); });
       // FOCUS-VIEW BOX REPLACEMENT: cache the record; applied on focus (or now, if already focused on this box).
-      BRICStore.get('boxmesh:'+id).then(function(rec){ if(!rec) return; boxOvrData[id]=rec; boxOvr[id]={kind:rec.kind,name:rec.name};
-        if(focused&&focused.userData.id===id&&focused.userData._matBak) applyBoxReplacementFromData(id); }).catch(function(err){ console.error('[mw-restore] boxmesh:'+id,err); });
+      var endB=MWApply('boxmesh:'+id);
+      BRICStore.get('boxmesh:'+id).then(function(rec){ try{ if(!rec) return; boxOvrData[id]=rec; boxOvr[id]={kind:rec.kind,name:rec.name};
+        if(focused&&focused.userData.id===id&&focused.userData._matBak) applyBoxReplacementFromData(id); } finally{ endB(); } }).catch(function(err){ endB(); console.error('[mw-restore] boxmesh:'+id,err); });
     }
     // moon (artifact) mesh + texture overrides
     function restoreMoonOverrides(grp){
       if(!window.BRICStore) return;
       grp.userData.moons.forEach(function(m){ var mid=m.userData.editId;
-        BRICStore.get('mesh:'+mid).then(function(rec){ if(!rec) return;
-          if(rec.kind==='obj') m.geometry=parseUploadedOBJ(rec.text,0.12);
-          else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,0.12,rec.depth||0.3,rec.axis||'z'); if(g) m.geometry=g; }
-          else if(rec.kind==='glb') loadGLBScene(rec.buffer,function(scene){ if(scene) applyGLBSceneToMoon(mid,scene); });
-          else if(rec.kind==='step') parseSTEP(rec.buffer,function(group){ if(group) applyGLBSceneToMoon(mid,group); });
-        }).catch(function(err){ console.error('[mw-restore] moon mesh:'+mid,err); });
+        var endM=MWApply('mesh:'+mid);
+        BRICStore.get('mesh:'+mid).then(function(rec){ if(!rec){ endM(); return; }
+          if(rec.kind==='obj'){ m.geometry=parseUploadedOBJ(rec.text,0.12); endM(); }
+          else if(rec.kind==='svg'){ var g=parseSVGGeo(rec.text,0.12,rec.depth||0.3,rec.axis||'z'); if(g) m.geometry=g; endM(); }
+          else if(rec.kind==='glb') loadGLBScene(rec.buffer,function(scene){ try{ if(scene) applyGLBSceneToMoon(mid,scene); } finally{ endM(); } });
+          else if(rec.kind==='step') parseSTEP(rec.buffer,function(group){ try{ if(group) applyGLBSceneToMoon(mid,group); } finally{ endM(); } });
+          else endM();
+        }).catch(function(err){ endM(); console.error('[mw-restore] moon mesh:'+mid,err); });
         BRICStore.get('tex:'+mid).then(function(rec){ if(rec&&rec.dataURL) applyTextureTo(mid,rec.dataURL,false); }).catch(function(err){ console.error('[mw-restore] moon tex:'+mid,err); });
       });
     }
+    function MWApply(key){ return window.MWAssets?MWAssets.applyBegin(key):function(){}; }
     editIds.forEach(restorePlanetOverrides);
     planets.forEach(restoreMoonOverrides);
+    if(window.MWAssets) MWAssets.kick();   // every boot-time build is registered: the gate unlocks when they have all finished
 
     // ── global save ──────────────────────────────────────────────────────────
     // Local state (params/slots/mesh overrides/box textures) always writes to localStorage synchronously here —
@@ -15820,6 +15949,7 @@ f 2469//2469 2470//2470 2434//2434
     // reveals the rest via setSiteVisible once docked). A deep link / ?edit=1 / reduced-motion already
     // forced mwPhase to 'docked' above, before routing ran, so this is a no-op in those cases.
     if(mwPhase==='entry'){ document.body.classList.add('mw-entrygate'); setSiteVisible(false); } else setSiteVisible(true);
+    if(window.MWAssets) MWAssets.emit();   // the loader switches between cover and gate mode on this class
 
     animate();
   }
@@ -15839,7 +15969,7 @@ f 2469//2469 2470//2470 2434//2434
       var svgSrcs =['./vendor/SVGLoader.js',   CDN+'SVGLoader.js'];
       var gltfSrcs=['./vendor/GLTFLoader.js',  CDN+'GLTFLoader.js'];    // EDIT MODE: .glb upload support
       var dracoSrcs=['./vendor/DRACOLoader.js',CDN+'DRACOLoader.js'];   // MW SEED: pre-loaded portfolio .glb files are Draco-compressed
-      function boot(){ if(window.__mwLoadDone) window.__mwLoadDone(); try{ bootHolotable(); }catch(err){ console.error('[holotable]',err); showError('3D scene error: '+err.message); } }
+      function boot(){ try{ bootHolotable(); }catch(err){ console.error('[holotable]',err); showError('3D scene error: '+err.message); } }
       // MW SEED: wait for the manifest-driven asset seed (assets/manifest.json → IndexedDB) to finish
       // before booting the scene, so first-time visitors never see an empty/placeholder flash. If the
       // seed script isn't present (e.g. local prototype without /assets), boot immediately as before.
