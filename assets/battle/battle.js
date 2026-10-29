@@ -1052,7 +1052,7 @@ function playHero(){
 }
 // Select-page lock UI: a locked ship becomes a holographic WIREFRAME (hard edges + a faint fill, like the planet meshes on the galaxy view), PLAY → LOCKED (design-system inactive state),
 // and the requirement is one UI row: [minikit icon] ×(still needed) "shoot N minikits to unlock · have/N" in the feedback-warning colour so it stands out from the rest of the text.
-var kitIconSrc=null, carWireMat=null, carFillMat=null;
+var kitIconSrc=null, carWireMat=null, carFillMat=null, carDepthMat=null;
 // A GLB rendered ONCE to a small still image (a UI icon, not a 3D object): temporary WebGL context, released immediately. Used for the minikit in the unlock row and for the ships on the game-over modal.
 function modelIcon(proto,o){
   if(!proto||!T) return '';
@@ -1094,17 +1094,28 @@ function carWireGeo(id,meshes){
 }
 function carWire(on,id){
   if(!carModel) return;
-  if(!carWireMat){ carWireMat=new T.LineBasicMaterial({color:0x78E0D6,transparent:true,opacity:.7,blending:T.AdditiveBlending,depthWrite:false,fog:false}); carFillMat=new T.ShaderMaterial({transparent:true,depthWrite:true,side:T.FrontSide,   /* normal blending + depth write: ONE translucent front shell that also hides the back edges, so dense LEGO detail can't pile up into a white blob */
+  // Draw order (same idea as the galaxy's GLB planets, setPlanetDepthPass in index.html):
+  //   1 depth-only twin of EVERY part, 2 teal fill (no depth write), 3 outline.
+  // All twins land before any fill, so only the ship's front-most surface gets the fill: parts behind
+  // other parts and interior walls can't stack up. The old fill wrote depth part by part, so a far part
+  // drawn before a near one still showed through it. Twins draw after the scene's normal objects
+  // (renderOrder 0), so whatever is behind the ship is already on screen and stays visible: the ship
+  // remains a translucent hologram. polygonOffset pushes the twin back a hair so the fill still passes.
+  if(!carWireMat){ carWireMat=new T.LineBasicMaterial({color:0x78E0D6,transparent:true,opacity:.7,blending:T.AdditiveBlending,depthWrite:false,fog:false});
+    carDepthMat=new T.MeshBasicMaterial({colorWrite:false,depthWrite:true,transparent:true,side:T.FrontSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+    carFillMat=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.FrontSide,   /* ONE translucent front shell (see draw order above), so dense LEGO detail can't pile up into a white blob */
     uniforms:{col:{value:new T.Color(0x78E0D6)},k:{value:1}},   // fresnel rim fill: the same look as the logo head's holo material, so the silhouette reads and the detail doesn't
     vertexShader:'varying vec3 vN; varying vec3 vV; void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=-mv.xyz; gl_Position=projectionMatrix*mv; }',
     fragmentShader:'uniform vec3 col; uniform float k; varying vec3 vN; varying vec3 vV; void main(){ float fr=pow(1.0-abs(dot(normalize(vV),normalize(vN))),1.6); gl_FragColor=vec4(col,(fr*.55+.1)*k); }'}); }   // the site's holo teals (DARK.line / holoColor)
 
   var meshes=[]; carModel.traverse(function(o){ if(o.isMesh&&o.geometry&&o.material&&!o.userData.isHolo) meshes.push(o); });   // collect first: adding children while traversing would recurse forever
   var mu=carModel.userData;
-  if(on&&!mu.holoWireObj){ mu.holoWireObj=new T.LineSegments(carWireGeo(id,meshes),carWireMat); mu.holoWireObj.userData.isHolo=true; mu.holoWireObj.renderOrder=2; carModel.add(mu.holoWireObj); }
+  if(on&&!mu.holoWireObj){ mu.holoWireObj=new T.LineSegments(carWireGeo(id,meshes),carWireMat); mu.holoWireObj.userData.isHolo=true; mu.holoWireObj.renderOrder=3; carModel.add(mu.holoWireObj); }
   if(mu.holoWireObj) mu.holoWireObj.visible=on;
   meshes.forEach(function(o){ var u=o.userData;
-    if(on&&!u.holoFill){ u.holoFill=new T.Mesh(o.geometry,carFillMat); u.holoFill.userData.isHolo=true; u.holoFill.renderOrder=1; o.add(u.holoFill); }
+    if(on&&!u.holoDepth){ u.holoDepth=new T.Mesh(o.geometry,carDepthMat); u.holoDepth.userData.isHolo=true; u.holoDepth.renderOrder=1; o.add(u.holoDepth); }
+    if(on&&!u.holoFill){ u.holoFill=new T.Mesh(o.geometry,carFillMat); u.holoFill.userData.isHolo=true; u.holoFill.renderOrder=2; o.add(u.holoFill); }
+    if(u.holoDepth) u.holoDepth.visible=on;
     if(u.holoFill) u.holoFill.visible=on;
     o.material.visible=!on; });   // hide only the solid shading; the child outline/fill still draw
 }
