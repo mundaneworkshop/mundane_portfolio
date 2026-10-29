@@ -9,7 +9,8 @@
  *   bricWipe.intercept(hosts)   wipe on ordinary link clicks that leave this site for one of hosts (used on Framer for the way back)
  *   bricWipe.play([variant], [mid])  in place: cover then uncover, no navigation; mid() runs while fully covered (view swaps)
  *   bricWipe.variants           list of ids
- *   bricWipe.active()           true while the panel is up (covering or uncovering)
+ *   bricWipe.active()           true while the panel is up (covering or uncovering). It takes presses only while covering;
+ *                               once it starts to uncover, clicks pass through to the new view
  *   window 'bric:wipe-done'     fired when the page is fully uncovered again (play / enter), e.g. to start an intro that
  *                               would otherwise run unseen under the panel
  *
@@ -85,8 +86,12 @@
     var m = maskFor(variant);
     el.style.webkitMaskImage = m; el.style.maskImage = m;
     el.style.setProperty('--bw-p', 0);
+    el.style.pointerEvents = 'auto';   // covering: the old view is going away, a press must not land on it
     el.style.display = 'block';
   }
+  // uncovering: the new view is already in place and shows through the opening, so presses go straight to it. Holding them for the
+  // whole uncover (1.2s nominal, 2s+ on a busy frame) dropped every click a visitor aimed at the view they could already see.
+  function release() { if (el) el.style.pointerEvents = 'none'; }
 
   function run(ms, done) {
     if (anim) { try { anim.cancel(); } catch (e) {} }
@@ -132,7 +137,7 @@
       if (reduced() || !supported()) { if (mid) mid(); return null; }
       var v = pick(variant);
       build(v, false);
-      run(cfg.outMs, function () { if (mid) mid(); build(v, true); el.style.setProperty('--bw-p', 0); run(cfg.inMs, hide); });
+      run(cfg.outMs, function () { if (mid) mid(); build(v, true); el.style.setProperty('--bw-p', 0); release(); run(cfg.inMs, hide); });
       return v;
     },
     enter: function () {
@@ -146,7 +151,7 @@
       // otherwise it sits solid under the panel and the wipe uncovers nothing but the cover, then the page pops in at the end.
       var hold = document.getElementById('bric-wipe-hold'); if (hold) hold.remove();
       var started = false;
-      function start() { if (started) return; started = true; setTimeout(function () { run(cfg.inMs, hide); }, 120); }
+      function start() { if (started) return; started = true; setTimeout(function () { release(); run(cfg.inMs, hide); }, 120); }
       if (document.readyState === 'complete') start();
       else { window.addEventListener('load', start); setTimeout(start, 2500); }   // never hold a visitor on a blank panel
     }

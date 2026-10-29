@@ -284,6 +284,10 @@ function bricReticle(options) {
     if (!inFrame(cur, e.clientX, e.clientY)) return;
     var t = e.target && e.target.closest ? e.target.closest(o.selector + ',' + o.ignore) : null;
     if (t) return;
+    // ...and only while the target itself is uncovered: a layer over it (a screen wipe mid-transition, a modal) owns that press
+    var r = cur.el.getBoundingClientRect(), cx = Math.min(Math.max(r.left + r.width / 2, 0), window.innerWidth - 1), cy = Math.min(Math.max(r.top + r.height / 2, 0), window.innerHeight - 1);
+    var top = document.elementFromPoint(cx, cy);
+    if (top && !cur.el.contains(top)) return;
     e.preventDefault(); e.stopPropagation();
     cur.el.click();
   }
