@@ -731,11 +731,6 @@
   .mw-sound-switch.on:hover .sw-thumb{background:var(--bric-interactive-fill-hover);box-shadow:0 0 6px var(--bric-interactive-fill-hover)}
   .mw-sound-switch:focus-visible .sw-track{outline:2px solid var(--bric-interactive-outline-default);outline-offset:3px}
   /* prominent variant (arcade hero select, under Leaderboard): a bigger switch and label */
-  .mw-sound-switch--lg{gap:var(--bric-space-2-stud)}
-  .mw-sound-switch--lg .sw-track{width:52px;height:24px}
-  .mw-sound-switch--lg .sw-thumb{width:18px;height:16px;top:3px;left:3px}
-  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(26px)}
-  .mw-sound-switch--lg .sw-lbl{font-size:13px;letter-spacing:.2em;min-width:78px}
   /* disabled (Figma 12 · Toggle): outline, thumb and label drop to the disabled tokens; no hover, no reticle */
   .mw-sound-switch[aria-disabled="true"]{cursor:not-allowed;pointer-events:none}
   .mw-sound-switch[aria-disabled="true"] .sw-track{border-color:var(--bric-interactive-outline-disabled);background:transparent}
@@ -781,11 +776,8 @@
   .ct-links{display:flex;flex-wrap:wrap;gap:4px}
   .ct-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ct-trap{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}   /* bot trap: off-screen (not display:none, which some bots skip), unreachable by keyboard and screen readers */
-  .ct-glbname{font-family:var(--mono);font-size:11px;color:#7a8a86;margin:-2px 0 10px;letter-spacing:.5px}
   /* GLB upload affordances appear only in Edit Mode */
   .glb-up{display:none}
-  body.editing .ct-glbname.glb-up{display:block}
-  body.editing .ct-upload.glb-up{display:inline-flex;margin-bottom:10px}
   .ct-fld{position:relative}
   .ct-count{position:absolute;right:11px;bottom:10px;font-family:var(--mono);font-size:11px;line-height:16px;letter-spacing:1px;color:var(--bric-content-tertiary);pointer-events:none}
   .ct-count.low{color:var(--bric-register-amber-text)}
@@ -796,10 +788,7 @@
   #ctName::placeholder,#ctMsg::placeholder{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bric-content-tertiary);opacity:1}
   #ctName:focus,#ctMsg:focus{border-color:var(--bric-schematic-line);box-shadow:inset 0 0 0 1px var(--bric-schematic-line)}
   .ct-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}
-  .ct-upload{font-family:var(--grotesk);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#78E0D6;background:transparent;border:1px dashed rgba(90,191,184,.4);border-radius:2px;padding:8px 10px;cursor:pointer}
-  .ct-upload:hover{border-color:#5ABFB8}
   .ct-send{margin-left:auto}
-  .ct-note{font-family:var(--grotesk);font-size:13px;color:var(--bric-content-tertiary);align-self:center}
   .ct-send{flex:none}
   .ct-go{position:relative;flex:none;margin-left:auto}
   .ct-go .ct-send{height:56px;min-width:208px;padding:0 36px;font-size:16px;line-height:20px;letter-spacing:.18em}
@@ -12135,10 +12124,6 @@ f 2469//2469 2470//2470 2434//2434
       if(cpo) cpo.addEventListener('change',function(){ glbPost=cpo.checked; persist(); if(glbPost&&typeof igSetPosterizeLevels==='function') igSetPosterizeLevels(params.levels); viewerSlots().forEach(function(s){ if(s&&s._glbApplyPost) s._glbApplyPost(glbPost); }); });
     })();
     var contactGLBBuf=null;
-    function showContactFig(){ var slot=document.getElementById('ctFigSlot'); if(!slot) return;
-      if(contactGLBBuf){ mountGLBViewer(slot,contactGLBBuf); return; }
-      if(window.BRICStore){ BRICStore.get('contact:r2:glb').then(function(rec){ if(rec&&rec.buffer){ contactGLBBuf=rec.buffer; mountGLBViewer(slot,contactGLBBuf); } else slot.innerHTML=r2SVG(1.2); }).catch(function(){ slot.innerHTML=r2SVG(1.2); }); }
-      else slot.innerHTML=r2SVG(1.2); }
     function bindCount(inp,out,max){ var i=document.getElementById(inp), o=document.getElementById(out); if(!i||!o) return;
       function upd(){ var r=max-i.value.length; o.textContent=(r<0?'\u2212'+(-r):r)+' / '+max; o.classList.toggle('low',r<=20&&r>=0); o.classList.toggle('zero',r<0); }   // no maxlength: going over the cap is allowed and knocks the dish out of alignment (the server still enforces it)
       i.addEventListener('input',upd); upd(); }
@@ -15166,7 +15151,6 @@ f 2469//2469 2470//2470 2434//2434
     function ocSetKits(n){ try{ localStorage.setItem('mw_kits_total',String(Math.max(0,n|0))); }catch(e){} }
     function ocShipList(){ try{ return window.MWBattle&&MWBattle.shipList?MWBattle.shipList():[]; }catch(e){ return []; } }
     function ocHeroList(){ try{ return window.MWBattle&&MWBattle.heroList?MWBattle.heroList():[]; }catch(e){ return []; } }
-    function ocShipName(id){ var l=ocShipList().concat(ocHeroList()); for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i].name||id; return id; }
     function ocKillStats(){ try{ var k=(JSON.parse(localStorage.getItem('mw_ark_stats')||'{}')||{}).kills; return k&&typeof k==='object'?k:{}; }catch(e){ return {}; } }
     // ── UNLOCK ENGINE ──────────────────────────────────────────────────────────────────────────────────────────────────
     // Every rule type the Sig Fig Lab offers. Two sources of progress, both in localStorage and both read fresh (no cached state to drift):
@@ -15259,7 +15243,7 @@ f 2469//2469 2470//2470 2434//2434
           box.appendChild(row); });
         host.appendChild(box); });
     }
-    setInterval(function(){ try{ ocDbgBuild(); }catch(e){} },1000);
+    setInterval(function(){ if(document.hidden) return; try{ ocDbgBuild(); }catch(e){} },1000);   // paused while the tab is hidden
     function ocNewList(){ try{ var a=JSON.parse(localStorage.getItem('mw_outfits_new')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
     function ocSetNew(a){ try{ localStorage.setItem('mw_outfits_new',JSON.stringify(a)); }catch(e){} }
     function ocMarkSeen(id){ var a=ocNewList(), i=a.indexOf(id); var o=ocFind(id); if(i>=0&&o&&!ocLocked(o)){ a.splice(i,1); ocSetNew(a); } }
@@ -15311,7 +15295,6 @@ f 2469//2469 2470//2470 2434//2434
       if(ocKitLoading) return; ocKitLoading=true;
       fetch('assets/battle/models/minikit.glb').then(function(r){ return r.ok?r.arrayBuffer():null; }).then(function(b){ ocKitLoading=false; if(b){ ocKitBuf=b; ocHudUpdate(); } }).catch(function(){ ocKitLoading=false; });
     }
-    function ocHudNudge(){ var el=document.getElementById('outfitHud'); if(!el) return; el.classList.remove('oh-nudge'); void el.offsetWidth; el.classList.add('oh-nudge'); setTimeout(function(){ el.classList.remove('oh-nudge'); },900); }
     (function wireHud(){
       var pv=document.getElementById('ohPrev'), nx=document.getElementById('ohNext'), go=document.getElementById('ohGo'); if(!pv) return;
       function ui(){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } }
