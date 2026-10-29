@@ -116,5 +116,8 @@
 .bric-crumb{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-half-stud)}
 .bric-crumb__sep{color:var(--bric-content-secondary);font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;user-select:none}
 .bric-crumb__item{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);box-sizing:border-box;color:var(--bric-content-secondary);text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;white-space:nowrap}
+/* Large (desktop site nav): the items are Large buttons (.bric-btn without --sm, 40px), the separators and plain items take the Large type to match */
+.bric-crumb--lg .bric-crumb__sep{font-size:13px;letter-spacing:.08em}
+.bric-crumb--lg .bric-crumb__item{height:var(--bric-space-5-stud);padding:0 var(--bric-space-2-stud);font-size:13px;letter-spacing:.08em}
 
 @media (prefers-reduced-motion:reduce){.bric-seg::after{transition:none}.bric-btn::after{transition:none}.bric-btn.is-ignite::after{animation:none}}

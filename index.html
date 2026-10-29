@@ -739,6 +739,8 @@
   .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
   .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
   .mw-sound-switch .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
+  .mw-sound-switch .sw-lbl{display:inline-flex;flex-direction:column}
+  .mw-sound-switch .sw-lbl::after{content:'Sound off';height:0;overflow:hidden;visibility:hidden}   /* the label always takes the width of the longer state: the switch is anchored top-right, so "Sound on" ↔ "Sound off" moved its left edge 6px on every toggle and a second press on that edge missed */
   .mw-sound-switch.on .sw-thumb{background:var(--bric-interactive-fill-default);transform:translateX(16px);box-shadow:0 0 6px var(--bric-interactive-fill-default)}   /* travel 16 = thumb centred in the track (Figma 12 · Toggle) */
   .mw-sound-switch:hover .sw-track{border-color:var(--bric-interactive-outline-hover);background:var(--bric-interactive-fill-hover-tint);box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-stroke-near),0 0 24px 2px var(--bric-fx-glow-amber-stroke-far)}
   .mw-sound-switch:hover .sw-lbl{color:var(--bric-interactive-text-hover-accent)}
@@ -750,6 +752,13 @@
   .mw-sound-switch[aria-disabled="true"] .sw-track{border-color:var(--bric-interactive-outline-disabled);background:transparent}
   .mw-sound-switch[aria-disabled="true"] .sw-thumb{background:var(--bric-interactive-fill-disabled);box-shadow:none}
   .mw-sound-switch[aria-disabled="true"] .sw-lbl{color:var(--bric-interactive-text-disabled)}
+  /* Large (desktop topbar, beside the Large breadcrumb): the Small switch scaled to the Large button's type and a 24px (3-stud) track, same 2px keyline gap
+     ratio; thumb travel 22 = centred in the track like the Small 16. Proposed size, not yet in Figma 12 · Toggle. */
+  .mw-sound-switch--lg{gap:var(--bric-space-stud);min-height:var(--bric-space-5-stud)}   /* a 40px row like the Large buttons, so it centres on the breadcrumb row */
+  .mw-sound-switch--lg .sw-track{width:48px;height:var(--bric-space-3-stud)}
+  .mw-sound-switch--lg .sw-thumb{width:18px;height:16px;top:3px;left:3px}
+  .mw-sound-switch--lg.on .sw-thumb{transform:translateX(22px)}
+  .mw-sound-switch--lg .sw-lbl{font-size:13px;letter-spacing:.08em}
   @media (prefers-reduced-motion:reduce){.mw-sound-switch .sw-track,.mw-sound-switch .sw-thumb,.mw-sound-switch .sw-lbl{transition:none}}
   /* message stars layer */
   /* message stars are DRAWN on a low-res canvas so they inherit the scene's pixelize + posterize; the DOM beacons stay as invisible click targets */
@@ -14067,8 +14076,15 @@ f 2469//2469 2470//2470 2434//2434
         s.textContent=(ovr!=null)?ovr:seg.text;
         s.setAttribute('data-ci',i); crumbPathEl.appendChild(s);
       });
-      syncCrumbEdit();
+      syncCrumbSize(); syncCrumbEdit();
     }
+    // Size: the top bar (breadcrumb, CV view toggle, sound switch) is Large on desktop (the Small 24px controls were hard to land a click on), Small on phones
+    // until the mobile menu replaces the breadcrumb there
+    var crumbSmQ=window.matchMedia('(max-width:700px)'), crumbBarEl=document.getElementById('breadcrumb');
+    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches; crumbBarEl.classList.toggle('bric-crumb--lg',!sm); crumbBarEl.querySelectorAll('.bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
+      var seg=document.getElementById('cvView'), sw=document.getElementById('soundToggle'); if(seg) seg.classList.toggle('bric-seg--sm',sm); if(sw) sw.classList.toggle('mw-sound-switch--lg',!sm); }
+    if(crumbSmQ.addEventListener) crumbSmQ.addEventListener('change',function(){ syncCrumbSize(); window.dispatchEvent(new Event('resize')); });   // resize: the CV toggle and the manual layout re-measure against the new row height
+    syncCrumbSize();
     function setCrumb(ctx,segs){ crumbCtx=ctx||''; crumbSegs=segs||[]; renderCrumb(); }
     function syncCrumbEdit(){ var on=(typeof editMode!=='undefined')&&editMode;
       crumbRootEl.contentEditable=on?'true':'false'; crumbRootEl.classList.toggle('inline-edit-on',on);
@@ -16106,7 +16122,7 @@ f 2469//2469 2470//2470 2434//2434
     // free rectangle as window.MWStage; the frame loop then centres + fits the kit box and moons inside it.
     //   'auto' → dock, with the drawer as the fallback on narrow screens (phones).
     // The mode can be forced from the author-only switcher / Debug panel (window.__mwManualLayout).
-    var ML_TOP=48;                 // px reserved along the top (breadcrumb row)
+    function mlTop(){ var r=document.getElementById('breadcrumb').getBoundingClientRect(); return r.height?Math.round(r.bottom+8):48; }   // px reserved along the top: the breadcrumb row + 8 (Large on desktop, Small on phones)
     var mlMode=null;
     function mlIsProject(){ return document.body.classList.contains('mw-planet') || document.body.classList.contains('mw-cvroute'); }   // the CV route's node manual takes the same dock/drawer + MWStage as a project; the orbit camera frames itself into that rectangle (cvFrame)
     function mlPref(){ var p=window.__mwManualLayout; return (p==='dock'||p==='drawer')?p:'auto'; }
@@ -16121,7 +16137,7 @@ f 2469//2469 2470//2470 2434//2434
       mlSetMode(m);
       var W=window.innerWidth, H=window.innerHeight, g=mlGap();
       // dock / drawer: everything above the bar
-      return { l:0, t:ML_TOP, r:W, b:H-g-manualScene.offsetHeight-10 };
+      return { l:0, t:mlTop(), r:W, b:H-g-manualScene.offsetHeight-10 };
     }
     function mlPick(){
       var pref=mlPref(); if(pref!=='auto') return pref;
