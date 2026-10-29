@@ -1753,8 +1753,11 @@
         setCopy:function(obj){ try{ localStorage.setItem('bric_copy',JSON.stringify(obj)); return true; }catch(e){ console.warn('copy save failed',e); return false; } }
       };
     }
+    // seedOne reads through the raw store (not window.BRICStore.get, which waits on lazy entries and would wait on itself)
+    var rawGet=window.BRICStore.get;
+    window.__mwLazy={};   // key -> promise: heavy manifest entries ("lazy":true) that seed AFTER boot; BRICStore.get(key) waits for its own entry
     function seedOne(entry,asBlob){
-      return BRICStore.get(entry.key).then(function(existing){
+      return rawGet.call(window.BRICStore,entry.key).then(function(existing){
         // already populated — never overwrite, UNLESS the stored record is an older seeded file this
         // entry supersedes (manifest "replaces": [old filenames]). Seeded records carry the manifest
         // file's name, so returning visitors get a re-made model once; an author's Edit Mode upload
@@ -1849,15 +1852,23 @@
       .then(function(manifest){
         if(!manifest) return reconcileServerContent();
         var jobs=[];
-        (manifest.models||[]).forEach(function(e){ jobs.push(seedOne(e,false)); });
+        var lazyQ=[];
+        (manifest.models||[]).forEach(function(e){
+          if(e.lazy){ e._p=new Promise(function(res){ e._done=res; }); e._p._done=e._done; window.__mwLazy[e.key]=e._p; lazyQ.push(e); }
+          else jobs.push(seedOne(e,false));
+        });
         (manifest.images||[]).forEach(function(e){ jobs.push(seedOne(e,true)); });
         jobs.push(seedBoxTex(manifest.boxtex));
         // Copy must land in localStorage before bootHolotable() reads it synchronously — do it first: the
         // static seed baseline, then reconcile against the server (which overrides it once real
         // server-side content exists, or pulls this browser's local edits up if it's the admin's own).
-        return seedCopy(manifest.copySeed).then(reconcileServerContent).then(function(){ return Promise.all(jobs); });
+        return seedCopy(manifest.copySeed).then(reconcileServerContent).then(function(){ return Promise.all(jobs); }).then(function(){
+          // boot is released here; the heavy moon/ship/viewer models download in the background, two at a time
+          function worker(){ var e=lazyQ.shift(); if(!e) return; seedOne(e,false).then(function(){ e._done(); worker(); }); }
+          worker(); worker();
+        });
       })
-      .catch(function(err){ console.warn('[mw-seed] manifest load failed — continuing without pre-seeded assets', err); return reconcileServerContent(); });
+      .catch(function(err){ Object.keys(window.__mwLazy).forEach(function(k){ window.__mwLazy[k]._done(); }); console.warn('[mw-seed] manifest load failed — continuing without pre-seeded assets', err); return reconcileServerContent(); });
   })();
   </script>
 
@@ -15947,7 +15958,7 @@ f 2469//2469 2470//2470 2434//2434
     window.BRICStore={
       // key e.g. 'mesh:w0' or 'tex:w0' -> stores {..} or Blob/ArrayBuffer
       set:function(key,val){ return tx('readwrite').then(function(os){ return new Promise(function(res,rej){ var r=os.put(val,key); r.onsuccess=function(){res(true);}; r.onerror=function(){rej(r.error);}; }); }); },
-      get:function(key){ return tx('readonly').then(function(os){ return new Promise(function(res,rej){ var r=os.get(key); r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }); },
+      get:function(key){ var lz=window.__mwLazy&&window.__mwLazy[key]; return (lz||Promise.resolve()).then(function(){ return tx('readonly'); }).then(function(os){ return new Promise(function(res,rej){ var r=os.get(key); r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }); },
       del:function(key){ return tx('readwrite').then(function(os){ return new Promise(function(res,rej){ var r=os.delete(key); r.onsuccess=function(){res(true);}; r.onerror=function(){rej(r.error);}; }); }); },
       keys:function(){ return tx('readonly').then(function(os){ return new Promise(function(res,rej){ var r=os.getAllKeys(); r.onsuccess=function(){res(r.result||[]);}; r.onerror=function(){rej(r.error);}; }); }); },
       // copy overrides (small) — localStorage
