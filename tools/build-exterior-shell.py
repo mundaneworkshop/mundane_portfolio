@@ -7,8 +7,9 @@ face that no ray from outside can reach, keeping per-face colours. Source files 
 Run (from repo root):
   /Applications/Blender.app/Contents/MacOS/Blender -b --python tools/build-exterior-shell.py -- <src.glb> <out.glb> [rays] [eps_frac]
 Used for:
-  assets/battle/models/nano-n1.glb            -> assets/models/arcade/nano-n1-planet-v2.glb   (manifest mesh:arcade)
-  assets/models/holonet/endor-shield.glb      -> assets/models/holonet/endor-shield-planet-v2.glb (manifest mesh:contact)
+  assets/models/cv/briefcase.glb -> assets/models/cv/briefcase-planet.glb (manifest mesh:cv)
+Many-part builds still read as busy after this (every brick keeps its own outlined seams);
+those use build-remesh-solid.py instead.
 """
 import bpy, bmesh, sys, os, math, time, collections
 from mathutils import Vector

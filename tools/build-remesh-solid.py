@@ -9,8 +9,9 @@ Run (from repo root):
   /Applications/Blender.app/Contents/MacOS/Blender -b --python tools/build-remesh-solid.py -- <src.glb> <out.glb> [voxel_frac] [target_faces]
   voxel_frac   voxel size as a fraction of the model's longest side (default 0.012; bigger = blobbier)
   target_faces face budget after decimation (default 4000)
-Used for:
-  assets/battle/models/nano-n1.glb -> assets/models/arcade/nano-n1-planet-v2.glb (manifest mesh:arcade)
+Used for (bump the -vN suffix and the manifest path on every rebuild, so no cache serves a stale copy):
+  assets/battle/models/nano-n1.glb       -> assets/models/arcade/nano-n1-planet-v2.glb       0.010 3000  (manifest mesh:arcade)
+  assets/models/holonet/endor-shield.glb -> assets/models/holonet/endor-shield-planet-v2.glb 0.007 5000  (manifest mesh:contact)
 """
 import bpy, bmesh, sys, os, collections
 from mathutils.bvhtree import BVHTree
