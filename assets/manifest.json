@@ -13,7 +13,6 @@
     { "key": "cv:ship:glb", "lazy": true, "path": "assets/models/cv/nano-venator-ship.glb", "kind": "glb" },
     { "key": "mesh:contact", "path": "assets/models/holonet/endor-shield-planet-v2.glb", "kind": "glb", "replaces": ["endor-shield.glb", "comms-dish.glb", "endor-shield-planet.glb"] },
     { "key": "mesh:moon:contact:0", "path": "assets/models/holonet/astromech.glb", "kind": "glb" },
-    { "key": "contact:r2:glb", "lazy": true, "path": "assets/models/holonet/contact-r2.glb", "kind": "glb" },
     { "key": "mesh:li", "path": "assets/models/linkedin/linkedin-icon.svg", "kind": "svg" },
     { "key": "boxmesh:li", "path": "assets/models/linkedin/sig-fig-linkedin.glb", "kind": "glb" },
     { "key": "mesh:ig", "path": "assets/models/instagram/instagram-icon.svg", "kind": "svg" },
