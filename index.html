@@ -131,6 +131,58 @@
   body.mw-arcade #arcadeExit{display:flex}
   body.mw-arcade #breadcrumb{display:none}
   body.mw-arcade-exiting #arcadeExit{opacity:.35;pointer-events:none}
+
+  /* ── MENU BAR (Direction A, Figma BRIC DS › 15 · Menu Bar): a plain site menu beside the galaxy. The wordmark (#homeBtn) is home; Work opens a dropdown of the
+     case studies; About (the CV page), Jason (the minifigure focus view), HoloNet, Arcade are links; LinkedIn / Instagram logo buttons, the CV view toggle (CV page only) and the sound switch sit on the right.
+     Items are built from galaxyModel (buildMwNav), so a new case study appears here as soon as it exists as a planet. The breadcrumb stays as a small depth
+     crumb under the bar (project, case chapter, artifact) and is hidden where the bar already says where you are. */
+  #mwNav{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-stud);flex:1 1 auto;min-width:0;pointer-events:auto;transition:opacity .5s ease}
+  #mwNav ul{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-stud);margin:0;padding:0;list-style:none}
+  #mwNav .mw-nav__main{margin-left:var(--bric-space-1-5-stud)}
+  #mwNav .mw-nav__social{margin-left:auto}
+  #mwNav li{position:relative}
+  #mwNav .bric-btn.mw-logo{width:var(--bric-space-5-stud);padding:0}
+  #mwNav .bric-btn--sm.mw-logo{width:var(--bric-space-3-stud)}
+  #mwNav .mw-logo svg{width:20px;height:20px;display:block;fill:currentColor}
+  #mwNav .bric-btn--sm.mw-logo svg{width:14px;height:14px}
+  #mwNav .mw-chev{display:inline-block;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg);transition:transform var(--bric-snap-duration-fast) var(--bric-snap-easing)}   /* drawn, not a text glyph */
+  #mwNav [aria-expanded="true"] .mw-chev{transform:translateY(1px) rotate(-135deg)}
+  #mwCvSlot{display:flex;align-items:center}
+  #mwCvSlot:empty{display:none}
+  #mwCvSlot #cvView{position:static;visibility:visible}
+  #mwCvSlot #cvView:not(.placed){display:none}
+  /* the sound switch stays absolutely placed top-right (every view, arcade included); the bar ends left of it. --mw-snd-w is measured in buildMwNav */
+  #topbar{padding-right:calc(22px + var(--mw-snd-w,140px) + var(--bric-space-2-stud))}
+  body.mw-entrygate #mwNav, body.mw-preboot #mwNav{opacity:0;pointer-events:none}
+  body.mw-preboot #mwNav{transition:none}
+  body.mw-arcade #mwNav{display:none}   /* the arcade's exit row takes the bar's place; leaving the arcade brings the menu back */
+  /* the old breadcrumb: hidden for visitors (the menu bar's current item says where you are); Edit Mode shows it under the bar, Small, to edit its labels */
+  #breadcrumb{position:absolute;left:22px;top:var(--mw-crumb-top,64px)}
+  #breadcrumb.mw-crumb-off{display:none}
+  #crumbpath>.bric-crumb__sep:first-child{display:none}
+  /* Work dropdown: the manual container (dot matrix + corner crop marks, no outline, no dividers) */
+  .mw-dd{position:absolute;left:0;top:calc(100% + 6px);z-index:30;width:420px;max-width:calc(100vw - 32px);box-sizing:border-box;padding:var(--bric-space-2-stud) var(--bric-space-1-5-stud);display:flex;flex-direction:column;gap:var(--bric-space-half-stud);
+    background-color:color-mix(in srgb,var(--bric-surface-base) 94%,transparent);background-image:radial-gradient(circle,var(--bric-border-subtle) 1px,transparent 1px);background-size:16px 16px;
+    opacity:0;visibility:hidden;transform:translateY(-4px);pointer-events:none;transition:opacity var(--bric-snap-duration-normal) var(--bric-snap-easing),transform var(--bric-snap-duration-normal) var(--bric-snap-easing),visibility 0s linear var(--bric-snap-duration-normal)}
+  .mw-dd.open{opacity:1;visibility:visible;transform:none;pointer-events:auto;transition:opacity var(--bric-snap-duration-normal) var(--bric-snap-easing),transform var(--bric-snap-duration-normal) var(--bric-snap-easing),visibility 0s}
+  .mw-dd .mb-corner{position:absolute;width:26px;height:26px;pointer-events:none;border:0 solid var(--bric-schematic-line-dim)}
+  .mw-dd .mb-corner.tl{top:0;left:0;border-top-width:1.5px;border-left-width:1.5px}
+  .mw-dd .mb-corner.tr{top:0;right:0;border-top-width:1.5px;border-right-width:1.5px}
+  .mw-dd .mb-corner.bl{bottom:0;left:0;border-bottom-width:1.5px;border-left-width:1.5px}
+  .mw-dd .mb-corner.br{bottom:0;right:0;border-bottom-width:1.5px;border-right-width:1.5px}
+  #mwNav .mw-dd ul{display:flex;flex-direction:column;align-items:stretch;flex-wrap:nowrap;gap:var(--bric-space-half-stud);margin:0;padding:0;list-style:none}
+  .mw-dd a{--bric-ret-arm:8px;--bric-ret-outset:-2px;--bric-ret-label:none;display:block;min-height:44px;box-sizing:border-box;padding:10px 14px 11px;border-radius:var(--bric-corner-step);color:var(--bric-content-primary);text-decoration:none;outline:none}
+  .mw-dd .mw-dd__t{display:block;font-family:var(--display);font-weight:600;font-size:20px;line-height:28px}
+  .mw-dd .mw-dd__d{display:block;font-family:var(--grotesk);font-size:13px;line-height:20px;color:var(--bric-content-secondary)}
+  .mw-dd a[aria-current="page"] .mw-dd__t{color:var(--bric-register-amber-text-hot)}
+  .mw-dd a.mw-dd--hidden{opacity:.5}   /* Edit Mode only: a hidden planet, dimmed as in the galaxy */
+  @media (hover:hover){ .mw-dd a:hover{background:var(--bric-interactive-fill-hover-tint)} }
+  .mw-dd a:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:-2px}
+  /* skip link: first tab stop, visible only when focused */
+  .mw-skip{position:fixed;left:22px;top:12px;z-index:2147483001;padding:8px 14px;background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);font:500 13px/16px var(--grotesk);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;border-radius:var(--bric-corner-step);transform:translateY(-200%)}
+  .mw-skip:focus{transform:none}
+  body.mw-entrygate .mw-skip, body.mw-preboot .mw-skip{display:none}
+  @media (prefers-reduced-motion:reduce){ .mw-dd,.mw-dd.open,#mwNav .mw-chev{transition:none} .mw-dd{transform:none} }
   /* game-over + leaderboard card: design-system tokens, 8px grid, tabular numerals, every column shares one right edge */
   #arcadeResult{position:fixed;inset:0;z-index:80;display:flex;padding:var(--bric-space-3-stud);background:var(--bric-surface-overlay);backdrop-filter:blur(6px);overflow-y:auto}
   #arcadeResult .ar-card{width:min(520px,100%);margin:auto;padding:var(--bric-space-4-stud);position:relative;background:color-mix(in srgb,var(--bric-surface-base) 88%,transparent);background-image:radial-gradient(circle,var(--bric-border-subtle) 1px,transparent 1px);background-size:16px 16px;display:flex;flex-direction:column;gap:var(--bric-space-3-stud);font-family:var(--display,sans-serif);color:var(--bric-content-primary)}   /* the manual's look: BRIC dot matrix + corner brackets (.mb-corner), no outline */
@@ -742,7 +794,6 @@
   /* sound switch — design-system physical switch. Track = the secondary-button outline; the thumb is the one place a glow is allowed (active switch thumb);
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
   #soundToggle{position:absolute;top:16px;right:22px;z-index:21;transition:opacity .3s ease}   /* top-right corner on EVERY view (galaxy, focus, case study, CV, HoloNet, arcade); the admin toolbar makes room for it below */
-  body.author-mode #topbar{padding-right:200px}   /* author mode: the toolbar buttons end left of the sound switch */
   .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;position:relative;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
   .mw-sound-switch::before{content:'';position:absolute;left:-4px;right:-4px;top:min(-4px,calc((100% - var(--bric-hit-min,32px))/2));bottom:min(-4px,calc((100% - var(--bric-hit-min,32px))/2))}   /* hit area = the reticle's lock box, at least --bric-hit-min tall (the switch is 16px: 32px mouse / 44px touch target); before this, a press inside the brackets but off the 16px row went to the galaxy canvas */
   .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
@@ -1112,6 +1163,7 @@
 <link rel="stylesheet" href="assets/bric-author.css" />
 </head>
 <body class="mw-preboot">
+  <a class="mw-skip" id="mwSkip" href="#mwNav">Skip to menu</a>
   <!-- Crawler / no-JS / screen-reader content. The galaxy is a WebGL canvas, so this is the readable outline of the same site. Visually hidden for sighted JS users. -->
   <main id="mw-seo" class="mw-sr-only">
     <h1>Jason Hsin · Staff Product Designer</h1>
@@ -1259,7 +1311,8 @@
 
   <div id="topbar">
     <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
-    <div id="breadcrumb" class="bric-crumb"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><span id="crumbpath" class="bric-crumb"></span></div>
+    <nav id="mwNav" aria-label="Site"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><ul class="mw-nav__main" id="mwNavMain"></ul><ul class="mw-nav__social" id="mwNavSocial"></ul><div id="mwCvSlot"></div></nav>
+    <div id="breadcrumb" class="bric-crumb mw-crumb-off" aria-label="Location"><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
       <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
@@ -10369,7 +10422,7 @@ f 2469//2469 2470//2470 2434//2434
     // picks a slug that doesn't collide with `taken` (sibling slugs at the same URL level) — appends -2, -3, … as needed
     function uniqueSlug(base,taken){ var s=slugify(base)||'untitled', n=2;
       while(taken.indexOf(s)>=0){ s=(slugify(base)||'untitled')+'-'+n; n++; } return s; }
-    function setRoute(path){ try{ if(location.pathname!==path) history.pushState({},'',path); }catch(e){} try{ syncRouteHead(); }catch(e){} }
+    function setRoute(path){ try{ if(location.pathname!==path) history.pushState({},'',path); }catch(e){} try{ syncRouteHead(); }catch(e){} try{ if(typeof mwNavSync==='function') mwNavSync(); }catch(e){} }
     // SEO: keep <title>, description, canonical, og:/twitter: and robots in step with the SPA route (index.html is served for every path,
     // so crawlers that run JS would otherwise see the home head everywhere). Unknown routes get noindex (the in-app 404 overlay is a 200).
     var _headDefault=null;
@@ -12030,7 +12083,7 @@ f 2469//2469 2470//2470 2434//2434
     // Immersive overview hero: shown while no stop is open and the whole route is framed; decodes in line by line, fades out when a stop opens.
     function cvHeroWanted(){ return cvScene.active&&!cvListOn&&!cvAtNode&&cvFrameMode==='overview'; }   // stays up in Edit Mode: its one-liner + CTAs are edited right here
     function cvHeroPlace(){ var h=document.getElementById('cvHero'), seg=document.getElementById('cvView'), bc=document.getElementById('breadcrumb'); if(!h) return;   // well clear of the top bar: 16% down, and never closer than 40px under the breadcrumb / toggle
-      var y=window.innerHeight*0.16; [seg,bc].forEach(function(e){ var r=e&&e.getBoundingClientRect(); if(r&&r.height) y=Math.max(y,r.bottom+40); }); h.style.top=Math.round(y)+'px'; }
+      var y=window.innerHeight*0.16; [seg,bc,document.getElementById('mwNav')].forEach(function(e){ var r=e&&e.getBoundingClientRect(); if(r&&r.height) y=Math.max(y,r.bottom+40); }); h.style.top=Math.round(y)+'px'; }
     function cvHeroSync(){
       var h=document.getElementById('cvHero'); if(!h||!cvData) return; var want=cvHeroWanted(), was=h.classList.contains('on');
       if(want&&(!h.childElementCount||h._em!==!!editMode)) cvHeroRender();
@@ -12166,16 +12219,11 @@ f 2469//2469 2470//2470 2434//2434
       // radiogroup keys: the arrows move between the options (and so never reach the stop stepping below while the toggle has focus)
       if(seg) seg.addEventListener('keydown',function(e){ var k=e.key, d=(k==='ArrowRight'||k==='ArrowDown')?1:(k==='ArrowLeft'||k==='ArrowUp')?-1:0; if(!d) return;
         e.preventDefault(); var i=opts.indexOf(document.activeElement), n=opts[(i+d+opts.length)%opts.length]; n.focus(); cvSetView(n.getAttribute('data-cv-view')); });
-      // beside the breadcrumb on its row (Secondary appearance, so it doesn't compete with the page CTAs); when a long stop title leaves
-      // no room before the right-hand controls (sound switch), it drops under the breadcrumb, left-aligned with it
+      // in the menu bar's right group, beside the sound switch (Secondary appearance, so it doesn't compete with the page CTAs)
       var _pvRaf=0, cp=document.getElementById('crumbpath'), bc=document.getElementById('breadcrumb');
-      function placeView(){ _pvRaf=0; if(!seg||!bc) return; if(!cvScene.active){ seg.classList.remove('placed'); return; }
-        if(seg.matches(':hover')&&seg.classList.contains('placed')){ seg.addEventListener('pointerleave',placeViewSoon,{once:true}); return; }   // never slide out from under the pointer (switching views changes the breadcrumb); catch up once it leaves
-        var r=bc.getBoundingClientRect(), w=seg.offsetWidth, h=seg.offsetHeight, room=window.innerWidth-180;
-        if(!r.width){ seg.classList.remove('placed'); return; }
-        if(r.right+16+w<=room){ seg.style.left=Math.round(r.right+16)+'px'; seg.style.top=Math.round(r.top+(r.height-h)/2)+'px'; seg.classList.remove('under'); }
-        else { seg.style.left=Math.round(r.left)+'px'; seg.style.top=Math.round(r.bottom+10)+'px'; seg.classList.add('under'); }   // .under: the hit areas split the 10px gap with the breadcrumb above
-        seg.classList.add('placed'); }
+      function placeView(){ _pvRaf=0; if(!seg) return; if(!cvScene.active){ if(seg.classList.contains('placed')){ seg.classList.remove('placed'); if(typeof mwNavFit==='function') mwNavFit(); } return; }
+        var slot=document.getElementById('mwCvSlot'); if(slot&&seg.parentNode!==slot) slot.appendChild(seg);   // the menu bar's right group, beside the sound switch
+        seg.classList.add('placed'); if(typeof mwNavFit==='function') mwNavFit(); }
       function placeViewSoon(){ if(!_pvRaf) _pvRaf=requestAnimationFrame(placeView); }
       if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
       window.addEventListener('resize',placeViewSoon);
@@ -14249,7 +14297,8 @@ f 2469//2469 2470//2470 2434//2434
     (function(){ var r=copyOvr['crumb:root']; if(r) r=String(r).replace(/^[⌂\s]+/,''); crumbRootEl.textContent=(r!=null&&r!=='')?r:CRUMB_ROOT_DEFAULT; })();
     crumbRootEl.addEventListener('blur',function(){ if(!crumbRootEl.isContentEditable) return;   // only an Edit Mode edit is saved: a visitor's click focuses the root (tabindex) and the blur fired mid-decode, persisting the scrambled label ("Mundane Aorkshop")
       var t=crumbRootEl.textContent.replace(/^[⌂\s▸]*/,'').replace(/\s+$/,''); copyOvr['crumb:root']=t; persistCopy(); crumbRootEl.textContent=t||CRUMB_ROOT_DEFAULT; });
-    crumbRootEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); crumbRootEl.blur(); } });
+    crumbRootEl.addEventListener('keydown',function(e){ if(e.key!=='Enter'&&e.key!==' ') return; if(crumbRootEl.isContentEditable){ if(e.key==='Enter'){ e.preventDefault(); crumbRootEl.blur(); } return; }
+      e.preventDefault(); if(!editMode) goHomeV(); });   // the menu bar's home item: Enter / Space go home like a click (Edit Mode: Enter ends the label edit)
     function renderCrumb(){ crumbPathEl.innerHTML='';
       crumbSegs.forEach(function(seg,i){
         var sep=document.createElement('span'); sep.className='bric-crumb__sep'; sep.textContent='/'; sep.setAttribute('aria-hidden','true'); crumbPathEl.appendChild(sep);
@@ -14259,13 +14308,15 @@ f 2469//2469 2470//2470 2434//2434
         s.setAttribute('data-ci',i); crumbPathEl.appendChild(s);
       });
       syncCrumbSize(); syncCrumbEdit();
+      var em=(typeof editMode!=='undefined')&&editMode; crumbBarEl.classList.toggle('mw-crumb-off',!crumbSegs.length||!em);   // visitors never see it (the menu bar and the Work dropdown say where you are); Edit Mode keeps it, as that is where its labels are edited
+      if(typeof mwNavLayout==='function') mwNavLayout();
     }
     // Size: the top bar (breadcrumb or the arcade's exit row, CV view toggle, sound switch) is Large on desktop (the Small 24px controls were hard to land a click on), Small on phones
     // until the mobile menu replaces the breadcrumb there
     var crumbSmQ=window.matchMedia('(max-width:700px)'), crumbBarEl=document.getElementById('breadcrumb');
-    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches; crumbBarEl.classList.toggle('bric-crumb--lg',!sm); document.querySelectorAll('#breadcrumb .bric-btn,#arcadeExit .bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
+    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches||!!window.__mwNavTight; document.querySelectorAll('#mwNav .bric-btn,#arcadeExit .bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
       var seg=document.getElementById('cvView'), sw=document.getElementById('soundToggle'); if(seg) seg.classList.toggle('bric-seg--sm',sm); if(sw) sw.classList.toggle('mw-sound-switch--lg',!sm); }
-    if(crumbSmQ.addEventListener) crumbSmQ.addEventListener('change',function(){ syncCrumbSize(); window.dispatchEvent(new Event('resize')); });   // resize: the CV toggle and the manual layout re-measure against the new row height
+    if(crumbSmQ.addEventListener) crumbSmQ.addEventListener('change',function(){ if(typeof mwNavFit==='function') mwNavFit(); else syncCrumbSize(); window.dispatchEvent(new Event('resize')); });   // resize: the CV toggle and the manual layout re-measure against the new row height
     syncCrumbSize();
     function setCrumb(ctx,segs){ crumbCtx=ctx||''; crumbSegs=segs||[]; renderCrumb(); }
     function syncCrumbEdit(){ var on=(typeof editMode!=='undefined')&&editMode;
@@ -15515,7 +15566,7 @@ f 2469//2469 2470//2470 2434//2434
       var tries=0; (function wait(){ var l=ocCycleList(); if(!l.length){ if(tries++<50) setTimeout(wait,200); return; }
         var t=oid&&l.filter(function(o){ return o.id===oid; })[0]; if(t&&(!outfitCur||outfitCur.id!==t.id)){ ocShow(t.id,true); setTimeout(function(){ veilThen(openAbout); },400); } else veilThen(openAbout); })(); }
     window.MWOutfits={fig:function(){ return outfitCur&&outfitCur.group; },seek:function(t){ var g=outfitCur&&outfitCur.group; if(!g||!g.userData.mixer) return false; g.userData.hold=(t!=null); if(t!=null) g.userData.mixer.setTime(t); return true; },   /* review hook: freeze the idle loop at t seconds (seek(null) resumes) */
-      cur:function(){ return outfitCur; },prog:ocProg,cond:ocCondOf,cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null,pos:camPos.toArray(),look:camLook.toArray(),sf:{dist:_sf.dist,k:_sf.k,sx:_sf.sx,sy:_sf.sy,ok:_sf.ok}}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
+      cur:function(){ return outfitCur; },locked:function(id){ var o=ocFind(id); return !o||ocLocked(o); },   /* menu bar: is this outfit still locked (or unknown)? */prog:ocProg,cond:ocCondOf,cam:function(){ return {yaw:focusYaw,pitch:focusPitch,zoom:params.focusZoom,fit:params.stageFit,fill:params.stageFill,maxH:params.stageMaxH,saved:copyOvr['camview:about']||null,pos:camPos.toArray(),look:camLook.toArray(),sf:{dist:_sf.dist,k:_sf.k,sx:_sf.sx,sy:_sf.sy,ok:_sf.ok}}; },proxy:function(){ return ocProxySync(); },kits:ocKits,setKits:ocSetKits,locked:ocLocked,lockLine:ocLockLine,about:openAbout,list:ocAll,show:ocShow,next:ocNext,bundle:ocBuildBundle,addFiles:ocAddFiles,drafts:function(){ return outfitDrafts; },save:ocSaveDrafts,render:ocRender};   // console / test hook
     colorCtl('cMoonHot','cMoonHotHex',function(v){ params.moonHot=v; params.holoCustom=true; applyHoloColors(); });
     colorCtl('cMoonTint','cMoonTintHex',function(v){ params.moonTint=v; params.holoCustom=true; applyHoloColors(); });
     // Artifact (uploaded moon) FX → FX_MOON set
@@ -15983,6 +16034,102 @@ f 2469//2469 2470//2470 2434//2434
     applyRouteFromLocation(); syncRouteHead();
     window.addEventListener('popstate',function(){ applyRouteFromLocation(); syncRouteHead(); });
 
+    // ── MENU BAR (Direction A): a plain menu beside the galaxy, built from galaxyModel so new case studies appear on their own. Every item is a real
+    // <a href>; a plain click goes through the route system (pushState + applyRouteFromLocation → activate), so the screen wipe and camera ease run
+    // exactly as a planet click does (instant under prefers-reduced-motion). Cmd / Ctrl / middle click keeps the browser's new-tab behaviour.
+    // Work is a disclosure button (aria-expanded) over a list of links, not an ARIA menu: Esc closes it and returns focus, Tab moves on.
+    var MW_ONE_LINERS={ w0:'Shipping platform features to millions of users', w1:'Securing 160,000+ paid reservations, $4B+ in order value', w2:'Building a startup to $10M+ ARR from scratch' };   // default one-liners; CASES[id].oneLiner wins when set
+    // official artwork, unaltered paths: LinkedIn [in] bug as served by linkedin.com; Instagram glyph from the Meta Brand Resource Center pack (2023)
+    var MW_LOGO={
+      li:'<svg viewBox="0 0 27 27" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M1.91 0h22.363a1.91 1.91 0 011.909 1.91v22.363a1.91 1.91 0 01-1.91 1.909H1.91A1.91 1.91 0 010 24.272V1.91A1.91 1.91 0 011.91 0zm1.908 22.364h3.818V9.818H3.818zM8.182 5.727a2.455 2.455 0 10-4.91 0 2.455 2.455 0 004.91 0zm2.182 4.091v12.546h3.818v-6.077c0-2.037.75-3.332 2.553-3.332 1.3 0 1.81 1.201 1.81 3.332v6.077h3.819v-6.93c0-3.74-.895-5.78-4.667-5.78-1.967 0-3.277.921-3.788 1.946V9.818z"/></svg>',
+      ig:'<svg viewBox="0 0 1000 1000" aria-hidden="true" focusable="false"><path transform="translate(-2.5 -2.5)" d="M295.42,6c-53.2,2.51-89.53,11-121.29,23.48-32.87,12.81-60.73,30-88.45,57.82S40.89,143,28.17,175.92c-12.31,31.83-20.65,68.19-23,121.42S2.3,367.68,2.56,503.46,3.42,656.26,6,709.6c2.54,53.19,11,89.51,23.48,121.28,12.83,32.87,30,60.72,57.83,88.45S143,964.09,176,976.83c31.8,12.29,68.17,20.67,121.39,23s70.35,2.87,206.09,2.61,152.83-.86,206.16-3.39S799.1,988,830.88,975.58c32.87-12.86,60.74-30,88.45-57.84S964.1,862,976.81,829.06c12.32-31.8,20.69-68.17,23-121.35,2.33-53.37,2.88-70.41,2.62-206.17s-.87-152.78-3.4-206.1-11-89.53-23.47-121.32c-12.85-32.87-30-60.7-57.82-88.45S862,40.87,829.07,28.19c-31.82-12.31-68.17-20.7-121.39-23S637.33,2.3,501.54,2.56,348.75,3.4,295.42,6m5.84,903.88c-48.75-2.12-75.22-10.22-92.86-17-23.36-9-40-19.88-57.58-37.29s-28.38-34.11-37.5-57.42c-6.85-17.64-15.1-44.08-17.38-92.83-2.48-52.69-3-68.51-3.29-202s.22-149.29,2.53-202c2.08-48.71,10.23-75.21,17-92.84,9-23.39,19.84-40,37.29-57.57s34.1-28.39,57.43-37.51c17.62-6.88,44.06-15.06,92.79-17.38,52.73-2.5,68.53-3,202-3.29s149.31.21,202.06,2.53c48.71,2.12,75.22,10.19,92.83,17,23.37,9,40,19.81,57.57,37.29s28.4,34.07,37.52,57.45c6.89,17.57,15.07,44,17.37,92.76,2.51,52.73,3.08,68.54,3.32,202s-.23,149.31-2.54,202c-2.13,48.75-10.21,75.23-17,92.89-9,23.35-19.85,40-37.31,57.56s-34.09,28.38-57.43,37.5c-17.6,6.87-44.07,15.07-92.76,17.39-52.73,2.48-68.53,3-202.05,3.29s-149.27-.25-202-2.53m407.6-674.61a60,60,0,1,0,59.88-60.1,60,60,0,0,0-59.88,60.1M245.77,503c.28,141.8,115.44,256.49,257.21,256.22S759.52,643.8,759.25,502,643.79,245.48,502,245.76,245.5,361.22,245.77,503m90.06-.18a166.67,166.67,0,1,1,167,166.34,166.65,166.65,0,0,1-167-166.34"/></svg>' };
+    var mwNavMain=document.getElementById('mwNavMain'), mwNavSocial=document.getElementById('mwNavSocial'), mwWorkBtn=null, mwWorkDd=null;
+    function mwJasonHref(){ var O=window.MWOutfits, c=O&&O.cur&&O.cur(), id=c&&c.id;   // the outfit standing on the hologram now; the default head while outfits are loading or that one is still locked (a bare /about redirects to the CV)
+      if(!id||(O.locked&&O.locked(id))) id='head'; return '/about/'+id; }
+    function mwCaseSlug(id){ var c=CASES[id]||{}; return c.slug||slugify(c.title||id); }
+    function mwPlanet(id){ var p=null; galaxyModel.forEach(function(z){ (z.planets||[]).forEach(function(q){ if(q.id===id) p={z:z,p:q}; }); }); return p; }
+    function mwShown(id){ var e=mwPlanet(id); return !!e && ((!e.z.hidden&&!e.p.hidden) || !!editMode); }
+    function mwWorkItems(){ var out=[]; galaxyModel.forEach(function(z){ if(z.kind!=='work') return; (z.planets||[]).forEach(function(q){ var hid=!!(z.hidden||q.hidden); if(hid&&!editMode) return;
+      var c=CASES[q.id]||{}; out.push({ id:q.id, title:q.title||c.title, line:c.oneLiner||MW_ONE_LINERS[q.id]||'', href:'/work/'+mwCaseSlug(q.id), hidden:hid }); }); }); return out; }
+    function mwLink(text,href,key){ var li=document.createElement('li'), a=document.createElement('a'); a.className='bric-btn'; a.href=href; a.textContent=text; a.setAttribute('data-mw-nav',key); li.appendChild(a); return li; }
+    function buildMwNav(){ if(!mwNavMain) return; mwNavMain.textContent=''; mwNavSocial.textContent='';
+      var work=mwWorkItems();
+      if(work.length){ var li=document.createElement('li'); li.className='mw-nav__work';
+        var b=document.createElement('button'); b.type='button'; b.className='bric-btn'; b.id='mwWorkBtn'; b.setAttribute('aria-expanded','false'); b.setAttribute('aria-controls','mwWorkDd'); b.setAttribute('data-mw-nav','work');
+        b.innerHTML='Work <span class="mw-chev" aria-hidden="true"></span>'; li.appendChild(b);
+        var dd=document.createElement('div'); dd.className='mw-dd'; dd.id='mwWorkDd'; dd.innerHTML='<span class="mb-corner tl"></span><span class="mb-corner tr"></span><span class="mb-corner bl"></span><span class="mb-corner br"></span>';
+        var ul=document.createElement('ul'); ul.setAttribute('aria-label','Case studies');
+        work.forEach(function(w){ var r=document.createElement('li'), a=document.createElement('a'); a.href=w.href; a.setAttribute('data-bric-target',''); a.setAttribute('data-mw-case',w.id); if(w.hidden) a.className='mw-dd--hidden';
+          var t=document.createElement('span'); t.className='mw-dd__t'; t.textContent=w.title; a.appendChild(t);
+          if(w.line){ var d=document.createElement('span'); d.className='mw-dd__d'; d.textContent=w.line; a.appendChild(d); }
+          r.appendChild(a); ul.appendChild(r); });
+        dd.appendChild(ul); li.appendChild(dd); mwNavMain.appendChild(li); mwWorkBtn=b; mwWorkDd=dd; }
+      else { mwWorkBtn=null; mwWorkDd=null; }
+      if(mwShown('cv')) mwNavMain.appendChild(mwLink('About','/'+cvSlug,'about'));   // one About item for the CV page (the About text lives there since PR #103)
+      mwNavMain.appendChild(mwLink('Jason',mwJasonHref(),'jason'));   // the minifigure focus view on the hologram: the unlockable outfits
+      if(mwShown('contact')) mwNavMain.appendChild(mwLink('HoloNet','/'+holonetSlug,'holonet'));
+      if(mwShown('arcade')) mwNavMain.appendChild(mwLink('Arcade','/'+arcadeSlug,'arcade'));
+      [['li','LinkedIn'],['ig','Instagram']].forEach(function(s){ if(!mwShown(s[0])) return; var u=CASES[s[0]]&&CASES[s[0]].ctaUrl; if(!u||u==='#') return;
+        var li=document.createElement('li'), a=document.createElement('a'); a.className='bric-btn mw-logo'; a.href=u; a.target='_blank'; a.rel='noopener';
+        a.setAttribute('aria-label',s[1]+', opens in a new tab'); a.title=s[1]; a.setAttribute('data-mw-nav',s[0]); a.innerHTML=MW_LOGO[s[0]]; li.appendChild(a); mwNavSocial.appendChild(li); });
+      mwNavSync(); mwNavFit(); }
+    // current item from the URL: Work while a case study (or its artifacts / chapters) is open, About on the CV, Jason on the minifigure focus view (/about/<outfit>), HoloNet on HoloNet
+    function mwNavSync(){ if(!mwNavMain) return; var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), s0=parts[0]||'', cur='';
+      if(s0==='work') cur='work'; else if(s0===cvSlug) cur='about'; else if(s0==='about') cur='jason'; else if(s0===holonetSlug) cur='holonet'; else if(s0===arcadeSlug) cur='arcade';
+      [].forEach.call(document.querySelectorAll('#mwNav [data-mw-nav]'),function(a){ var k=a.getAttribute('data-mw-nav'), on=(k===cur);
+        if(k==='work'){ a.classList.toggle('is-active',on||a.getAttribute('aria-expanded')==='true'); a.classList.toggle('mw-current',on); return; }
+        a.classList.toggle('is-active',on); if(on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+      [].forEach.call(document.querySelectorAll('#mwWorkDd [data-mw-case]'),function(a){ if(s0==='work'&&parts[1]===mwCaseSlug(a.getAttribute('data-mw-case'))) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); }); }
+    // the bar ends left of the absolutely placed sound switch; the depth crumb sits just under the bar (which wraps on narrow screens)
+    function mwNavLayout(){ var tb=document.getElementById('topbar'), sw=document.getElementById('soundToggle'), nav=document.getElementById('mwNav'); if(!tb||!nav) return;
+      if(sw&&sw.offsetWidth) tb.style.setProperty('--mw-snd-w',sw.offsetWidth+'px');
+      var r=nav.getBoundingClientRect(); if(r.height) tb.style.setProperty('--mw-crumb-top',Math.round(r.bottom+6)+'px'); }
+    // narrow windows: the bar drops to the Small buttons before it ever wraps; it only wraps when even Small does not fit on one row
+    function mwNavWraps(){ var nav=document.getElementById('mwNav'); if(!nav||!nav.offsetHeight) return false; var nr=nav.getBoundingClientRect(), top=Infinity, bot=-Infinity, right=-Infinity;
+      [].forEach.call(nav.querySelectorAll('#homeBtn,#mwNav>ul>li,#mwCvSlot>*'),function(e){ if(!e.offsetWidth) return; var r=e.getBoundingClientRect(); top=Math.min(top,r.top); bot=Math.max(bot,r.top); right=Math.max(right,r.right); });
+      return bot-top>4 || right>nr.right+1; }   // wrapped onto a second row, or running past the bar's edge (the dropdown and hit-area extenders are not counted)
+    function mwNavFit(){ var was=!!window.__mwNavTight; window.__mwNavTight=false;
+      if(!crumbSmQ.matches){ syncCrumbSize(); mwNavLayout(); if(mwNavWraps()){ window.__mwNavTight=true; syncCrumbSize(); } }
+      else syncCrumbSize();
+      mwNavLayout(); if(was!==window.__mwNavTight) window.dispatchEvent(new Event('resize')); }   // the bar's height changed: the manual layout and the CV hero re-measure (the second pass finds no change)
+    function mwWorkOpen(on,focusFirst){ if(!mwWorkBtn||!mwWorkDd) return; on=!!on; if((mwWorkBtn.getAttribute('aria-expanded')==='true')===on) return;
+      mwWorkBtn.setAttribute('aria-expanded',on?'true':'false'); mwWorkDd.classList.toggle('open',on); mwNavSync();
+      if(on&&window.MWAudio&&!window.__mwArcade){ try{ MWAudio.uiReady(); MWAudio.ui('hover'); }catch(e){} }
+      if(on&&focusFirst){ var f=mwWorkDd.querySelector('a[aria-current="page"]')||mwWorkDd.querySelector('a'); if(f) f.focus(); } }
+    function mwNavigate(path){ mwWorkOpen(false); if(location.pathname===path){ mwNavSync(); return; }
+      var away=focused||cvScene.active||document.body.classList.contains('mw-altfocus');
+      if(!away||path==='/'){ try{ history.pushState({},'',path); }catch(e){} applyRouteFromLocation(); syncRouteHead(); mwNavSync(); return; }
+      // from one view straight to another (project → project, CV → project…): back to the galaxy under the same wipe, then open the target, so the
+      // first view's kit box and focus state are fully reset. goHome() pushes '/', which the target replaces: Back still returns to the view we left.
+      veilThen(function(){ goHome(); try{ history.replaceState({},'',path); }catch(e){} applyRouteFromLocation(); syncRouteHead(); mwNavSync(); }); }
+    if(mwNavMain){
+      var navEl=document.getElementById('mwNav');
+      navEl.addEventListener('click',function(e){ var t=e.target&&e.target.closest?e.target:null; if(!t) return;
+        if(t.closest('#mwWorkBtn')){ e.preventDefault(); mwWorkOpen(mwWorkBtn.getAttribute('aria-expanded')!=='true',e.detail===0); return; }   // e.detail 0 = keyboard: focus moves into the list
+        var a=t.closest('a[href]'); if(!a||!navEl.contains(a)) return;
+        if(e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;   // new tab / window: the browser's own behaviour
+        var k=a.getAttribute('data-mw-nav');
+        if(k==='li'||k==='ig'){ e.preventDefault(); var g=planetById(k); if(g) activate(g.userData); else window.mwOpen(a.href); return; }   // activate: opens the profile and counts the visit for the outfit unlocks
+        e.preventDefault(); if(a.getAttribute('aria-current')==='page'){ mwWorkOpen(false); return; }
+        if(k==='jason'){ a.href=mwJasonHref(); }
+        mwNavigate(new URL(a.href,location.href).pathname); });
+      navEl.addEventListener('keydown',function(e){ if(!mwWorkDd) return; var open=mwWorkBtn.getAttribute('aria-expanded')==='true';
+        if(e.key==='Escape'&&open){ e.preventDefault(); e.stopPropagation(); mwWorkOpen(false); mwWorkBtn.focus(); return; }
+        if((e.key==='ArrowDown'||e.key==='ArrowUp')&&(e.target===mwWorkBtn||mwWorkDd.contains(e.target))){ e.preventDefault(); e.stopPropagation();
+          if(!open){ mwWorkOpen(true,true); return; } var as=[].slice.call(mwWorkDd.querySelectorAll('a')), i=as.indexOf(document.activeElement);
+          var n=as[e.key==='ArrowDown'?Math.min(as.length-1,i+1):Math.max(0,i-1)]; if(i<0) n=as[0]; if(n) n.focus(); } });
+      navEl.addEventListener('focusout',function(e){ if(!mwWorkDd) return; var to=e.relatedTarget; if(to&&mwWorkBtn.parentNode.contains(to)) return; if(to) mwWorkOpen(false); });   // Tab out of the Work item closes it
+      document.addEventListener('pointerdown',function(e){ if(mwWorkBtn&&mwWorkBtn.getAttribute('aria-expanded')==='true'&&!mwWorkBtn.parentNode.contains(e.target)) mwWorkOpen(false); },true);
+      var skip=document.getElementById('mwSkip'); if(skip) skip.addEventListener('click',function(e){ e.preventDefault(); var h=document.getElementById('homeBtn'); if(h) h.focus(); });
+      window.addEventListener('resize',mwNavFit);
+      if(document.fonts&&document.fonts.ready) document.fonts.ready.then(mwNavFit);   // label widths change once the web fonts arrive
+      if(window.ResizeObserver){ var sw=document.getElementById('soundToggle'); if(sw) new ResizeObserver(mwNavLayout).observe(sw); new ResizeObserver(mwNavLayout).observe(navEl); }
+      if(window.ResizeObserver){ var tbEl=document.getElementById('topbar'), tbW=0; new ResizeObserver(function(){ var w=tbEl.clientWidth; if(w!==tbW){ tbW=w; mwNavFit(); } }).observe(tbEl); }   // the bar's width changed (window, zoom, split view): refit, even where no resize event fires
+      // Edit Mode can show hidden planets and rename things: rebuild on its toggle; the arcade and route changes close the dropdown
+      new MutationObserver(function(){ if(mwNavMain._em!==!!editMode){ mwNavMain._em=!!editMode; buildMwNav(); } if(document.body.classList.contains('mw-arcade')) mwWorkOpen(false); }).observe(document.body,{attributes:true,attributeFilter:['class']});
+      window.addEventListener('popstate',function(){ mwWorkOpen(false); mwNavSync(); });
+      mwNavMain._em=!!editMode; buildMwNav(); }
+
     // Entry gate: hide everything but the starfield + the monogram mount until it's clicked (startDock
     // reveals the rest via setSiteVisible once docked). A deep link / ?edit=1 / reduced-motion already
     // forced mwPhase to 'docked' above, before routing ran, so this is a no-op in those cases.
@@ -16316,7 +16463,7 @@ f 2469//2469 2470//2470 2434//2434
     // free rectangle as window.MWStage; the frame loop then centres + fits the kit box and moons inside it.
     //   'auto' → dock, with the drawer as the fallback on narrow screens (phones).
     // The mode can be forced from the author-only switcher / Debug panel (window.__mwManualLayout).
-    function mlTop(){ var r=document.getElementById('breadcrumb').getBoundingClientRect(); return r.height?Math.round(r.bottom+8):48; }   // px reserved along the top: the breadcrumb row + 8 (Large on desktop, Small on phones)
+    function mlTop(){ var b=0; ['mwNav','breadcrumb'].forEach(function(id){ var e=document.getElementById(id), r=e&&e.getBoundingClientRect(); if(r&&r.height) b=Math.max(b,r.bottom); }); return b?Math.round(b+8):48; }   // px reserved along the top: the breadcrumb row + 8 (Large on desktop, Small on phones)
     var mlMode=null;
     function mlIsProject(){ return document.body.classList.contains('mw-planet') || document.body.classList.contains('mw-cvroute'); }   // the CV route's node manual takes the same dock/drawer + MWStage as a project; the orbit camera frames itself into that rectangle (cvFrame)
     function mlPref(){ var p=window.__mwManualLayout; return (p==='dock'||p==='drawer')?p:'auto'; }
