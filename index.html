@@ -10223,6 +10223,14 @@ f 2469//2469 2470//2470 2434//2434
       set('meta[name="description"]','content',d); set('meta[property="og:title"]','content',t); set('meta[property="og:description"]','content',d);
       set('meta[name="twitter:title"]','content',t); set('meta[name="twitter:description"]','content',d);
       if(url){ set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
+      // structured data for the current route (replaces the previous route's block; the static Person/WebSite blocks in the head stay)
+      var ld=document.getElementById('mw-route-ld'), pageUrl=url||location.href.split('#')[0].split('?')[0], person={ '@type':'Person', name:'Jason Hsin', url:'https://www.mundanework.shop/' }, graph=null;
+      if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:person };
+      else if(robots!=='noindex' && parts[0]==='work' && parts[1] && t!==_headDefault.title) graph={ '@context':'https://schema.org', '@graph':[
+        { '@type':'CreativeWork', name:t.split(' · ')[0], url:pageUrl, author:person },
+        { '@type':'BreadcrumbList', itemListElement:[ { '@type':'ListItem', position:1, name:'Mundane Workshop', item:'https://www.mundanework.shop/' }, { '@type':'ListItem', position:2, name:t.split(' · ')[0], item:pageUrl } ] } ] };
+      if(!graph){ if(ld) ld.remove(); }
+      else { if(!ld){ ld=document.createElement('script'); ld.type='application/ld+json'; ld.id='mw-route-ld'; H.appendChild(ld); } ld.textContent=JSON.stringify(graph); }
       var rb=q('meta[name="robots"]'); if(!rb&&robots){ rb=document.createElement('meta'); rb.name='robots'; H.appendChild(rb); } if(rb) rb.setAttribute('content',robots||'index, follow');
     }
     // every OTHER project's current slug (auto-assigning one to any project that doesn't have one yet, same rule applyData/edit uses) — used to keep a manually-typed slug unique
