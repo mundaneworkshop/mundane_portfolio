@@ -449,6 +449,7 @@
     margin-top: 16px;
   }
   .manual-cta-btn { }   /* look comes from .bric-btn--primary */
+  .bric-btn.inline-edit-on::before { pointer-events:none; }   /* Edit Mode: any editable .bric-btn (CTA label) — the hit-extender must never sit between the pointer and the text being edited */
   /* .inline-edit-on:hover/:focus (generic affordance for editable text sitting directly on the page) strips
      the background down to a near-transparent tint — fine for plain text, but this is a solid button with
      dark text, so that would make it unreadable against the page. Keep it opaque while editing. */
@@ -1611,7 +1612,7 @@
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
           <div class="manual-cta">
-            <button class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
+            <span role="button" tabindex="0" class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</span>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -15968,8 +15969,8 @@ f 2469//2469 2470//2470 2434//2434
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
         ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
-        // ctaBtn is a real <button> — browsers treat Space as its native activation key (like a click),
-        // which eats the keystroke before contentEditable ever sees it. Insert the space manually instead.
+        // ctaBtn is a <span role=button>, not a <button>: Safari/Firefox won't place a caret inside an editable <button>, so its label could not be edited there.
+        // A span still reaches the global role=button Enter/Space activation outside Edit Mode; in Edit Mode Space is inserted manually so nothing treats it as a click.
         ctaBtn.onkeydown=data.edit?function(e){
           if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); }
           else if(e.key===' '){ e.preventDefault(); document.execCommand('insertText',false,' '); }
