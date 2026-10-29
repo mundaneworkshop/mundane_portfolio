@@ -451,6 +451,7 @@
     margin-top: 16px;
   }
   .manual-cta-btn { }   /* look comes from .bric-btn--primary */
+  .bric-btn.inline-edit-on::before { pointer-events:none; }   /* Edit Mode: any editable .bric-btn (CTA label) — the hit-extender must never sit between the pointer and the text being edited */
   /* .inline-edit-on:hover/:focus (generic affordance for editable text sitting directly on the page) strips
      the background down to a near-transparent tint — fine for plain text, but this is a solid button with
      dark text, so that would make it unreadable against the page. Keep it opaque while editing. */
@@ -589,7 +590,7 @@
   /* Entry gate text is no longer DOM: two 3D marquee bands float around the monogram cube (see "Entry gate bands" in the monogram script). */
 
   /* ── TOAST ── */
-  #toast{position:absolute;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:30;opacity:0;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--holo);transition:.35s}
+  #toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:2147483600;opacity:0;pointer-events:none;background:var(--bric-interactive-fill-default);border:1px solid var(--bric-interactive-fill-default);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--bric-interactive-text-on-fill);transition:.35s}   /* same light-fill / dark-text pair as the primary button: reads against the dark scene */
 
   /* ══════ CV + Contact bespoke focus views (not kit boxes) ══════ */
   .altfocus{position:absolute;inset:0;z-index:18;display:none;align-items:center;justify-content:center;pointer-events:none}
@@ -925,7 +926,9 @@
   #manual-scene[data-ml="dock"][data-about] .manual-page{ grid-template-columns:minmax(0,62ch) auto; }
   #manual-scene[data-ml="dock"][data-about="plain"] .manual-page{ grid-template-columns:minmax(0,62ch); }
   #manual-scene[data-ml="dock"][data-about] .manual-cta{ grid-column:2; grid-row:1 / span 4; }
-  #manual-scene[data-ml="dock"][data-about] .snap-grid, #manual-scene[data-ml="dock"][data-about] .manual-tags, #manual-scene[data-ml="dock"][data-about] .manual-extralinks, #manual-scene[data-ml="dock"][data-about] .manual-slug{ display:none!important }
+  #manual-scene[data-ml="dock"][data-about] .snap-grid, #manual-scene[data-ml="dock"][data-about] .manual-tags, #manual-scene[data-ml="dock"][data-about] .manual-slug{ display:none!important }
+  #manual-scene[data-ml="dock"][data-about] .manual-extralinks{ grid-column:2; grid-row:5; margin-top:12px }   /* About keeps its optional extra links (empty = display:none from JS) under the CTA */
+  #manual-scene[data-ml="dock"][data-about="plain"] .manual-extralinks{ grid-column:1; grid-row:auto }
   /* WRAP-TO-CONTENT for every manual (CV nodes, projects, artifacts): same idea as ABOUT above, driven by data-wrap
      (set in mlWrapFlags): s = snapshot only, c = CTA/links only, x = neither. Absent = full manual, unchanged. */
   #manual-scene[data-ml="dock"][data-wrap], #manual-scene[data-ml="drawer"][data-wrap]{ width:max-content; min-width:min(380px,calc(100vw - 2 * var(--ml-gap,24px))); max-width:min(1280px,calc(100vw - 2 * var(--ml-gap,24px))); }
@@ -1622,7 +1625,7 @@
             <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
           </div>
           <div class="manual-cta">
-            <button class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</button>
+            <span role="button" tabindex="0" class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</span>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -10416,7 +10419,10 @@ f 2469//2469 2470//2470 2434//2434
       },{passive:true});
       window.addEventListener('keydown',function(e){
         if(e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey) return;
-        var t=e.target; if(t&&t.closest&&t.closest('input,textarea,select,button,a,summary,[role=button],[contenteditable=true],[contenteditable=""]')) return;
+        var t=e.target, typing=t&&t.closest&&t.closest('input,textarea,select,[contenteditable=true],[contenteditable=""]');
+        // a focused button / link / role=button (the CTA, the breadcrumb, anything just clicked) keeps focus in the About view and must not stop the outfit arrows: arrows do nothing on them natively
+        if(typeof aboutGrp!=='undefined'&&focused===aboutGrp&&!typing&&!window.__mwArcade&&!(typeof csScene!=='undefined'&&csScene.active)&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } outfitLastSwitch=performance.now(); ocNext(e.key==='ArrowRight'?1:-1); return; }
+        if(t&&t.closest&&t.closest('button,a,summary,[role=button]')||typing) return;
         if(typeof csScene!=='undefined'&&csScene.active) return;   // case-study ring owns the arrows
         if(window.__mwArcade) return;                                // arcade: arrows/WASD fly the hero ship
         var k=e.key;
@@ -10560,7 +10566,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
       // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
-      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.open(_u,'_blank','noopener'); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
+      if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.mwOpen(_u); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
       if(ud.id==='arcade'){ if(window.MWAudio) MWAudio.unlock();   /* keep the click's user gesture: the wipe delays the open */ veilThen(function(){ openArcade(ud.id); }); return; }
@@ -10691,7 +10697,7 @@ f 2469//2469 2470//2470 2434//2434
       return { artifact:true, title:meta.title, framing:meta.desc, tags:[], cta:meta.cta, ctaUrl:meta.ctaUrl, ctaHidden:!!meta.ctaHidden, ctaActive:(meta.ctaActive==null?true:!!meta.ctaActive), links:meta.links, edit:editMode,
         slug:(meta.slug||slugify(meta.title||'')), slugPrefix:'/work/'+_projSlug+'/',
         onEditSlug:function(v){ var s=uniqueSlug(v,takenMoonSlugs(focused,m)); meta.slug=s; persistCopy(); showMoonManual(m); if(focusedMoon===m) setRoute('/work/'+_projSlug+'/'+s); },
-        onCta:function(){ if(meta.ctaUrl && meta.ctaUrl!=='#') window.open(meta.ctaUrl,'_blank'); },
+        onCta:function(){ if(meta.ctaUrl && meta.ctaUrl!=='#') window.mwOpen(meta.ctaUrl); },
         onAddLink:function(){ meta.links.push({label:'New link',url:'#'}); persistCopy(); showMoonManual(m); },
         onDelLink:function(i){ meta.links.splice(i,1); persistCopy(); showMoonManual(m); },
         onEditLink:function(i,v){ if(meta.links[i]){ meta.links[i].label=v; persistCopy(); } },
@@ -11598,7 +11604,7 @@ f 2469//2469 2470//2470 2434//2434
       var em=(typeof editMode!=='undefined')&&editMode;
       return { artifact:false, kind:'util', kicker:m.kicker, title:m.title, subtitle:m.sub, framing:m.body,
         snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:(m.cta==null?'Download CV (PDF)':m.cta), ctaUrl:(m.ctaUrl==null?'#':m.ctaUrl), ctaHidden:!!m.ctaHidden, ctaActive:(m.ctaActive==null?true:!!m.ctaActive), external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
-        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.open(m.ctaUrl,'_blank','noopener'); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
+        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.mwOpen(m.ctaUrl); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
         onSubtitle:function(v){ m.sub=v; cvPersist(); cvRefreshNodeLabel(id); },
         onEditTag:function(i,v){ var t=cvTagArr(m); if(t[i]!=null){ t[i]=v; m.tags=t.join(' · '); cvPersist(); } },
         onAddTag:function(){ var t=cvTagArr(m); t.push('New tag'); m.tags=t.join(' · '); cvPersist(); cvShowBooklet(id); },
@@ -13976,7 +13982,7 @@ f 2469//2469 2470//2470 2434//2434
         onDelExtraLink:function(i){ if(c.extraLinks){ c.extraLinks.splice(i,1); saveCaseField(id,'extraLinks',c.extraLinks); reShowProject(id); } },
         onEditExtraLink:function(i,v){ if(c.extraLinks&&c.extraLinks[i]){ c.extraLinks[i].label=v; saveCaseField(id,'extraLinks',c.extraLinks); } },
         onEditExtraLinkUrl:function(i,v){ if(c.extraLinks&&c.extraLinks[i]){ c.extraLinks[i].url=v; saveCaseField(id,'extraLinks',c.extraLinks); } },
-        onCta:function(){ if(c.ctaUrl && c.ctaUrl!=='#') window.open(c.ctaUrl,'_blank','noopener'); },
+        onCta:function(){ if(c.ctaUrl && c.ctaUrl!=='#') window.mwOpen(c.ctaUrl); },
         onCtaLabel:function(v){ saveCaseField(id,'cta',v); },
         onCtaUrl:function(v){ saveCaseField(id,'ctaUrl',v); },
         onCtaHide:function(h){ saveCaseField(id,'ctaHidden',h); reShowProject(id); },
@@ -15187,6 +15193,20 @@ f 2469//2469 2470//2470 2434//2434
       if(focused===aboutGrp) veilThen(function(){ goHome(); go(); }); else veilThen(go);
       return true;
     }
+    // mailto:/tel: hand off to the mail/phone app in place; window.open(...,'_blank') on them leaves a blank tab behind
+    window.mwOpen=function(url){
+      if(/^mailto:/i.test(url)){ mwMail(url); return; }
+      if(/^tel:/i.test(url)) location.href=url; else window.open(url,'_blank','noopener'); };
+    // mailto: with no mail app set up does nothing at all. A mail app taking over blurs the page / hides the tab within a moment; if that never happens, copy the address instead and say so.
+    function mwMail(url){
+      var addr=decodeURIComponent(url.replace(/^mailto:/i,'').split('?')[0]), left=false;
+      function gone(){ left=true; }
+      window.addEventListener('blur',gone); document.addEventListener('visibilitychange',gone);
+      location.href=url;
+      setTimeout(function(){ window.removeEventListener('blur',gone); document.removeEventListener('visibilitychange',gone);
+        if(left||!addr) return;
+        var done=function(){ if(typeof toast==='function') toast('Email address copied: '+addr); };
+        try{ navigator.clipboard.writeText(addr).then(done,function(){ if(typeof toast==='function') toast(addr); }); }catch(e){ if(typeof toast==='function') toast(addr); } },900); }
     function ocOpenCtaUrl(url,target,o){
       try{ var u=new URL(url,location.href); if((u.hostname===location.hostname||/(^|\.)mundanework\.shop$/i.test(u.hostname))&&u.pathname.replace(/\/+$/,'')==='/arcade'){ ocGoArcade(); return; } }catch(e){}
       if(ocGoCase(o)) return;
@@ -15195,8 +15215,9 @@ f 2469//2469 2470//2470 2434//2434
       // visit. It counts for the outfit's own case study, and for whichever planet's slug the link ends in.
       try{ if(o&&o.unlock&&o.unlock.type==='caseStudy') ocNote('caseStudy',o.unlock.target||'w0');
         var seg=new URL(url,location.href).pathname.split('/').filter(Boolean).pop(); if(seg) Object.keys(CASES).forEach(function(k){ var c=CASES[k]; if(c&&c.title&&slugify(c.title)===seg) ocNote('caseStudy',k); }); }catch(e){}
-      if(target==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(url); else location.href=url; } else window.open(url,'_blank','noopener');
+      if(target==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(url); else location.href=url; } else window.mwOpen(url);
     }
+    function ocAboutLinks(id){ var o=ocFind(id); return ((o&&o.about&&o.about.extraLinks)||[]).slice(); }   // current links (a render's `a` goes stale as edits land)
     function aboutData(o){
       var a=o.about||{}, id=o.id, base={artifact:false,kind:'util',snapshot:[],tags:[],external:false,edit:false,extraLinks:[],slug:'about',slugPrefix:'/',onCta:function(){},aboutView:true};
       if(!editMode&&ocLocked(o)){   // (Edit Mode shows the real copy even for a locked outfit, so it can be edited)
@@ -15212,10 +15233,15 @@ f 2469//2469 2470//2470 2434//2434
         onCtaLabel:function(v){ ocSetAbout(id,{ctaText:v}); },
         onCtaUrl:function(v){ ocSetAbout(id,{ctaUrl:v}); },
         onCtaHide:function(hide){ ocSetAbout(id,{ctaShow:!hide}); ocRefreshAbout(); },
+        extraLinks:(a.extraLinks||[]),
+        onAddExtraLink:function(){ ocSetAbout(id,{extraLinks:ocAboutLinks(id).concat([{label:'New link',url:'#'}])}); ocRefreshAbout(); },
+        onDelExtraLink:function(i){ var L=ocAboutLinks(id); L.splice(i,1); ocSetAbout(id,{extraLinks:L}); ocRefreshAbout(); },
+        onEditExtraLink:function(i,v){ var L=ocAboutLinks(id); if(L[i]){ L[i]=Object.assign({},L[i],{label:v}); ocSetAbout(id,{extraLinks:L}); } },
+        onEditExtraLinkUrl:function(i,v){ var L=ocAboutLinks(id); if(L[i]){ L[i]=Object.assign({},L[i],{url:v}); ocSetAbout(id,{extraLinks:L}); } },
         onCta:function(){ if(a.ctaShow&&a.ctaText&&ocCaseTarget(o)&&ocGoCase(o)) return; if(_cta) ocOpenCtaUrl(a.ctaUrl,a.ctaTarget,o); }});
     }
     function ocRefreshAbout(){ var o=outfitCur&&ocFind(outfitCur.id); if(!o||!window.CS) return;
-      var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:d.kicker||'About Jason',bold:true},{text:o.name}]);   /* the outfit's kicker is the first breadcrumb word (the booklet itself has no kicker node) */ setRoute('/about/'+o.id); }
+      var d=aboutData(o); CS.showBooklet(d); setCrumb('about',[{text:'About Jason',bold:true}]);   /* the trail ends at About Jason for every outfit, locked or not (no outfit name, no per-outfit kicker) */ setRoute('/about/'+o.id); }
     function openAbout(){
       var o=outfitCur&&ocFind(outfitCur.id); if(!o||focused===aboutGrp) return;
       if(focused) goHome();
@@ -15808,7 +15834,7 @@ f 2469//2469 2470//2470 2434//2434
     function setText(sel,val){ if(val==null) return; var el=manualScene.querySelector(sel); if(el) el.textContent=val; }
     function applyData(data){
       if(!data) return;
-      if(data.aboutView) manualScene.setAttribute('data-about',(data.ctaHidden&&!data.edit)?'plain':'cta'); else manualScene.removeAttribute('data-about');   // About: the manual wraps its content (CSS)
+      if(data.aboutView) manualScene.setAttribute('data-about',(data.ctaHidden&&!data.edit&&!(data.extraLinks&&data.extraLinks.length))?'plain':'cta'); else manualScene.removeAttribute('data-about');   // About: the manual wraps its content (CSS)
       setText('.manual-title', data.title);
       var _subEl=manualScene.querySelector('.manual-subtitle');
       if(_subEl){ var _subEdit=!!(data.edit && data.onSubtitle);
@@ -15904,7 +15930,7 @@ f 2469//2469 2470//2470 2434//2434
           var ul=document.createElement('div'); ul.className='manual-links';
           data.links.forEach(function(l,i){
             var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
-            if(!data.edit){ row.href=l.url||'#'; row.target='_blank'; row.rel='noopener'; }
+            if(!data.edit){ row.href=l.url||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
               sp.addEventListener('blur',function(){ if(data.onEditLink) data.onEditLink(i,sp.textContent.replace(/\s+$/,'')); });
@@ -15935,7 +15961,7 @@ f 2469//2469 2470//2470 2434//2434
           var exUl=document.createElement('div'); exUl.className='manual-links';
           data.extraLinks.forEach(function(l,i){
             var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
-            if(!data.edit){ row.href=l.url||'#'; row.target='_blank'; row.rel='noopener'; }
+            if(!data.edit){ row.href=l.url||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
               sp.addEventListener('blur',function(){ if(data.onEditExtraLink) data.onEditExtraLink(i,sp.textContent.replace(/\s+$/,'')); });
@@ -15974,13 +16000,13 @@ f 2469//2469 2470//2470 2434//2434
         if(locked){ ctaBtn.onclick=null; }
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
-            if(data.ctaUrl && data.ctaUrl!=='#'){ if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.open(data.ctaUrl,'_blank','noopener'); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
+            if(data.ctaUrl && data.ctaUrl!=='#'){ if(/^(mailto|tel):/i.test(data.ctaUrl)) location.href=data.ctaUrl; else if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.mwOpen(data.ctaUrl); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
             else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
         ctaBtn.onblur=data.edit?function(){ if(data.onCtaLabel) data.onCtaLabel(ctaBtn.textContent.replace(/\s+$/,'')); }:null;
-        // ctaBtn is a real <button> — browsers treat Space as its native activation key (like a click),
-        // which eats the keystroke before contentEditable ever sees it. Insert the space manually instead.
+        // ctaBtn is a <span role=button>, not a <button>: Safari/Firefox won't place a caret inside an editable <button>, so its label could not be edited there.
+        // A span still reaches the global role=button Enter/Space activation outside Edit Mode; in Edit Mode Space is inserted manually so nothing treats it as a click.
         ctaBtn.onkeydown=data.edit?function(e){
           if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); ctaBtn.blur(); }
           else if(e.key===' '){ e.preventDefault(); document.execCommand('insertText',false,' '); }
@@ -16001,9 +16027,10 @@ f 2469//2469 2470//2470 2434//2434
           if(data.edit && data.onCtaUrl){
             if(!cu){ cu=document.createElement('input'); cu.type='text'; cu.className='cta-url'; cu.placeholder='https://…  (CTA destination)';
               cu.style.cssText='flex:1 0 100%;margin-top:6px;font-family:'+"'Space Mono',monospace"+';font-size:11px;color:var(--c-primary);background:rgba(240,237,232,.05);border:1px solid rgba(240,237,232,.22);padding:4px 7px;border-radius:2px';
-              cu.addEventListener('input',function(){ if(data.onCtaUrl) data.onCtaUrl(cu.value); });
+              cu.addEventListener('input',function(){ if(cu._onUrl) cu._onUrl(cu.value); });   // reads the CURRENT manual's saver: cu is reused across renders, so closing over this render's `data` saved edits to whichever manual was opened first
               cu.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); cu.blur(); } });
               ctaWrap.appendChild(cu); }
+            cu._onUrl=data.onCtaUrl;
             if(document.activeElement!==cu) cu.value=data.ctaUrl||''; }
           else if(cu){ cu.remove(); } }
         _wasArtifact=!!data.artifact;
