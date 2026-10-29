@@ -13158,20 +13158,32 @@ f 2469//2469 2470//2470 2434//2434
       // material is left untouched on purpose → the planet keeps its amber holo FX
       fitHitProxy(grp);
     }
-    // GLB planets: depth-only twin of the planet mesh, drawn in the opaque pass (before the additive,
-    // double-sided, no-depth-write holo material). The holo then shows ONLY the front-most surface,
-    // so a model's far side / inner walls no longer stack up as busy outlines (same idea as the logo's
-    // depth pre-pass and the locked-figure ghostDepth). polygonOffset pushes the twin back a hair so the
-    // holo's own front surface still passes the depth test. The twin reads its geometry live from `hit`
-    // and only counts while the planet is in its galaxy shape (not the focus-view kit box, _geoBak) and
-    // mostly opaque (opBase), so a faded or focused planet never cuts holes in what's behind it.
-    var PLANET_DEPTH_MAT=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+    // GLB planets: depth-only twin of the planet mesh, so the additive, double-sided, no-depth-write holo
+    // shows ONLY the model's front-most surface — its far side / inner walls no longer stack up as busy
+    // outlines (same idea as the logo's depth pre-pass and the locked-figure ghostDepth).
+    // KEEP THE TRANSLUCENCY: the twin and its planet draw LAST (renderOrder above everything else, a
+    // pair per planet: twin, then planet), so the floor, cone and other planets behind are already on
+    // screen and still show through. A twin in the opaque pass instead hides everything behind the
+    // planet (it read as solid — the first version did this). polygonOffset pushes the twin back a hair
+    // so the holo's own front surface still passes the depth test. The twin reads its geometry live from
+    // `hit` and only counts while the planet is in its galaxy shape (not the focus-view kit box, _geoBak)
+    // and mostly opaque (opBase); otherwise the planet keeps its normal draw order.
+    var PLANET_DEPTH_MAT=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,transparent:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+    var PLANET_DEPTH_RO=1000, planetDepthSlots=0;   // above every other renderOrder in the scene (max elsewhere: 41)
     function setPlanetDepthPass(id,on){
       var grp=planetById(id); if(!grp) return; var hit=grp.userData.hit, dm=hit.userData.depthTwin;
       if(dm&&dm.parent!==hit) dm=hit.userData.depthTwin=null;   // dropped by applyFocusedPlanetGeo's child sweep
       if(!on){ if(dm){ hit.remove(dm); hit.userData.depthTwin=null; } return; }
       if(dm) return;
+      if(hit.userData.depthRO==null){
+        hit.userData.depthRO=PLANET_DEPTH_RO+2*(planetDepthSlots++);
+        var baseRO=hit.renderOrder||0;
+        Object.defineProperty(hit,'renderOrder',{configurable:true,
+          get:function(){ var t=hit.userData.depthTwin; return (t&&t.visible)?hit.userData.depthRO+1:baseRO; },
+          set:function(v){ baseRO=v; }});
+      }
       dm=new THREE.Mesh(hit.geometry,PLANET_DEPTH_MAT); dm.raycast=function(){}; dm.userData.depthTwin=true;
+      dm.renderOrder=hit.userData.depthRO;
       Object.defineProperty(dm,'geometry',{get:function(){ return hit.geometry; },set:function(){}});
       Object.defineProperty(dm,'visible',{get:function(){ var u=hit.material&&hit.material.uniforms&&hit.material.uniforms.opBase;
         return !grp.userData._geoBak && !!u && u.value>0.45; },set:function(){}});
