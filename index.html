@@ -1076,20 +1076,30 @@
     </nav>
     <!-- ABOUT (/about): the one shared About page. This is real HTML so crawlers and no-JS readers see it without WebGL; the desktop minifigure focus view
          (aboutData() / ocOpenAboutRoute) enhances it and a future phone About tab renders this same content with the current outfit still.
-         COPY STATUS: every sentence below is existing site copy, copied verbatim from assets/outfits.json (outfits "work", "vr-gamer", "slate-dummy", "iron-man").
-         Nothing here is new biography. PLACEHOLDER = Jason has not written final About copy yet; replace it with his text (bio, what he does, case-study summaries).
-         Keep it in step with outfits.json by hand: there is no build step, so this block does not regenerate from the CMS. -->
+         COPY STATUS: written with Jason (Oct 29 2026 interview) from his answers plus the Josh.ai case study. Final unless he edits it.
+         Keep the head description in syncRouteHead() (parts[0]==='about') in step with the lede. No build step: this block does not regenerate from the CMS or outfits.json. -->
     <section id="mw-about" data-outfit="work" aria-labelledby="mw-about-h">
       <h2 id="mw-about-h">About Jason Hsin</h2>
-      <h3>Staff Product Designer</h3>
-      <p>I have over a decade of experience designing consumer experience across multiple verticals including social media, entertainment, augmented and virtual reality, voice control, internet of things, AI, and automotive. I've been a founding designer at a startup with 8 figure annual revenue, and led platform initiatives as product design lead for the Metaverse while at Meta.</p>
-      <h3>Selected work</h3><!-- PLACEHOLDER summaries: outfit blurbs from outfits.json, pending Jason's final case-study text -->
-      <ul>
-        <li><a href="/work/meta-horizon-worlds">Meta Horizon Worlds</a>: At Meta I was the product design lead on Horizon Worlds responsible for delivering seasonal and limited time quests where players could partake in special events to unlock rewards for their Meta Avatars. I also led exploratory work on platform monetization to empower creators selling custom digital content and enable players to purchase content throughout the Metaverse.</li>
-        <li><a href="/work/slate-auto">Slate Auto</a>: At Slate Auto, I led the redesign and development of Slatemaker, the online car configurator responsible for over 160,000 paid reservations and over $4B in potential order value.</li>
-        <li><a href="/work/josh-ai">Josh.ai</a>: Jarvis served as a huge inspiration for my work on Josh.ai, a voice-first home control and automation platform that was ahead of its time. As founding designer I built a company from scratch to $10M+ ARR and 30+ FTE, becoming the dominant voice control solution for the luxury smart home market with 70% market share.</li>
-      </ul>
-      <p><a href="https://www.linkedin.com/in/jason-hsin-00378837/">Let's connect on LinkedIn</a> · <a href="/cv">CV</a> · <a href="/holonet">HoloNet</a></p>
+      <p><strong>Jason Hsin is a staff product designer building delightful consumer experiences.</strong> He is based in Los Angeles, where he now works independently as Mundane Workshop, creating digital products that solve everyday problems.</p>
+      <p>With over a decade of experience, Jason has designed consumer products across social media, entertainment, augmented and virtual reality, voice control, internet of things, AI and automotive. He has been a founding designer at a startup that grew past $10M in annual revenue, and he led platform initiatives as a product design lead for the Metaverse at Meta. He studied illustration and entertainment design at Art Center College of Design.</p>
+      <h3>How he designs</h3>
+      <p>Jason works from three values:</p>
+      <ol>
+        <li>Design should serve a purpose: to entertain, educate, alleviate or empower.</li>
+        <li>Design should delight. Whether it is a utility, an educational tool or a game, it should be fun to use.</li>
+        <li>Design should be obsessive. If Jason isn't engrossed by the problem, he won't work on it.</li>
+      </ol>
+      <h3>Selected work</h3>
+      <h4>Josh.ai: Founding Designer, 2015&ndash;2022</h4>
+      <p>Jason built the brand and product line from zero and took it to product-market fit and segment leadership: $10M+ in annual revenue, a team grown to 30+ full-time employees, and 70% of luxury smart home installations. He set the brand vision and product roadmap, created the visual language and design system, and designed the iOS and Android apps, the Josh Micro microphone and the Josh Home Remote. He designed for end users, the homeowners, as well as for B2B partners: the small business owners and technicians who installed the products. Jason holds two patents on Josh Micro's multi-modal interaction (US D855,583 and US 10,345,773). <a href="https://case.mundanework.shop/josh-ai">Read the Josh.ai case study</a>.</p>
+      <h4>Meta Horizon Worlds: Product Design Lead, 2.5 years</h4>
+      <p>Jason led design for seasonal and limited-time quests, where players take part in special events to unlock rewards for their Meta Avatars, working with a multi-faceted cross-functional team across engineering, research, art, QA and management. He shipped the quest system, which first- and third-party developers adopted, and an Avatar inventory for owned items across the Metaverse. He defined the north star for platform monetization mechanics for both developers and players, and presented to leadership up to VP level to steer the direction of Metaverse initiatives. He also worked on a number of other initiatives spanning player experience and the Meta Quest headset operating system. <a href="https://case.mundanework.shop/meta-horizon">Read the Meta Horizon Worlds case study</a>.</p>
+      <h4>Slate Auto: UX Designer, 6 months</h4>
+      <p>Jason owned the UX and UI of Slatemaker, the online car configurator behind more than 160,000 paid reservations and over $4B in potential order value. He worked with internal UX research, art and engineering teams and a third-party vendor to build it. <a href="https://case.mundanework.shop/slate-auto">Read the Slate Auto case study</a>.</p>
+      <h3>Beyond product</h3>
+      <p>Jason mentors students at Art Center College of Design and has given talks at Meta on the parallels between LEGO and design systems. He was an organizer of TEDxACCD: Systems by Design, a conference created by a 23-student transdisciplinary studio course about the dissolving borders between disciplines. He drove creative direction, onboarded keynote speakers, facilitated partnerships, managed the process and oversaw guest check-ins.</p>
+      <h3>Work with Jason</h3>
+      <p>Jason is looking for full-time and contract roles on ambitious projects across tech, entertainment, media, industry, defense, consumer and growth markets. <a href="https://www.linkedin.com/in/jason-hsin-00378837/">Connect on LinkedIn</a>, send a message through the <a href="/holonet">HoloNet</a>, or see his <a href="/cv">CV</a>.</p>
     </section>
   </main>
   <noscript><p style="position:fixed;inset:auto 16px 16px;color:#cfe;font:14px/1.4 system-ui">This portfolio is an interactive 3D scene and needs JavaScript. The links above work without it.</p></noscript>
@@ -10165,7 +10175,7 @@ f 2469//2469 2470//2470 2434//2434
       var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), t=_headDefault.title, d=_headDefault.desc, robots=_headDefault.robots;
       if(!routeKnown(parts)){ t='Page not found · Jason Hsin'; robots='noindex'; }
       else if(parts[0]===cvSlug){ t='CV · Jason Hsin · Staff Product Designer'; d='Experience, skills and selected work for Jason Hsin, staff product designer building delightful consumer experiences.'; }
-      else if(parts[0]==='about'){ t='About · Jason Hsin · Staff Product Designer'; d='About Jason Hsin: staff product designer with over a decade of experience designing consumer products across social, AR/VR, voice control, AI and automotive.'; }
+      else if(parts[0]==='about'){ t='About · Jason Hsin · Staff Product Designer'; d='Jason Hsin is a staff product designer in Los Angeles: Josh.ai founding designer, Meta Horizon Worlds design lead, Slate Auto. Open to full-time and contract work.'; }
       else if(parts[0]===holonetSlug){ t='HoloNet · Contact Jason Hsin'; d='Send Jason Hsin a message through the HoloNet.'; }
       else if(parts[0]===arcadeSlug){ t='Arcade · Mundane Workshop'; d='A tiny space-battle arcade game on the Mundane Workshop portfolio.'; }
       else if(parts[0]==='work' && parts[1]){
@@ -10182,7 +10192,7 @@ f 2469//2469 2470//2470 2434//2434
       if(url){ set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
       // structured data for the current route (replaces the previous route's block; the static Person/WebSite blocks in the head stay)
       var ld=document.getElementById('mw-route-ld'), pageUrl=url||location.href.split('#')[0].split('?')[0], person={ '@type':'Person', name:'Jason Hsin', url:'https://www.mundanework.shop/' }, graph=null;
-      if(robots!=='noindex' && parts[0]==='about') graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:Object.assign({},person,{ jobTitle:'Staff Product Designer', sameAs:['https://www.linkedin.com/in/jason-hsin-00378837/','https://www.instagram.com/jas0n_0n_a_bike/'] }) };
+      if(robots!=='noindex' && parts[0]==='about') graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:Object.assign({},person,{ jobTitle:'Staff Product Designer', alumniOf:{ '@type':'CollegeOrUniversity', name:'Art Center College of Design' }, sameAs:['https://www.linkedin.com/in/jason-hsin-00378837/','https://www.instagram.com/jas0n_0n_a_bike/'] }) };
       else if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:person };
       else if(robots!=='noindex' && parts[0]==='work' && parts[1] && t!==_headDefault.title) graph={ '@context':'https://schema.org', '@graph':[
         { '@type':'CreativeWork', name:t.split(' · ')[0], url:pageUrl, author:person },
