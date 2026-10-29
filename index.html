@@ -14260,10 +14260,10 @@ f 2469//2469 2470//2470 2434//2434
       });
       syncCrumbSize(); syncCrumbEdit();
     }
-    // Size: the top bar (breadcrumb, CV view toggle, sound switch) is Large on desktop (the Small 24px controls were hard to land a click on), Small on phones
+    // Size: the top bar (breadcrumb or the arcade's exit row, CV view toggle, sound switch) is Large on desktop (the Small 24px controls were hard to land a click on), Small on phones
     // until the mobile menu replaces the breadcrumb there
     var crumbSmQ=window.matchMedia('(max-width:700px)'), crumbBarEl=document.getElementById('breadcrumb');
-    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches; crumbBarEl.classList.toggle('bric-crumb--lg',!sm); crumbBarEl.querySelectorAll('.bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
+    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches; crumbBarEl.classList.toggle('bric-crumb--lg',!sm); document.querySelectorAll('#breadcrumb .bric-btn,#arcadeExit .bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
       var seg=document.getElementById('cvView'), sw=document.getElementById('soundToggle'); if(seg) seg.classList.toggle('bric-seg--sm',sm); if(sw) sw.classList.toggle('mw-sound-switch--lg',!sm); }
     if(crumbSmQ.addEventListener) crumbSmQ.addEventListener('change',function(){ syncCrumbSize(); window.dispatchEvent(new Event('resize')); });   // resize: the CV toggle and the manual layout re-measure against the new row height
     syncCrumbSize();
