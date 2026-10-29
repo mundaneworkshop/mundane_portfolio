@@ -1695,7 +1695,9 @@
        (IndexedDB) that Edit Mode already reads from — so the deployed site shows the real
        models/photos without anyone having to manually upload them in a browser first.
        Idempotent: skips any key that's already populated (e.g. an author edit made live in
-       Edit Mode), so it never clobbers real changes on repeat visits. Defines window.BRICStore
+       Edit Mode), so it never clobbers real changes on repeat visits. Exception: a manifest
+       entry's "replaces" list names older seeded files it supersedes, and only those get
+       swapped for the new file (see seedOne). Defines window.BRICStore
        early (same shape as the later EDIT MODE block) so both this script and the rest of the
        page can use it; resolves window.__mwSeedReady, which bootHolotable() waits on before
        rendering, so visitors never see an empty/placeholder flash on first load. -->
@@ -1722,7 +1724,12 @@
     }
     function seedOne(entry,asBlob){
       return BRICStore.get(entry.key).then(function(existing){
-        if(existing!=null) return null;   // already populated — never overwrite
+        // already populated — never overwrite, UNLESS the stored record is an older seeded file this
+        // entry supersedes (manifest "replaces": [old filenames]). Seeded records carry the manifest
+        // file's name, so returning visitors get a re-made model once; an author's Edit Mode upload
+        // (any other file name) is still left alone, and the new record's name ends the upgrade.
+        var stale = existing!=null && entry.replaces && existing.name && entry.replaces.indexOf(existing.name)>=0;
+        if(existing!=null && !stale) return null;
         var isSvg = entry.kind==='svg';
         return fetch(entry.path).then(function(r){ if(!r.ok) throw new Error('fetch failed: '+entry.path);
           if(asBlob) return r.blob();
@@ -13159,6 +13166,37 @@ f 2469//2469 2470//2470 2434//2434
       // material is left untouched on purpose → the planet keeps its amber holo FX
       fitHitProxy(grp);
     }
+    // GLB planets: depth-only twin of the planet mesh, so the additive, double-sided, no-depth-write holo
+    // shows ONLY the model's front-most surface — its far side / inner walls no longer stack up as busy
+    // outlines (same idea as the logo's depth pre-pass and the locked-figure ghostDepth).
+    // KEEP THE TRANSLUCENCY: the twin and its planet draw LAST (renderOrder above everything else, a
+    // pair per planet: twin, then planet), so the floor, cone and other planets behind are already on
+    // screen and still show through. A twin in the opaque pass instead hides everything behind the
+    // planet (it read as solid — the first version did this). polygonOffset pushes the twin back a hair
+    // so the holo's own front surface still passes the depth test. The twin reads its geometry live from
+    // `hit` and only counts while the planet is in its galaxy shape (not the focus-view kit box, _geoBak)
+    // and mostly opaque (opBase); otherwise the planet keeps its normal draw order.
+    var PLANET_DEPTH_MAT=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,transparent:true,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1});
+    var PLANET_DEPTH_RO=1000, planetDepthSlots=0;   // above every other renderOrder in the scene (max elsewhere: 41)
+    function setPlanetDepthPass(id,on){
+      var grp=planetById(id); if(!grp) return; var hit=grp.userData.hit, dm=hit.userData.depthTwin;
+      if(dm&&dm.parent!==hit) dm=hit.userData.depthTwin=null;   // dropped by applyFocusedPlanetGeo's child sweep
+      if(!on){ if(dm){ hit.remove(dm); hit.userData.depthTwin=null; } return; }
+      if(dm) return;
+      if(hit.userData.depthRO==null){
+        hit.userData.depthRO=PLANET_DEPTH_RO+2*(planetDepthSlots++);
+        var baseRO=hit.renderOrder||0;
+        Object.defineProperty(hit,'renderOrder',{configurable:true,
+          get:function(){ var t=hit.userData.depthTwin; return (t&&t.visible)?hit.userData.depthRO+1:baseRO; },
+          set:function(v){ baseRO=v; }});
+      }
+      dm=new THREE.Mesh(hit.geometry,PLANET_DEPTH_MAT); dm.raycast=function(){}; dm.userData.depthTwin=true;
+      dm.renderOrder=hit.userData.depthRO;
+      Object.defineProperty(dm,'geometry',{get:function(){ return hit.geometry; },set:function(){}});
+      Object.defineProperty(dm,'visible',{get:function(){ var u=hit.material&&hit.material.uniforms&&hit.material.uniforms.opBase;
+        return !grp.userData._geoBak && !!u && u.value>0.45; },set:function(){}});
+      hit.add(dm); hit.userData.depthTwin=dm;
+    }
     function updateCpMeshUI(){}   // panel retired — no-op kept for existing callers
 
     // ══════ FOCUS-VIEW BOX REPLACEMENT ════════════════════════════════════════
@@ -13577,7 +13615,7 @@ f 2469//2469 2470//2470 2434//2434
               BRICStore.set('mesh:'+id,{kind:'glb',buffer:e.target.result,name:file.name}); toast('artifact mesh ✓'); refreshEditPanel(); });
           } else {
             parseGLBGeo(e.target.result,meshRadiusFor(id),function(geo,err,mat){ if(!geo){toast(err||'glb error');return;}
-              applyMeshTo(id,geo,mat); planetMeshOvr[id]={kind:'glb',name:file.name};
+              applyMeshTo(id,geo,mat); setPlanetDepthPass(id,true); planetMeshOvr[id]={kind:'glb',name:file.name};
               BRICStore.set('mesh:'+id,{kind:'glb',buffer:e.target.result,name:file.name}); toast('mesh applied ✓'); refreshEditPanel(); });
           }
         };
@@ -14152,7 +14190,7 @@ f 2469//2469 2470//2470 2434//2434
           // monogram replaced the head. It no longer does — the monogram lives at the base emitter,
           // the head/uploaded logo always lives in the beam — so a custom logo restores normally.
           if(id==='logo' && rec.textured){ loadGLBScene(rec.buffer,function(scene){ if(scene){ applyTexturedGLBToLogo(scene); planetMeshOvr.logo={kind:'glb',name:rec.name,textured:true}; } }); }
-          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
+          else { parseGLBGeo(rec.buffer,meshRadiusFor(id),function(g2){ if(g2){ applyMeshTo(id,g2); setPlanetDepthPass(id,true); planetMeshOvr[id]={kind:'glb',name:rec.name}; } }); }
         }
         else if(rec.kind==='step'){ parseSTEP(rec.buffer,function(group){ if(!group) return;
           if(id==='logo'){ applyTexturedGLBToLogo(group); planetMeshOvr.logo={kind:'step',name:rec.name}; }
