@@ -1,3 +1,5 @@
+> **Retired (Oct 28 2026).** The Instagram planet deep-links to the live profile; the polaroid feed, its photos (`assets/images/instagram/`), `igfeed:*` store keys and `igurl:*` copy keys were removed. Kept below as history.
+
 # Instagram focus view
 
 > Instagram planet focus = light polaroid grid in index.html, with upload panel, external CTA, and inherited 8-bit post-processing.

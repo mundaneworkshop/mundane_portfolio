@@ -31,13 +31,5 @@
     { "id": "w1", "face": "back", "path": "assets/models/slate-auto/boxtex-back.jpg" },
     { "id": "w2", "face": "front", "path": "assets/models/josh-ai/boxtex-front.jpg" },
     { "id": "w2", "face": "back", "path": "assets/models/josh-ai/boxtex-back.jpg" }
-  ],
-  "images": [
-    { "key": "igfeed:0", "path": "assets/images/instagram/ig-1-cat-eyes.jpg" },
-    { "key": "igfeed:1", "path": "assets/images/instagram/ig-2-henry-handsome.jpg" },
-    { "key": "igfeed:2", "path": "assets/images/instagram/ig-3-fiscal-responsibility.jpg" },
-    { "key": "igfeed:3", "path": "assets/images/instagram/ig-4-ramen-cannibal.jpg" },
-    { "key": "igfeed:4", "path": "assets/images/instagram/ig-5-zoom-outfits.jpg" },
-    { "key": "igfeed:5", "path": "assets/images/instagram/ig-6-meet-my-son.jpg" }
   ]
 }
