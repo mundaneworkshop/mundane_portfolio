@@ -1068,11 +1068,29 @@
         <li><a href="/work/meta-horizon-worlds">Meta Horizon Worlds</a></li>
         <li><a href="/work/slate-auto">Slate Auto</a></li>
         <li><a href="/work/josh-ai">Josh.ai</a></li>
+        <li><a href="/about">About</a></li>
         <li><a href="/cv">CV</a></li>
         <li><a href="/holonet">Contact (HoloNet)</a></li>
         <li><a href="https://www.linkedin.com/in/jason-hsin-00378837/">Jason Hsin on LinkedIn</a></li>
       </ul>
     </nav>
+    <!-- ABOUT (/about): the one shared About page. This is real HTML so crawlers and no-JS readers see it without WebGL; the desktop minifigure focus view
+         (aboutData() / ocOpenAboutRoute) enhances it and a future phone About tab renders this same content with the current outfit still.
+         COPY STATUS: every sentence below is existing site copy, copied verbatim from assets/outfits.json (outfits "work", "vr-gamer", "slate-dummy", "iron-man").
+         Nothing here is new biography. PLACEHOLDER = Jason has not written final About copy yet; replace it with his text (bio, what he does, case-study summaries).
+         Keep it in step with outfits.json by hand: there is no build step, so this block does not regenerate from the CMS. -->
+    <section id="mw-about" data-outfit="work" aria-labelledby="mw-about-h">
+      <h2 id="mw-about-h">About Jason Hsin</h2>
+      <h3>Staff Product Designer</h3>
+      <p>I have over a decade of experience designing consumer experience across multiple verticals including social media, entertainment, augmented and virtual reality, voice control, internet of things, AI, and automotive. I've been a founding designer at a startup with 8 figure annual revenue, and led platform initiatives as product design lead for the Metaverse while at Meta.</p>
+      <h3>Selected work</h3><!-- PLACEHOLDER summaries: outfit blurbs from outfits.json, pending Jason's final case-study text -->
+      <ul>
+        <li><a href="/work/meta-horizon-worlds">Meta Horizon Worlds</a>: At Meta I was the product design lead on Horizon Worlds responsible for delivering seasonal and limited time quests where players could partake in special events to unlock rewards for their Meta Avatars. I also led exploratory work on platform monetization to empower creators selling custom digital content and enable players to purchase content throughout the Metaverse.</li>
+        <li><a href="/work/slate-auto">Slate Auto</a>: At Slate Auto, I led the redesign and development of Slatemaker, the online car configurator responsible for over 160,000 paid reservations and over $4B in potential order value.</li>
+        <li><a href="/work/josh-ai">Josh.ai</a>: Jarvis served as a huge inspiration for my work on Josh.ai, a voice-first home control and automation platform that was ahead of its time. As founding designer I built a company from scratch to $10M+ ARR and 30+ FTE, becoming the dominant voice control solution for the luxury smart home market with 70% market share.</li>
+      </ul>
+      <p><a href="https://www.linkedin.com/in/jason-hsin-00378837/">Let's connect on LinkedIn</a> · <a href="/cv">CV</a> · <a href="/holonet">HoloNet</a></p>
+    </section>
   </main>
   <noscript><p style="position:fixed;inset:auto 16px 16px;color:#cfe;font:14px/1.4 system-ui">This portfolio is an interactive 3D scene and needs JavaScript. The links above work without it.</p></noscript>
   <div id="scene" role="img" aria-label="Interactive 3D galaxy of Jason Hsin's projects. Drag to rotate, click a planet to travel."></div>
@@ -10147,6 +10165,7 @@ f 2469//2469 2470//2470 2434//2434
       var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), t=_headDefault.title, d=_headDefault.desc, robots=_headDefault.robots;
       if(!routeKnown(parts)){ t='Page not found · Jason Hsin'; robots='noindex'; }
       else if(parts[0]===cvSlug){ t='CV · Jason Hsin · Staff Product Designer'; d='Experience, skills and selected work for Jason Hsin, staff product designer building delightful consumer experiences.'; }
+      else if(parts[0]==='about'){ t='About · Jason Hsin · Staff Product Designer'; d='About Jason Hsin: staff product designer with over a decade of experience designing consumer products across social, AR/VR, voice control, AI and automotive.'; }
       else if(parts[0]===holonetSlug){ t='HoloNet · Contact Jason Hsin'; d='Send Jason Hsin a message through the HoloNet.'; }
       else if(parts[0]===arcadeSlug){ t='Arcade · Mundane Workshop'; d='A tiny space-battle arcade game on the Mundane Workshop portfolio.'; }
       else if(parts[0]==='work' && parts[1]){
@@ -10154,6 +10173,7 @@ f 2469//2469 2470//2470 2434//2434
         var ct=pid&&CASES[pid]&&(CASES[pid].title||'');
         if(ct){ t=ct+' · Jason Hsin · Product Designer'; d=ct+': a case study by Jason Hsin, staff product designer.'; }
       }
+      if(parts[0]==='about') parts=['about'];   // /about/<outfit-id> is the same page: it canonicalizes to /about
       var url=(location.hostname==='www.mundanework.shop')?'https://www.mundanework.shop'+(parts.length?'/'+parts.join('/'):'/'):null;   // previews/localhost keep the production canonical already in the head
       document.title=t;
       var set=function(sel,attr,v){ var el=q(sel); if(el&&v!=null) el.setAttribute(attr,v); };
@@ -10162,7 +10182,8 @@ f 2469//2469 2470//2470 2434//2434
       if(url){ set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
       // structured data for the current route (replaces the previous route's block; the static Person/WebSite blocks in the head stay)
       var ld=document.getElementById('mw-route-ld'), pageUrl=url||location.href.split('#')[0].split('?')[0], person={ '@type':'Person', name:'Jason Hsin', url:'https://www.mundanework.shop/' }, graph=null;
-      if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:person };
+      if(robots!=='noindex' && parts[0]==='about') graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:Object.assign({},person,{ jobTitle:'Staff Product Designer', sameAs:['https://www.linkedin.com/in/jason-hsin-00378837/','https://www.instagram.com/jas0n_0n_a_bike/'] }) };
+      else if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:person };
       else if(robots!=='noindex' && parts[0]==='work' && parts[1] && t!==_headDefault.title) graph={ '@context':'https://schema.org', '@graph':[
         { '@type':'CreativeWork', name:t.split(' · ')[0], url:pageUrl, author:person },
         { '@type':'BreadcrumbList', itemListElement:[ { '@type':'ListItem', position:1, name:'Mundane Workshop', item:'https://www.mundanework.shop/' }, { '@type':'ListItem', position:2, name:t.split(' · ')[0], item:pageUrl } ] } ] };
@@ -15663,6 +15684,7 @@ f 2469//2469 2470//2470 2434//2434
       if(!parts.length || parts[0]==='index.html') return true;
       var s0=parts[0];
       if(s0===cvSlug || s0===arcadeSlug || s0===holonetSlug) return true;
+      if(s0==='about') return parts.length<=2;   // /about and /about/<outfit-id> (an unknown outfit id falls back to the default outfit)
       if(s0!=='work') return false;
       if(!parts[1]) return true;
       return Object.keys(CASES).some(function(id){ var c=CASES[id]; return c && (c.slug||slugify(c.title||id))===parts[1]; });

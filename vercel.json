@@ -4,6 +4,8 @@
     { "source": "/", "destination": "/index.html" },
     { "source": "/:slug(cv|arcade|holonet)", "destination": "/index.html" },
     { "source": "/:slug(cv|arcade|holonet)/", "destination": "/index.html" },
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/about/:path*", "destination": "/index.html" },
     { "source": "/work/:path*", "destination": "/index.html" }
   ],
   "headers": [
