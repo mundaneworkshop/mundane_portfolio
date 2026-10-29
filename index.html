@@ -12221,9 +12221,9 @@ f 2469//2469 2470//2470 2434//2434
         e.preventDefault(); var i=opts.indexOf(document.activeElement), n=opts[(i+d+opts.length)%opts.length]; n.focus(); cvSetView(n.getAttribute('data-cv-view')); });
       // in the menu bar's right group, beside the sound switch (Secondary appearance, so it doesn't compete with the page CTAs)
       var _pvRaf=0, cp=document.getElementById('crumbpath'), bc=document.getElementById('breadcrumb');
-      function placeView(){ _pvRaf=0; if(!seg) return; if(!cvScene.active){ seg.classList.remove('placed'); return; }
+      function placeView(){ _pvRaf=0; if(!seg) return; if(!cvScene.active){ if(seg.classList.contains('placed')){ seg.classList.remove('placed'); if(typeof mwNavFit==='function') mwNavFit(); } return; }
         var slot=document.getElementById('mwCvSlot'); if(slot&&seg.parentNode!==slot) slot.appendChild(seg);   // the menu bar's right group, beside the sound switch
-        seg.classList.add('placed'); if(typeof mwNavLayout==='function') mwNavLayout(); }
+        seg.classList.add('placed'); if(typeof mwNavFit==='function') mwNavFit(); }
       function placeViewSoon(){ if(!_pvRaf) _pvRaf=requestAnimationFrame(placeView); }
       if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
       window.addEventListener('resize',placeViewSoon);
@@ -14314,9 +14314,9 @@ f 2469//2469 2470//2470 2434//2434
     // Size: the top bar (breadcrumb or the arcade's exit row, CV view toggle, sound switch) is Large on desktop (the Small 24px controls were hard to land a click on), Small on phones
     // until the mobile menu replaces the breadcrumb there
     var crumbSmQ=window.matchMedia('(max-width:700px)'), crumbBarEl=document.getElementById('breadcrumb');
-    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches; document.querySelectorAll('#mwNav .bric-btn,#arcadeExit .bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
+    function syncCrumbSize(){ if(!crumbSmQ) return; var sm=crumbSmQ.matches||!!window.__mwNavTight; document.querySelectorAll('#mwNav .bric-btn,#arcadeExit .bric-btn').forEach(function(b){ b.classList.toggle('bric-btn--sm',sm); });
       var seg=document.getElementById('cvView'), sw=document.getElementById('soundToggle'); if(seg) seg.classList.toggle('bric-seg--sm',sm); if(sw) sw.classList.toggle('mw-sound-switch--lg',!sm); }
-    if(crumbSmQ.addEventListener) crumbSmQ.addEventListener('change',function(){ syncCrumbSize(); window.dispatchEvent(new Event('resize')); });   // resize: the CV toggle and the manual layout re-measure against the new row height
+    if(crumbSmQ.addEventListener) crumbSmQ.addEventListener('change',function(){ if(typeof mwNavFit==='function') mwNavFit(); else syncCrumbSize(); window.dispatchEvent(new Event('resize')); });   // resize: the CV toggle and the manual layout re-measure against the new row height
     syncCrumbSize();
     function setCrumb(ctx,segs){ crumbCtx=ctx||''; crumbSegs=segs||[]; renderCrumb(); }
     function syncCrumbEdit(){ var on=(typeof editMode!=='undefined')&&editMode;
@@ -16069,7 +16069,7 @@ f 2469//2469 2470//2470 2434//2434
       [['li','LinkedIn'],['ig','Instagram']].forEach(function(s){ if(!mwShown(s[0])) return; var u=CASES[s[0]]&&CASES[s[0]].ctaUrl; if(!u||u==='#') return;
         var li=document.createElement('li'), a=document.createElement('a'); a.className='bric-btn mw-logo'; a.href=u; a.target='_blank'; a.rel='noopener';
         a.setAttribute('aria-label',s[1]+', opens in a new tab'); a.title=s[1]; a.setAttribute('data-mw-nav',s[0]); a.innerHTML=MW_LOGO[s[0]]; li.appendChild(a); mwNavSocial.appendChild(li); });
-      syncCrumbSize(); mwNavSync(); mwNavLayout(); }
+      mwNavSync(); mwNavFit(); }
     // current item from the URL: Work while a case study (or its artifacts / chapters) is open, CV on the CV, About on the minifigure About view, Contact on HoloNet
     function mwNavSync(){ if(!mwNavMain) return; var parts=location.pathname.replace(/^\/+|\/+$/g,'').split('/').filter(Boolean), s0=parts[0]||'', cur='';
       if(s0==='work') cur='work'; else if(s0===cvSlug) cur='cv'; else if(s0==='about') cur='about'; else if(s0===holonetSlug) cur='contact'; else if(s0===arcadeSlug) cur='arcade';
@@ -16081,6 +16081,14 @@ f 2469//2469 2470//2470 2434//2434
     function mwNavLayout(){ var tb=document.getElementById('topbar'), sw=document.getElementById('soundToggle'), nav=document.getElementById('mwNav'); if(!tb||!nav) return;
       if(sw&&sw.offsetWidth) tb.style.setProperty('--mw-snd-w',sw.offsetWidth+'px');
       var r=nav.getBoundingClientRect(); if(r.height) tb.style.setProperty('--mw-crumb-top',Math.round(r.bottom+6)+'px'); }
+    // narrow windows: the bar drops to the Small buttons before it ever wraps; it only wraps when even Small does not fit on one row
+    function mwNavWraps(){ var nav=document.getElementById('mwNav'); if(!nav||!nav.offsetHeight) return false; var nr=nav.getBoundingClientRect(), top=Infinity, bot=-Infinity, right=-Infinity;
+      [].forEach.call(nav.querySelectorAll('#homeBtn,#mwNav>ul>li,#mwCvSlot>*'),function(e){ if(!e.offsetWidth) return; var r=e.getBoundingClientRect(); top=Math.min(top,r.top); bot=Math.max(bot,r.top); right=Math.max(right,r.right); });
+      return bot-top>4 || right>nr.right+1; }   // wrapped onto a second row, or running past the bar's edge (the dropdown and hit-area extenders are not counted)
+    function mwNavFit(){ var was=!!window.__mwNavTight; window.__mwNavTight=false;
+      if(!crumbSmQ.matches){ syncCrumbSize(); mwNavLayout(); if(mwNavWraps()){ window.__mwNavTight=true; syncCrumbSize(); } }
+      else syncCrumbSize();
+      mwNavLayout(); if(was!==window.__mwNavTight) window.dispatchEvent(new Event('resize')); }   // the bar's height changed: the manual layout and the CV hero re-measure (the second pass finds no change)
     function mwWorkOpen(on,focusFirst){ if(!mwWorkBtn||!mwWorkDd) return; on=!!on; if((mwWorkBtn.getAttribute('aria-expanded')==='true')===on) return;
       mwWorkBtn.setAttribute('aria-expanded',on?'true':'false'); mwWorkDd.classList.toggle('open',on); mwNavSync();
       if(on&&window.MWAudio&&!window.__mwArcade){ try{ MWAudio.uiReady(); MWAudio.ui('hover'); }catch(e){} }
@@ -16118,8 +16126,10 @@ f 2469//2469 2470//2470 2434//2434
       navEl.addEventListener('focusout',function(e){ if(!mwWorkDd) return; var to=e.relatedTarget; if(to&&mwWorkBtn.parentNode.contains(to)) return; if(to) mwWorkOpen(false); });   // Tab out of the Work item closes it
       document.addEventListener('pointerdown',function(e){ if(mwWorkBtn&&mwWorkBtn.getAttribute('aria-expanded')==='true'&&!mwWorkBtn.parentNode.contains(e.target)) mwWorkOpen(false); },true);
       var skip=document.getElementById('mwSkip'); if(skip) skip.addEventListener('click',function(e){ e.preventDefault(); var h=document.getElementById('homeBtn'); if(h) h.focus(); });
-      window.addEventListener('resize',mwNavLayout);
+      window.addEventListener('resize',mwNavFit);
+      if(document.fonts&&document.fonts.ready) document.fonts.ready.then(mwNavFit);   // label widths change once the web fonts arrive
       if(window.ResizeObserver){ var sw=document.getElementById('soundToggle'); if(sw) new ResizeObserver(mwNavLayout).observe(sw); new ResizeObserver(mwNavLayout).observe(navEl); }
+      if(window.ResizeObserver){ var tbEl=document.getElementById('topbar'), tbW=0; new ResizeObserver(function(){ var w=tbEl.clientWidth; if(w!==tbW){ tbW=w; mwNavFit(); } }).observe(tbEl); }   // the bar's width changed (window, zoom, split view): refit, even where no resize event fires
       // Edit Mode can show hidden planets and rename things: rebuild on its toggle; the arcade and route changes close the dropdown
       new MutationObserver(function(){ if(mwNavMain._em!==!!editMode){ mwNavMain._em=!!editMode; buildMwNav(); } if(document.body.classList.contains('mw-arcade')) mwWorkOpen(false); }).observe(document.body,{attributes:true,attributeFilter:['class']});
       window.addEventListener('popstate',function(){ mwWorkOpen(false); mwNavSync(); });
