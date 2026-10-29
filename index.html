@@ -647,6 +647,8 @@
   .cvrlbl.hov .cvrlbl-t{color:#F0D080}   /* node hovered in the scene (or its label): same highlight as the label's own :hover */
   /* ── CV view toggle (Immersive / List: the BRIC segmented toggle, assets/bric-components.css) at the top centre + the list view ── */
   #cvView{position:fixed;top:16px;left:22px;width:max-content;visibility:hidden}   /* fixed to the viewport, beside the breadcrumb (placed by placeView in wireCVView; hidden until placed) */
+  #cvView.under .bric-seg__opt::before{top:-7px}   /* dropped under the breadcrumb (phones): the two rows are 10px apart, so each side's hit area takes half the gap (the options sit 2px inside the track) instead of the toggle's 44px touch extender swallowing it all */
+  body:has(#cvView.under) #breadcrumb .bric-btn::before{bottom:-5px}
   #cvView.placed{visibility:visible}
   #cvListBar{position:fixed;left:0;right:0;top:0;height:112px;z-index:16;display:none;pointer-events:none;background:linear-gradient(to bottom,var(--bric-surface-scene) 62%,transparent)}   /* the page's fixed chrome (breadcrumb, toggle, sound) sits on this, not on scrolling cards */
   body.cv-list #cvListBar{display:block}
@@ -732,7 +734,8 @@
      hover turns amber like every other control. Tokens only (assets/tokens/bric-tokens.css). */
   #soundToggle{position:absolute;top:16px;right:22px;z-index:21;transition:opacity .3s ease}   /* top-right corner on EVERY view (galaxy, focus, case study, CV, HoloNet, arcade); the admin toolbar makes room for it below */
   body.author-mode #topbar{padding-right:200px}   /* author mode: the toolbar buttons end left of the sound switch */
-  .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
+  .mw-sound-switch{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;position:relative;display:flex;align-items:center;gap:var(--bric-space-1-5-stud);cursor:pointer;user-select:none;outline:none}   /* reticle: locks onto the whole switch like a .bric-btn (selector in the reticle init) */
+  .mw-sound-switch::before{content:'';position:absolute;left:-4px;right:-4px;top:min(-4px,calc((100% - var(--bric-hit-min,32px))/2));bottom:min(-4px,calc((100% - var(--bric-hit-min,32px))/2))}   /* hit area = the reticle's lock box, at least --bric-hit-min tall (the switch is 16px: 32px mouse / 44px touch target); before this, a press inside the brackets but off the 16px row went to the galaxy canvas */
   .mw-sound-switch .sw-track{width:34px;height:16px;border:1px solid var(--bric-interactive-outline-default);background:transparent;position:relative;flex-shrink:0;border-radius:var(--bric-corner-step);transition:border-color .1s,background .1s,box-shadow .1s}   /* rounded like the buttons (Figma 12 · Toggle); no clip-path, so the hover glow can show */
   .mw-sound-switch .sw-thumb{width:12px;height:10px;position:absolute;top:2px;left:2px;background:var(--bric-content-secondary);transition:transform .12s,background .12s,box-shadow .12s}
   .mw-sound-switch .sw-lbl{font-family:var(--grotesk);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bric-interactive-text-idle);transition:color .1s}
@@ -1900,8 +1903,8 @@
         var target=el.textContent; if(!/[A-Za-z0-9]/.test(target)) return;
         if(!el.__gfxId) el.__gfxId='el'+(++uid);
         if(live[el.__gfxId]) return;   // already decoding: leave it alone (no restart, no second lock)
-        var L=lockEl||el, hadAria=el.hasAttribute('aria-label'), bric=el.classList.contains('bric-btn');
-        lock(L,noClip||bric||el.hasAttribute('data-text'),bric);   // glitch labels (data-text) keep their overhanging slices; everything else clips
+        var L=lockEl||el, hadAria=el.hasAttribute('aria-label'), bric=el.classList.contains('bric-btn'), ext=getComputedStyle(L,'::before').position==='absolute';
+        lock(L,noClip||bric||ext||el.hasAttribute('data-text'),bric);   // glitch labels (data-text) keep their overhanging slices; everything else clips, except a control with a hit-extender (::before outside its box: the segmented toggle's options): overflow:hidden would clip the extender mid-press, the release would land outside the button and the click was lost
         if(!hadAria) el.setAttribute('aria-label',target);
         run({ key:el.__gfxId, target:target, opts:opts(K),
           render:function(out){ var h='', plain=''; for(var i=0;i<out.length;i++){ plain+=out[i].c; h+=out[i].r?esc(out[i].c):'<span class="gfx-u">'+esc(out[i].c)+'</span>'; } el.innerHTML=bric?'<span>'+h+'</span>':h;   // one child span: if each glyph were its own flex item, the button's gap would be applied between glyphs
@@ -10390,18 +10393,18 @@ f 2469//2469 2470//2470 2434//2434
     }
     var focusYaw=0, focusPitch=0.28, focusRadius=6, focusBaseR=6, focusPanY=0;   // focusPanY = vertical pan of the framing (Y), shift-drag
     var camUpV=new THREE.Vector3(0,1,0), arcRoll=0, arcRollT=0, arcDragSign=1;   // arcRoll = auto-right roll (radians) about the view axis: eases to π once the free pitch carries the camera upside down, so the hero ends up upright on screen
-    var dragging=false, dragMoved=false, lastX=0, lastY=0, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
+    var dragging=false, dragMoved=false, lastX=0, lastY=0, downX=0, downY=0, dragSlop=6, manualRot=0, camElev=0, camZoom=1, arcPitch=0, arcPitchS=0, arcEntryZoom=1, arcReturn=false;   // arcPitch = free (unbounded) camera pitch in radians while a game is being played
     var _arcFoc=new THREE.Vector3(), _arcF=new THREE.Vector3();
     var msgFocusActive=false, msgFocusYaw=0, msgFocusPos=new THREE.Vector3();
     var _mwRM=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null; function mwReduced(){ return !!(_mwRM&&_mwRM.matches); }   // message-star orbit state (used by the animate camera branch)
     function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
 
     renderer.domElement.addEventListener('pointerdown',function(e){ arcReturn=false; if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
-      arcDragSign=Math.cos(arcPitchS)<0?-1:1; dragging=true; dragMoved=false; lastX=e.clientX; lastY=e.clientY; });   // arcDragSign: the pitch drag is mirrored when the camera starts the drag flipped over the pole
+      arcDragSign=Math.cos(arcPitchS)<0?-1:1; dragging=true; dragMoved=false; lastX=downX=e.clientX; lastY=downY=e.clientY; dragSlop=(e.pointerType&&e.pointerType!=='mouse')?12:6; });   // arcDragSign: the pitch drag is mirrored when the camera starts the drag flipped over the pole
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
-        if(Math.abs(dx)>2||Math.abs(dy)>2)dragMoved=true; var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert
+        if(!dragMoved&&Math.hypot(e.clientX-downX,e.clientY-downY)>dragSlop)dragMoved=true;   // a click is a drag only once the pointer has travelled dragSlop from where it went down (6px mouse, 12px touch/pen). The old test (any single move event over 2px) turned a click with a little hand wobble, or a fast trackpad tap, into a drag, and the planet click was dropped var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert
         if(MWSub.active){ MWSub.active.orbit.drag(dx,dy,e.shiftKey,sy); }   // sub-scene: drag orbits, SHIFT-drag pans Y
         else if(focused){
           if(e.shiftKey){ focusPanY=clamp(focusPanY - syF*dy*0.012, -4, 4); focusYaw-=dx*0.006; }   // SHIFT-drag = pan the framing up/down (Y), still orbit on X
@@ -11967,8 +11970,8 @@ f 2469//2469 2470//2470 2434//2434
         if(seg.matches(':hover')&&seg.classList.contains('placed')){ seg.addEventListener('pointerleave',placeViewSoon,{once:true}); return; }   // never slide out from under the pointer (switching views changes the breadcrumb); catch up once it leaves
         var r=bc.getBoundingClientRect(), w=seg.offsetWidth, h=seg.offsetHeight, room=window.innerWidth-180;
         if(!r.width){ seg.classList.remove('placed'); return; }
-        if(r.right+16+w<=room){ seg.style.left=Math.round(r.right+16)+'px'; seg.style.top=Math.round(r.top+(r.height-h)/2)+'px'; }
-        else { seg.style.left=Math.round(r.left)+'px'; seg.style.top=Math.round(r.bottom+10)+'px'; }
+        if(r.right+16+w<=room){ seg.style.left=Math.round(r.right+16)+'px'; seg.style.top=Math.round(r.top+(r.height-h)/2)+'px'; seg.classList.remove('under'); }
+        else { seg.style.left=Math.round(r.left)+'px'; seg.style.top=Math.round(r.bottom+10)+'px'; seg.classList.add('under'); }   // .under: the hit areas split the 10px gap with the breadcrumb above
         seg.classList.add('placed'); }
       function placeViewSoon(){ if(!_pvRaf) _pvRaf=requestAnimationFrame(placeView); }
       if(cp) new MutationObserver(placeViewSoon).observe(cp,{childList:true,subtree:true,characterData:true});
@@ -14041,7 +14044,8 @@ f 2469//2469 2470//2470 2434//2434
     var crumbRootEl=document.getElementById('homeBtn'), crumbPathEl=document.getElementById('crumbpath');
     var CRUMB_ROOT_DEFAULT='Mundane Workshop', crumbCtx='', crumbSegs=[];
     (function(){ var r=copyOvr['crumb:root']; if(r) r=String(r).replace(/^[⌂\s]+/,''); crumbRootEl.textContent=(r!=null&&r!=='')?r:CRUMB_ROOT_DEFAULT; })();
-    crumbRootEl.addEventListener('blur',function(){ var t=crumbRootEl.textContent.replace(/^[⌂\s▸]*/,'').replace(/\s+$/,''); copyOvr['crumb:root']=t; persistCopy(); crumbRootEl.textContent=t||CRUMB_ROOT_DEFAULT; });
+    crumbRootEl.addEventListener('blur',function(){ if(!crumbRootEl.isContentEditable) return;   // only an Edit Mode edit is saved: a visitor's click focuses the root (tabindex) and the blur fired mid-decode, persisting the scrambled label ("Mundane Aorkshop")
+      var t=crumbRootEl.textContent.replace(/^[⌂\s▸]*/,'').replace(/\s+$/,''); copyOvr['crumb:root']=t; persistCopy(); crumbRootEl.textContent=t||CRUMB_ROOT_DEFAULT; });
     crumbRootEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); crumbRootEl.blur(); } });
     function renderCrumb(){ crumbPathEl.innerHTML='';
       crumbSegs.forEach(function(seg,i){
@@ -14059,7 +14063,7 @@ f 2469//2469 2470//2470 2434//2434
       Array.prototype.forEach.call(crumbPathEl.querySelectorAll('.crumb-seg'),function(s){
         s.contentEditable=on?'true':'false'; s.classList.toggle('inline-edit-on',on);
         if(!s._wired){ s._wired=true;
-          s.addEventListener('blur',function(){ copyOvr['crumb:'+crumbCtx+':'+s.getAttribute('data-ci')]=s.textContent.replace(/\s+$/,''); persistCopy(); });
+          s.addEventListener('blur',function(){ if(!s.isContentEditable) return; copyOvr['crumb:'+crumbCtx+':'+s.getAttribute('data-ci')]=s.textContent.replace(/\s+$/,''); persistCopy(); });
           s.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); s.blur(); } });
         }
       });

@@ -55,15 +55,20 @@
 .bric-btn:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:-4px}
 
 /* hit area = the reticle's lock box. The targeting brackets sit --bric-ret-outset (4px) outside the button and the pointer disappears behind them, so a press anywhere
-   inside the brackets has to count. Invisible, all sides; the Small touch rule below widens it vertically. */
-.bric-btn::before{content:'';position:absolute;inset:calc(var(--bric-ret-outset,4px)*-1)}
-/* touch: keep the 24px Small look but give it a 44px hit area (invisible, vertical only) */
-@media (pointer:coarse){
-  .bric-btn--sm::before{content:'';position:absolute;left:0;right:0;top:-10px;bottom:-10px}
-}
+   inside the brackets has to count. Invisible, all sides, and never smaller than --bric-hit-min (32px mouse, 44px touch; WCAG 2.5.8 asks 24): a short or narrow
+   control grows the extender until it gets there (top/bottom % = the button's height, left/right % = its width), so the 24px Small look keeps a 32 / 44px target.
+   A button that follows another one in a row doesn't reach back over it: the earlier button's extender already fills the gap, and a later sibling paints on top,
+   so its extender would cover the earlier button's edge (HoloNet E-mail / Schedule call sat 4px apart: pressing E-mail's right edge opened Schedule call). */
+:root{--bric-hit-min:32px}
+@media (pointer:coarse){ :root{--bric-hit-min:44px} }
+.bric-btn::before{content:'';position:absolute;
+  top:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2));bottom:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2));
+  left:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2));right:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2))}
+.bric-btn+.bric-btn::before{left:min(0px,calc((100% - var(--bric-hit-min))/2))}
 
-/* glyph decode (GFX): scramble glyphs render at ~0.78em so the box never overflows (Aurebesh runs 25–40% wider than Latin) */
-.bric-btn .gfx-u{font-size:.78em}
+/* glyph decode (GFX): scramble glyphs render at ~0.78em so the box never overflows (Aurebesh runs 25–40% wider than Latin). The toggle's options aren't clipped
+   during the decode either (it would clip their hit-extender), so they get the same size. */
+.bric-btn .gfx-u,.bric-seg__opt .gfx-u{font-size:.78em}
 /* The decode rewrites the label's inner HTML every tick, so a press that lands on a child span would be detached before release and the browser drops
    the click (needed 2-3 taps during the ~400ms decode). Children never take pointer events: the button itself is always the press + release target. */
 .gfx-u,.bric-btn>span:only-child{pointer-events:none}
@@ -92,7 +97,14 @@
 .bric-seg--secondary .bric-seg__opt[aria-checked="true"]{background:transparent;color:var(--bric-interactive-text-idle);text-shadow:0 0 6px var(--bric-fx-bloom-text);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
 .bric-seg--secondary[aria-disabled="true"] .bric-seg__opt[aria-checked="true"]{background:transparent;color:var(--bric-interactive-text-disabled);text-shadow:none;box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled)}
 .bric-seg__opt:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:1px}
-@media (pointer:coarse){ .bric-seg--sm .bric-seg__opt::before{content:'';position:absolute;left:0;right:0;top:-10px;bottom:-10px} }   /* 44px touch target, 24px look */
+/* hit area: each option reaches the track's outer edge plus the reticle outset (padding 3 + 4 Large, 2 + 4 Small), and at least --bric-hit-min tall, so the Small
+   toggle (20px options) is a 32px target with a mouse and 44px on touch while it still looks 24px. Options meet edge to edge, so only the end ones grow sideways. */
+.bric-seg__opt::before{content:'';position:absolute;left:0;right:0;top:min(-7px,calc((100% - var(--bric-hit-min,32px))/2));bottom:min(-7px,calc((100% - var(--bric-hit-min,32px))/2))}
+.bric-seg__opt:first-child::before{left:-7px}
+.bric-seg__opt:last-child::before{right:-7px}
+.bric-seg--sm .bric-seg__opt::before{top:min(-6px,calc((100% - var(--bric-hit-min,32px))/2));bottom:min(-6px,calc((100% - var(--bric-hit-min,32px))/2))}
+.bric-seg--sm .bric-seg__opt:first-child::before{left:-6px}
+.bric-seg--sm .bric-seg__opt:last-child::before{right:-6px}
 
 /* tag: static label, never interactive — outline is deliberately dimmer than the label */
 .bric-tag{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);border-radius:var(--bric-corner-step);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-tag);box-sizing:border-box;color:var(--bric-interactive-text-idle);cursor:default;user-select:none;white-space:nowrap;text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em}
