@@ -1452,58 +1452,7 @@
     </div>
   </div>
 
-  <!-- ░░ Instagram focus view — light polaroid grid (shown in place of the kit box when 'ig' is focused) ░░ -->
-  <style>
-    #ig-feed{ position:fixed; left:var(--stage-cx,50%); top:var(--stage-cy,38%); transform:translate(-50%,-50%);   /* --stage-* = free area beside the manual (see MANUAL LAYOUTS) */
-      z-index:40; pointer-events:none; opacity:0; visibility:hidden;
-      transition:opacity .55s ease;
-      /* scale continuously with the viewport instead of hard-capping at 520px — the old
-         min(520px,60vw) meant the grid never resized across most normal desktop widths
-         (anything wider than ~867px just sat at the 520px ceiling). min(vw,vh) keeps it
-         inside the frame on short windows too, since the feed is vertically centered. */
-      width:clamp(280px, min(calc(var(--stage-w,100vw) * .44), calc(var(--stage-h,100vh) * .62)), 760px); }
-    #ig-feed.show{ opacity:1; visibility:visible; pointer-events:auto; }
-    #ig-feed .ig-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:26px 22px; perspective:1200px; }
-    #ig-feed .ig-pol{ --rot:0deg; aspect-ratio:1 / 1.12; position:relative; cursor:pointer;
-      box-shadow:0 16px 30px -12px rgba(0,0,0,0.55), 0 4px 10px -4px rgba(0,0,0,0.4);
-      transform:rotate(var(--rot)); transition:transform .45s cubic-bezier(.2,.7,.2,1), box-shadow .45s ease;
-      animation:igfloat 7s ease-in-out infinite; }
-    #ig-feed .ig-pol:hover{ transform:rotate(0deg) translateY(-6px) scale(1.05);
-      box-shadow:0 26px 48px -14px rgba(0,0,0,0.6), 0 8px 18px -6px rgba(0,0,0,0.45);
-      z-index:5; animation-play-state:paused; }
-    /* the ENTIRE polaroid (paper + photo + pin) is drawn to one canvas → the whole card inherits the 8-bit post */
-    #ig-feed .ig-card{ position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0;
-      image-rendering:pixelated; image-rendering:crisp-edges; filter:url(#ig-posterize); }
-    /* transparent overlay aligned to the drawn photo well — hosts the slot label + edit controls (kept crisp) */
-    #ig-feed .ig-photo{ position:absolute; left:6%; right:6%; top:5.4%; bottom:16%;
-      overflow:hidden; display:flex; align-items:center; justify-content:center; z-index:1; }
-    #ig-feed .ig-slot{ position:relative; z-index:2; font-family:'Space Grotesk',sans-serif; font-size:11px; letter-spacing:.1em;
-      text-transform:uppercase; color:rgba(26,21,18,0.4); text-align:center; }
-    #ig-feed .ig-slot b{ display:block; font-size:18px; color:#B86C0A; margin-bottom:3px; }
-    #ig-feed .ig-pol:nth-child(1){ --rot:-3.2deg; animation-delay:-0.2s; }
-    #ig-feed .ig-pol:nth-child(2){ --rot:2.1deg; animation-delay:-2.4s; }
-    #ig-feed .ig-pol:nth-child(3){ --rot:-1.4deg; animation-delay:-4.1s; }
-    #ig-feed .ig-pol:nth-child(4){ --rot:2.8deg; animation-delay:-1.1s; }
-    #ig-feed .ig-pol:nth-child(5){ --rot:-2.6deg; animation-delay:-3.3s; }
-    #ig-feed .ig-pol:nth-child(6){ --rot:1.7deg; animation-delay:-5.0s; }
-    @keyframes igfloat{ 0%,100%{ translate:0 0; } 50%{ translate:0 -6px; } }
-    @media (prefers-reduced-motion:reduce){ #ig-feed .ig-pol{ animation:none; } }
-    /* Edit Mode: freeze the float so upload targets hold still, expose per-slot controls */
-    #ig-feed.ig-edit .ig-pol{ animation:none; }
-    #ig-feed.ig-edit .ig-pol:hover{ transform:rotate(var(--rot)); box-shadow:0 16px 30px -12px rgba(0,0,0,0.55); }
-    /* hover = preview: un-pixelate (canvas re-rendered crisp) and drop posterize — view mode only */
-    #ig-feed:not(.ig-edit) .ig-pol:hover .ig-card{ filter:none; }
-    #ig-feed .ig-edit-ov{ position:absolute; inset:0; z-index:3; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:6px;
-      background:rgba(14,15,18,0.5); }
-    #ig-feed .ig-eb-row{ display:flex; gap:6px; }
-    #ig-feed .ig-eb{ font-family:'Space Grotesk',sans-serif; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
-      color:#0E0F12; background:#E9A73E; border:none; padding:5px 8px; cursor:pointer; }
-    #ig-feed .ig-eb:hover{ background:#F0B848; }
-    #ig-feed .ig-eb-clr{ background:rgba(240,237,232,0.85); padding:5px 7px; }
-    #ig-feed .ig-url{ width:92%; box-sizing:border-box; font-family:'Space Mono',monospace; font-size:11px;
-      color:#0E0F12; background:rgba(240,237,232,0.92); border:1px solid rgba(14,15,18,0.3); padding:3px 5px; }
-  </style>
-  <!-- screen-space posterize for the polaroids (free + live; pixelation stays in the canvas).
+  <!-- screen-space posterize (free + live; pixelation stays in the canvas): shared by the message stars, CV canvases and GLB viewer.
        tableValues are rebuilt from params.levels by igSetPosterizeLevels(). -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
     <filter id="ig-posterize" color-interpolation-filters="sRGB">
@@ -1514,18 +1463,6 @@
       </feComponentTransfer>
     </filter>
   </defs></svg>
-  <div id="ig-feed">
-    <div class="ig-grid">
-      <!-- SWAP: replace each <div class="ig-slot">…</div> with <img src="ig-1.jpg" alt="">  (square crops, newest first) -->
-      <figure class="ig-pol"><div class="ig-photo"><!-- <img src="ig-1.jpg" alt=""> --><div class="ig-slot"><b>1</b>image</div></div></figure>
-      <figure class="ig-pol"><div class="ig-photo"><!-- <img src="ig-2.jpg" alt=""> --><div class="ig-slot"><b>2</b>image</div></div></figure>
-      <figure class="ig-pol"><div class="ig-photo"><!-- <img src="ig-3.jpg" alt=""> --><div class="ig-slot"><b>3</b>image</div></div></figure>
-      <figure class="ig-pol"><div class="ig-photo"><!-- <img src="ig-4.jpg" alt=""> --><div class="ig-slot"><b>4</b>image</div></div></figure>
-      <figure class="ig-pol"><div class="ig-photo"><!-- <img src="ig-5.jpg" alt=""> --><div class="ig-slot"><b>5</b>image</div></div></figure>
-      <figure class="ig-pol"><div class="ig-photo"><!-- <img src="ig-6.jpg" alt=""> --><div class="ig-slot"><b>6</b>image</div></div></figure>
-    </div>
-  </div>
-
   <!-- ░░ Message stars (visitor transmissions pinned in the galaxy) ░░ -->
   <canvas id="msgCanvas" aria-hidden="true"></canvas>
   <canvas id="cvFxCanvas" aria-hidden="true"></canvas>
@@ -10635,8 +10572,7 @@ f 2469//2469 2470//2470 2434//2434
     function goHomeV(){ veilThen(goHome); }
     function activate(ud){
       if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
-      // Socials just deep-link out — no in-page focus view (the kit-box/booklet and, for
-      // Instagram, the #ig-feed polaroid grid stay in the code dormant, not deleted).
+      // Socials just deep-link out — no in-page focus view (the kit-box/booklet stays in the code dormant).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.mwOpen(_u); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
       if(ud.id==='contact'){ veilThen(function(){ openContact(ud.id); }); return; }
@@ -10828,12 +10764,8 @@ f 2469//2469 2470//2470 2434//2434
       fitHitProxy(grp);
       applyBoxMaterials(grp);
       grp.userData.hit.layers.enable(1);   // MERGE: layer 1 = crisp-overlay pass (debug)
-      // ── Instagram focus → show the light polaroid grid IN PLACE OF the kit box ──
-      var _igf=document.getElementById('ig-feed');
-      if(id==='ig'){ grp.userData.hit.visible=false; if(_igf){ _igf.classList.add('show'); igSetPosterizeLevels(); igFeedLoad(); igFeedRefresh(); } }
-      else if(_igf){ _igf.classList.remove('show'); }
       // FOCUS-VIEW BOX REPLACEMENT: if this project has an uploaded asset, swap it in for the box.
-      if(id!=='ig' && boxOvrData[id]) applyBoxReplacementFromData(id);
+      if(boxOvrData[id]) applyBoxReplacementFromData(id);
       // MERGE Stage 2: the open booklet is now the focus panel (click-through; native casepanel retired)
       document.getElementById('cs-root').classList.add('cs-focus-panel');
       if(window.CS && CS.showBooklet) CS.showBooklet(projectDataForBooklet(id));
@@ -10873,7 +10805,6 @@ f 2469//2469 2470//2470 2434//2434
       if(typeof altFocusCleanup==='function') altFocusCleanup();   // hide CV/Contact bespoke overlays
       document.getElementById('cs-root').classList.remove('cs-focus-panel');   // MERGE Stage 2: exit booklet focus panel
       document.getElementById('cs-root').classList.remove('active'); if(window.CS) CS.reset();
-      var _igf2=document.getElementById('ig-feed'); if(_igf2) _igf2.classList.remove('show');   // hide ig polaroid feed on exit
       if(typeof refreshEditPanel==='function') refreshEditPanel();
       setRoute('/'); }
 
@@ -12726,7 +12657,7 @@ f 2469//2469 2470//2470 2434//2434
         toggleHideUI();
       }
     });
-    bind('cPixel','vPixel',function(v){ params.pixel=v; rt.setSize(Math.floor(W/v),Math.floor(H/v)); if(typeof igFeedReprocess==='function') igFeedReprocess(); if(typeof refreshViewerPixel==='function') refreshViewerPixel(); });
+    bind('cPixel','vPixel',function(v){ params.pixel=v; rt.setSize(Math.floor(W/v),Math.floor(H/v)); if(typeof refreshViewerPixel==='function') refreshViewerPixel(); });
     bind('cLevels','vLevels',function(v){ params.levels=v; postMat.uniforms.levels.value=v; if(typeof igSetPosterizeLevels==='function') igSetPosterizeLevels(v); });
     bind('cStars','vStars',function(v){ params.starCount=v; buildStars(); });
     bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=starPx(); },2);
@@ -13718,7 +13649,6 @@ f 2469//2469 2470//2470 2434//2434
 
     function refreshEditPanel(){
       if(typeof updateMarqueePanel==='function') updateMarqueePanel();
-      if(typeof igFeedRefresh==='function') igFeedRefresh();
       var panel=document.getElementById('editPanel'); if(!panel) return;
       var tid=currentEditTarget();
       if(!(editMode && tid)){ panel.style.display='none'; return; }
@@ -13751,46 +13681,6 @@ f 2469//2469 2470//2470 2434//2434
       else { document.getElementById('epStatus').textContent=ovr?('mesh: '+(ovr.name||ovr.kind)):'mesh: default'; }
       Array.prototype.forEach.call(document.querySelectorAll('#epFaces .epFace'),function(b){ var on=b.getAttribute('data-face')===boxFace; b.classList.toggle('on',on); });
     }
-    // ════════ Instagram focus view — per-slot image upload (Edit Mode) ════════
-    // Content lives in BRICStore (IndexedDB) as Blobs under 'igfeed:0..5' — a clean,
-    // serializable store decoupled from rendering. A future R3F rebuild reads the same
-    // keys and turns each Blob into a texture (object URL → useTexture); the DOM here is
-    // just one renderer of that data. Keep state as Blobs/object URLs, never DOM-specific.
-    var IGF_N=6, _igObjUrls={}, _igSrc={};
-    function igFeedPhoto(i){ var f=document.getElementById('ig-feed'); if(!f) return null; var pol=f.querySelectorAll('.ig-pol')[i]; return pol?pol.querySelector('.ig-photo'):null; }
-    // Render slot i through the SAME 8-bit post as the WebGL scene: pixelate by params.pixel
-    // (low-res buffer + nearest upscale) and posterize to params.levels (floor(c*levels+0.5)/levels).
-    // The decoded source is kept in _igSrc so moving the global sliders re-renders every slot live.
-    function igRenderSlot(i,crisp){
-      var f=document.getElementById('ig-feed'); if(!f) return;
-      var pol=f.querySelectorAll('.ig-pol')[i]; if(!pol) return;
-      var slot=pol.querySelector('.ig-slot'), src=_igSrc[i];
-      var cv=pol.querySelector('canvas.ig-card');
-      if(!cv){ cv=document.createElement('canvas'); cv.className='ig-card'; pol.insertBefore(cv,pol.firstChild); }
-      if(slot) slot.style.display=src?'none':'';   // keep the numbered label on empty slots
-      var W=Math.max(1,pol.clientWidth||120), H=Math.max(1,pol.clientHeight||Math.round(W*1.12));
-      var pixel=crisp?1:Math.max(1,(typeof params!=='undefined'&&params.pixel)||2);   // crisp=1 → no pixelation (hover preview)
-      var lw=Math.max(1,Math.round(W/pixel)), lh=Math.max(1,Math.round(H/pixel));
-      var tmp=document.createElement('canvas'); tmp.width=lw; tmp.height=lh;
-      var t=tmp.getContext('2d'); t.imageSmoothingEnabled=false;
-      // 1) paper (full card)
-      t.fillStyle='#FBF8F2'; t.fillRect(0,0,lw,lh);
-      // 2) photo well — same 6% / 5.4% / 88% / 78.6% box the .ig-photo overlay uses
-      var bx=Math.round(lw*0.06), by=Math.round(lh*0.054), bw=Math.round(lw*0.88), bh=Math.round(lh*0.786);
-      if(src){ var iw=src.naturalWidth||src.width||1, ih=src.naturalHeight||src.height||1;
-        var sc=Math.max(bw/iw, bh/ih), dw=iw*sc, dh=ih*sc;          // cover-fit
-        t.save(); t.beginPath(); t.rect(bx,by,bw,bh); t.clip();
-        t.drawImage(src, bx+(bw-dw)/2, by+(bh-dh)/2, dw, dh); t.restore(); }
-      else { var g=t.createLinearGradient(0,by,0,by+bh);            // empty → neutral fill (bands under posterize)
-        g.addColorStop(0,'#ECE6DB'); g.addColorStop(1,'#D6CEBF'); t.fillStyle=g; t.fillRect(bx,by,bw,bh); }
-      // 3) nearest-upscale the low-res card → hard pixel blocks across the whole polaroid.
-      //    Posterization is applied separately as a screen-space SVG filter on .ig-card
-      //    (#ig-posterize) — free, live, and re-bandable without touching this canvas.
-      cv.width=W; cv.height=H;
-      var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=false; ctx.clearRect(0,0,W,H);
-      ctx.drawImage(tmp,0,0,lw,lh,0,0,W,H);
-    }
-    function igFeedReprocess(){ for(var i=0;i<IGF_N;i++){ igRenderSlot(i); } }
     // Screen-space posterize: rebuild the SVG filter's discrete bands from params.levels.
     // Color quantization is geometry-independent, so this matches the scene without a redraw.
     function igSetPosterizeLevels(n){
@@ -13798,56 +13688,6 @@ f 2469//2469 2470//2470 2434//2434
       var vals=[]; for(var i=0;i<=n;i++){ vals.push((i/n).toFixed(4)); }
       var s=vals.join(' ');
       ['R','G','B'].forEach(function(ch){ var fn=document.getElementById('igpf'+ch); if(fn) fn.setAttribute('tableValues',s); });
-    }
-    function igFeedSetSlot(i,blob){
-      var photo=igFeedPhoto(i); if(!photo) return;
-      if(_igObjUrls[i]){ try{URL.revokeObjectURL(_igObjUrls[i]);}catch(e){} _igObjUrls[i]=null; }
-      if(blob){ var u=URL.createObjectURL(blob); _igObjUrls[i]=u;
-        var img=new Image(); img.onload=function(){ _igSrc[i]=img; igRenderSlot(i); }; img.src=u; }
-      else { _igSrc[i]=null; igRenderSlot(i); }
-    }
-    function igFeedLoad(){ if(!window.BRICStore) return; for(var i=0;i<IGF_N;i++){ (function(i){ BRICStore.get('igfeed:'+i).then(function(b){ igFeedSetSlot(i, b||null); }); })(i); } }
-    var _igResizeT=null;
-    window.addEventListener('resize',function(){ clearTimeout(_igResizeT); _igResizeT=setTimeout(function(){ var f=document.getElementById('ig-feed'); if(f&&f.classList.contains('show')) igFeedReprocess(); },180); });
-    var _igUpInput=null;
-    function igFeedUploadTo(i){
-      if(!_igUpInput){ _igUpInput=document.createElement('input'); _igUpInput.type='file'; _igUpInput.accept='image/*'; _igUpInput.style.display='none'; document.body.appendChild(_igUpInput); }
-      _igUpInput.value='';
-      _igUpInput.onchange=function(){ var file=_igUpInput.files&&_igUpInput.files[0]; if(!file) return;
-        igFeedSetSlot(i,file); if(window.BRICStore) BRICStore.set('igfeed:'+i,file); if(typeof toast==='function') toast('slot '+(i+1)+' image ✓'); };
-      _igUpInput.click();
-    }
-    function igFeedClear(i){ igFeedSetSlot(i,null); if(window.BRICStore) BRICStore.del('igfeed:'+i); if(typeof toast==='function') toast('slot '+(i+1)+' cleared'); }
-    function igFeedEditing(){ return !!(editMode && focused && focused.userData && focused.userData.id==='ig'); }
-    function igFeedRefresh(){
-      var f=document.getElementById('ig-feed'); if(!f) return;
-      var on=igFeedEditing(); f.classList.toggle('ig-edit',on);
-      Array.prototype.forEach.call(f.querySelectorAll('.ig-pol'),function(pol,i){
-        // one-time per card: hover un-pixelates (view mode); click opens the slot's saved URL in a new tab
-        if(!pol._ighook){ pol._ighook=true;
-          pol.addEventListener('mouseenter',function(){ if(igFeedEditing()) return; igRenderSlot(i,true); });
-          pol.addEventListener('mouseleave',function(){ if(igFeedEditing()) return; igRenderSlot(i,false); });
-          pol.addEventListener('click',function(){ if(igFeedEditing()) return; var u=copyOvr['igurl:'+i]; if(u){ try{ window.open(u,'_blank','noopener'); }catch(e){} } });
-        }
-        var photo=pol.querySelector('.ig-photo'); if(!photo) return;
-        var ov=photo.querySelector('.ig-edit-ov');
-        if(on){
-          if(!ov){ ov=document.createElement('div'); ov.className='ig-edit-ov';
-            var row=document.createElement('div'); row.className='ig-eb-row';
-            var up=document.createElement('button'); up.type='button'; up.className='ig-eb'; up.textContent='⬆ upload';
-            up.onclick=function(e){ e.stopPropagation(); igFeedUploadTo(i); };
-            var cl=document.createElement('button'); cl.type='button'; cl.className='ig-eb ig-eb-clr'; cl.textContent='✕'; cl.title='clear slot';
-            cl.onclick=function(e){ e.stopPropagation(); igFeedClear(i); };
-            row.appendChild(up); row.appendChild(cl);
-            var url=document.createElement('input'); url.type='text'; url.className='ig-url'; url.placeholder='https://… (opens on click)';
-            url.addEventListener('click',function(e){ e.stopPropagation(); });
-            url.addEventListener('input',function(){ copyOvr['igurl:'+i]=url.value.trim(); persistCopy(); });
-            url.addEventListener('keydown',function(e){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); url.blur(); } });
-            ov.appendChild(row); ov.appendChild(url); photo.appendChild(ov); }
-          var uf=ov.querySelector('.ig-url'); if(uf && document.activeElement!==uf) uf.value=copyOvr['igurl:'+i]||'';
-        }
-        else if(ov){ ov.remove(); }
-      });
     }
     function addMoonTo(grp){ var m=addMoon(grp); setMoonLabel(m); copyOvr['mooncount:'+grp.userData.id]=grp.userData.moons.length; persistCopy(); refreshEditPanel(); toast('artifact added'); }
     function removeMoonFrom(grp){ removeLastMoon(grp); copyOvr['mooncount:'+grp.userData.id]=grp.userData.moons.length; persistCopy(); refreshEditPanel(); toast('artifact removed'); }
