@@ -588,7 +588,7 @@
   /* Entry gate text is no longer DOM: two 3D marquee bands float around the monogram cube (see "Entry gate bands" in the monogram script). */
 
   /* ── TOAST ── */
-  #toast{position:absolute;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:30;opacity:0;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--holo);transition:.35s}
+  #toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:2147483600;opacity:0;pointer-events:none;background:var(--panel);border:1px solid var(--border);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--holo);transition:.35s}
 
   /* ══════ CV + Contact bespoke focus views (not kit boxes) ══════ */
   .altfocus{position:absolute;inset:0;z-index:18;display:none;align-items:center;justify-content:center;pointer-events:none}
@@ -15180,7 +15180,19 @@ f 2469//2469 2470//2470 2434//2434
       return true;
     }
     // mailto:/tel: hand off to the mail/phone app in place; window.open(...,'_blank') on them leaves a blank tab behind
-    window.mwOpen=function(url){ if(/^(mailto|tel):/i.test(url)) location.href=url; else window.open(url,'_blank','noopener'); };
+    window.mwOpen=function(url){
+      if(/^mailto:/i.test(url)){ mwMail(url); return; }
+      if(/^tel:/i.test(url)) location.href=url; else window.open(url,'_blank','noopener'); };
+    // mailto: with no mail app set up does nothing at all. A mail app taking over blurs the page / hides the tab within a moment; if that never happens, copy the address instead and say so.
+    function mwMail(url){
+      var addr=decodeURIComponent(url.replace(/^mailto:/i,'').split('?')[0]), left=false;
+      function gone(){ left=true; }
+      window.addEventListener('blur',gone); document.addEventListener('visibilitychange',gone);
+      location.href=url;
+      setTimeout(function(){ window.removeEventListener('blur',gone); document.removeEventListener('visibilitychange',gone);
+        if(left||!addr) return;
+        var done=function(){ if(typeof toast==='function') toast('Email address copied: '+addr); };
+        try{ navigator.clipboard.writeText(addr).then(done,function(){ if(typeof toast==='function') toast(addr); }); }catch(e){ if(typeof toast==='function') toast(addr); } },900); }
     function ocOpenCtaUrl(url,target,o){
       try{ var u=new URL(url,location.href); if((u.hostname===location.hostname||/(^|\.)mundanework\.shop$/i.test(u.hostname))&&u.pathname.replace(/\/+$/,'')==='/arcade'){ ocGoArcade(); return; } }catch(e){}
       if(ocGoCase(o)) return;
