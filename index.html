@@ -78,6 +78,13 @@
      (robots meta, robots.txt, sitemap.xml, manifest, twitter:title/description, WebSite JSON-LD: done, see PR for audit item 2) -->
 <!-- /SITE METADATA -->
 
+<!-- VERCEL WEB ANALYTICS -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<!-- /VERCEL WEB ANALYTICS -->
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preload" as="font" type="font/woff2" href="assets/fonts/aurebesh/aurebesh-bold.woff2" crossorigin />
@@ -591,7 +598,7 @@
   #manual-scene[data-ml="dock"] .snap-grid       { grid-column: 2; grid-row: 1 / span 6; margin-bottom: 0; }
   #manual-scene[data-ml="dock"] .manual-cta      { grid-column: 3; grid-row: 1; margin-top: 0; justify-content: flex-start; }
   #manual-scene[data-ml="dock"] .manual-extralinks { grid-column: 3; grid-row: 2 / span 5; margin-top: 18px; }
-  /* ── DRAWER (bottom, compact; phone layout) ── */
+  /* ─�� DRAWER (bottom, compact; phone layout) ── */
   #manual-scene[data-ml="drawer"] {
     left: 50% !important; bottom: var(--ml-gap, 24px) !important;
     width: min(1120px, calc(100vw - 2 * var(--ml-gap, 24px)));
@@ -14875,7 +14882,7 @@ f 2469//2469 2470//2470 2434//2434
 
     function pmSetPlanetUrl(p,v){ if(!pmUrlOk(v)) return; var u=v||'#'; if(CASES[p.id]) CASES[p.id].ctaUrl=u; copyOvr['case:'+p.id+':ctaUrl']=u; }
 
-    // ── structural commit: reconcile the scene, persist, redraw the panel ──
+    // ── structural commit: reconcile the scene, persist, redraw the panel ─���
     function pmCommit(msg,opts){
       opts=opts||{};
       pmPurgeLegacyMenuKeys(); syncSceneToModel(); persistModel();
