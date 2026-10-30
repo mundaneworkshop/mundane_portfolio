@@ -1,4 +1,4 @@
-/*! BRIC targeting reticle cursor, v1.5
+/*! BRIC targeting reticle cursor, v1.6
  *
  * ONE source file, used by both the Vercel site (<script src="assets/bric-reticle.js">) and Framer
  * (framer-code/sync-reticle.js in the bric-ds folder pastes this file verbatim into the ReticleCursor.tsx code component).
@@ -33,6 +33,10 @@
  * The frame is the hit area (v1.5): the native cursor is hidden, so the visitor aims with the brackets. While locked onto a DOM
  * target the reticle stays locked as long as the pointer is inside the frame (the element plus its outset), and a click there
  * that lands on nothing clickable of its own is passed to the target (target.click()). Virtual targets keep their own hit tests.
+ *
+ * A press on a target always ends in a click (v1.6): while the brackets are up nothing in a target starts a native link drag or a
+ * text selection. With the cursor hidden the visitor can't see either one start, and both swallow the click: a 2px slip during
+ * the press on a link dragged the link instead of following it.
  *
  * The page keeps its own click handling (open the lightbox, etc.). While the reticle is up the native cursor
  * is hidden and <html data-bric-ret="hot"> is set; <html data-bric-reticle> is set for as long as the module runs,
@@ -88,7 +92,8 @@ function bricReticle(options) {
     '.bric-ret b{position:absolute;left:0;top:0;font:' + o.font + ';letter-spacing:' + o.tracking + ';text-transform:uppercase;color:' + o.color + ';white-space:nowrap;opacity:0;will-change:transform;transition:transform ' + o.duration + 'ms ' + o.ease + ',opacity 200ms linear}' +
     '.bric-ret.lock b{opacity:1}' +
     '.bric-ret.snap i,.bric-ret.snap i::before,.bric-ret.snap i::after,.bric-ret.snap b,.bric-ret.rm i,.bric-ret.rm i::before,.bric-ret.rm i::after,.bric-ret.rm b,.bric-ret.rm{transition:none}' +
-    'html[data-bric-ret="hot"],html[data-bric-ret="hot"] *{cursor:none!important}';
+    'html[data-bric-ret="hot"],html[data-bric-ret="hot"] *{cursor:none!important}' +
+    'html[data-bric-ret="hot"] :is(' + o.selector + '),html[data-bric-ret="hot"] :is(' + o.selector + ') *{-webkit-user-select:none;user-select:none;-webkit-user-drag:none}';
   var style = document.createElement('style');
   style.setAttribute('data-bric-ret', '');
   style.textContent = css;
@@ -291,6 +296,10 @@ function bricReticle(options) {
     e.preventDefault(); e.stopPropagation();
     cur.el.click();
   }
+  // -webkit-user-drag (above) has no Firefox equivalent: cancel the drag there instead
+  function onDrag(e) {
+    if (html.getAttribute('data-bric-ret') === 'hot' && e.target && e.target.closest && e.target.closest(o.selector)) e.preventDefault();
+  }
   function onOut(e) { if (!e.relatedTarget) { if (cur || root.classList.contains('on')) { leave(); hide(); } } }
   function onScroll() {
     probeEl = null;
@@ -309,6 +318,7 @@ function bricReticle(options) {
   document.addEventListener('pointermove', onMove, { passive: true });
   document.addEventListener('pointerout', onOut, { passive: true });
   document.addEventListener('click', onClick, true);
+  document.addEventListener('dragstart', onDrag, true);
   window.addEventListener('scroll', onScroll, { passive: true, capture: true });
   window.addEventListener('resize', onScroll, { passive: true });
   window.addEventListener('blur', drop);
@@ -326,6 +336,7 @@ function bricReticle(options) {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerout', onOut);
       document.removeEventListener('click', onClick, true);
+      document.removeEventListener('dragstart', onDrag, true);
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onScroll);
       window.removeEventListener('blur', drop);
