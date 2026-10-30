@@ -76,7 +76,7 @@
       "enabled": true,
       "unlock": {
         "type": "destroy",
-        "n": 10,
+        "n": 1,
         "ships": [
           "tie-fighter",
           "tie-interceptor",
@@ -111,7 +111,7 @@
       "enabled": true,
       "unlock": {
         "type": "destroy",
-        "n": 10,
+        "n": 1,
         "ships": [
           "x-wing",
           "y-wing",
