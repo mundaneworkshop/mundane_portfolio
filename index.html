@@ -2119,6 +2119,16 @@
         if(getComputedStyle(L).display==='inline') st.display='inline-block';
         st.boxSizing='border-box'; st.width=w+'px'; st.height=h+'px'; st.whiteSpace='nowrap'; if(!noClip) st.overflow='hidden'; }
       function unlock(L){ var s=L.__gfxLock; if(!s||--s.n>0) return; if(!s.none){ var st=L.style; st.width=s.w; st.height=s.h; st.boxSizing=s.bs; st.overflow=s.ov; st.whiteSpace=s.ws; st.display=s.d; st.justifyContent=s.jc; st.paddingLeft=s.pl; } L.__gfxLock=null; }
+      // A decode never ends under a held press. Its finish releases the box lock (width/height/padding back to auto), and Chrome drops the click
+      // when that lands between press and release on a control that moved even 1px meanwhile: a press in the last moments of the ~380ms hover
+      // decode did nothing (Oct 30 2026: 0/3 such presses clicked before this, 2/2 after). The finish waits until the click has been dispatched.
+      var pressEl=null, held=[];
+      function release(){ pressEl=null; var h=held; held=[]; h.forEach(function(f){ f(); }); }
+      document.addEventListener('pointerdown',function(e){ pressEl=e.target; },true);
+      ['pointerup','pointercancel'].forEach(function(t){ document.addEventListener(t,function(){ if(pressEl) setTimeout(release,0); },true); });   // after this event's click
+      document.addEventListener('pointermove',function(e){ if(pressEl&&!e.buttons) release(); },true);   // released outside the window
+      window.addEventListener('blur',function(){ if(pressEl) release(); });
+      function afterPress(L,fn){ if(pressEl&&pressEl.isConnected&&L.contains(pressEl)) held.push(fn); else fn(); }
       function decodeEl(el,K,lockEl,noClip){
         if(!params['gx'+K+'On']||reduced()||!el||el.isContentEditable||el.childElementCount>0) return;
         var target=el.textContent; if(!/[A-Za-z0-9]/.test(target)) return;
@@ -2130,12 +2140,12 @@
         run({ key:el.__gfxId, target:target, opts:opts(K),
           render:function(out){ var h='', plain=''; for(var i=0;i<out.length;i++){ plain+=out[i].c; h+=out[i].r?esc(out[i].c):'<span class="gfx-u">'+esc(out[i].c)+'</span>'; } el.innerHTML=bric?'<span>'+h+'</span>':h;   // one child span: if each glyph were its own flex item, the button's gap would be applied between glyphs
             if(el.hasAttribute('data-text')) el.setAttribute('data-text',plain); },   // glitch-label pseudo layers mirror the scramble
-          done:function(){ el.textContent=target; if(el.hasAttribute('data-text')) el.setAttribute('data-text',target); unlock(L); if(!hadAria) el.removeAttribute('aria-label'); } }); }
+          done:function(){ afterPress(L,function(){ el.textContent=target; if(el.hasAttribute('data-text')) el.setAttribute('data-text',target); unlock(L); if(!hadAria) el.removeAttribute('aria-label'); }); } }); }
       function label(lb){ if(!lb) return; var t=lb.querySelector('.pl-title'), s=lb.querySelector('.pl-sub');
         if(t) decodeEl(t,'Lbl',lb); if(s) decodeEl(s,'Lbl',lb); }
       var BTN_SEL='button, [role="button"], .bric-btn';
       document.addEventListener('mouseover',function(e){ var b=e.target&&e.target.closest?e.target.closest(BTN_SEL):null;
-        if(!b||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],[aria-current="page"],:disabled,.disabled')||document.body.classList.contains('editing')) return; decodeEl(b,'Btn'); });   // no decode in Debug or Edit Mode
+        if(!b||e.buttons||b.contains(e.relatedTarget)||b.closest('#debug,[data-gfx="off"]')||b.matches('[aria-disabled="true"],[aria-current="page"],:disabled,.disabled')||document.body.classList.contains('editing')) return; decodeEl(b,'Btn'); });   // no decode in Debug or Edit Mode
       // BRIC buttons: click ignites the glow (220ms stepped pulse, see assets/bric-components.css); keyboard activation for role=button spans
       document.addEventListener('click',function(e){ var b=e.target&&e.target.closest?e.target.closest('.bric-btn'):null; if(!b||reduced()||b.matches('[aria-current="page"]')) return;   // the current-page crumb is a label, not a control: no ignite
         b.classList.remove('is-ignite'); void b.offsetWidth; b.classList.add('is-ignite'); setTimeout(function(){ b.classList.remove('is-ignite'); },240); });
