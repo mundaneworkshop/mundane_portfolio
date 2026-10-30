@@ -92,7 +92,7 @@
       "about": {
         "title": "Rebel Pilot",
         "body": "To the contrary, I try not to blow up massive cross-functional work projects.",
-        "teaser": "Destroy a total of 10 Imperial ships (fighters or capital ships) in the Arcade to unlock.",
+        "teaser": "Destroy 1 Imperial ship (a fighter or capital ship) in the Arcade to unlock.",
         "ctaText": "play arcade",
         "ctaUrl": "https://www.mundanework.shop/arcade",
         "ctaShow": true,
@@ -129,7 +129,7 @@
       "about": {
         "title": "Imperial Pilot",
         "body": "I'm a team player and work well on my own or as part of a large, cross-functional org. Just like, well, you know.",
-        "teaser": "Destroy a total of 10 Rebel ships (fighters or capital ships) in the Arcade to unlock.",
+        "teaser": "Destroy 1 Rebel ship (a fighter or capital ship) in the Arcade to unlock.",
         "ctaText": "play arcade",
         "ctaUrl": "https://www.mundanework.shop/arcade",
         "ctaShow": true,
