@@ -146,7 +146,7 @@
   #mwNav{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-stud);flex:1 1 auto;min-width:0;pointer-events:auto;transition:opacity .5s ease}
   #mwNav ul{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-stud);margin:0;padding:0;list-style:none}
   #mwNav .mw-nav__main{margin-left:var(--bric-space-1-5-stud)}
-  #mwNav .mw-nav__social{margin-left:auto}
+  #mwNav .mw-nav__social{margin-left:0}   /* the right group: CV view toggle (CV page only), then the social logos, then the sound switch */
   #mwNav li{position:relative}
   #mwNav .bric-btn.mw-logo{width:var(--bric-space-5-stud);padding:0}
   #mwNav .bric-btn--sm.mw-logo{width:var(--bric-space-3-stud)}
@@ -154,8 +154,9 @@
   #mwNav .bric-btn--sm.mw-logo svg{width:14px;height:14px}
   #mwNav .mw-chev{display:inline-block;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg);transition:transform var(--bric-snap-duration-fast) var(--bric-snap-easing)}   /* drawn, not a text glyph */
   #mwNav [aria-expanded="true"] .mw-chev{transform:translateY(1px) rotate(-135deg)}
-  #mwCvSlot{display:flex;align-items:center}
+  #mwCvSlot{display:flex;align-items:center;margin-left:auto}
   #mwCvSlot:empty{display:none}
+  #mwCvSlot:empty + .mw-nav__social{margin-left:auto}   /* no toggle (every page but the CV): the social logos take the push to the right */
   #mwCvSlot #cvView{position:static;visibility:visible}
   #mwCvSlot #cvView:not(.placed){display:none}
   /* the sound switch stays absolutely placed top-right (every view, arcade included); the bar ends left of it. --mw-snd-w is measured in buildMwNav */
@@ -1303,7 +1304,7 @@
 
   <div id="topbar">
     <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
-    <nav id="mwNav" aria-label="Site"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><ul class="mw-nav__main" id="mwNavMain"></ul><ul class="mw-nav__social" id="mwNavSocial"></ul><div id="mwCvSlot"></div></nav>
+    <nav id="mwNav" aria-label="Site"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><ul class="mw-nav__main" id="mwNavMain"></ul><div id="mwCvSlot"></div><ul class="mw-nav__social" id="mwNavSocial"></ul></nav>
     <div id="breadcrumb" class="bric-crumb mw-crumb-off" aria-label="Location"><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
