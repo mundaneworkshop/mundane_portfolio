@@ -1037,13 +1037,6 @@
   #outfitHud .oh-mid .oh-name{min-width:0;line-height:1.2;white-space:nowrap}
   #outfitHud .oh-mid .oh-sub{line-height:1.2;white-space:nowrap;max-width:none}
   #outfitHud .oh-lock{display:none!important}   /* the manual says how to unlock a locked outfit; no second copy in the carousel */   /* arcade carousel: big ◄ ► buttons with room between them */
-  /* GALAXY KEYBOARD LEGEND: same look as the arcade's #bt-hints legend */
-  #galaxyKeys{display:none;position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:16;gap:30px;align-items:center;padding:12px 26px;pointer-events:none;background:color-mix(in srgb,var(--panel,#0a1212) 82%,transparent);border:1px solid var(--border,rgba(90,191,184,.35));backdrop-filter:blur(6px);font-family:var(--display,'Space Mono',sans-serif);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text,#E8F7F5);white-space:nowrap;max-width:calc(100vw - 24px);overflow:hidden}
-  body.gk-show #galaxyKeys{display:flex}
-  #galaxyKeys .gk-h{display:flex;align-items:center;gap:11px}
-  #galaxyKeys svg{color:var(--holo,#AAF5EE);flex:none}
-  @media (max-width:1100px){ #galaxyKeys{gap:18px;padding:10px 16px;font-size:11px;letter-spacing:1.6px} }
-  @media (max-width:760px){ #galaxyKeys{display:none!important} }
   /* ABOUT manual: wrap the content: no dead snapshot / tag / link columns, no CTA column unless there is a CTA */
   #manual-scene[data-ml="dock"][data-about]{ width:max-content; min-width:min(460px,calc(100vw - 2 * var(--ml-gap,24px))); max-width:min(1280px,calc(100vw - 2 * var(--ml-gap,24px))); }
   #manual-scene[data-ml="dock"][data-about] .manual-page{ grid-template-columns:minmax(0,62ch) auto; }
@@ -1298,14 +1291,6 @@
     <div class="oh-row"><button type="button" class="oh-arrow" id="ohPrev" aria-label="Previous outfit">◄</button><div class="oh-mid"><div class="oh-name" id="ohName"></div><div class="oh-sub" id="ohSub" role="status" aria-live="polite"></div></div><button type="button" class="oh-arrow" id="ohNext" aria-label="Next outfit">►</button></div>
     <div class="oh-lock" id="ohLock"><div class="oh-kit" id="ohKit" aria-hidden="true"></div><span class="oh-kitx" id="ohKitX"></span></div>
     <button type="button" class="oh-go" id="ohGo">Play the Space Arcade</button>
-  </div>
-
-  <!-- GALAXY KEYBOARD LEGEND: shown on the galaxy view instead of the outfit carousel (same style as the arcade's legend) -->
-  <div id="galaxyKeys" role="note" aria-label="Keyboard and mouse controls">
-    <div class="gk-h"><svg viewBox="0 0 64 24" width="66" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M19 7.5 l-6 4.5 l6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/><rect x="33.5" y="2.5" width="29" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M45 7.5 l6 4.5 l-6 4.5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg><span>Left / right · select</span></div>
-    <div class="gk-h"><svg viewBox="0 0 56 24" width="58" height="26" aria-hidden="true"><rect x="1.5" y="2.5" width="53" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M42 8 v5 h-22 M24 9.5 l-4 3.5 l4 3.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg><span>Enter · navigate</span></div>
-    <div class="gk-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><path d="M12 2 A9 9 0 0 0 3 11 L3 13 L12 13 Z" fill="currentColor"/></svg><span>Click + drag · rotate + pan</span></div>
-    <div class="gk-h"><svg viewBox="0 0 24 32" width="26" height="34" aria-hidden="true"><rect x="3" y="2" width="18" height="28" rx="9" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="13" stroke="currentColor" stroke-width="1.4"/><line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1.4"/><rect x="10.4" y="4.6" width="3.2" height="6.4" rx="1.6" fill="currentColor"/><path d="M9 16.5 l3 -2.6 l3 2.6 M9 22 l3 2.6 l3 -2.6" stroke="currentColor" stroke-width="1.3" fill="none"/></svg><span>Scroll · zoom</span></div>
   </div>
 
   <!-- OUTFITS MANAGER: upload/manage minifigure outfits (each = one or more GLBs). See docs/project-history/outfits.md. -->
@@ -15284,10 +15269,6 @@ f 2469//2469 2470//2470 2434//2434
         outfitStage.visible=false; outfitHeadHidden=false;   // mwUpdate re-shows the head/GLB each frame from here
       }
     }
-    setInterval(function(){   // the galaxy keyboard legend: docked galaxy view only
-      var on=mwPhase==='docked'&&!focused&&!arcadeActive&&!editMode&&!MWSub.active&&!document.body.classList.contains('mw-altfocus')&&!document.body.classList.contains('mw-entrygate')&&!document.body.classList.contains('ui-hidden')&&!document.body.classList.contains('mw-planet');
-      if(on!==document.body.classList.contains('gk-show')) document.body.classList.toggle('gk-show',on);
-    },200);
     var OC_HUD_BOTTOM=236, ocHudMan=0;   // px from the window bottom: the carousel row stays put whatever the manual's height; this is the tallest manual at a laptop width, and a taller one seen later (narrow window) lifts it once and it stays
     window.addEventListener('resize',function(){ ocHudMan=0; });   // the tallest manual seen is re-learned at the new size
     function ocLoadDrafts(){ try{ var d=JSON.parse(localStorage.getItem('mw_outfit_drafts')||'[]'); outfitDrafts=Array.isArray(d)?d:[]; }catch(e){ outfitDrafts=[]; } }
@@ -16188,7 +16169,7 @@ f 2469//2469 2470//2470 2434//2434
           r.appendChild(a); ul.appendChild(r); });
         dd.appendChild(ul); li.appendChild(dd); mwNavMain.appendChild(li); mwWorkBtn=b; mwWorkDd=dd; }
       else { mwWorkBtn=null; mwWorkDd=null; }
-      if(mwShown('cv')) mwNavMain.appendChild(mwLink('About','/'+cvSlug,'about'));   // one About item for the CV page (the About text lives there since PR #103)
+      if(mwShown('cv')) mwNavMain.appendChild(mwLink('CV','/'+cvSlug,'about'));   // the one nav item for the CV page (key stays 'about': the About text lives there since PR #103)
       mwNavMain.appendChild(mwLink('Jason',mwJasonHref(),'jason'));   // the minifigure focus view on the hologram: the unlockable outfits
       if(mwShown('contact')) mwNavMain.appendChild(mwLink('HoloNet','/'+holonetSlug,'holonet'));
       if(mwShown('arcade')) mwNavMain.appendChild(mwLink('Arcade','/'+arcadeSlug,'arcade'));
