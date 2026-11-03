@@ -1265,18 +1265,12 @@
   </div>
   <!-- CONTENT: marquee (ring) text editors — appear in Edit Mode; all other copy is click-to-edit inline -->
   <div id="marqueePanel">
-    <div class="mq-row"><span class="mq-lbl">Ring · Latin</span><label class="mq-hide"><input type="checkbox" id="ringEnHide"> hide</label></div>
+    <div class="mq-row"><span class="mq-lbl">Ring</span><label class="mq-hide"><input type="checkbox" id="ringEnHide"> hide</label></div>
     <input type="text" id="marqueeEditEn" placeholder="latin ring text…">
-    <div class="mq-row"><span class="mq-lbl">Ring · Aurebesh</span><label class="mq-hide"><input type="checkbox" id="ringAurHide"> hide</label></div>
-    <input type="text" id="marqueeEditAur" placeholder="aurebesh ring text…">
     <div class="mq-row" style="margin-top:6px"><span class="mq-lbl">Ring shape</span></div>
     <div class="mq-ctl"><label>Font size <b id="vMarqFont">58</b><input type="range" id="cMarqFont" min="20" max="120" step="2" value="58"></label></div>
-    <div class="mq-row" style="margin-top:4px"><span class="mq-lbl" style="opacity:.6">Latin ring</span></div>
     <div class="mq-ctl"><label>Diameter <b id="vMarqDiamEn">2.40</b><input type="range" id="cMarqDiamEn" min="0.8" max="6.0" step="0.1" value="2.4"></label></div>
     <div class="mq-ctl"><label>Height <b id="vMarqHeightEn">4.10</b><input type="range" id="cMarqHeightEn" min="0.5" max="10.0" step="0.1" value="4.1"></label></div>
-    <div class="mq-row" style="margin-top:4px"><span class="mq-lbl" style="opacity:.6">Aurebesh ring</span></div>
-    <div class="mq-ctl"><label>Diameter <b id="vMarqDiamAur">2.75</b><input type="range" id="cMarqDiamAur" min="0.8" max="6.0" step="0.1" value="2.75"></label></div>
-    <div class="mq-ctl"><label>Height <b id="vMarqHeightAur">3.70</b><input type="range" id="cMarqHeightAur" min="0.5" max="10.0" step="0.1" value="3.7"></label></div>
   </div>
 
   <!-- PROJECTS MANAGER: zones + planets as plain form controls (Edit Mode). Body is generated from galaxyModel by pmRender(). -->
@@ -1403,7 +1397,6 @@
       <div class="menudiv"></div>
       <div class="ctl sec"><label>Marquee rings</label></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cMarqDirEn"> Reverse Latin ring</label></div>
-      <div class="ctl"><label class="chk"><input type="checkbox" id="cMarqDirAur"> Reverse Aurebesh ring</label></div>
       <div class="ctl"><label>Ring speed <b id="vMarqSpeed">1.0</b></label><input type="range" id="cMarqSpeed" min="0.1" max="4" step="0.1" value="1.0"></div>
       <div class="ctl"><label class="chk"><input type="checkbox" id="cMarqHolo"> Marquee holo FX</label></div>
       <div class="menudiv"></div>
@@ -2056,7 +2049,7 @@
   <script>
   function bootHolotable(){
     var W=window.innerWidth, H=window.innerHeight;
-    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:1.5,mwRetArm:28,mwRetOutset:6,mwHoverFlicker:0.08,gateIn:1200,gateFade:380,gateH1Delay:0,gateH2Delay:600,gateH1Lift:18,gateH1Size:22,gateH1Seg:12,gateH1Color:'',gateH2Lift:40,gateH2Size:22,gateH2Seg:12,gateH2Color:'',gateH1Flip:true,gateH1Rev:true,gateH2Flip:false,gateH2Rev:true,gateSpeed:6,gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqDirAur:1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqDiamAur:2.75, marqHeightEn:4.1, marqHeightAur:3.7, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
+    var params={ mwMono:true, mwScale:1.4, mwPose:true, mwEntryMul:0.95, mwDockY:-0.40, dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:1.5,mwRetArm:28,mwRetOutset:6,mwHoverFlicker:0.08,gateIn:1200,gateFade:380,gateH1Delay:0,gateH2Delay:600,gateH1Lift:18,gateH1Size:22,gateH1Seg:12,gateH1Color:'',gateH2Lift:40,gateH2Size:22,gateH2Seg:12,gateH2Color:'',gateH1Flip:true,gateH1Rev:true,gateH2Flip:false,gateH2Rev:true,gateSpeed:6,gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin', bootGap:0.08, bootStageDur:0.21, bootPlanetStagger:0.03, pixel:2, levels:24, starCount:200, starSize:0.03, spin:0.4, studSize:0.10, studGap:0.55, beamBottom:0.80, beamTop:0.20, beamCurve:0.4, beamFocusMul:0.4, gridOpacity:0.55, planetSpread:1.3, objScale:1.25, moonMotion:true, moonSpeed:0.5, moonDist:1.0, moonScale:2, focusZoom:1.2, stageFit:true, stageFill:0.74, stageMaxH:0.58, manualLayout:'auto', zoneSteps:4, wheelInvert:false, invertY:true, invertYFocus:true, focusMode:'hologram', autoRotate:true, camRotDir:-1, marqDirEn:-1, marqSpeedMult:1.0, marqHolo:true, marqFontSize:120, marqDiamEn:2.4, marqHeightEn:4.1, holoEnabled:true, scanIntensity:0.2, fresnelPow:4, glitch:true, glitchAmt:0.35, logoScanIntensity:0.7, logoFresnelPow:1.8, logoScanFreq:14, logoFxInt:1.0, logoGlitchOn:true, logoGlitchAmt:0.25, logoHot:'#71fdff', logoTint:'#70fdff', planetHot:'#F0D080', planetTint:'#E9A73E', moonHot:'#AAF5EE', moonTint:'#5ABFB8', holoCustom:false, logoHolo:1, logoHoloAdd:false, logoClip:0, mfScan:0.7, mfFres:1.8, mfFreq:14, mfInt:1, mfHolo:0, mfGlitchOn:true, mfGAmt:0.25, mfHot:'#71fdff', mfTint:'#9e9e9e', bfScan:0.7, bfFres:1.8, bfFreq:14, bfInt:1, bfHolo:0, bfGlitchOn:true, bfGAmt:0.25, bfHot:'#71fdff', bfTint:'#9e9e9e', cfgV:2 };
 
     // ══════ GLYPH DECODE (Aurebesh → Latin) ══════
     // One shared engine, three surfaces: the Latin marquee ring (canvas, on load + hover), planet labels (DOM, hover),
@@ -2265,7 +2258,6 @@
     function setRingHolo(on){
       ringHoloActive=on;
       if(ringEn) ringEn.material=on?ringEn.userData.holoMat:ringEn.userData.basicMat;
-      if(ringAur) ringAur.material=on?ringAur.userData.holoMat:ringAur.userData.basicMat;
     }
 
     // Factory: returns a ShaderMaterial sharing SHU + its own color/opacity uniforms
@@ -9958,7 +9950,6 @@ f 2469//2469 2470//2470 2434//2434
       // Respect a saved "hide this ring" choice (marquee editor, copyOvr) throughout the cascade —
       // otherwise the ring pops back visible the instant the cascade finishes, clobbering it.
       ringEn.visible=(vRing>0.3) && !copyOvr['ringEnHidden'];
-      ringAur.visible=(vRing>0.3) && !copyOvr['ringAurHidden'];
       bootLogoGate=vHead>0.3;
       // sound: each stage's event fires once, the first frame it switches on (MWAudio.site, clips assigned in audio.js SITE_EVENTS)
       function bootSnd(k,on,o){ if(on&&!bootSndDone[k]){ bootSndDone[k]=1; if(window.MWAudio) MWAudio.site(k,o); } }
@@ -9983,7 +9974,7 @@ f 2469//2469 2470//2470 2434//2434
       if(allDone){
         bootSnd('planetsDone',true);
         BOOT_DONE=true; setSiteVisible(true);   // catch-all for anything not explicitly staged above
-        ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];   // ...except don't let that catch-all override a saved ring-hide choice
+        ringEn.visible=!copyOvr['ringEnHidden'];   // ...except don't let that catch-all override a saved ring-hide choice
         bootLogoGate=true; bootGridVal=1; bootPlanetGate=bootPlanetGate.map(function(){ return true; }); bootPlanetVal=bootPlanetVal.map(function(){ return 1; });
       }
     }
@@ -10374,7 +10365,6 @@ f 2469//2469 2470//2470 2434//2434
     // ---------- text rings above all planets ----------
     // Two independent ring strings (Latin + Aurebesh). Each ring draws its own via getText().
     var BIO_EN='MUNDANE WORKSHOP · RUN BY JASON HSIN · A PRODUCT DESIGNER WHO BUILDS DELIGHTFUL CONSUMER EXPERIENCES · ';
-    var BIO_AUR='MUNDANE WORKSHOP · RUN BY JASON HSIN · A PRODUCT DESIGNER WHO BUILDS DELIGHTFUL CONSUMER EXPERIENCES · ';
     function makeRing(radius,yPos,fontFamily,getText,decodeKey){
       var cv=document.createElement('canvas'); cv.width=4096; cv.height=128; var cx=cv.getContext('2d');
       var tex=new THREE.CanvasTexture(cv); tex.wrapS=THREE.RepeatWrapping; tex.repeat.x=1;
@@ -10404,7 +10394,6 @@ f 2469//2469 2470//2470 2434//2434
     }
     var ringEn=makeRing(2.4,4.1,"'Space Mono', monospace",function(){return BIO_EN;},'ring');
     var ringBoot=false, ringHot=false;   // ringBoot: first decode fired after docking · ringHot: pointer currently over the ring
-    var ringAur=makeRing(2.75,3.7,"'Aurebesh','Space Mono', monospace",function(){return BIO_AUR;});
 
     // ---------- planets + moons ----------
     var planets=[]; var rng=mulberry32(20260617);
@@ -11133,8 +11122,8 @@ f 2469//2469 2470//2470 2434//2434
     var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 PLAY TO UNLOCK NEW SHIPS \u2022 ';
     var arcadeStage='select';   // 'select' (hero carousel replaces the head) | 'play' (every hologram artifact hidden, the hero flies)
     function arcadeRingText(on){
-      if(on){ if(!_ringBak) _ringBak={en:BIO_EN,aur:BIO_AUR}; BIO_EN=ARCADE_RING; BIO_AUR=ARCADE_RING; }
-      else if(_ringBak){ BIO_EN=_ringBak.en; BIO_AUR=_ringBak.aur; _ringBak=null; }
+      if(on){ if(!_ringBak) _ringBak={en:BIO_EN}; BIO_EN=ARCADE_RING; }
+      else if(_ringBak){ BIO_EN=_ringBak.en; _ringBak=null; }
       redrawRings(); if(ringEn.userData.decode) ringEn.userData.decode();   // replays the Aurebesh → Latin decode on the new text
     }
     function openArcade(id,noJump){
@@ -11157,7 +11146,7 @@ f 2469//2469 2470//2470 2434//2434
     // or orbiting never finds the edge of the sky.
     function arcadeRestoreHolo(){   // undo the 'play' stage's blanket hide
       setSiteVisible(true); mwMount.visible=true;
-      ringEn.visible=!copyOvr['ringEnHidden']; ringAur.visible=!copyOvr['ringAurHidden'];
+      ringEn.visible=!copyOvr['ringEnHidden'];
     }
     window.addEventListener('mw:arcselzoom',function(){ if(arcadeActive&&arcadeStage==='select'&&MWBattle.getSelZoom){ arcEntryZoom=arcGalZoom*MWBattle.getSelZoom(); arcReturn=true; } });   // live from the debug slider
     function arcadeSetStage(st){
@@ -13150,7 +13139,6 @@ f 2469//2469 2470//2470 2434//2434
     document.getElementById('cAuto').addEventListener('change',function(){ params.autoRotate=this.checked; if(!focused)autoRotate=this.checked; });
     var _crd=document.getElementById('cCamRotDir'); if(_crd) _crd.addEventListener('change',function(){ params.camRotDir=this.checked?-1:1; });
     var _cmd=document.getElementById('cMarqDirEn'); if(_cmd) _cmd.addEventListener('change',function(){ params.marqDirEn=this.checked?-1:1; });
-    var _cma=document.getElementById('cMarqDirAur'); if(_cma) _cma.addEventListener('change',function(){ params.marqDirAur=this.checked?-1:1; });
     bind('cMarqSpeed','vMarqSpeed',function(v){ params.marqSpeedMult=v; },1);
     var _cmh=document.getElementById('cMarqHolo'); if(_cmh) _cmh.addEventListener('change',function(){ params.marqHolo=this.checked; setRingHolo(this.checked); });
     // ── Glyph decode controls (enable + timing per surface) ──
@@ -14236,7 +14224,7 @@ f 2469//2469 2470//2470 2434//2434
       if(sb) sb.addEventListener('click',saveGalCam); if(rb) rb.addEventListener('click',resetGalCam); applyGalCam(); })();
     function redrawRings(){ var hex='#'+new THREE.Color(dark?DARK.line:LIGHT.line).getHexString(); ringCanvases.forEach(function(d){ d(hex); }); }
     function rebuildRingGeom(ring,radius){ ring.geometry.dispose(); ring.geometry=new THREE.CylinderGeometry(radius,radius,0.5,64,1,true); }
-    function rebuildBeam(){ var outerR=Math.max(params.marqDiamEn,params.marqDiamAur), topY=Math.max(params.marqHeightEn,params.marqHeightAur); beam.geometry.dispose(); beam.geometry=new THREE.CylinderGeometry(outerR,0.18,topY,28,1,true); beam.position.y=topY/2; }
+    function rebuildBeam(){ var outerR=params.marqDiamEn, topY=params.marqHeightEn; beam.geometry.dispose(); beam.geometry=new THREE.CylinderGeometry(outerR,0.18,topY,28,1,true); beam.position.y=topY/2; }
     // Static text nodes (leaf elements) that become click-to-edit. Keyed by stable DOM order.
     // Keyed PER SELECTOR + index (stable: adding/removing a selector won't shift other groups' keys).
     // NOTE: snapshot cells + the CTA button are NOT here — they're rendered + edited PER-PROJECT by applyData
@@ -14461,34 +14449,24 @@ f 2469//2469 2470//2470 2434//2434
     // marquee rings (canvas, not DOM) — two independent strings + hide toggles, edited via a panel in Edit Mode
     (function(){
       if(copyOvr['marqueeEn']!=null) BIO_EN=copyOvr['marqueeEn'];
-      if(copyOvr['marqueeAur']!=null) BIO_AUR=copyOvr['marqueeAur'];
       if(copyOvr['ringEnHidden']) ringEn.visible=false;
-      if(copyOvr['ringAurHidden']) ringAur.visible=false;
       redrawRings();
-      var en=document.getElementById('marqueeEditEn'), au=document.getElementById('marqueeEditAur'),
-          enH=document.getElementById('ringEnHide'), auH=document.getElementById('ringAurHide');
+      var en=document.getElementById('marqueeEditEn'),
+          enH=document.getElementById('ringEnHide');
       if(en){ en.value=BIO_EN; en.addEventListener('input',function(){ BIO_EN=this.value; copyOvr['marqueeEn']=this.value; persistCopy(); redrawRings(); }); }
-      if(au){ au.value=BIO_AUR; au.addEventListener('input',function(){ BIO_AUR=this.value; copyOvr['marqueeAur']=this.value; persistCopy(); redrawRings(); }); }
       if(enH){ enH.checked=!!copyOvr['ringEnHidden']; enH.addEventListener('change',function(){ ringEn.visible=!this.checked; copyOvr['ringEnHidden']=this.checked; persistCopy(); }); }
-      if(auH){ auH.checked=!!copyOvr['ringAurHidden']; auH.addEventListener('change',function(){ ringAur.visible=!this.checked; copyOvr['ringAurHidden']=this.checked; persistCopy(); }); }
       // Ring shape controls (font size, diameter, height) — edit mode only
       function mqCtlSet(id,vid,val,fix){ var el=document.getElementById(id),vl=document.getElementById(vid); if(el) el.value=val; if(vl) vl.textContent=(fix!=null?parseFloat(val).toFixed(fix):parseFloat(val)); }
       if(copyOvr['marqFontSize']!=null){ params.marqFontSize=copyOvr['marqFontSize']; redrawRings(); }
       if(copyOvr['marqDiamEn']!=null){ params.marqDiamEn=copyOvr['marqDiamEn']; rebuildRingGeom(ringEn,params.marqDiamEn); }
-      if(copyOvr['marqDiamAur']!=null){ params.marqDiamAur=copyOvr['marqDiamAur']; rebuildRingGeom(ringAur,params.marqDiamAur); }
       if(copyOvr['marqHeightEn']!=null){ params.marqHeightEn=copyOvr['marqHeightEn']; ringEn.position.y=params.marqHeightEn; }
-      if(copyOvr['marqHeightAur']!=null){ params.marqHeightAur=copyOvr['marqHeightAur']; ringAur.position.y=params.marqHeightAur; }
       rebuildBeam();
       mqCtlSet('cMarqFont','vMarqFont',params.marqFontSize);
       mqCtlSet('cMarqDiamEn','vMarqDiamEn',params.marqDiamEn,2);
       mqCtlSet('cMarqHeightEn','vMarqHeightEn',params.marqHeightEn,2);
-      mqCtlSet('cMarqDiamAur','vMarqDiamAur',params.marqDiamAur,2);
-      mqCtlSet('cMarqHeightAur','vMarqHeightAur',params.marqHeightAur,2);
       var _cf=document.getElementById('cMarqFont'); if(_cf) _cf.addEventListener('input',function(){ params.marqFontSize=parseFloat(this.value); document.getElementById('vMarqFont').textContent=this.value; copyOvr['marqFontSize']=params.marqFontSize; persistCopy(); redrawRings(); });
       var _cde=document.getElementById('cMarqDiamEn'); if(_cde) _cde.addEventListener('input',function(){ params.marqDiamEn=parseFloat(this.value); document.getElementById('vMarqDiamEn').textContent=parseFloat(this.value).toFixed(2); copyOvr['marqDiamEn']=params.marqDiamEn; persistCopy(); rebuildRingGeom(ringEn,params.marqDiamEn); rebuildBeam(); });
-      var _cda=document.getElementById('cMarqDiamAur'); if(_cda) _cda.addEventListener('input',function(){ params.marqDiamAur=parseFloat(this.value); document.getElementById('vMarqDiamAur').textContent=parseFloat(this.value).toFixed(2); copyOvr['marqDiamAur']=params.marqDiamAur; persistCopy(); rebuildRingGeom(ringAur,params.marqDiamAur); rebuildBeam(); });
       var _che=document.getElementById('cMarqHeightEn'); if(_che) _che.addEventListener('input',function(){ params.marqHeightEn=parseFloat(this.value); document.getElementById('vMarqHeightEn').textContent=parseFloat(this.value).toFixed(2); copyOvr['marqHeightEn']=params.marqHeightEn; persistCopy(); ringEn.position.y=params.marqHeightEn; rebuildBeam(); });
-      var _cha=document.getElementById('cMarqHeightAur'); if(_cha) _cha.addEventListener('input',function(){ params.marqHeightAur=parseFloat(this.value); document.getElementById('vMarqHeightAur').textContent=parseFloat(this.value).toFixed(2); copyOvr['marqHeightAur']=params.marqHeightAur; persistCopy(); ringAur.position.y=params.marqHeightAur; rebuildBeam(); });
     })();
 
     // Restore overrides from IndexedDB on boot.
@@ -15695,7 +15673,7 @@ f 2469//2469 2470//2470 2434//2434
     colorCtl('cBfHot','cBfHotHex',function(v){ FX_BOX.hot.value.set(v); params.bfHot=v; });
     colorCtl('cBfTint','cBfTintHex',function(v){ FX_BOX.tint.value.set(v); params.bfTint=v; });
     // (Kit box marquee is now per-project — edited in Edit Mode on the focused box; see epMarq wiring.)
-    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:1.5,mwRetArm:28,mwRetOutset:6,mwHoverFlicker:0.08,gateIn:1200,gateFade:380,gateH1Delay:0,gateH2Delay:600,gateH1Lift:18,gateH1Size:22,gateH1Seg:12,gateH1Color:'',gateH2Lift:40,gateH2Size:22,gateH2Seg:12,gateH2Color:'',gateH1Flip:true,gateH1Rev:true,gateH2Flip:false,gateH2Rev:true,gateSpeed:6,gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqDirAur:1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqDiamAur:2.75,marqHeightEn:4.1,marqHeightAur:3.7,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
+    var DEFAULTS={mwMono:true,mwScale:1.4,mwPose:true,mwEntryMul:0.95,mwDockY:-0.40,dockDur:0.30,dockHold:0.70,mwIntroDur:0.7,mwHoverScale:0.06,mwHoverSpin:0.3,mwHoverGlow:1.5,mwRetArm:28,mwRetOutset:6,mwHoverFlicker:0.08,gateIn:1200,gateFade:380,gateH1Delay:0,gateH2Delay:600,gateH1Lift:18,gateH1Size:22,gateH1Seg:12,gateH1Color:'',gateH2Lift:40,gateH2Size:22,gateH2Seg:12,gateH2Color:'',gateH1Flip:true,gateH1Rev:true,gateH2Flip:false,gateH2Rev:true,gateSpeed:6,gateH1Text:'MUNDANE WORKSHOP',gateH2Text:'The creative practice of product designer Jason Hsin',bootGap:0.08,bootStageDur:0.21,bootPlanetStagger:0.03,pixel:2,levels:24,starCount:200,starSize:0.03,spin:0.4,studSize:0.10,studGap:0.55,gridOpacity:0.55,planetSpread:1.3,objScale:1.25,beamBottom:0.80,beamTop:0.20,beamCurve:0.4,beamFocusMul:0.4,moonSpeed:0.5,moonMotion:true,moonDist:1.0,moonScale:2,focusZoom:1.2,stageFit:true,stageFill:0.74,stageMaxH:0.58,manualLayout:'auto',zoneSteps:4,wheelInvert:false,invertY:true,invertYFocus:true,focusMode:'hologram',autoRotate:true,camRotDir:-1,marqDirEn:-1,marqSpeedMult:1.0,marqHolo:true,marqFontSize:120,marqDiamEn:2.4,marqHeightEn:4.1,holoEnabled:true,scanIntensity:0.2,fresnelPow:4,glitch:true,glitchAmt:0.35,logoScanIntensity:0.7,logoFresnelPow:1.8,logoScanFreq:14,logoFxInt:1.0,logoGlitchOn:true,logoGlitchAmt:0.25,logoHot:'#71fdff',logoTint:'#70fdff',planetHot:'#F0D080',planetTint:'#E9A73E',moonHot:'#AAF5EE',moonTint:'#5ABFB8',holoCustom:false,logoHolo:1,logoHoloAdd:false,logoClip:0,mfScan:0.7,mfFres:1.8,mfFreq:14,mfInt:1,mfHolo:0,mfGlitchOn:true,mfGAmt:0.25,mfHot:'#71fdff',mfTint:'#9e9e9e',bfScan:0.7,bfFres:1.8,bfFreq:14,bfInt:1,bfHolo:0,bfGlitchOn:true,bfGAmt:0.25,bfHot:'#71fdff',bfTint:'#9e9e9e',hnSpeed:0.45,hnDensity:2,hnConduit:0.16,hnFade:0.16,hnBright:0.4,mbAlpha:0.88,cfgV:4};
     Object.assign(DEFAULTS,GX_DEFAULTS);   // glyph-decode params reset / export-diff like everything else
     function setCtl(id,vid,val){ document.getElementById(id).value=val; document.getElementById(vid).textContent=val; }
     // Entry gate band tunables: sync the sliders; lift / height rebuild the band geometry (gateBandsFrame), the rest are read live
@@ -15744,7 +15722,6 @@ f 2469//2469 2470//2470 2434//2434
       var _cmh2=document.getElementById('cMarqHolo'); if(_cmh2){ _cmh2.checked=!!params.marqHolo; setRingHolo(!!params.marqHolo); }
       var _crd2=document.getElementById('cCamRotDir'); if(_crd2) _crd2.checked=(params.camRotDir<0);
       var _cmd2=document.getElementById('cMarqDirEn'); if(_cmd2) _cmd2.checked=(params.marqDirEn<0);
-      var _cma2=document.getElementById('cMarqDirAur'); if(_cma2) _cma2.checked=(params.marqDirAur<0);
       setCtl('cMarqSpeed','vMarqSpeed',(params.marqSpeedMult!=null?params.marqSpeedMult:1).toFixed(1));
       var _cmf=document.getElementById('cMarqFont'); if(_cmf) setCtl('cMarqFont','vMarqFont',params.marqFontSize);
       var _chs=document.getElementById('cHnSpeed'); if(_chs){ setCtl('cHnSpeed','vHnSpeed',params.hnSpeed.toFixed(2)); setCtl('cHnDensity','vHnDensity',params.hnDensity); setCtl('cHnBright','vHnBright',params.hnBright.toFixed(1)); setCtl('cHnConduit','vHnConduit',params.hnConduit.toFixed(2)); setCtl('cHnFade','vHnFade',params.hnFade.toFixed(2)); }
@@ -15964,7 +15941,7 @@ f 2469//2469 2470//2470 2434//2434
       logo.visible=!holoFocused||focusAmount<0.05;
       SHU.time.value=t;
       if(!ringBoot && mwPhase==='docked' && GFX.settled()){ ringBoot=true; if(ringEn.userData.decode) ringEn.userData.decode(); }   // page load: Aurebesh → Latin once the site is docked
-      ringEn.rotation.y=t*0.12*params.spin*params.marqDirEn*params.marqSpeedMult; ringAur.rotation.y=-t*0.09*params.spin*params.marqDirAur*params.marqSpeedMult;
+      ringEn.rotation.y=t*0.12*params.spin*params.marqDirEn*params.marqSpeedMult; 
       planets.forEach(function(p){ var s=p.userData.base+(p.userData.target-p.userData.base)*0.18; p.userData.base=s; p.scale.setScalar(s*GS); p.position.lerp(p.userData.posTarget,0.08);
         if(focused===p && p.userData.hit.userData.boxFlat){ p.userData.hit.lookAt(camera.position); }   // flat-panel box replacement → billboard to camera
         else p.userData.hit.rotation.y=(focused===p)?0:t*0.25;   // MERGE: focused kit box faces the camera (don't spin away the cover)
@@ -16037,7 +16014,6 @@ f 2469//2469 2470//2470 2434//2434
       updateBootReveal();
       if(arcadeActive){
         ZONES.forEach(function(z){ z.mesh.visible=false; });   // arcade: no zone wedges
-        ringAur.visible=false;   // arcade: the secondary Aurebesh ring is hidden
         if(arcadeStage==='select'){ holoHead.visible=false; glowShell.visible=false; if(logo.userData.glbGroup) logo.userData.glbGroup.visible=false; }   // the hero carousel replaces the head
         else { galaxy.children.forEach(function(c){ if(c!==starPoints) c.visible=false; }); mwMount.visible=false; if(mwQuad) mwQuad.visible=false; }   // play: no hologram at all (grid, cone, rings, emitter, monogram, head)
       }
