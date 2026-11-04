@@ -229,11 +229,47 @@
   .seg .bric-btn{min-height:36px}
   #glLost{position:fixed;left:8px;right:8px;top:calc(var(--hdr) + 8px);z-index:35;padding:8px 12px;background:var(--bric-surface-base);box-shadow:inset 0 0 0 1px var(--bric-danger-edge);color:var(--bric-danger-text);font:400 11px/16px var(--f-m)}
 
-  /* phone landscape: stage left, content right (plan v6) */
+  /* phone landscape: stage left, content right. A media query, not a layout swap, so rotating reflows live (stages resize via ResizeObserver, the gate sizes per frame) */
   @media (orientation:landscape) and (max-height:520px){
+    :root{--hdr:calc(44px + var(--st))}
+    /* gate: monogram stays centered; hint and controls tighten */
+    #gateHint{top:calc(var(--st) + 10px)}
+    #gateFoot{bottom:calc(var(--sb) + 8px);gap:6px}
+    #gateFail{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:4px 16px}
+    /* index: the hologram is the left half (sticky, so it stays put while the rows scroll on the right). Sticky, not fixed: the render loop skips hosts with no offsetParent */
+    .flow .wrap{max-width:none}
+    #v-index .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;min-height:calc(100vh - var(--hdr));min-height:calc(100dvh - var(--hdr))}
+    #holo{grid-column:1;grid-row:1 / span 2;position:sticky;top:var(--hdr);min-height:0;height:calc(100vh - var(--hdr) - 52px - var(--sb));height:calc(100dvh - var(--hdr) - 52px - var(--sb))}
+    #v-index .appear{grid-column:1;grid-row:1 / span 2;position:sticky;top:calc(100vh - 52px - var(--sb));top:calc(100dvh - 52px - var(--sb));height:52px;padding:4px var(--gx)}
+    #rows{grid-column:2;grid-row:1 / span 2}
+    #rows>.zone:first-child{padding-top:12px}
+    .zone,.proof{padding-right:calc(var(--gx) + var(--sr))}
+    /* outfit and case: stage left, manual right */
     #v-outfit,#v-case{grid-template-rows:minmax(0,1fr);grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
     .manual{margin:8px calc(8px + var(--sr)) calc(var(--sb) + 8px) 0}
-    #holo{height:70svh}
+    .pane{padding:12px 16px}
+    .pane h2{font-size:20px}
+    .stick{padding-bottom:calc(var(--sb) + 8px)}
+    /* HoloNet list has no stage: a centered column rather than a stretched one */
+    #v-holonet{grid-template-columns:minmax(0,640px);justify-content:center}
+    #v-holonet .manual{margin-left:8px}
+    /* CV: the heading and CTAs stay on the left, the cards scroll on the right */
+    #v-cv .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+    #v-cv .page-h{grid-column:1;grid-row:1 / span 2;position:sticky;top:var(--hdr);padding-bottom:16px}
+    #v-cv .cv-head{font-size:22px;margin-bottom:14px}
+    #v-cv .cv-cards{grid-column:2;grid-row:1;padding:16px calc(var(--gx) + var(--sr)) 0 0}
+    #v-cv .cv-end{grid-column:2;grid-row:2;padding-right:calc(var(--gx) + var(--sr))}
+    /* console: the dish screen beside the fields */
+    .ct-con{flex-direction:row;align-items:flex-start;gap:16px}
+    .ct-scr{width:38%;flex:none;height:min(60dvh,272px)}
+    .ct-fields{flex:1;min-width:0}
+    #ctMsg{min-height:84px}
+    .ct-actions{margin-top:12px}
+    .ct-go .ct-send{height:48px}
+    .ct-scroll{padding-top:calc(var(--st) + 8px);padding-bottom:calc(var(--sb) + 8px)}
+    /* menu: a bottom panel on the right, not a full-width strip */
+    #sheet{left:auto;width:min(520px,70vw);max-height:calc(100dvh - 8px);border-left:1px solid var(--bric-border-default)}
+    #perf{max-height:calc(100dvh - var(--hdr) - 56px)}
   }
   @media (prefers-reduced-motion:reduce){
     .view-in{animation:none}
