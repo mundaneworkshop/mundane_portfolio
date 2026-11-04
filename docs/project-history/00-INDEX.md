@@ -18,6 +18,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - Touching the Arcade space battle (Fun zone planet, fleets, lasers, hero ships, minikits, lighting, exit) → [arcade-space-battle.md](arcade-space-battle.md)
 - Touching the hologram minifigure outfits (outfit GLBs, the ☺ outfits manager, export bundle, cycling) → [outfits.md](outfits.md)
 - Intaking minifigure sig figs (Studio .io, Blender GLB, idle loop, About copy, unlock rules, the Sig Fig Lab artifact and its export bundle) → [sigfig-lab.md](sigfig-lab.md)
+- Arcade rendering cost, instancing, merged ships, bolts → [arcade-batching.md](arcade-batching.md)
 - Adding / renaming / retyping arcade ships, hero unlock thresholds, the ships.json manifest and the Arcade Fleet Lab artifact → [arcade-ships.md](arcade-ships.md)
 - Known open backlog items not yet built → [holotable-next-steps.md](holotable-next-steps.md), [text-style-tokens-todo.md](text-style-tokens-todo.md)
 
