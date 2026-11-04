@@ -2194,7 +2194,7 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
     }catch(e){ mwPhase='docked'; }
     if(mwPhase==='docked') mwDockT=1;   // landed on a deep link (/arcade, /cv …) with no dock animation: the monogram must start at its docked resting place, not mid-air at the entry spot
 
-    function rtPixel(){ return (window.__mwArcade&&window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch())?1:params.pixel; }   // the arcade on a phone renders 1 art pixel per CSS pixel; a small screen can't afford the desktop's chunkier grid
+    function rtPixel(){ return (window.__mwArcade&&window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch()&&!arcTablet())?1:params.pixel; }   // the arcade on a phone renders 1 art pixel per CSS pixel; a small screen can't afford the desktop's chunkier grid
     var rt=new THREE.WebGLRenderTarget(Math.floor(W/params.pixel),Math.floor(H/params.pixel),{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
     var postScene=new THREE.Scene(), postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
     var postMat=new THREE.ShaderMaterial({uniforms:{tDiffuse:{value:rt.texture},levels:{value:params.levels}},
@@ -2322,13 +2322,14 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
 
     // ---------- starfield (in galaxy so it drags with the map) ----------
     var starPoints=null, STAR_HOLE_ARC=[32,19,19], STAR_HOLE_GAL=[30,18,30];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
+    function arcTablet(){ return arcTouch()&&Math.min(window.innerWidth,window.innerHeight)>=600; }   // a large touch screen (iPad): the desktop's chunky pixels, and a star count halfway between phone and desktop
     function arcTouch(){ return !!(window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch()); }   // phones and tablets flying the arcade: fewer stars so fighters show through, finer pixels (rtPixel)
     function starPx(){ return params.starSize*((typeof arcadeActive!=='undefined'&&arcadeActive)?40:75); }   // fixed pixel size: a bit larger in the (nearer) galaxy view
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
       // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
       // hologram), out to a far shell. Sky density matches what the arcade's far field already had (the old small shell + far field ≈ 14× the Star-density slider); the slider scales it.
-      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*14*(ARC&&arcTouch()?.25:1)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
+      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*14*(ARC&&arcTouch()?(arcTablet()?.625:.25):1)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
       for(var i=0;i<N;i++){ var t=r2()*Math.PI*2, p=Math.acos(2*r2()-1), dx=Math.sin(p)*Math.cos(t), dy=Math.cos(p), dz=Math.sin(p)*Math.sin(t);
         var rin=1/Math.sqrt(dx*dx/(HX*HX)+dy*dy/(HY*HY)+dz*dz/(HZ*HZ)), r=rin*1.04+r2()*(R1-rin*1.04);
         pos[i*3]=dx*r; pos[i*3+1]=dy*r+1.9; pos[i*3+2]=dz*r;
