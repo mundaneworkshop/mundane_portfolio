@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+<!-- Opt-in sound debugger: ?sounddebug=1 shows an on-screen log of every audio call (sticks for the tab; ?sounddebug=0 off). Inert otherwise. See docs/project-history/mobile-site.md -->
+<script>(function(){try{var q=new URLSearchParams(location.search).get("sounddebug"),S=sessionStorage;if(q==="0"){S.removeItem("mw_sounddebug");S.removeItem("mw_sounddebug_log")}else if(q==="1")S.setItem("mw_sounddebug","1");if(S.getItem("mw_sounddebug")){var s=document.createElement("script");s.src="/assets/mobile/sounddebug.js";document.head.appendChild(s)}}catch(e){}})();</script>
 <!-- MOBILE LAYOUT: off for everyone until launch. /arcade always boots the galaxy, which runs the game with touch controls; Exit game returns to this layout. ?mobile=1 turns it on for this tab on a touch device under the large-iPad size, ?mobile=force on any device, ?mobile=0 turns it off.
      Decided once on load from the screen (not the window), so rotating never swaps layouts. Full story: docs/project-history/mobile-site.md -->
 <script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f||/^\/arcade\/?$/.test(location.pathname))return;
