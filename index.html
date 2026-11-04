@@ -925,6 +925,10 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
   .mm-del:hover{border-color:var(--bric-danger-edge);background:rgba(226,113,111,.1)}
   body.editing .mm-del{display:block}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* in the arcade the bottom of the screen belongs to the controls: toasts come down from the top instead */
+  body.mw-arcade #toast{top:calc(16px + env(safe-area-inset-top));bottom:auto;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;transform:translateX(-50%) translateY(-20px)}
+  body.mw-arcade #toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){ body.mw-arcade #toast{transition:opacity .35s;transform:translateX(-50%)} }
 
   #status{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;padding:12px 22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none}
   /* First-visit asset loader (PR #106). Without the gate (deep links, reduced motion) it covers the page until every model is in. On the gate the

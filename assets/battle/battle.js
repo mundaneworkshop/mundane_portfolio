@@ -422,6 +422,7 @@ function buildTouchUi(){
 }
 function touchCss(){ return [
   'body.mw-touch-arcade{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}',
+  '@media (orientation:portrait){body.mw-touch-arcade #toast{top:calc(88px + env(safe-area-inset-top))}body.mw-touch-arcade #bt-note{top:calc(148px + env(safe-area-inset-top))}}',   /* the portrait top row is full: score left, Menu right */
   'html:has(body.mw-touch-arcade){overflow:hidden;width:100%;height:100%}',   /* hidden site panels overflow the page: a phone browser then zooms out to fit and reports a window bigger than the screen */
   'body.mw-touch-arcade #bt-hints,body.mw-touch-arcade #arcadeExit{display:none!important}',
   '#bt-touch,#bt-xh,#bt-lock{display:none}',
