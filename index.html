@@ -14,7 +14,7 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
 <script>(function(){try{var vv=window.visualViewport;if(!vv||!matchMedia('(pointer:coarse)').matches||window.__mwMobile)return;var d=Object.getOwnPropertyDescriptor(window,'innerHeight');if(!d||!d.get||!d.configurable)return;var real=function(){return d.get.call(window)};
 function vis(){var r=real();return(vv.scale<=1.01&&r-(vv.height+vv.offsetTop)>4)?Math.round(vv.height+vv.offsetTop):r}
 Object.defineProperty(window,'innerHeight',{configurable:true,enumerable:true,get:vis});
-function fit(){var h=vis(),s=document.documentElement.style;if(h!==real()){s.height=h+'px';if(document.body)document.body.style.height=h+'px'}else{s.height='';if(document.body)document.body.style.height=''}}
+function fit(){var h=vis(),de=document.documentElement,s=de.style,on=h!==real();if(on){s.height=h+'px';s.setProperty('--mw-vh',h+'px');if(document.body)document.body.style.height=h+'px'}else{s.height='';s.removeProperty('--mw-vh');if(document.body)document.body.style.height=''}de.classList.toggle('mw-vis',on)}
 vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListener('orientationchange',fit);document.addEventListener('DOMContentLoaded',fit);fit()}catch(e){}})()</script>
 <!-- ROUTING: pages now load at nested paths (/work/<slug>, /work/<slug>/<moon-slug>, /cv, /holonet) via the
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
@@ -136,6 +136,8 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
     --amber-fill:rgba(168,118,26,.16); --amber-edge:rgba(122,86,20,.6); --amber-scan:rgba(122,86,20,.12);
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  /* iPad visible-height override (script at top): body becomes the containing block for every position:fixed panel, so their bottom anchors sit at the visible bottom, not the toolbar-covered layout viewport. Only when html.mw-vis is set. */
+  html.mw-vis body{contain:layout}
   html,body{height:100%;background:var(--bg);overflow:hidden;color:var(--line);font-family:var(--grotesk)}
   #scene{position:absolute;inset:0;z-index:0}
   canvas{display:block}
@@ -596,7 +598,7 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
   #manual-scene[data-ml="dock"].visible { transform: translateX(-50%) !important; }
   #manual-scene[data-ml="dock"]:not(.visible) { transform: translateX(-50%) translateY(28px) !important; }
   #manual-scene[data-ml="dock"] #manual-book {
-    max-height: calc(100vh - 2 * var(--ml-gap, 24px) - 56px);
+    max-height: calc(var(--mw-vh, 100vh) - 2 * var(--ml-gap, 24px) - 56px);
     transform-origin: 50% 100%; transform: rotateX(7deg) !important;
   }
   #manual-scene[data-ml="dock"] .manual-page {
@@ -623,7 +625,7 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
   #manual-scene[data-ml="drawer"].visible { transform: translateX(-50%) !important; }
   #manual-scene[data-ml="drawer"]:not(.visible) { transform: translateX(-50%) translateY(28px) !important; }
   #manual-scene[data-ml="drawer"] #manual-book {
-    max-height: calc(100vh - 2 * var(--ml-gap, 24px) - 56px);
+    max-height: calc(var(--mw-vh, 100vh) - 2 * var(--ml-gap, 24px) - 56px);
     transform-origin: 50% 100%; transform: rotateX(5deg) !important;
   }
   #manual-scene[data-ml="drawer"] .manual-page {
@@ -968,7 +970,7 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
 
   /* ── DEBUG PANEL ── */
   #debug{position:absolute;left:22px;bottom:50px;z-index:28;width:242px;background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:0;padding:12px 14px 14px;display:none}
-  #debug.open{display:block;overflow-y:auto;max-height:calc(100vh - 80px)}
+  #debug.open{display:block;overflow-y:auto;max-height:calc(var(--mw-vh,100vh) - 80px)}
   /* Panel chrome header */
   #debug h3{font-family:var(--display);font-weight:600;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin:-12px -14px 18px;padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
   #debug h3::after{content:'DBG';font-size:7px;letter-spacing:2px;color:rgba(90,191,184,.4);font-weight:400}
@@ -1006,7 +1008,7 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
      single place to add / remove / rename / hide them. Deliberately NOT a projected 3D label (those drift
      with camera motion and were hard to click) and deliberately on the LEFT so it never sits over
      #editPanel (right-anchored). Generated from galaxyModel by pmRender(). */
-  #projMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
+  #projMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(var(--mw-vh,100vh) - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.pm-open #projMgr{display:flex}
   body.edit-focus #projMgr, body.cs-focus #projMgr, body.mw-casestudy #projMgr, body.mw-entrygate #projMgr, body.mw-altfocus #projMgr, body.ui-hidden #projMgr{display:none}
   #projMgr .pm-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px}
@@ -1077,7 +1079,7 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
   #manual-scene[data-ml="drawer"][data-wrap="c"] .manual-page{ grid-template-columns:minmax(0,56ch) auto; }
   @media (max-width:640px){ #manual-scene[data-ml="drawer"][data-wrap] .manual-page{ grid-template-columns:minmax(0,1fr); } #manual-scene[data-ml="drawer"][data-wrap]{ min-width:min(280px,calc(100vw - 2 * var(--ml-gap,24px))); } }
   /* OUTFITS MANAGER: same visual language as the Projects Manager */
-  #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
+  #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(var(--mw-vh,100vh) - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.oc-open #outfitMgr{display:flex}
   body.oc-open.pm-open #outfitMgr{left:362px}
   body.edit-focus #outfitMgr, body.cs-focus #outfitMgr, body.mw-casestudy #outfitMgr, body.mw-entrygate #outfitMgr, body.mw-altfocus #outfitMgr, body.ui-hidden #outfitMgr{display:none}
