@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<!-- MOBILE LAYOUT: off for everyone until launch. ?mobile=1 turns it on for this tab on a touch device under the large-iPad size, ?mobile=force on any device, ?mobile=0 turns it off.
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+<!-- MOBILE LAYOUT: off for everyone until launch. /arcade always boots the galaxy, which runs the game with touch controls; Exit game returns to this layout. ?mobile=1 turns it on for this tab on a touch device under the large-iPad size, ?mobile=force on any device, ?mobile=0 turns it off.
      Decided once on load from the screen (not the window), so rotating never swaps layouts. Full story: docs/project-history/mobile-site.md -->
-<script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f)return;
+<script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f||/^\/arcade\/?$/.test(location.pathname))return;
 var touch=matchMedia('(pointer:coarse)').matches,side=Math.min(screen.width,screen.height);if(f!=='force'&&!(touch&&side<1024))return;
 var c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;
 window.__mwMobile=true;document.documentElement.classList.add('mw-mobile');var m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
@@ -22,6 +22,8 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
   <link rel="preload" href="assets/mw-monogram/mw-monogram.js" as="script" />
 <!-- Screen wipe entry hold: when arriving with ?wipe=, paint the panel colour before first paint (assets/bric-wipe.js takes over, removes it). Keep the colour in sync with the panel. -->
 <script>(function(){try{if(/[?&]wipe=/.test(location.search)){var s=document.createElement('style');s.id='bric-wipe-hold';s.textContent='html::before{content:"";position:fixed;inset:0;z-index:2147483646;background:#070C0C}';document.head.appendChild(s);setTimeout(function(){var e=document.getElementById('bric-wipe-hold');if(e)e.remove()},6000)}}catch(e){}})()</script>
+<!-- Touch visits to /arcade: a flat cover keeps the desktop galaxy from showing until the hyperspace jump is up (openArcade lifts it). #mwLoad stays above it, so progress and asset failures still show. -->
+<script>(function(){try{if(!/^\/arcade\/?$/.test(location.pathname))return;var q=location.search;if(/[?&]touch=0\b/.test(q)||!(/[?&]touch=1\b/.test(q)||matchMedia('(pointer:coarse)').matches))return;var s=document.createElement('style');s.id='mw-arcade-hold';s.textContent='html::after{content:"";position:fixed;inset:0;z-index:2147483645;background:#070C0C}#mwLoad{z-index:2147483646}';document.head.appendChild(s);setTimeout(function(){var e=document.getElementById('mw-arcade-hold');if(e)e.remove()},20000)}catch(e){}})()</script>
 
 <!-- SITE METADATA — edit everything in this block to change how the site presents itself
      (browser tab, favicon, search/social previews). Not part of the in-page CMS — this is
@@ -923,6 +925,10 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
   .mm-del:hover{border-color:var(--bric-danger-edge);background:rgba(226,113,111,.1)}
   body.editing .mm-del{display:block}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* in the arcade the bottom of the screen belongs to the controls: toasts come down from the top instead */
+  body.mw-arcade #toast{top:calc(16px + env(safe-area-inset-top));bottom:auto;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;transform:translateX(-50%) translateY(-20px)}
+  body.mw-arcade #toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){ body.mw-arcade #toast{transition:opacity .35s;transform:translateX(-50%)} }
 
   #status{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;padding:12px 22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none}
   /* First-visit asset loader (PR #106). Without the gate (deep links, reduced motion) it covers the page until every model is in. On the gate the
@@ -2177,6 +2183,7 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
     }catch(e){ mwPhase='docked'; }
     if(mwPhase==='docked') mwDockT=1;   // landed on a deep link (/arcade, /cv …) with no dock animation: the monogram must start at its docked resting place, not mid-air at the entry spot
 
+    function rtPixel(){ return (window.__mwArcade&&window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch())?1:params.pixel; }   // the arcade on a phone renders 1 art pixel per CSS pixel; a small screen can't afford the desktop's chunkier grid
     var rt=new THREE.WebGLRenderTarget(Math.floor(W/params.pixel),Math.floor(H/params.pixel),{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
     var postScene=new THREE.Scene(), postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
     var postMat=new THREE.ShaderMaterial({uniforms:{tDiffuse:{value:rt.texture},levels:{value:params.levels}},
@@ -2304,12 +2311,13 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
 
     // ---------- starfield (in galaxy so it drags with the map) ----------
     var starPoints=null, STAR_HOLE_ARC=[32,19,19], STAR_HOLE_GAL=[30,18,30];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
+    function arcTouch(){ return !!(window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch()); }   // phones and tablets flying the arcade: fewer stars so fighters show through, finer pixels (rtPixel)
     function starPx(){ return params.starSize*((typeof arcadeActive!=='undefined'&&arcadeActive)?40:75); }   // fixed pixel size: a bit larger in the (nearer) galaxy view
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
       // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
       // hologram), out to a far shell. Sky density matches what the arcade's far field already had (the old small shell + far field ≈ 14× the Star-density slider); the slider scales it.
-      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*(ARC?14:14)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
+      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*14*(ARC&&arcTouch()?.25:1)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
       for(var i=0;i<N;i++){ var t=r2()*Math.PI*2, p=Math.acos(2*r2()-1), dx=Math.sin(p)*Math.cos(t), dy=Math.cos(p), dz=Math.sin(p)*Math.sin(t);
         var rin=1/Math.sqrt(dx*dx/(HX*HX)+dy*dy/(HY*HY)+dz*dz/(HZ*HZ)), r=rin*1.04+r2()*(R1-rin*1.04);
         pos[i*3]=dx*r; pos[i*3+1]=dy*r+1.9; pos[i*3+2]=dz*r;
@@ -10866,8 +10874,8 @@ f 2469//2469 2470//2470 2434//2434
     }
     window.addEventListener('bric:wipe-done',function(){ _veilBusy=false; });   // the panel is gone: the next view change gets its own wipe (registered before the CV toggle's queued switch runs on the same event)
     function goHomeV(){ veilThen(goHome); }
-    function activate(ud){
-      if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
+    function activate(ud,silent){
+      if(!silent&&window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet stays in the code dormant).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.mwOpen(_u); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
@@ -11128,6 +11136,7 @@ f 2469//2469 2470//2470 2434//2434
     // Exit = the top-left button (where the breadcrumb normally sits) or ESC → ships jump to hyperspace, then the galaxy comes back.
     var arcadeActive=false, arcadeExiting=false, _ringBak=null, arcGalZoom=1;
     var ARCADE_RING='SELECT YOUR HERO SHIP \u2022 PLAY TO UNLOCK NEW SHIPS \u2022 ';
+    var arcLens=0, arcLensOn=false;
     var arcadeStage='select';   // 'select' (hero carousel replaces the head) | 'play' (every hologram artifact hidden, the hero flies)
     function arcadeRingText(on){
       if(on){ if(!_ringBak) _ringBak={en:BIO_EN}; BIO_EN=ARCADE_RING; }
@@ -11137,18 +11146,19 @@ f 2469//2469 2470//2470 2434//2434
     function openArcade(id,noJump){
       if(arcadeActive||!window.MWBattle) return;
       if(window.MWAudio){ MWAudio.unlock(); MWAudio.siteStop(); }   // the planet click is the user gesture that lets audio start; the arcade has its own ambience, so the site's steps aside
-      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcRoll=arcRollT=0; arcReturn=false; buildStars();   // big star-free play area while in the arcade
+      arcadeActive=true; arcadeExiting=false; window.__mwArcade=true; arcEntryZoom=camZoom; arcPitch=arcPitchS=0; arcRoll=arcRollT=0; arcReturn=false; rt.setSize(Math.floor(W/rtPixel()),Math.floor(H/rtPixel())); buildStars();   // big star-free play area while in the arcade
       setHovered(null); if(typeof setZone==='function') setZone(null);
       document.body.classList.add('mw-arcade'); setCrumb('',[]); setRoute('/'+arcadeSlug);
       arcadeRingText(true);
       var camPose=new THREE.Vector3(0,HOME_LOOK.y+(HOME_POS.y-HOME_LOOK.y)*camZoom+camElev,HOME_LOOK.z+(HOME_POS.z-HOME_LOOK.z)*camZoom);
       if(window.MWAudio&&window.MWLightspeed&&!noJump) MWAudio.jumpStart();   // before init: the hero-select ambience waits for the jump's exit
-      MWBattle.init({ onGameOver:function(){ exitArcade(); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
+      MWBattle.init({ onGameOver:function(){ exitArcade(); }, onExit:function(){ exitArcade(true); }, showLeaderboard:function(){ showArcadeResult(null); }, THREE:THREE, scene:scene, camera:camera, renderer:renderer, dom:renderer.domElement, debugEl:document.getElementById('debug'),
         pose:{pos:camPose}, center:[0,1.9,0], fog:scene.fog, onStage:arcadeSetStage, getRot:function(){ return galaxy.rotation.y; }, sceneLights:SCENE_LIGHTS, createLoader:mwCreateGLTFLoader,
         monoRadius:function(){ return 2.9; },   // hologram cone / ring radius + margin — fighters keep clear of it
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
       arcGalZoom=camZoom; if(MWBattle.getSelZoom){ arcEntryZoom=camZoom*MWBattle.getSelZoom(); arcReturn=true; }   // hero-select view: camera eases in so the hologram nearly fills the window height and the ship has room (battle.js P.selZoom)
       if(window.MWLightspeed&&!noJump){ MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWAudio) MWAudio.jumpReveal(); if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); } else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
+      var _arcHold=document.getElementById('mw-arcade-hold'); if(_arcHold) _arcHold.remove();   // the jump (or the intro) is up: touch visits can see the page now
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
@@ -11156,6 +11166,7 @@ f 2469//2469 2470//2470 2434//2434
       setSiteVisible(true); mwMount.visible=true;
       ringEn.visible=!copyOvr['ringEnHidden'];
     }
+    window.addEventListener('resize',function(){ if(arcadeActive&&arcadeStage==='select'&&arcTouch()) window.dispatchEvent(new CustomEvent('mw:arcselzoom')); });   // portrait and landscape frame the hologram differently
     window.addEventListener('mw:arcselzoom',function(){ if(arcadeActive&&arcadeStage==='select'&&MWBattle.getSelZoom){ arcEntryZoom=arcGalZoom*MWBattle.getSelZoom(); arcReturn=true; } });   // live from the debug slider
     function arcadeSetStage(st){
       var was=arcadeStage; arcadeStage=st;
@@ -11294,19 +11305,20 @@ f 2469//2469 2470//2470 2434//2434
     window.addEventListener('keydown',function(e){ if(arcadeResultEl&&e.key==='Escape'){ e.preventDefault(); e.stopImmediatePropagation();   // stopImmediate: the arcade-exit ESC handler below must not also run
       if(performance.now()-arcadeResultT<=350) return;   /* >350ms: the ESC that opened it must not also close it */
       if(arcadeResultEl.querySelector('#arAgain')) arcadeAgain(); else closeArcadeResult(); } },true);   // game-over modal: ESC = back to hero select (same as Play again); leaderboard: just closes
-    function exitArcade(){
+    function exitArcade(skipScore){   // skipScore: the player chose to leave (touch Exit game), so no scoreboard or name entry
       if(!arcadeActive||arcadeExiting) return; arcadeExiting=true;
       if(window.__mwLightspeed) window.__mwLightspeed.destroy(true);   // ESC mid-load
       if(window.MWAudio) MWAudio.jumpCancel();
       var _sum=(window.MWBattle&&MWBattle.isActive())?MWBattle.summary():null; document.body.classList.add('mw-arcade-exiting'); setRoute('/');
       // OUTRO (no hyperspace): everyone stops firing, fighters fly off screen, support/capital ships stay; the scoreboard modal comes up and
       // closing it ends the exit. Leaving without having played just tears down at once.
-      if(_sum&&_sum.played){ MWBattle.outro(); showArcadeResult(_sum); }
+      if(_sum&&_sum.played&&skipScore!==true){ MWBattle.outro(); showArcadeResult(_sum); }
       else finishArcadeAfterOutro();
     }
     // Back to the galaxy runs through the Star Wars screen wipe (assets/bric-wipe.js, random variant): the arcade tears down while the panel fully covers the page.
     // Play again skips it (hero select, not the galaxy). The wipe no-ops under reduced motion.
     function finishArcadeAfterOutro(noWipe){
+      if(noWipe!==true&&arcTouch()){ try{ sessionStorage.setItem('mw_gate_passed','1'); }catch(e){} if(window.bricWipe) window.bricWipe.go('/?mobile=1',null,true); else location.replace('/?mobile=1'); return; }   // phones leave the arcade for the mobile layout's index (PR #119), past its entry gate. The panel stays up until the page changes, so the desktop galaxy never shows; drop ?mobile=1 once that layout is on by default
       var swap=function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(noWipe===true); };
       if(noWipe===true||!window.bricWipe) swap(); else window.bricWipe.play(null,swap);
     }
@@ -11314,7 +11326,7 @@ f 2469//2469 2470//2470 2434//2434
       if(!again&&window.MWAudio&&MWAudio.siteStart) MWAudio.siteStart();   // back on the galaxy: the site-wide ambience returns (Play again goes straight to hero select, so it stays off)
       arcadeActive=false; arcadeExiting=false; window.__mwArcade=false; arcadeStage='select'; arcadeRestoreHolo();
       document.body.classList.remove('mw-arcade','mw-arcade-exiting'); arcadeRingText(false);
-      buildStars();                                                   // back to the galaxy's tight star field
+      rt.setSize(Math.floor(W/rtPixel()),Math.floor(H/rtPixel())); buildStars();                                                   // back to the galaxy's tight star field
       var _gc=copyOvr['galcam']; camZoom=(_gc&&_gc.zoom!=null)?_gc.zoom:1; camElev=(_gc&&_gc.elev!=null)?_gc.elev:0;   // reset the zoom/height you changed in the arcade to the galaxy's normal view
     }
     window.addEventListener('keydown',function(e){ if(e.key==='Escape'&&arcadeActive){ e.preventDefault(); if(window.MWAudio&&!arcadeExiting) MWAudio.ui('back'); exitArcade(); } },true);
@@ -15781,7 +15793,14 @@ f 2469//2469 2470//2470 2434//2434
     }
     document.getElementById('cReset').addEventListener('click',function(){ Object.assign(params,DEFAULTS); applyParams(); });
 
-    window.addEventListener('resize',function(){ W=window.innerWidth; H=window.innerHeight; camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H); rt.setSize(Math.floor(W/params.pixel),Math.floor(H/params.pixel)); });
+    window.addEventListener('resize',function(){ W=window.innerWidth; H=window.innerHeight; camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H); rt.setSize(Math.floor(W/rtPixel()),Math.floor(H/rtPixel())); });
+    // Touch devices can fire resize on rotation while innerWidth still holds the old value, leaving the canvas at the portrait width. Re-check after the rotation settles, and keep a slow check running for anything else that moves the viewport without a usable event.
+    if(window.matchMedia('(pointer:coarse)').matches||/[?&]touch=1/.test(location.search)){
+      var vpCheck=function(){ void document.documentElement.offsetWidth; if(window.innerWidth!==W||window.innerHeight!==H) window.dispatchEvent(new Event('resize')); };
+      window.addEventListener('orientationchange',function(){ [0,100,300,600,1000].forEach(function(ms){ setTimeout(vpCheck,ms); }); });
+      if(window.visualViewport) window.visualViewport.addEventListener('resize',vpCheck);
+      setInterval(vpCheck,250);
+    }
 
     // ---------- init ----------
     buildStars(); applyTheme();
@@ -15918,7 +15937,9 @@ f 2469//2469 2470//2470 2434//2434
         camPos.set(0,_bl.y+oy*_pc-oz*_ps+camElev,_bl.z+oy*_ps+oz*_pc); camLook.copy(_bl); camUpV.set(0,_pc,_ps); arcRollT=_pc<0?Math.PI:0;   // past the pole (camera inverted) the view rolls itself upright
         if(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getPan){ var _pn=MWBattle.getPan();   // edge-dwell pan (battle.js): a true pan: only the look point moves along the camera's right / up, the camera stays put and turns (no dolly)
           if(_pn&&(_pn.x||_pn.y)){ var _rc=Math.cos(arcRoll); camLook.x+=_pn.x*_rc; camLook.addScaledVector(camUpV,_pn.y*_rc); } }   // _rc: screen-right / up flip with the auto-right roll
-        if(_ca&&_ca.fk>0.001&&_ca.focus){ _arcFoc.copy(_ca.focus).sub(_bl); camPos.addScaledVector(_arcFoc,_ca.fk); camLook.lerp(_ca.focus,_ca.fk); } }   // hero death: the camera pivots onto the dying ship and dives in
+        if(_ca&&_ca.fk>0.001&&_ca.focus){ _arcFoc.copy(_ca.focus).sub(_bl); camPos.addScaledVector(_arcFoc,_ca.fk); camLook.lerp(_ca.focus,_ca.fk); }
+        var _ch=(arcadeActive&&arcadeStage==='play'&&window.MWBattle&&MWBattle.getChase)?MWBattle.getChase():null;   // touch flight owns the camera
+        if(_ch){ camPos.copy(_ch.pos); camLook.copy(_ch.look); camUpV.copy(_ch.up); arcRollT=0; arcRoll=0; arcReturn=false; } }   // hero death: the camera pivots onto the dying ship and dives in
       else { var _bx=0,_by=FOCUSFRAME.anchorY-FOCUSFRAME.lookDrop,_bz=0;
         if(focusedMoon){ var _mw=_aMw; focusedMoon.getWorldPosition(_mw); _bx=_mw.x; _by=_mw.y; _bz=_mw.z; }   // artifact focus: orbit the moon, not the box
         camLook.set(_bx, _by+focusPanY, _bz);   // focusPanY = stable vertical pan offset (shift-drag)
@@ -15975,8 +15996,12 @@ f 2469//2469 2470//2470 2434//2434
       if(_vk!==_camViewKey){ _camViewKey=_vk; _camEaseT=_now; }
       var _ce=(_now-_camEaseT)/1000, _ck=0.06;
       if(!reduceMotionQ.matches && _ce<2.6){ var _cs=Math.min(1,_ce/1.3); _cs=_cs*_cs*(3-2*_cs); _ck=_ce<1.3 ? 0.010+(0.048-0.010)*_cs : 0.048+(0.06-0.048)*Math.min(1,(_ce-1.3)/1.3); }
-      camera.position.lerp(camPos,_ck); lookNow.lerp(camLook,_ck); camera.lookAt(lookNow);
+      if(arcadeActive&&window.MWBattle&&MWBattle.getChase&&MWBattle.getChase()){ _ck=0.06+0.4*MWBattle.getChase().k; }   /* the chase camera settles quickly once entered */ camera.position.lerp(camPos,_ck); lookNow.lerp(camLook,_ck); camera.lookAt(lookNow);
       stageLens();
+      var _lensT=(arcadeActive&&!arcadeExiting&&arcadeStage==='select'&&W>H&&arcTouch())?.25:0;   // phone landscape hero select: hologram in the left column, menu in the right (battle.js touchCss)
+      arcLens=(_lensT===0&&arcLens<.002)?0:arcLens+(_lensT-arcLens)*(window.matchMedia('(prefers-reduced-motion:reduce)').matches?1:.12);
+      if(arcLens>0) camera.setViewOffset(W,H,arcLens*W,0,W,H); else if(_lensT===0&&arcLensOn&&camera.view&&camera.view.enabled&&!_sf.ok) camera.clearViewOffset();
+      arcLensOn=arcLens>0;
 
       if(focused){ var fwp=_aFwp; focused.getWorldPosition(fwp); var fd=fwp.distanceTo(camera.position);
         planets.forEach(function(p){ if(p===focused){ p.visible=true; return; } if(!planetShown(p)){ p.visible=false; return; } var pw=_aPw; p.getWorldPosition(pw); p.visible=pw.distanceTo(camera.position)>fd-0.4; }); }
@@ -16088,7 +16113,7 @@ f 2469//2469 2470//2470 2434//2434
         if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHomeV(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
-        if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData); return; }
+        if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData,arcTouch()); return; }   // phones arrive here from the mobile site's Arcade link: no second confirm sound on page load
         if(seg0==='about'){ if(!parts[1]){ try{ history.replaceState({},'','/'+cvSlug); }catch(e){} var gab=planetById('cv'); if(gab) activate(gab.userData); return; }   /* bare /about lands on the CV, where the About text lives */
           if(!focused||focused!==aboutGrp) ocOpenAboutRoute(parts[1]); return; }
         if(seg0===holonetSlug){ var gho=planetById('contact'); if(gho) activate(gho.userData); return; }

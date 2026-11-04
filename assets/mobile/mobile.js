@@ -65,9 +65,6 @@ const MARKUP=`<div id="sky" aria-hidden="true"></div>
     </div>
   </section>
 
-  <section id="v-arcade" class="flow" aria-label="Space Arcade" hidden><div class="wrap">
-    <div class="page-h"><h1 class="h1">Space Arcade</h1><p class="body" style="margin-top:10px">The arcade isn't in this mobile build yet.</p></div>
-  </div></section>
 </div>
 
 <div id="ctSheet" role="dialog" aria-modal="true" aria-label="HoloNet transmission">
@@ -648,7 +645,7 @@ function skyScroll(){ const y=window.scrollY; skyEls.forEach(c=>{ c.style.transf
 drawSky(); addEventListener('resize',drawSky); addEventListener('scroll',skyScroll,{passive:true});
 
 /* ═════════ views ═════════ */
-const VIEWS=['index','outfit','case','cv','holonet','arcade'].map(n=>$('#v-'+n));
+const VIEWS=['index','outfit','case','cv','holonet'].map(n=>$('#v-'+n));
 let curView=$('#v-index'), indexScroll=0;
 if('scrollRestoration' in history) history.scrollRestoration='manual';
 function showView(el){
@@ -802,7 +799,6 @@ function route(){
   else if(a==='work'&&BY_SLUG[parts[1]]){ const c=BY_SLUG[parts[1]], k=parts[2]!=null?c.arts.findIndex((_,i)=>artSlug(c,i)===parts[2]):-1; renderCase(c,k+1); }
   else if(a==='cv') showView($('#v-cv'));
   else if(a==='holonet'){ showView($('#v-holonet')); ct.open(); }
-  else if(a==='arcade') showView($('#v-arcade'));
   else {
     showView($('#v-index')); attach(holo);
     const o=outfitById(curOutfit)||OUTFITS[0]; $('#appearBtn').href='/about/'+o.id;
@@ -811,7 +807,9 @@ function route(){
   syncMenuCurrent();
 }
 addEventListener('popstate',routeWiped);
-function go(path){ if(path!==location.pathname) history.pushState({},'',path); routeWiped(); }
+/* the game runs in the galaxy build, so it's a full page load under the wipe. Its Exit game comes back to /?mobile=1 */
+function goArcade(){ if(window.bricWipe&&!GT.on) bricWipe.go('/arcade'); else location.href='/arcade'; }
+function go(path){ if(path==='/arcade'){ goArcade(); return; } if(path!==location.pathname) history.pushState({},'',path); routeWiped(); }
 /* same-origin links route in place, so the wipe and the running 3D stay; everything else is a normal link */
 document.addEventListener('click',e=>{ const a=e.target.closest&&e.target.closest('a[href]'); if(!a||a.target||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button>0) return; let u; try{ u=new URL(a.href); }catch(err){ return; } if(u.origin!==location.origin) return; e.preventDefault(); go(u.pathname); });
 /* per-route head (syncRouteHead): titles and canonicals match the galaxy's */

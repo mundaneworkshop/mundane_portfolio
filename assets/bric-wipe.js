@@ -126,11 +126,13 @@
     variants: VARIANTS.slice(),
     active: function () { return !!el && el.style.display === 'block'; },
     config: function (o) { for (var k in o) if (o[k] != null) cfg[k] = o[k]; return bricWipe; },
-    go: function (url, variant) {
-      if (reduced() || !supported()) { location.href = url; return; }
+    // replace: leave this page out of the back stack
+    go: function (url, variant, replace) {
+      var nav = function (u) { if (replace) location.replace(u); else location.href = u; };
+      if (reduced() || !supported()) { nav(url); return; }
       var v = pick(variant);
       build(v, false);
-      run(cfg.outMs, function () { location.href = withParam(url, v); });
+      run(cfg.outMs, function () { nav(withParam(url, v)); });
     },
     // mid (optional) runs once the page is fully covered: swap the view underneath it. Reduced motion / no mask support: mid runs at once, no wipe.
     play: function (variant, mid) {
