@@ -46,7 +46,7 @@ Decided by Jason on Nov 4 2026:
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
-- The arcade on phones. `/arcade` shows a placeholder here.
+- The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/?mobile=1`. The touch controls are still on `spike/arcade-touch`.
 - The per-route JSON-LD from `syncRouteHead()` is not ported. Titles, descriptions and canonicals are. Check how crawlers that identify as phones see this layout before the flag defaults on.
 - Touch for the desktop galaxy on large iPads.
 - Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.

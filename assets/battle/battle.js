@@ -178,7 +178,7 @@ function on(target,ev,fn,opt){ target.addEventListener(ev,fn,opt); listeners.pus
 
 // world geometry of the visible battlefield, from the ENTRY camera (so layout is responsive but doesn't chase user orbit/zoom)
 function monoR(){ return ctx.monoRadius()/S; }   // clearance radius of the hologram, in battle-local units
-function halfH(z){ return Math.tan(ctx.camera.fov*Math.PI/360)*(L-z); }
+function halfH(z){ return Math.tan((baseFov||ctx.camera.fov)*Math.PI/360)*(L-z); }
 function halfW(z){ return halfH(z)*Math.max(1.15,ctx.camera.aspect); }
 function anchorWorld(u,v,z,out){ return out.set(u*halfW(z), CY+v*halfH(z), z); }
 
@@ -308,6 +308,156 @@ function pumpLoads(){
     })(m);
   }
 }
+
+/* ───────────────────────────── SPIKE: touch flight (A0, throwaway) ─────────────────────────────
+   Coarse-pointer devices, or ?touch=1: locked chase camera, always-forward flight, D-pad + Fire + Menu. ?density=.5 overrides the fleet, ?perf=0 hides the readout. */
+var TOUCH=/[?&]touch=1\b/.test(location.search)||(!/[?&]touch=0\b/.test(location.search)&&!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches));
+var baseFov=0, dpad={x:0,y:0}, steer={x:0,y:0}, padReset=null, invertY=false, touchEl=null, xhEl=null, lockEl=null, lockShown=null, perfEl=null, touchLock=null;
+var chase={on:false,k:0,dir:null,pos:null,look:null,up:null,out:null}, perf={t:0,n:0,fps:0,calls:0,tris:0};
+function tuneQ(k,d){ var m=new RegExp('[?&]'+k+'=([\\d.]+)').exec(location.search); return m?parseFloat(m[1]):d; }   // spike only: try values on a phone from the URL
+var TURN=tuneQ('turn',1.15), STEER_EASE=8, HERO_FWD=1.35, FIGHTER_TOUCH=tuneQ('fscale',1.75), ASSIST_RANGE=16, KIT_COS=Math.cos(10*Math.PI/180),
+    ASSIST_COS=Math.cos(tuneQ('assist',20)*Math.PI/180), ASSIST_KEEP=Math.cos(tuneQ('assist',20)*1.5*Math.PI/180), FOLLOW=tuneQ('follow',.95), RELOCK_WAIT=1.5;
+function lockHolds(s,o,mp){   // a fighter lock lasts until it dies, leaves the frame, gets behind the hero, or the stick moves the nose off it
+  if(!o.alive||o.jump||o.leaving||!o.root.visible||!here(o)) return false;
+  _v3.copy(o.pos).sub(mp); var d=_v3.length(), along=_v3.dot(s.dir);
+  if(along<=0||d>ASSIST_RANGE*1.25) return false;
+  if(Math.hypot(dpad.x,dpad.y)>.03&&along/d<ASSIST_KEEP) return false;
+  _hF.copy(o.pos); G.localToWorld(_hF); _hF.project(ctx.camera);
+  return Math.abs(_hF.x)<=1&&Math.abs(_hF.y)<=1&&_hF.z<=1;
+}
+function touchTarget(s,mp,out){   // aim assist, fighters and minikits only: support and capital ships are big enough to aim at by hand
+  var best=null, bc=-1, blockD=1e9, cur=touchLock&&touchLock.cls==='fighter'?touchLock:null;
+  if(cur){ if(lockHolds(s,cur,mp)) best=cur; else if(cur.alive) cur.noLockT=clockT+RELOCK_WAIT; }   // broken on purpose: this fighter can't snap straight back
+  if(!best){
+    for(var i=0;i<ships.length;i++){ var o=ships[i]; if(!o.alive||o.hero||o.team===HERO||o.jump||o.leaving||o.cls==='base'||!o.root.visible||!here(o)) continue;
+      _v3.copy(o.pos).sub(mp); var d=_v3.length(); if(d<.2) continue; var along=_v3.dot(s.dir);
+      if(o.cls!=='fighter'){ var rr=o.c.r*o.root.scale.x*.6; if(along>0&&d*d-along*along<rr*rr) blockD=Math.min(blockD,along); continue; }   // the nose is on a big ship: a fighter behind it isn't worth pulling shots off
+      if(d>ASSIST_RANGE||(o.noLockT||0)>clockT) continue; var c=along/d;
+      if(c>ASSIST_COS&&c>bc){ bc=c; best=o; } }
+    if(best&&best.pos.distanceTo(mp)>blockD) best=null;
+    if(!best){ for(var k=0;k<kits.length;k++){ if(kits[k].opening) continue; _v3.copy(kits[k].pos).sub(mp); var kd=_v3.length(); if(kd<.2||kd>ASSIST_RANGE) continue; var kc=_v3.dot(s.dir)/kd; if(kc>KIT_COS&&kc>bc){ bc=kc; best=kits[k]; } } }
+  }
+  if(best){ out.copy(best.pos); if(best.vel){ var sp=7*P.laserSpeed, tt=out.distanceTo(mp)/sp; out.copy(best.pos).addScaledVector(best.vel,tt); tt=out.distanceTo(mp)/sp; out.copy(best.pos).addScaledVector(best.vel,tt); } } return best;   // full lead, solved twice
+}
+function updLockReticle(){   // corner marks on the locked fighter itself; the small crosshair stays on the lead point, where the shots go
+  if(!lockEl) return;
+  var o=(chase.on&&touchLock&&touchLock.cls==='fighter'&&touchLock.alive)?touchLock:null;
+  if(!o){ if(lockShown){ lockShown=null; lockEl.classList.remove('on'); } return; }
+  if(o!==lockShown){ lockShown=o; lockEl.classList.remove('on'); void lockEl.offsetWidth; lockEl.classList.add('on'); }   // restart the snap-in for each new lock
+  var cm=ctx.camera, r=ctx.dom.getBoundingClientRect(); _hF.copy(o.pos); G.localToWorld(_hF);
+  var dist=Math.max(.01,_hF.distanceTo(cm.position)), wr=o.c.r*o.root.scale.x*G.scale.x, px=wr/(dist*Math.tan(cm.fov*Math.PI/360))*r.height/2;
+  _hF.project(cm);
+  lockEl.style.transform='translate('+Math.round((_hF.x+1)/2*r.width+r.left)+'px,'+Math.round((1-_hF.y)/2*r.height+r.top)+'px) scale('+clamp(px*2.6/52,.8,2).toFixed(2)+')';
+}
+function updHeroTouch(s,dt){
+  s.prev.copy(s.dir);
+  var ek=1-Math.exp(-dt*STEER_EASE); steer.x+=(dpad.x-steer.x)*ek; steer.y+=(dpad.y-steer.y)*ek;   // the turn eases in and out, so a flick of the thumb doesn't throw the nose
+  var yi=Math.abs(steer.x)<.002?0:steer.x, pi=Math.abs(steer.y)<.002?0:steer.y*(invertY?-1:1);
+  var fl=touchLock&&touchLock.cls==='fighter'&&touchLock.alive?touchLock:null;
+  s.followK=lerp(s.followK||0,fl&&Math.hypot(dpad.x,dpad.y)<.03?1:0,Math.min(1,dt*5));   // any stick input hands the nose straight back to the player
+  if(fl&&s.followK>.01){ _v2.copy(_hT).sub(s.pos).normalize(); var fa=Math.acos(clamp(s.dir.dot(_v2),-1,1)); if(fa>.002){ _v1.crossVectors(s.dir,_v2); if(_v1.lengthSq()>1e-6){ s.dir.applyAxisAngle(_v1.normalize(),Math.min(fa,FOLLOW*s.followK*dt)); } } if(Math.abs(s.dir.y)>.88){ s.dir.y=.88*(s.dir.y<0?-1:1); s.dir.normalize(); } }   // the follow turns slower than the stick: a hard-turning fighter can get away
+  if(yi) s.dir.applyAxisAngle(_up,-yi*TURN*dt);
+  if(pi){ _v1.crossVectors(s.dir,_up); if(_v1.lengthSq()>1e-5){ _v1.normalize(); if(!((pi>0&&s.dir.y>.85)||(pi<0&&s.dir.y<-.85))) s.dir.applyAxisAngle(_v1,pi*TURN*.8*dt); } }
+  var ax=arenaAx()*1.12, ay=arenaAy()*1.1, az=arenaAz(), ex=Math.max(Math.abs(s.pos.x)/ax,Math.abs(s.pos.y-CY)/ay,Math.abs(s.pos.z)/az);
+  if(ex>.8&&!yi&&!pi){ _v2.set(CX-s.pos.x,CY-s.pos.y,CZ-s.pos.z).normalize(); s.dir.lerp(_v2,Math.min(1,dt*1.6*(ex-.8)*5)); }   // soft edge: turn back toward the battle instead of hitting a wall
+  s.dir.normalize();
+  s.spd=lerp(s.spd,HERO_FWD*P.speed,Math.min(1,dt*2)); s.vel.copy(s.dir).multiplyScalar(s.spd); s.pos.addScaledVector(s.vel,dt);
+  s.pos.x=clamp(s.pos.x,-ax,ax); s.pos.y=clamp(s.pos.y,CY-ay,CY+ay); s.pos.z=clamp(s.pos.z,-az,az*.9);
+  var yr=(s.prev.z*s.dir.x-s.prev.x*s.dir.z)/Math.max(dt,1e-3); s.yawRate=lerp(s.yawRate,yr,Math.min(1,dt*6));
+  aim(s.root,s.dir); s.bankV=lerp(s.bankV,clamp(s.yawRate*.5,-.9,.9),Math.min(1,dt*5)); s.bank.rotation.z=s.bankV;
+  heroFx(s,dt);
+  if(window.MWAudio){ MWAudio.heroEngine(clamp((s.spd-.1)/.9,0,1)); if(fireHeld&&!quiet()) MWAudio.heroFireHeld(); }
+  s.cd-=dt;
+  var mp=muzzle(s,_v1.set(0,0,0),true); touchLock=touchTarget(s,mp,_hT);   // runs every frame, so it must not switch guns: only a shot does
+  if(!touchLock) _hT.copy(mp).addScaledVector(s.dir,8);
+  if(!quiet()&&fireHeld&&s.cd<=0){ mp=muzzle(s,_v1.set(0,0,0)); var dd=_v2.copy(_hT).sub(mp); if(dd.lengthSq()<1e-4) dd.copy(s.dir); dd.normalize(); dd.x+=rnd(-1,1)*CLS.hero.spread; dd.y+=rnd(-1,1)*CLS.hero.spread; dd.normalize();
+    spawnBolt(HERO,mp,dd,true); s.cd=CLS.hero.int/Math.max(.2,P.laser); if(window.MWAudio) MWAudio.heroShot(); }
+  if(xhEl){ _hF.copy(_hT); G.localToWorld(_hF); _hF.project(ctx.camera); var r=ctx.dom.getBoundingClientRect(); xhEl.style.transform='translate('+Math.round((_hF.x+1)/2*r.width+r.left)+'px,'+Math.round((1-_hF.y)/2*r.height+r.top)+'px)'; xhEl.classList.toggle('lock',!!touchLock); }
+  heroCollide(s,dt);
+}
+function updChase(dt){   // world-space camera target for index.html (getChase)
+  var hero=heroShip, on=TOUCH&&stage==='play'&&!!hero&&!quiet();
+  chase.on=on; if(!on){ chase.k=0; chase.dir=null; if(baseFov&&ctx.camera.fov!==baseFov){ ctx.camera.fov=baseFov; ctx.camera.updateProjectionMatrix(); } return; }
+  if(!chase.pos){ chase.pos=new T.Vector3(); chase.look=new T.Vector3(); chase.up=new T.Vector3(); chase.out={pos:chase.pos,look:chase.look,up:chase.up,k:0}; }
+  if(!chase.dir) chase.dir=hero.dir.clone();
+  chase.dir.lerp(hero.dir,Math.min(1,dt*(reduceMotion()?12:4.5))).normalize();
+  chase.k=Math.min(1,chase.k+dt*1.4);
+  var asp=ctx.camera.aspect||1, port=asp<1, f=port?68:55; if(ctx.camera.fov!==f){ ctx.camera.fov=f; ctx.camera.updateProjectionMatrix(); }
+  var back=port?3.1:2.4, high=port?.5:.55, ahead=port?2.4:3, drop=port?1.05:.1;   // portrait: the look point sits low so the hero rides above centre, clear of the thumbs
+  chase.pos.copy(hero.pos).addScaledVector(chase.dir,-back); chase.pos.y+=high; chase.look.copy(hero.pos).addScaledVector(chase.dir,ahead); chase.look.y-=drop;
+  G.localToWorld(chase.pos); G.localToWorld(chase.look); chase.up.copy(_up).applyQuaternion(G.quaternion); chase.out.k=chase.k;
+}
+function updPerf(dt){
+  if(!perfEl||!ctx.renderer) return; var inf=ctx.renderer.info; perf.calls=inf.render.calls; perf.tris=inf.render.triangles; inf.reset();
+  perf.t+=dt; perf.n++; if(perf.t<.5) return; var fps=perf.n/perf.t; perf.t=0; perf.n=0;
+  var mem=(performance.memory&&performance.memory.usedJSHeapSize)?' · heap '+Math.round(performance.memory.usedJSHeapSize/1048576)+'MB':'';
+  perfEl.textContent=Math.round(fps)+' fps · '+perf.calls+' calls · '+Math.round(perf.tris/1000)+'k tris · ships '+fleetStats.drawn+'/'+fleetStats.ships+' · density '+P.density+mem+' · '+innerWidth+'x'+innerHeight;
+}
+function openTouchMenu(){ if(heroShip&&heroShip.burning) return; if(padReset) padReset(); fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); changeHero(); }
+function buildTouchUi(){
+  document.body.classList.add('mw-touch-arcade');
+  touchEl=document.createElement('div'); touchEl.id='bt-touch';
+  touchEl.innerHTML='<button type="button" class="bric-btn bric-btn--secondary bric-btn--sm bt-menu">Menu</button><div class="bt-stick" role="group" aria-label="Steer"><i></i></div><button type="button" class="bt-fire" aria-label="Fire">Fire</button>';
+  document.body.appendChild(touchEl);
+  xhEl=document.createElement('div'); xhEl.id='bt-xh'; document.body.appendChild(xhEl);
+  lockEl=document.createElement('div'); lockEl.id='bt-lock'; lockEl.innerHTML='<b><i></i><i></i><i></i><i></i></b>'; document.body.appendChild(lockEl);
+  if(!/[?&]perf=0\b/.test(location.search)){ perfEl=document.createElement('div'); perfEl.id='bt-perf'; document.body.appendChild(perfEl); if(ctx.renderer) ctx.renderer.info.autoReset=false; }
+  var pad=touchEl.querySelector('.bt-stick'), knob=pad.querySelector('i'), pid=null, DEAD=.14;
+  function read(e){   // analog: the knob follows the thumb inside the ring, and small moves make small turns (power curve)
+    var r=pad.getBoundingClientRect(), trav=(r.width-knob.offsetWidth)/2, dx=(e.clientX-(r.left+r.width/2))/trav, dy=(e.clientY-(r.top+r.height/2))/trav, n=Math.hypot(dx,dy), m=Math.min(1,n);
+    if(n>0){ dx/=n; dy/=n; }
+    knob.style.transform='translate('+(dx*m*trav).toFixed(1)+'px,'+(dy*m*trav).toFixed(1)+'px)';
+    var a=m<DEAD?0:Math.pow((m-DEAD)/(1-DEAD),1.6); dpad.x=dx*a; dpad.y=-dy*a;
+  }
+  padReset=function(){ pid=null; dpad.x=dpad.y=steer.x=steer.y=0; pad.classList.remove('on'); knob.style.transform=''; };
+  on(pad,'pointerdown',function(e){ e.preventDefault(); if(pid!==null) return; pid=e.pointerId; try{ pad.setPointerCapture(pid); }catch(_){} pad.classList.add('on'); read(e); });
+  on(pad,'pointermove',function(e){ if(e.pointerId===pid) read(e); });
+  function padUp(e){ if(e.pointerId!==pid) return; pid=null; dpad.x=dpad.y=0; pad.classList.remove('on'); knob.style.transform=''; } on(pad,'pointerup',padUp); on(pad,'pointercancel',padUp); on(pad,'lostpointercapture',padUp);
+  var fb=touchEl.querySelector('.bt-fire'), fid=null;
+  on(fb,'pointerdown',function(e){ e.preventDefault(); if(fid!==null) return; fid=e.pointerId; try{ fb.setPointerCapture(fid); }catch(_){} fb.classList.add('on'); if(stage==='play'&&heroShip&&!heroShip.burning&&!quiet()){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });
+  function fireUp(e){ if(e.pointerId!==fid) return; fid=null; fb.classList.remove('on'); fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); } on(fb,'pointerup',fireUp); on(fb,'pointercancel',fireUp); on(fb,'lostpointercapture',fireUp);
+  on(touchEl.querySelector('.bt-menu'),'click',function(e){ e.stopPropagation(); openTouchMenu(); });
+  on(document,'visibilitychange',function(){ if(document.hidden&&stage==='play') openTouchMenu(); });
+  var tn=0; on(window,'touchend',function(){ if(tn++<4&&window.MWAudio&&MWAudio.unlock) MWAudio.unlock(); });   // touch: touchend is the activating gesture, pointerdown isn't
+  var ex=document.createElement('div'); ex.className='bt-tmenu';
+  ex.innerHTML='<button type="button" class="bric-btn bric-btn--secondary bt-inv"></button><button type="button" class="bric-btn bric-btn--secondary bt-den"></button><button type="button" class="bric-btn bric-btn--secondary bt-exit">Exit game</button>';
+  carUi.appendChild(ex);
+  var inv=ex.querySelector('.bt-inv'), den=ex.querySelector('.bt-den');
+  try{ invertY=localStorage.getItem('mw_battle_invert')==='1'; }catch(_){}
+  function lab(){ inv.textContent='Inverted: '+(invertY?'On':'Off'); den.textContent='Fleet: '+Math.round(P.density*100)+'%'; } lab();
+  on(inv,'click',function(e){ e.stopPropagation(); invertY=!invertY; try{ localStorage.setItem('mw_battle_invert',invertY?'1':'0'); }catch(_){} lab(); });
+  on(den,'click',function(e){ e.stopPropagation(); P.density=P.density>.9?.75:P.density>.6?.5:1; reconT=0; lab(); });   // spike only: lets a tester compare fleet sizes on the phone
+  on(ex.querySelector('.bt-exit'),'click',function(e){ e.stopPropagation(); if(ctx.onExit) ctx.onExit(); });
+}
+function touchCss(){ return [
+  'body.mw-touch-arcade{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}',
+  'html:has(body.mw-touch-arcade){overflow:hidden;width:100%;height:100%}',   /* hidden site panels overflow the page: a phone browser then zooms out to fit and reports a window bigger than the screen */
+  'body.mw-touch-arcade #bt-hints,body.mw-touch-arcade #arcadeExit{display:none!important}',
+  '#bt-touch,#bt-xh,#bt-perf,#bt-lock{display:none}',
+  'body.mw-touch-arcade.bt-playing #bt-touch{display:block;position:fixed;inset:0;z-index:30;pointer-events:none}',
+  'body.mw-touch-arcade.bt-playing .mw-sound-switch{visibility:hidden}',
+  '#bt-touch .bt-menu{position:absolute;top:calc(12px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));pointer-events:auto;touch-action:manipulation}',
+  '#bt-touch .bt-stick{position:absolute;left:calc(24px + env(safe-area-inset-left));bottom:calc(28px + env(safe-area-inset-bottom));width:144px;height:144px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--bric-surface-overlay);border:1px solid var(--bric-interactive-outline-default);opacity:.6;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}',
+  '#bt-touch .bt-stick i{display:block;width:60px;height:60px;border-radius:50%;background:var(--bric-content-secondary);transition:transform .14s ease-out;will-change:transform}',
+  '#bt-touch .bt-stick.on{opacity:.8}#bt-touch .bt-stick.on i{background:var(--bric-interactive-fill-default);transition:none}',
+  '@media (prefers-reduced-motion:reduce){#bt-touch .bt-stick i{transition:none}}',
+  '#bt-touch .bt-fire{position:absolute;right:calc(28px + env(safe-area-inset-right));bottom:calc(56px + env(safe-area-inset-bottom));width:88px;height:88px;border-radius:50%;background:var(--bric-surface-overlay);border:1px solid var(--bric-interactive-outline-default);color:var(--bric-content-primary);font:500 13px/1 var(--grotesk);letter-spacing:.08em;text-transform:uppercase;opacity:.6;transition:none;pointer-events:auto;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}',
+  '#bt-touch .bt-fire.on{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);opacity:.85}',
+  'body.mw-touch-arcade.bt-playing #bt-xh{display:block;position:fixed;left:-12px;top:-12px;width:24px;height:24px;z-index:17;pointer-events:none;border:1px solid var(--bric-content-secondary);border-radius:50%}',
+  '#bt-xh.lock{border-color:var(--bric-content-primary)}',
+  'body.mw-touch-arcade.bt-playing #bt-lock.on{display:block;position:fixed;left:-26px;top:-26px;width:52px;height:52px;z-index:17;pointer-events:none;will-change:transform}',
+  '#bt-lock b{display:block;position:absolute;inset:0;animation:bt-lock-in .16s ease-out both}',
+  '#bt-lock i{position:absolute;width:13px;height:13px;border:0 solid var(--bric-content-primary)}',
+  '#bt-lock i:nth-child(1){left:0;top:0;border-width:2px 0 0 2px}#bt-lock i:nth-child(2){right:0;top:0;border-width:2px 2px 0 0}#bt-lock i:nth-child(3){left:0;bottom:0;border-width:0 0 2px 2px}#bt-lock i:nth-child(4){right:0;bottom:0;border-width:0 2px 2px 0}',
+  '@keyframes bt-lock-in{from{transform:scale(1.7);opacity:0}to{transform:scale(1);opacity:1}}',
+  '@media (prefers-reduced-motion:reduce){#bt-lock b{animation:none}}',
+  'body.mw-touch-arcade #bt-perf{display:block;position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top));z-index:40;pointer-events:none;font:400 10px/14px var(--mono);color:var(--bric-content-secondary)}',
+  'body.mw-touch-arcade #bt-hud{left:calc(16px + env(safe-area-inset-left));right:auto;top:calc(36px + env(safe-area-inset-top));align-items:flex-start}',
+  'body.mw-touch-arcade #bt-hud .bt-hn{font-size:32px}body.mw-touch-arcade #bt-hud .bt-hull{margin-top:8px}body.mw-touch-arcade #bt-hud .bt-hbar{width:96px}',
+  'body.mw-touch-arcade #bt-car{left:50%!important;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom));gap:8px;width:min(340px,calc(100vw - 32px))}body.mw-touch-arcade #bt-car .bt-row{margin-top:0}body.mw-touch-arcade #bt-car .bt-lb{margin-top:0;width:100%;justify-content:center}',
+  '#bt-car .bt-tmenu{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}#bt-car .bt-tmenu .bric-btn{justify-content:center;touch-action:manipulation;padding-left:8px;padding-right:8px;white-space:normal;text-align:center}#bt-car .bt-tmenu .bt-exit{grid-column:1/-1}',
+  '@media (orientation:landscape){body.mw-touch-arcade #bt-car{left:calc(75% - env(safe-area-inset-right)/2)!important;top:50%!important;bottom:auto;transform:translate(-50%,-50%);width:min(340px,calc(50vw - 32px - env(safe-area-inset-right)))}body.mw-touch-arcade #bt-car .bt-name,body.mw-touch-arcade #bt-car .bt-lock{position:absolute;left:calc(50% - 75vw);right:calc(50% + 25vw);width:fit-content;margin:0 auto}body.mw-touch-arcade #bt-car .bt-name{top:calc(50% + 50vh - 58px - env(safe-area-inset-bottom));top:calc(50% + 50dvh - 58px - env(safe-area-inset-bottom))}body.mw-touch-arcade #bt-car .bt-lock{top:calc(50% + 50vh - 38px - env(safe-area-inset-bottom));top:calc(50% + 50dvh - 38px - env(safe-area-inset-bottom))}}'   /* two columns: index.html slides the hologram into the left half, and the ship name and unlock text sit with it; the right half is buttons only */
+].join(''); }
 
 /* ───────────────────────────── fleet batching ─────────────────────────────
    Every fleet ship keeps its own root > bank > fx > model graph (the sim, atoms and shatter all read it), but its model stays hidden: the ship is drawn from an
@@ -630,9 +780,9 @@ function pickTarget(s){
   s.target=pool[Math.floor(Math.random()*k)].e;
   s.tT=s.cls==='fighter'?rnd(2,5):rnd(.7,1.4);
 }
-function muzzle(s,out){
+function muzzle(s,out,peek){   // peek: read the current gun's position without using up its turn
   var c=s.c, sc=s.root.scale.x;
-  if(s.cls==='fighter'||s.cls==='hero'){ s.gun=(s.gun||0)^1; out.set((s.gun?1:-1)*c.hx*.7,0,c.hz*.6); }
+  if(s.cls==='fighter'||s.cls==='hero'){ if(!peek) s.gun=(s.gun||0)^1; out.set((s.gun?1:-1)*c.hx*.7,0,c.hz*.6); }
   else out.set(rnd(-.7,.7)*c.hx,rnd(-.2,.9)*c.hy,rnd(-.8,.8)*c.hz);   // capitals/support: random hull battery
   s.root.updateMatrix();
   return out.applyMatrix4(s.root.matrix);   // G-local
@@ -1401,6 +1551,7 @@ function finishHeroDeath(s){
 }
 function updHero(s,dt){
   if(s.burning){ updHeroBurn(s,dt); return; }
+  if(TOUCH){ updHeroTouch(s,dt); return; }
   var hold=updHeroSnap(s,dt);   // auto camera snap: while held the hero ignores the pointer and flies on along its heading
   var o=pickAt(ptr.nx,ptr.ny,_hT);
   if(!ptr.in) _hT.copy(s.pos).addScaledVector(s.dir,1);               // pointer off the canvas: coast on
@@ -1461,6 +1612,7 @@ function updCarousel(dt){
 }
 function syncUi(){
   var sel=stage==='select'&&!quiet(), pl=stage==='play'&&!quiet();
+  if(TOUCH) document.body.classList.toggle('bt-playing',pl);
   if(carUi) carUi.style.display=sel?'flex':'none';
   if(sel) carLockUi(HEROES[carIdx]);
   if(hintEl) hintEl.style.display=(sel||pl)?'flex':'none';
@@ -1579,7 +1731,7 @@ function updLeave(s,dt){
 }
 
 function reduceMotion(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }   // the pan is a camera glide: off under reduced motion (right-drag still orbits)
-function updPan(dt){   // edge dwell: the camera ORBITS the battle without limit (yaw round, pitch over/under) toward the edge the cursor sits in; index.html reads getOrbit()
+function updPan(dt){ if(TOUCH) return;   // edge dwell: the camera ORBITS the battle without limit (yaw round, pitch over/under) toward the edge the cursor sits in; index.html reads getOrbit()
   var on_=!reduceMotion()&&stage==='play'&&!quiet()&&heroShip&&heroShip.alive&&!heroShip.burning&&ptr.in&&!ptr.out;
   var dx=0,dy=0;
   if(on_){ dx=clamp((Math.abs(ptr.nx)-EDGE_ZONE)/(1-EDGE_ZONE),0,1); dy=clamp((Math.abs(ptr.ny)-EDGE_ZONE)/(1-EDGE_ZONE),0,1); }
@@ -1612,13 +1764,13 @@ function update(t){
   if(!introScheduled&&!hyper&&!introHold) tryScheduleIntro();
 
   updPan(dt); trackLife(dt);
-  if(window.MWReticle) MWReticle.setActive(stage==='play'&&!quiet()&&!!heroShip&&ptr.in&&!ptr.out);   // arcade reticle: only while the hero flies and the pointer is over the battle
+  if(window.MWReticle) MWReticle.setActive(!TOUCH&&stage==='play'&&!quiet()&&!!heroShip&&ptr.in&&!ptr.out);   // arcade reticle: only while the hero flies and the pointer is over the battle
   var allGone=true;
   for(var i=ships.length-1;i>=0;i--){
     var s=ships[i];
     // global/class scale
     var base=s.cls==='hero'?P.scaleHero:s.cls==='base'?P.scaleBase:P['scale'+capName(s.cls)];
-    var sc=P.scale*base*((s.cls==='support'||s.cls==='capital')&&s.hasA?depthCompPos(s.pos):1)*(s.cls==='base'?(s.dsK||1):1);
+    var sc=P.scale*base*((s.cls==='support'||s.cls==='capital')&&s.hasA?depthCompPos(s.pos):1)*(s.cls==='base'?(s.dsK||1):1)*(TOUCH&&s.cls==='fighter'?FIGHTER_TOUCH:1);   // phones: fighters read larger (their hit size grows with them)
     if(s.spawnK<1){ s.spawnK=Math.min(1,s.spawnK+dt*1.6); }
     if(s.leaving){ s.spawnK=Math.max(0,s.spawnK-dt*3); if(s.spawnK<=0){ G.remove(s.root); ships.splice(i,1); anchorsDirty=true; continue; } }
     s.root.scale.setScalar(sc*s.spawnK*(s.spawnK<1?1:1)+1e-4);
@@ -1646,7 +1798,7 @@ function update(t){
   }
   sepLarge(); updDebris(dt); updTimers(dt); updPlanet(dt); updCamAssist(dt);
   updKits(dt); updCarousel(dt); updBars(dt);
-  updBolts(dt); updSparks(dt); updFlashes(dt); syncBatches();
+  updBolts(dt); updSparks(dt); updFlashes(dt); syncBatches(); updChase(dt); updLockReticle(); updPerf(dt);
   if(hyper){
     if(hyper.t===0) syncUi();
     hyper.t+=dt; var any=ships.some(function(s){ return s.alive; });
@@ -1663,8 +1815,8 @@ function bindInput(){
   on(document.documentElement,'mouseleave',function(){ ptr.out=true; });   // the cursor left the window: it must not keep panning from its last edge position
   on(document.documentElement,'mouseenter',function(){ ptr.out=false; });
   on(window,'pointerdown',function(e){ ptr.downX=e.clientX; ptr.downY=e.clientY; ptr.down=performance.now();
-    if(stage==='play'&&heroShip&&!heroShip.burning&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });   // left button = fire (hold to keep firing)
-  on(window,'pointerup',function(e){ if(e.button===0){ fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); } });
+    if(!TOUCH&&stage==='play'&&heroShip&&!heroShip.burning&&!quiet()&&e.button===0&&e.target===ctx.dom){ fireHeld=true; heroShip.cd=0; if(window.MWAudio) MWAudio.heroFireDown(); } });   // left button = fire (hold to keep firing)
+  on(window,'pointerup',function(e){ if(!TOUCH&&e.button===0){ fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); } });
   on(ctx.dom,'contextmenu',function(e){ e.preventDefault(); });          // right-drag pans the camera; no browser menu
   // (minikits no longer respond to mouse clicks — only to the hero ship's lasers)
   on(window,'keydown',function(e){
@@ -1730,7 +1882,7 @@ function injectCss(){
   ].join('\n'); document.head.appendChild(styleEl);
 }
 function buildUi(){
-  injectCss();
+  injectCss(); if(TOUCH) styleEl.textContent+=touchCss();
   carUi=document.createElement('div'); carUi.id='bt-car';
   carUi.innerHTML='<div class="bt-name"></div><div class="bt-lock" style="visibility:hidden" role="status"><img class="bt-kiticon" alt="" width="24" height="24"><span class="bt-locktxt"></span></div><div class="bt-row"><button type="button" class="bric-btn bric-btn--secondary" data-d="-1" aria-label="Previous hero ship">\u25C4</button><button type="button" class="bric-btn bric-btn--primary bt-play">PLAY</button><button type="button" class="bric-btn bric-btn--secondary" data-d="1" aria-label="Next hero ship">\u25BA</button></div><button type="button" class="bric-btn bric-btn--secondary bt-lb">Leaderboard</button>';
   [].forEach.call(carUi.querySelectorAll('button[data-d]'),function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); stepCar(+b.dataset.d); b.blur(); }); });
@@ -1865,7 +2017,7 @@ var MWBattle={
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
     kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false,met0:snapshotMet()}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null; wireCache={};
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(Math.max(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R,SUN_DIST+L+60)+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
-    fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
+    fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); baseFov=c.camera.fov; if(TOUCH){ var _dm=/[?&]density=([\d.]+)/.exec(location.search); if(_dm) P.density=parseFloat(_dm[1]); buildTouchUi(); } ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     audioRot0=c.getRot?c.getRot():0; if(window.MWAudio){ MWAudio.arcadeStart(); MWAudio.warm(); }
     window.MWBattle=MWBattle;
@@ -1881,6 +2033,7 @@ var MWBattle={
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
     if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.near=camNear; ctx.camera.updateProjectionMatrix(); }
+    if(TOUCH){ document.body.classList.remove('mw-touch-arcade','bt-playing'); if(ctx.renderer) ctx.renderer.info.autoReset=true; if(baseFov&&ctx.camera){ ctx.camera.fov=baseFov; ctx.camera.updateProjectionMatrix(); } [touchEl,xhEl,lockEl,perfEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); }); touchEl=lockEl=lockShown=xhEl=perfEl=null; }
     [carUi,noteEl,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
@@ -1888,7 +2041,8 @@ var MWBattle={
   _fleetStats:function(){ return fleetStats; }, _info:function(){ return ctx&&ctx.renderer?ctx.renderer.info:null; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
   heroLabel:function(id){ var m=BYID[id]; return m&&m.label||null; },
-  getSelZoom:function(){ return P?P.selZoom:.62; },   // hero-select camera zoom factor (index.html applies it; <1 = closer)
+  getChase:function(){ return chase.on?chase.out:null; }, _touchInfo:function(){ return {target:touchLock,heroObj:heroShip,dpad:dpad,steer:steer,turn:TURN,fscale:FIGHTER_TOUCH,lock:touchLock?(touchLock.cls||'kit'):null,reticle:!!(lockEl&&lockEl.classList.contains('on')),followK:heroShip?heroShip.followK||0:0,lockTeamHero:!!(touchLock&&touchLock.team===HERO),heroDir:heroShip?heroShip.dir.toArray():null,stage:stage}; }, isTouch:function(){ return TOUCH; },
+  getSelZoom:function(){ return TOUCH&&window.innerWidth>window.innerHeight?.74:(P?P.selZoom:.62); },   // hero-select camera zoom factor (index.html applies it; <1 = closer)
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
   setInverted:function(v){ camInverted=!!v; },   // index.html: the arcade camera is upside down (rolled upright)
   getOrbit:function(){ return takeOrbit(); },   // {yaw,pitch} radians accumulated since the last call: the edge-dwell orbit, unbounded (right edge turns the view right, top edge looks up)
