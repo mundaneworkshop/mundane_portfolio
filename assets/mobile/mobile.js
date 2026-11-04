@@ -158,6 +158,7 @@ const $=(s,r)=>(r||document).querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const STILLS=window.__mwLevel==='stills'; let stillN=0;   // fallback level (assets/mobile/level.js): rows are drawn once and the stage draws every other frame
 const DATA=window.SITE_DATA;
 const css=getComputedStyle(document.documentElement);
 /* colours only ever come from the tokens */
@@ -933,6 +934,7 @@ function perfTick(now,ms){
       'DPR   '+devicePixelRatio+'  viewport '+innerWidth+'x'+innerHeight+(vv?'  visual '+Math.round(vv.width)+'x'+Math.round(vv.height):'')+'\n'+
       'GEST  axis '+G.axis+'  fingers '+G.pointers+'  cancels '+G.cancels+'\n'+
       'LOAD  '+lastLoad+'\n'+
+      'LEVEL '+(window.__mwLevel||'?')+(window.__mwProbe?'  probe gpu '+window.__mwProbe.gpuMs+'ms raf '+window.__mwProbe.rafMs+'ms':'')+'\n'+
       'CTX LOST '+ctxLost;
   }
   fT=now; fCount=0; sumMs=0; worst=0;
@@ -1049,14 +1051,14 @@ function frame(now){
     if(s===holo){ holoBase.rotation.y=holo.yaw+holo.gal; ring.rotation.y=reduce?0:(now/1000)*.048*-1;   /* t*0.12*spin*dir, the site's ring drift */
       const vB=bootVal(.08),vR=bootVal(.16),vH=bootVal(.24); beamU.beamBottom.value=.8*vB; beamU.beamTop.value=.2*vB; ring.visible=vR>.3; s.pivot.visible=vH>.3;
       studMat.opacity=.55*bootVal(.08)*(Math.sin(now/1000*29.3)*.035+Math.sin(now/1000*13.1)*.025+1); monoDockedFrame(s); bootSounds(vB,vR,vH,bootVal(.08)); }
-    stagePost.draw(s.scene,s.camera);
+    if(!(STILLS&&(stillN++&1))) stagePost.draw(s.scene,s.camera);
   }
 
   rowCount=0;
   const t0=performance.now();
   if(curView===$('#v-index')) for(const r of ROWS){
     if(!r.model) continue;
-    if(r.inView||!r.drawn){ if(reduce&&r.drawn) continue; if(!reduce) r.yaw+=.35*dt; r.pivot.rotation.y=r.yaw; drawRow(r); rowCount++; }
+    if(r.inView||!r.drawn){ if((reduce||STILLS)&&r.drawn) continue; if(!reduce&&!STILLS) r.yaw+=.35*dt; r.pivot.rotation.y=r.yaw; drawRow(r); rowCount++; }
   }
   rowMs=rowMs*.9+(performance.now()-t0)*.1;
 
