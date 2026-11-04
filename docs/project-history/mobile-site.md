@@ -45,6 +45,10 @@ Decided by Jason on Nov 4 2026:
 - **Links in panels:** full-size secondary buttons on outfits, case studies and CV cards.
 - **GLB rows:** CV, HoloNet and Space Arcade get a brightness floor, because the planet shader leaves their flat faces nearly black at row size.
 
+## Phone landscape
+
+One media query at the end of `mobile.css`, `(orientation:landscape) and (max-height:520px)`, so rotating reflows live and never swaps layouts (stages follow their box through a ResizeObserver, the gate sizes per frame). Index: the hologram and Change appearance are a sticky left column and the rows scroll on the right. Outfits and case studies: stage left, manual right. CV: heading and CTAs sticky left, cards right. HoloNet: a centered column. Console: dish screen beside the fields. Menu: a right-hand panel. The header drops to 44px. Not `position:fixed` for the hologram: the render loop skips hosts whose `offsetParent` is null, which fixed elements are.
+
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
@@ -57,4 +61,4 @@ Decided by Jason on Nov 4 2026:
 - The per-route JSON-LD from `syncRouteHead()` is not ported. Titles, descriptions and canonicals are. Check how crawlers that identify as phones see this layout before the flag defaults on.
 - Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
 - Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
-- Phone landscape layout outside the arcade (stage left, content right, from the plan).
+- Phone landscape: checked in the app browser at 852x393 only, not on a real phone (notch safe areas, the keyboard over the console in landscape, and the gate's controls on very short screens are unverified).
