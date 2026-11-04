@@ -14,7 +14,7 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
 <script>(function(){try{var vv=window.visualViewport;if(!vv||!matchMedia('(pointer:coarse)').matches||window.__mwMobile)return;var d=Object.getOwnPropertyDescriptor(window,'innerHeight');if(!d||!d.get||!d.configurable)return;var real=function(){return d.get.call(window)};
 function vis(){var r=real();return(vv.scale<=1.01&&r-(vv.height+vv.offsetTop)>4)?Math.round(vv.height+vv.offsetTop):r}
 Object.defineProperty(window,'innerHeight',{configurable:true,enumerable:true,get:vis});
-function fit(){var h=vis(),s=document.documentElement.style;if(h!==real()){s.height=h+'px';if(document.body)document.body.style.height=h+'px'}else{s.height='';if(document.body)document.body.style.height=''}}
+function fit(){var h=vis(),s=document.documentElement.style;if(h!==real()){s.height=h+'px';s.setProperty('--mw-vh',h+'px');if(document.body)document.body.style.height=h+'px'}else{s.height='';s.removeProperty('--mw-vh');if(document.body)document.body.style.height=''}}
 vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListener('orientationchange',fit);document.addEventListener('DOMContentLoaded',fit);fit()}catch(e){}})()</script>
 <!-- ROUTING: pages now load at nested paths (/work/<slug>, /work/<slug>/<moon-slug>, /cv, /holonet) via the
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
