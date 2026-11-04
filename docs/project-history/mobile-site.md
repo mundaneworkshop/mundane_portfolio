@@ -44,12 +44,19 @@ Decided by Jason on Nov 4 2026:
 - **Links in panels:** full-size secondary buttons on outfits, case studies and CV cards.
 - **GLB rows:** CV, HoloNet and Space Arcade get a brightness floor, because the planet shader leaves their flat faces nearly black at row size.
 
+## Structured data and crawlers (Nov 4 2026)
+
+- **JSON-LD is ported.** The builder moved out of `syncRouteHead()` (it lives inside `bootHolotable()`, so the mobile layout cannot call it) into `window.mwSetRouteLd(kind, title, url)` in a small inline script in the head of `index.html`. The galaxy and `routeHead()` in `mobile.js` both call it, so `/cv` (and `/about/<outfit>`) emit the `ProfilePage` block and `/work/<slug>` the `CreativeWork` plus `BreadcrumbList`. The home, `/holonet` and `/arcade` emit only the two static head blocks. Checked on a local server with `?mobile=force` and `?mobile=0`, switching routes with pushState/popstate: same blocks, titles and counts on both layouts.
+- **What crawlers see.** The server returns the same `index.html` for every path, so the initial HTML is identical on both layouts: the static head, `#mw-seo` copy and Person/WebSite JSON-LD. Per-route head, including this JSON-LD, only exists after JS runs, on either layout. The layout is chosen in the first head script from `sessionStorage['mw_mobile']`, `pointer: coarse`, the screen's short side under 1024 and WebGL. A crawler has no flag today, so it gets the galaxy whatever its user agent. Once the flag defaults on, a phone-identifying crawler that renders with touch emulation and WebGL would take the mobile path. That path keeps `#mw-seo`, sets title, description, canonical and JSON-LD per route, and hides the body (`visibility: hidden`) only until mount, so it should index the same, but this is unverified: no crawler was run against it (Search Console URL Inspection on a preview is the real test).
+- **Cheap mitigation, in place:** the head script skips the mobile path when the user agent matches a common crawler or link-preview fetcher (`bot`, `crawl`, `spider`, `lighthouse`, `facebookexternalhit`, `slurp`), so those always get the galaxy path the SEO work was checked against. It is a user agent check, which the layout rule otherwise avoids on purpose, so it only lists bots and never decides between phone and desktop. Same URLs and content either way.
+- **Not covered:** fully server-rendered per-route head (all routes still share one HTML file); Google's real renderer behaviour; a Googlebot variant that does not say "bot" in its user agent.
+
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
 - The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/?mobile=1`.
 - **Open bug, not blocking:** tapping Arcade from the menu overlay still plays a placeholder-sounding beep on a real phone. Two extra `confirm` sounds were already removed (the link's own, and the one `activate()` played as `/arcade` loaded). A sound log then showed only the normal `press` and `release` from `mobile.js`, so the source is one of those or something outside `uiPlay`.
-- The per-route JSON-LD from `syncRouteHead()` is not ported. Titles, descriptions and canonicals are. Check how crawlers that identify as phones see this layout before the flag defaults on.
+- Run Search Console URL Inspection (live test) on a preview with the flag defaulted on, for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
 - Touch for the desktop galaxy on large iPads.
 - Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
 - Phone landscape layout outside the arcade (stage left, content right, from the plan).
