@@ -140,7 +140,7 @@ var LREF=4.3;   // the battle is authored for a camera 4.3 units from its centre
 var cache={}, loading={}, loadQ=[], inflight=0, failed={};
 var ships=[], heroShip=null, kits=[], kitTimer=4, kitCount=0;
 var carLocked=false, noteEl=null, noteT=0;
-var bolts=[], boltMats=[], boltFree=[[],[],[]], sparks=null, spN=420, spI=0, flashes=[];
+var bolts=[], boltMats=[], boltFree=[[],[],[]], boltIMs=[], sparks=null, spN=420, spI=0, flashes=[];
 var anchorsDirty=true, reconT=0;
 var ptr={x:0,y:0,nx:0,ny:0,in:false,down:0,downX:0,downY:0,out:false};
 /* Edge orbit: keep the cursor in the outer ~30% of the screen (each side) for EDGE_DWELL seconds and the camera turns that way, a full 360 and over the top, so the
@@ -184,12 +184,14 @@ function anchorWorld(u,v,z,out){ return out.set(u*halfW(z), CY+v*halfH(z), z); }
 
 var matList=[], sceneBase=[], DARKLIFT=null, DARKGLOW=null, HAZE=null;
 function trackMaterials(obj,mdl){
-  obj.traverse(function(o){ if(!o.isMesh) return; (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){
+  obj.traverse(function(o){ if(!o.isMesh) return; (Array.isArray(o.material)?o.material:[o.material]).forEach(function(m){ trackMaterial(m,mdl); }); });
+}
+function trackMaterial(m,mdl){
     if(m.userData.b0) return; m.userData.b0=m.color?m.color.clone():null; m.userData.e0=m.emissiveIntensity!=null?m.emissiveIntensity:1;
     m.userData.r0=m.roughness!=null?m.roughness:1; patchMaterial(m); if(envTex) m.envMap=envTex;
     m.userData.k=mdl.bright||1; m.userData.far=mdl.cls==='base'; m.userData.fighter=mdl.cls==='fighter'; m.userData.dark=false;
     if(mdl.lift&&m.color&&(m.color.r*.3+m.color.g*.59+m.color.b*.11)<.1) m.userData.dark=true;   // TIE panels/frames: near-black plastic vanishes against the void
-    matList.push(m); }); });
+    matList.push(m);
 }
 var fogBase=0, camFar=100, camNear=.1;
 var introHold=true, introT0=0, outroOn=false, introScheduled=false, introGroups=[[],[]], introWant=null, heroMax=3, LASER_DMG=.2,   /* hero hull: 3 = three collisions (any ship, 1 each); an enemy laser hit chips LASER_DMG */  timers=[];
@@ -299,11 +301,94 @@ function pumpLoads(){
         obj.position.sub(ctr.clone().applyQuaternion(pre.quaternion.clone().invert()));   // centre the bbox on the pivot (in pre-rotated space)
         var inner=new T.Group(); inner.add(pre); inner.scale.setScalar(s);
         cache[m.id]={ proto:inner, hx:sz.x*s/2, hy:sz.y*s/2, hz:sz.z*s/2, r:Math.max(sz.x,sz.y,sz.z)*s/2 };
+        if(BATCH&&BATCH_CLS[m.cls]) buildBatchParts(cache[m.id],inner,m);
         trackMaterials(inner,m); if(m.cls==='base') inner.traverse(function(o){ if(o.isMesh) [].concat(o.material).forEach(function(mt){ mt.fog=false; }); }); applyLook();
         anchorsDirty=true; reconT=0;
       },undefined,function(e){ if(mySess!==sess) return; inflight--; delete loading[m.id]; failed[m.id]=true; console.warn('[battle] failed to load',m.file,e); });
     })(m);
   }
+}
+
+/* ───────────────────────────── fleet batching ─────────────────────────────
+   Every fleet ship keeps its own root > bank > fx > model graph (the sim, atoms and shatter all read it), but its model stays hidden: the ship is drawn from an
+   InstancedMesh per model + part instead, so 10 Star Destroyers cost the same draw calls as 1. A "part" merges a model's flat-coloured opaque primitives that differ
+   only by base colour (colour moves into the vertices, the material colour becomes white). Dark TIE panels, textured and alpha primitives stay as parts of their own.
+   Heroes and the Death Star are not batched (per-ship material effects; a single instance). ?batch=0 turns all of it off, for comparing. docs/project-history/arcade-batching.md */
+var BATCH=!/[?&]batch=0\b/.test(location.search), BATCH_CLS={fighter:1,support:1,capital:1}, CULL_MARGIN=1.5, fleetStats={ships:0,drawn:0,culled:0};
+var _bM=null, _bPV=null, _bF=null, _bC=null;
+function batchKey(m){
+  if(m.map||m.normalMap||m.emissiveMap||m.alphaMap||m.transparent||m.alphaTest>0||m.vertexColors) return null;   // needs its own material
+  if(m.color&&(m.color.r*.3+m.color.g*.59+m.color.b*.11)<.1) return null;                                        // near-black: applyLook lifts these individually (.dark)
+  return [m.type,m.roughness,m.metalness,m.side,m.flatShading,m.emissive?m.emissive.getHex():0,m.emissiveIntensity,m.depthWrite].join('|');
+}
+function bakedGeometry(items,withColor){   // items: {g, m (material), M (matrix)} -> one indexed geometry in the model's space
+  var nv=0, ni=0; items.forEach(function(it){ var c=it.g.attributes.position.count; nv+=c; ni+=it.g.index?it.g.index.count:c; });
+  var pos=new Float32Array(nv*3), nor=new Float32Array(nv*3), col=withColor?new Float32Array(nv*3):null, uv=(!withColor&&items[0].g.attributes.uv)?new Float32Array(nv*2):null, idx=nv>65535?new Uint32Array(ni):new Uint16Array(ni);
+  var v=new T.Vector3(), nm=new T.Matrix3(), vo=0, io=0;
+  items.forEach(function(it){
+    var g=it.g, pa=g.attributes.position, na=g.attributes.normal, ua=g.attributes.uv, ix=g.index, c=it.m.color;
+    if(!na){ g=g.clone(); g.computeVertexNormals(); na=g.attributes.normal; }
+    nm.getNormalMatrix(it.M);
+    for(var i=0;i<pa.count;i++){
+      v.fromBufferAttribute(pa,i).applyMatrix4(it.M); pos[(vo+i)*3]=v.x; pos[(vo+i)*3+1]=v.y; pos[(vo+i)*3+2]=v.z;
+      v.fromBufferAttribute(na,i).applyMatrix3(nm).normalize(); nor[(vo+i)*3]=v.x; nor[(vo+i)*3+1]=v.y; nor[(vo+i)*3+2]=v.z;
+      if(col){ col[(vo+i)*3]=c.r; col[(vo+i)*3+1]=c.g; col[(vo+i)*3+2]=c.b; }
+      if(uv&&ua){ uv[(vo+i)*2]=ua.getX(i); uv[(vo+i)*2+1]=ua.getY(i); }
+    }
+    var n=ix?ix.count:pa.count; for(var j=0;j<n;j++) idx[io+j]=vo+(ix?ix.getX(j):j);
+    vo+=pa.count; io+=n;
+  });
+  var out=new T.BufferGeometry(); out.setAttribute('position',new T.BufferAttribute(pos,3)); out.setAttribute('normal',new T.BufferAttribute(nor,3));
+  if(col) out.setAttribute('color',new T.BufferAttribute(col,3)); if(uv) out.setAttribute('uv',new T.BufferAttribute(uv,2));
+  out.setIndex(new T.BufferAttribute(idx,1)); return out;
+}
+function buildBatchParts(c,inner,mdl){
+  inner.updateMatrixWorld(true);   // matrixWorld is now relative to the proto's own root, which is what a ship's model sits at
+  var merged={}, order=[]; c.parts=[]; c.list=[];
+  inner.traverse(function(o){ if(!o.isMesh||Array.isArray(o.material)) return;
+    var m=o.material, key=batchKey(m), it={g:o.geometry,m:m,M:o.matrixWorld};
+    if(key===null){ order.push({items:[it],src:m,merge:false}); return; }
+    if(!merged[key]){ merged[key]={items:[],src:m,merge:true}; order.push(merged[key]); }
+    merged[key].items.push(it);
+  });
+  order.forEach(function(pt){
+    var mat=pt.src.clone(); mat.userData={};   // a material must not be shared between an InstancedMesh and a plain Mesh (the program differs)
+    if(pt.merge){ mat.color.setRGB(1,1,1); mat.vertexColors=true; }
+    trackMaterial(mat,mdl);
+    c.parts.push({geo:bakedGeometry(pt.items,pt.merge),mat:mat,im:null,cap:0});
+  });
+}
+function partMesh(pt,need){   // grow-only: an InstancedMesh's capacity is fixed at creation
+  if(pt.im&&pt.cap>=need) return pt.im;
+  if(pt.im) G.remove(pt.im);
+  pt.cap=Math.max(need+4,Math.ceil(pt.cap*1.5)); pt.im=new T.InstancedMesh(pt.geo,pt.mat,pt.cap);
+  pt.im.instanceMatrix.setUsage(T.DynamicDrawUsage); pt.im.frustumCulled=false; G.add(pt.im);   // culled per ship below; three would cull the whole batch as one object
+  return pt.im;
+}
+function syncBatches(){
+  if(!BATCH||!G) return;
+  if(!_bM){ _bM=new T.Matrix4(); _bPV=new T.Matrix4(); _bF=new T.Frustum(); _bC=new T.Sphere(); }
+  var cam_=ctx.camera, gs=Math.max(G.scale.x,1e-4); cam_.updateMatrixWorld(); _bPV.multiplyMatrices(cam_.projectionMatrix,cam_.matrixWorldInverse); _bF.setFromProjectionMatrix(_bPV);
+  var id, st=fleetStats; st.ships=st.drawn=st.culled=0;
+  for(id in cache) if(cache[id].parts) cache[id].list.length=0;
+  for(var i=0;i<ships.length;i++){ var s=ships[i], c=s.c; if(!s.batched||!s.root.visible) continue; st.ships++;
+    if(!s.jump&&s.fx.scale.z===1){   // a ship stretching through a hyperspace jump reaches far past its sphere: never cull those
+      _bC.center.copy(s.pos).applyMatrix4(G.matrixWorld); _bC.radius=c.r*s.root.scale.x*gs*CULL_MARGIN;
+      if(!_bF.intersectsSphere(_bC)){ st.culled++; continue; }
+    }
+    c.list.push(s); st.drawn++;
+  }
+  for(id in cache){ var C=cache[id]; if(!C.parts) continue; var n=C.list.length;
+    for(var p=0;p<C.parts.length;p++){ var pt=C.parts[p]; if(!n&&!pt.im) continue; var im=partMesh(pt,n), arr=im.instanceMatrix.array;
+      for(var k=0;k<n;k++){ var sh=C.list[k];
+        if(p===0){ sh.root.updateMatrix(); sh.bank.updateMatrix(); sh.fx.updateMatrix(); _bM.multiplyMatrices(sh.root.matrix,sh.bank.matrix).multiply(sh.fx.matrix); sh.bM=(sh.bM||new T.Matrix4()).copy(_bM); }
+        sh.bM.toArray(arr,k*16);
+      }
+      im.count=n; im.visible=n>0; if(n) im.instanceMatrix.needsUpdate=true;
+    }
+  }
+  if(boltIMs.length){ var cnt=[0,0,0]; for(var b=0;b<bolts.length;b++){ var B=bolts[b], ix=B.idx, I=boltIMs[ix]; if(cnt[ix]>=I.instanceMatrix.count) continue; B.mesh.updateMatrix(); B.mesh.matrix.toArray(I.instanceMatrix.array,cnt[ix]*16); cnt[ix]++; }
+    for(var q=0;q<3;q++){ boltIMs[q].count=cnt[q]; boltIMs[q].visible=cnt[q]>0; if(cnt[q]) boltIMs[q].instanceMatrix.needsUpdate=true; } }
 }
 
 /* ───────────────────────────── scene objects ───────────────────────────── */
@@ -320,9 +405,10 @@ function makeShip(m){
   var c=cache[m.id]; var root=new T.Group(), bank=new T.Group(), fx=new T.Group();
   var model=c.proto.clone(true);
   fx.add(model); bank.add(fx); root.add(bank); G.add(root);
+  var batched=!!c.parts; if(batched) model.visible=false;   // drawn by its InstancedMesh (syncBatches); the hidden meshes still serve shatter() and buildAtoms()
   var s={ m:m, id:m.id, team:m.team, cls:m.cls, root:root, bank:bank, fx:fx, c:c, pos:root.position, dir:new T.Vector3(m.team===IMP?1:-1,0,0),
           arrived:false, arriveAt:0, spd:0, alive:true, hp:(CLS[m.cls]||{}).hp||1, target:null, tT:0, mode:'wander', mT:0, wp:new T.Vector3(), cd:rnd(0,1), ph:rnd(0,6.28), ph2:rnd(0,6.28),
-          yawRate:0, bankV:0, respawn:0, jump:null, au:0, av:0, az:0, vel:new T.Vector3(), prev:new T.Vector3(), side:m.team===IMP?-1:1, spawnK:0 };
+          yawRate:0, bankV:0, respawn:0, jump:null, au:0, av:0, az:0, vel:new T.Vector3(), prev:new T.Vector3(), side:m.team===IMP?-1:1, spawnK:0, batched:batched };
   s.k=(m.cls==='fighter'||m.cls==='hero')?1:0;
   if(m.cls==='base'){ s.pos.set(0,0,0); }
   ships.push(s); return s;
@@ -1560,7 +1646,7 @@ function update(t){
   }
   sepLarge(); updDebris(dt); updTimers(dt); updPlanet(dt); updCamAssist(dt);
   updKits(dt); updCarousel(dt); updBars(dt);
-  updBolts(dt); updSparks(dt); updFlashes(dt);
+  updBolts(dt); updSparks(dt); updFlashes(dt); syncBatches();
   if(hyper){
     if(hyper.t===0) syncUi();
     hyper.t+=dt; var any=ships.some(function(s){ return s.alive; });
@@ -1752,12 +1838,13 @@ function makeBolts(){
   var geo=new T.BoxGeometry(1,1,1);
   [0,1,2].forEach(function(i){
     var mat=new T.MeshBasicMaterial({color:BOLT_COL[i],fog:false}); boltMats[i]=mat; mat.color.multiplyScalar(stage==='select'?SELDIM:1);
-    for(var n=0;n<200;n++){ var m=new T.Mesh(geo,mat); m.visible=false; m.frustumCulled=false; G.add(m); boltFree[i].push({mesh:m,vel:new T.Vector3(),prev:new T.Vector3(),idx:i,life:0,team:i}); }
+    if(BATCH){ var im=new T.InstancedMesh(geo,mat,200); im.instanceMatrix.setUsage(T.DynamicDrawUsage); im.frustumCulled=false; im.count=0; im.visible=false; G.add(im); boltIMs[i]=im; }
+    for(var n=0;n<200;n++){ var m=BATCH?new T.Object3D():new T.Mesh(geo,mat); m.visible=false; if(!BATCH){ m.frustumCulled=false; G.add(m); } boltFree[i].push({mesh:m,vel:new T.Vector3(),prev:new T.Vector3(),idx:i,life:0,team:i}); }
   });
 }
 
 function resetState(){
-  ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; sparks=null; spI=0; flashes=[];
+  ships=[]; heroShip=null; kits=[]; kitTimer=4; bolts=[]; boltMats=[]; boltFree=[[],[],[]]; boltIMs=[]; sparks=null; spI=0; flashes=[];
   cache={}; loading={}; loadQ=[]; inflight=0; failed={}; matList=[]; sceneBase=[]; lights=[]; hyper=null; lastT=null; clockT=0;
   debris=[]; timers=[]; camReset(); introHold=true; introT0=0; outroOn=false; introScheduled=false; introGroups=[[],[]]; introWant=null; anchorsDirty=true; reconT=0; keys={}; fireHeld=false; pendingHero=null; _ap=null; envTex=null; listeners=[]; PL=null; planet=null; sunObj=null; envQ=envPrev=null; envIdle=0; planetMats=[]; planetState=0; sess++;
 }
@@ -1798,6 +1885,7 @@ var MWBattle={
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
   isActive:function(){ return active; },
+  _fleetStats:function(){ return fleetStats; }, _info:function(){ return ctx&&ctx.renderer?ctx.renderer.info:null; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
   heroLabel:function(id){ var m=BYID[id]; return m&&m.label||null; },
   getSelZoom:function(){ return P?P.selZoom:.62; },   // hero-select camera zoom factor (index.html applies it; <1 = closer)
