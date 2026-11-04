@@ -367,7 +367,7 @@ function updHeroTouch(s,dt){
   heroFx(s,dt);
   if(window.MWAudio){ MWAudio.heroEngine(clamp((s.spd-.1)/.9,0,1)); if(fireHeld&&!quiet()) MWAudio.heroFireHeld(); }
   s.cd-=dt;
-  var mp=muzzle(s,_v1.set(0,0,0),true); touchLock=touchTarget(s,mp,_hT);   // runs every frame, so it must not switch guns: only a shot does
+  s.root.updateMatrix(); var mp=_v1.set(0,0,s.c.hz*.6).applyMatrix4(s.root.matrix); touchLock=touchTarget(s,mp,_hT);   // aim from the centerline between the guns: the aim point, and so the crosshair, doesn't move as they alternate
   if(!touchLock) _hT.copy(mp).addScaledVector(s.dir,8);
   if(!quiet()&&fireHeld&&s.cd<=0){ mp=muzzle(s,_v1.set(0,0,0)); var dd=_v2.copy(_hT).sub(mp); if(dd.lengthSq()<1e-4) dd.copy(s.dir); dd.normalize(); dd.x+=rnd(-1,1)*CLS.hero.spread; dd.y+=rnd(-1,1)*CLS.hero.spread; dd.normalize();
     spawnBolt(HERO,mp,dd,true); s.cd=CLS.hero.int/Math.max(.2,P.laser); if(window.MWAudio) MWAudio.heroShot(); }
@@ -771,9 +771,9 @@ function pickTarget(s){
   s.target=pool[Math.floor(Math.random()*k)].e;
   s.tT=s.cls==='fighter'?rnd(2,5):rnd(.7,1.4);
 }
-function muzzle(s,out,peek){   // peek: read the current gun's position without using up its turn
+function muzzle(s,out){
   var c=s.c, sc=s.root.scale.x;
-  if(s.cls==='fighter'||s.cls==='hero'){ if(!peek) s.gun=(s.gun||0)^1; out.set((s.gun?1:-1)*c.hx*.7,0,c.hz*.6); }
+  if(s.cls==='fighter'||s.cls==='hero'){ s.gun=(s.gun||0)^1; out.set((s.gun?1:-1)*c.hx*.7,0,c.hz*.6); }
   else out.set(rnd(-.7,.7)*c.hx,rnd(-.2,.9)*c.hy,rnd(-.8,.8)*c.hz);   // capitals/support: random hull battery
   s.root.updateMatrix();
   return out.applyMatrix4(s.root.matrix);   // G-local
