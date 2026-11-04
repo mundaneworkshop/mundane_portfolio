@@ -35,6 +35,7 @@ Decided by Jason on Nov 4 2026:
 ## Decisions from prototype testing
 
 - **Hologram:** one fixed camera view that fits the whole text ring and keeps its near and far bands apart. Sideways drag rotates, and vertical swipes always scroll the page. The base grid runs past the hologram's box and behind Change Appearance.
+- **Head shader, close up:** the head's bright look on desktop and the index comes from its overlapping shells stacking alpha, because depth precision lets them all pass the pre-pass from far away. Close up the pre-pass culls them to one layer and the scan bands go near-black, so the outfit view stacks on purpose (`uStack`, `STACK_CLOSE`), measured to match the index's band values.
 - **Entry gate:** once per tab, only on a load of `/`. Drag the monogram to spin it. A press that travels under 12px is the tap that enters.
 - **Accelerometer:** removed. iOS forces a permission prompt on every visitor.
 - **HoloNet:** list only, with the console open by default. Transmit plays the firing sound at the tap, runs a 1.4s uplink that holds at 95% until the server answers, then the message slides in at the top of the list. A 3D packet flight was tried and rejected.
