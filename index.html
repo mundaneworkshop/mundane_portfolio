@@ -10870,8 +10870,8 @@ f 2469//2469 2470//2470 2434//2434
     }
     window.addEventListener('bric:wipe-done',function(){ _veilBusy=false; });   // the panel is gone: the next view change gets its own wipe (registered before the CV toggle's queued switch runs on the same event)
     function goHomeV(){ veilThen(goHome); }
-    function activate(ud){
-      if(window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
+    function activate(ud,silent){
+      if(!silent&&window.MWAudio&&!window.__mwArcade){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
       // Socials just deep-link out — no in-page focus view (the kit-box/booklet stays in the code dormant).
       if(ud.kind==='social'){ var _u=CASES[ud.id]&&CASES[ud.id].ctaUrl; if(_u&&_u!=='#'){ window.mwOpen(_u); if(window.MWOutfitEvent){ if(ud.id==='li'||ud.id==='linkedin') MWOutfitEvent('visitLinkedin'); else if(ud.id==='ig'||ud.id==='instagram') MWOutfitEvent('visitInstagram'); } } return; }
       if(ud.id==='cv'){ veilThen(function(){ openCV(ud.id); }); return; }            // bespoke focus views — not kit boxes
@@ -16109,7 +16109,7 @@ f 2469//2469 2470//2470 2434//2434
         if(!parts.length){ if(arcadeActive) exitArcade(); else if(focused || (cvScene.active) || document.body.classList.contains('mw-altfocus')) goHomeV(); return; }
         var seg0=parts[0];
         if(seg0===cvSlug){ var gcv=planetById('cv'); if(gcv) activate(gcv.userData); return; }
-        if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData); return; }
+        if(seg0===arcadeSlug){ var gar=planetById('arcade'); if(gar) activate(gar.userData,arcTouch()); return; }   // phones arrive here from the mobile site's Arcade link: no second confirm sound on page load
         if(seg0==='about'){ if(!parts[1]){ try{ history.replaceState({},'','/'+cvSlug); }catch(e){} var gab=planetById('cv'); if(gab) activate(gab.userData); return; }   /* bare /about lands on the CV, where the About text lives */
           if(!focused||focused!==aboutGrp) ocOpenAboutRoute(parts[1]); return; }
         if(seg0===holonetSlug){ var gho=planetById('contact'); if(gho) activate(gho.userData); return; }
