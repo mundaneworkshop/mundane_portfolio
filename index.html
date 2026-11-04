@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+<!-- Opt-in sound debugger: ?sounddebug=1 shows an on-screen log of every audio call (sticks for the tab; ?sounddebug=0 off). Inert otherwise. See docs/project-history/mobile-site.md -->
+<script>(function(){try{var q=new URLSearchParams(location.search).get("sounddebug"),S=sessionStorage;if(q==="0"){S.removeItem("mw_sounddebug");S.removeItem("mw_sounddebug_log")}else if(q==="1")S.setItem("mw_sounddebug","1");if(S.getItem("mw_sounddebug")){var s=document.createElement("script");s.src="/assets/mobile/sounddebug.js";document.head.appendChild(s)}}catch(e){}})();</script>
 <!-- MOBILE LAYOUT: off for everyone until launch. /arcade always boots the galaxy, which runs the game with touch controls; Exit game returns to this layout. ?mobile=1 turns it on for this tab on a touch device under the large-iPad size, ?mobile=force on any device, ?mobile=0 turns it off.
      Decided once on load from the screen (not the window), so rotating never swaps layouts. Full story: docs/project-history/mobile-site.md -->
 <script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f||/^\/arcade\/?$/.test(location.pathname)||/bot\b|crawl|spider|lighthouse|googlebot|bingbot|facebookexternalhit|slurp/i.test(navigator.userAgent))return;   /* crawlers and link-preview fetchers always take the galaxy path, which the SEO work was checked against; same URLs, head and #mw-seo copy */
@@ -10,6 +12,15 @@ var touch=matchMedia('(pointer:coarse)').matches,side=Math.min(screen.width,scre
 var c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;
 window.__mwMobile=true;document.documentElement.classList.add('mw-mobile');var m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
 var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html.mw-mobile{background:#070C0C}html.mw-mobile body{visibility:hidden}';document.head.appendChild(st);}catch(e){}})();</script>
+<!-- LARGE IPAD VISIBLE HEIGHT: on some iPadOS browsers window.innerHeight (and the 100% html/body box) is the full screen height while the browser toolbars cover the bottom of it, so every bottom-anchored panel (case-study manual, CV, outfit selection) sat half under the toolbar. On a coarse pointer, when visualViewport is shorter than innerHeight (and the page isn't pinch-zoomed), innerHeight reports the visible height and html/body get that height in px. Desktop and phones never take this path. -->
+<script>(function(){try{var vv=window.visualViewport;if(!vv||!matchMedia('(pointer:coarse)').matches||window.__mwMobile)return;var d=Object.getOwnPropertyDescriptor(window,'innerHeight');if(!d||!d.get||!d.configurable)return;var real=function(){return d.get.call(window)};
+function vis(){var r=real();return(vv.scale<=1.01&&r-(vv.height+vv.offsetTop)>4)?Math.round(vv.height+vv.offsetTop):r}
+Object.defineProperty(window,'innerHeight',{configurable:true,enumerable:true,get:vis});
+function fit(){var h=vis(),de=document.documentElement,s=de.style,on=h!==real();if(on){s.height=h+'px';s.setProperty('--mw-vh',h+'px');if(document.body)document.body.style.height=h+'px'}else{s.height='';s.removeProperty('--mw-vh');if(document.body)document.body.style.height=''}de.classList.toggle('mw-vis',on)}
+vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListener('orientationchange',fit);document.addEventListener('DOMContentLoaded',fit);vv.addEventListener('scroll',fit);addEventListener('pageshow',fit);addEventListener('focus',fit);document.addEventListener('visibilitychange',fit);fit();/* the first paint can use a stale, taller viewport and nothing re-measures until a rotation: re-fit for a few seconds after load */[100,300,700,1500,3000].forEach(function(ms){setTimeout(fit,ms)});var f=0;(function t(){fit();if(f++<120)requestAnimationFrame(t)})()}catch(e){}})()</script>
+<!-- IPAD FIRST-LOAD VIEWPORT NUDGE: Chrome on iPad can load a page with innerHeight equal to the whole screen (outerHeight) while its toolbar covers the top, so bottom-anchored panels are cut off until something (rotation, the keyboard opening) forces a viewport recompute. On a coarse pointer, outside the mobile site and a home-screen app, if the window claims the full screen height, briefly rewrite the viewport meta and fire resize (4 tries over 3s, each only if innerHeight still equals outerHeight). Never runs on desktop, phones, or when the numbers already differ. ?vpdebug=1 shows an on-screen readout of the viewport numbers. -->
+<script>(function(){try{if(!matchMedia('(pointer:coarse)').matches||window.__mwMobile||navigator.standalone===true)return;var n=0,T=[150,600,1500,3000];function stale(){return outerHeight>0&&innerHeight>=outerHeight-4}function nudge(){if(!stale())return;var m=document.querySelector('meta[name=viewport]');if(m){var c=m.getAttribute('content');m.setAttribute('content',c+', maximum-scale=1');requestAnimationFrame(function(){m.setAttribute('content',c);window.dispatchEvent(new Event('resize'))})}else window.dispatchEvent(new Event('resize'))}function go(){if(n>=T.length)return;var i=n++;setTimeout(function(){nudge();go()},T[i]-(i?T[i-1]:0))}if(document.readyState==='complete')go();else addEventListener('load',go)}catch(e){}})()</script>
+<script>(function(){try{if(!/[?&]vpdebug=1/.test(location.search))return;var vv=window.visualViewport,el;function u(){if(!el){el=document.createElement('pre');el.style.cssText='position:fixed;left:8px;top:8px;z-index:99999;margin:0;padding:8px;background:#000;color:#0f0;font:14px/1.3 monospace;pointer-events:none';(document.body||document.documentElement).appendChild(el)}var de=document.documentElement,c=document.getElementById('cs-root');el.textContent=['innerH '+innerHeight+' outerH '+outerHeight,'vv.h '+(vv&&vv.height)+' top '+(vv&&vv.offsetTop)+' scale '+(vv&&vv.scale),'screen '+screen.width+'x'+screen.height,'html.clientH '+de.clientHeight+' bodyH '+(document.body&&document.body.clientHeight),'cs-root '+(c?Math.round(c.getBoundingClientRect().bottom):'-'),'mw-vis '+de.classList.contains('mw-vis')].join('\n')}setInterval(u,300)}catch(e){}})()</script>
 <!-- ROUTING: pages now load at nested paths (/work/<slug>, /work/<slug>/<moon-slug>, /cv, /holonet) via the
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
      would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
@@ -136,6 +147,8 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     --amber-fill:rgba(168,118,26,.16); --amber-edge:rgba(122,86,20,.6); --amber-scan:rgba(122,86,20,.12);
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  /* iPad visible-height override (script at top): body becomes the containing block for every position:fixed panel, so their bottom anchors sit at the visible bottom, not the toolbar-covered layout viewport. Only when html.mw-vis is set. */
+  html.mw-vis body{contain:layout}
   html,body{height:100%;background:var(--bg);overflow:hidden;color:var(--line);font-family:var(--grotesk)}
   #scene{position:absolute;inset:0;z-index:0}
   canvas{display:block}
@@ -596,7 +609,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   #manual-scene[data-ml="dock"].visible { transform: translateX(-50%) !important; }
   #manual-scene[data-ml="dock"]:not(.visible) { transform: translateX(-50%) translateY(28px) !important; }
   #manual-scene[data-ml="dock"] #manual-book {
-    max-height: calc(100vh - 2 * var(--ml-gap, 24px) - 56px);
+    max-height: calc(var(--mw-vh, 100vh) - 2 * var(--ml-gap, 24px) - 56px);
     transform-origin: 50% 100%; transform: rotateX(7deg) !important;
   }
   #manual-scene[data-ml="dock"] .manual-page {
@@ -623,7 +636,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   #manual-scene[data-ml="drawer"].visible { transform: translateX(-50%) !important; }
   #manual-scene[data-ml="drawer"]:not(.visible) { transform: translateX(-50%) translateY(28px) !important; }
   #manual-scene[data-ml="drawer"] #manual-book {
-    max-height: calc(100vh - 2 * var(--ml-gap, 24px) - 56px);
+    max-height: calc(var(--mw-vh, 100vh) - 2 * var(--ml-gap, 24px) - 56px);
     transform-origin: 50% 100%; transform: rotateX(5deg) !important;
   }
   #manual-scene[data-ml="drawer"] .manual-page {
@@ -968,7 +981,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
 
   /* ── DEBUG PANEL ── */
   #debug{position:absolute;left:22px;bottom:50px;z-index:28;width:242px;background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:0;padding:12px 14px 14px;display:none}
-  #debug.open{display:block;overflow-y:auto;max-height:calc(100vh - 80px)}
+  #debug.open{display:block;overflow-y:auto;max-height:calc(var(--mw-vh,100vh) - 80px)}
   /* Panel chrome header */
   #debug h3{font-family:var(--display);font-weight:600;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin:-12px -14px 18px;padding:11px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
   #debug h3::after{content:'DBG';font-size:7px;letter-spacing:2px;color:rgba(90,191,184,.4);font-weight:400}
@@ -1006,7 +1019,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
      single place to add / remove / rename / hide them. Deliberately NOT a projected 3D label (those drift
      with camera motion and were hard to click) and deliberately on the LEFT so it never sits over
      #editPanel (right-anchored). Generated from galaxyModel by pmRender(). */
-  #projMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
+  #projMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(var(--mw-vh,100vh) - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.pm-open #projMgr{display:flex}
   body.edit-focus #projMgr, body.cs-focus #projMgr, body.mw-casestudy #projMgr, body.mw-entrygate #projMgr, body.mw-altfocus #projMgr, body.ui-hidden #projMgr{display:none}
   #projMgr .pm-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 8px}
@@ -1077,7 +1090,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   #manual-scene[data-ml="drawer"][data-wrap="c"] .manual-page{ grid-template-columns:minmax(0,56ch) auto; }
   @media (max-width:640px){ #manual-scene[data-ml="drawer"][data-wrap] .manual-page{ grid-template-columns:minmax(0,1fr); } #manual-scene[data-ml="drawer"][data-wrap]{ min-width:min(280px,calc(100vw - 2 * var(--ml-gap,24px))); } }
   /* OUTFITS MANAGER: same visual language as the Projects Manager */
-  #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(100vh - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
+  #outfitMgr{display:none;position:fixed;top:96px;left:22px;z-index:47;width:min(320px,calc(100vw - 44px));max-height:calc(var(--mw-vh,100vh) - 150px);flex-direction:column;box-sizing:border-box;background:rgba(14,15,18,.96);border:1px solid #E9A73E;border-radius:4px;font-family:'Space Mono',monospace;color:#F0EDE8}
   body.oc-open #outfitMgr{display:flex}
   body.oc-open.pm-open #outfitMgr{left:362px}
   body.edit-focus #outfitMgr, body.cs-focus #outfitMgr, body.mw-casestudy #outfitMgr, body.mw-entrygate #outfitMgr, body.mw-altfocus #outfitMgr, body.ui-hidden #outfitMgr{display:none}
@@ -2189,7 +2202,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     }catch(e){ mwPhase='docked'; }
     if(mwPhase==='docked') mwDockT=1;   // landed on a deep link (/arcade, /cv …) with no dock animation: the monogram must start at its docked resting place, not mid-air at the entry spot
 
-    function rtPixel(){ return (window.__mwArcade&&window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch())?1:params.pixel; }   // the arcade on a phone renders 1 art pixel per CSS pixel; a small screen can't afford the desktop's chunkier grid
+    function rtPixel(){ return (window.__mwArcade&&window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch()&&!arcTablet())?1:params.pixel; }   // the arcade on a phone renders 1 art pixel per CSS pixel; a small screen can't afford the desktop's chunkier grid
     var rt=new THREE.WebGLRenderTarget(Math.floor(W/params.pixel),Math.floor(H/params.pixel),{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter});
     var postScene=new THREE.Scene(), postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
     var postMat=new THREE.ShaderMaterial({uniforms:{tDiffuse:{value:rt.texture},levels:{value:params.levels}},
@@ -2317,13 +2330,14 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
 
     // ---------- starfield (in galaxy so it drags with the map) ----------
     var starPoints=null, STAR_HOLE_ARC=[32,19,19], STAR_HOLE_GAL=[30,18,30];   // semi-axes (world units) of the star-free ellipsoid — the arcade's playable area (hero volume ≈ 31×17×18)
+    function arcTablet(){ return arcTouch()&&Math.min(window.innerWidth,window.innerHeight)>=600; }   // a large touch screen (iPad): the desktop's chunky pixels, and a star count halfway between phone and desktop
     function arcTouch(){ return !!(window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch()); }   // phones and tablets flying the arcade: fewer stars so fighters show through, finer pixels (rtPixel)
     function starPx(){ return params.starSize*((typeof arcadeActive!=='undefined'&&arcadeActive)?40:75); }   // fixed pixel size: a bit larger in the (nearer) galaxy view
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
       // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
       // hologram), out to a far shell. Sky density matches what the arcade's far field already had (the old small shell + far field ≈ 14× the Star-density slider); the slider scales it.
-      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*14*(ARC&&arcTouch()?.25:1)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
+      var ARC=(typeof arcadeActive!=='undefined')&&arcadeActive, HOLE=ARC?STAR_HOLE_ARC:STAR_HOLE_GAL, N=Math.round(params.starCount*14*(ARC&&arcTouch()?(arcTablet()?.625:.25):1)), pos=new Float32Array(N*3), col=new Float32Array(N*3), r2=mulberry32(7), HX=HOLE[0], HY=HOLE[1], HZ=HOLE[2], R1=ARC?130:95;   // galaxy view: a tight hole around the hologram + nearer shell; arcade: hole = play area
       for(var i=0;i<N;i++){ var t=r2()*Math.PI*2, p=Math.acos(2*r2()-1), dx=Math.sin(p)*Math.cos(t), dy=Math.cos(p), dz=Math.sin(p)*Math.sin(t);
         var rin=1/Math.sqrt(dx*dx/(HX*HX)+dy*dy/(HY*HY)+dz*dz/(HZ*HZ)), r=rin*1.04+r2()*(R1-rin*1.04);
         pos[i*3]=dx*r; pos[i*3+1]=dy*r+1.9; pos[i*3+2]=dz*r;
@@ -10655,6 +10669,33 @@ f 2469//2469 2470//2470 2434//2434
     renderer.domElement.addEventListener('pointerdown',function(e){ arcReturn=false; if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
       arcDragSign=Math.cos(arcPitchS)<0?-1:1; dragging=true; dragMoved=false; lastX=downX=e.clientX; lastY=downY=e.clientY; dragSlop=(e.pointerType&&e.pointerType!=='mouse')?12:6; });   // arcDragSign: the pitch drag is mirrored when the camera starts the drag flipped over the pole
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
+    // ── TOUCH ON THE DESKTOP GALAXY (large iPads, shorter side >= 1024px, which the mobile layout leaves here) ──
+    // Every handler below is gated on a coarse primary pointer AND e.pointerType==='touch', so mouse/trackpad behaviour is untouched.
+    // The canvas gets touch-action:none so the browser never takes a drag for a scroll/zoom (the page itself never scrolls: html,body overflow:hidden).
+    // Pinch = the wheel's zoom (same clamps). Tap = hover then click: the first tap on a planet / the figure / the kit box face PREVIEWS it
+    // (the hover state the mouse gets for free), the second tap on the same thing opens it. A tap on nothing clears the preview.
+    var touchCoarse=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches), touchPtrs={}, pinchD=0, lastPT='', tapX=0, tapY=0;
+    function touchCount(){ var n=0; for(var k in touchPtrs) n++; return n; }
+    function touchDist(){ var a=[]; for(var k in touchPtrs) a.push(touchPtrs[k]); return a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0; }
+    function zoomStep(dir,mag){   // the wheel handler's zoom (same clamps), `mag` wheel notches of it: +1 = a wheel down-scroll (out), -1 = up (in). Sub-scene orbits only take whole steps.
+      if(MWSub.active){ if(mag>=0.5) MWSub.active.orbit.zoom(dir); }
+      else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08*mag,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
+      else { camZoom=clamp(camZoom+dir*0.06*mag,0.4,2.2); } }
+    if(touchCoarse){
+      renderer.domElement.style.touchAction='none';
+      renderer.domElement.addEventListener('pointerdown',function(e){ if(e.pointerType!=='touch') return; lastPT='touch'; tapX=e.clientX; tapY=e.clientY;
+        mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;   // a tap fires no pointermove, so the click handler's raycast would use the last position of an earlier drag
+        touchPtrs[e.pointerId]={x:e.clientX,y:e.clientY};
+        if(touchCount()===2){ pinchD=touchDist(); dragging=false; dragMoved=true; } });   // two fingers: stop orbiting, and the lift is never a tap
+      document.addEventListener('pointerdown',function(e){ if(e.pointerType!=='touch'||e.target===renderer.domElement) return;   // a touch on a panel / the nav: the previewed planet and its reticle lock let go
+        if(window.__bricReticle&&__bricReticle.touchRelease) __bricReticle.touchRelease(); if(hovered&&mwPhase==='docked'&&!focused) setHovered(null); },true);
+      window.addEventListener('pointermove',function(e){ var t=touchPtrs[e.pointerId]; if(!t||e.pointerType!=='touch') return; t.x=e.clientX; t.y=e.clientY;
+        if(touchCount()===2){ dragging=false; dragMoved=true; var d=touchDist(); if(pinchD>0&&d>0){ var r=d/pinchD;   // fingers apart = zoom in, like wheel-up
+          if(Math.abs(r-1)>0.01){ var mg=Math.min(2,Math.abs(r-1)/0.12); arcReturn=false; zoomStep(r>1?-1:1,mg); if(!MWSub.active||mg>=0.5) pinchD=d; } } } });   // 12% finger spread = one wheel notch
+      function touchEnd(e){ if(!touchPtrs[e.pointerId]) return; delete touchPtrs[e.pointerId]; pinchD=0;
+        if(touchCount()===1){ var k; for(k in touchPtrs){ lastX=touchPtrs[k].x; lastY=touchPtrs[k].y; } dragging=false; dragMoved=true; } }   // one finger left from a pinch: don't resume the orbit with a jump
+      window.addEventListener('pointerup',touchEnd); window.addEventListener('pointercancel',function(e){ touchEnd(e); dragging=false; setTimeout(function(){dragMoved=false;},30); });
+    }
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
         if(!dragMoved&&Math.hypot(e.clientX-downX,e.clientY-downY)>dragSlop)dragMoved=true; var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert. A click is a drag only once the pointer has travelled dragSlop from where it went down (6px mouse, 12px touch/pen). The old test (any single move event over 2px) turned a click with a little hand wobble, or a fast trackpad tap, into a drag, and the planet click was dropped
@@ -10750,7 +10791,7 @@ f 2469//2469 2470//2470 2434//2434
       });
       var kbInitDone=false;
       setInterval(function(){   // once the site has docked and the figure is on show: the reticle starts on it
-        if(kbInitDone||mwPhase!=='docked'||focused||arcadeActive||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')||document.body.classList.contains('ui-hidden')) return;
+        if(kbInitDone||touchCoarse||mwPhase!=='docked'||focused||arcadeActive||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')||document.body.classList.contains('ui-hidden')) return;
         var f=ocFigObj(), r=f&&rectOf(ocFigRectObj()); if(!r) return;
         kbInitDone=true; var m=outfitCur&&ocFind(outfitCur.id);
         kb={key:'figure', label:(m&&ocLocked(m))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:f, open:ocClickFigure, init:performance.now()}; kbRetarget();
@@ -10794,7 +10835,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.__bricReticle&&window.__bricReticle.setTargets) window.__bricReticle.setTargets(targets);
     })();
     function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); var _on=(z.id===id), _was=z.label.classList.contains('on'); z.label.classList.toggle('on',_on); if(_on&&!_was) GFX.decodeEl(z.label,'Zone',null,true); }); }
-    renderer.domElement.addEventListener('pointermove',function(e){
+    function hoverMove(e){
       if(arcadeActive){ renderer.domElement.style.cursor='default'; return; }   // arcade: no planet/zone hover
       if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
         var _wasMwHover=mwHover;
@@ -10825,7 +10866,8 @@ f 2469//2469 2470//2470 2434//2434
       if(_fOn&&!figHover&&window.MWAudio&&!window.__mwArcade) MWAudio.ui('hover');
       figHover=_fOn; setHovered(_fOn?null:grp);
       if(renderer&&renderer.domElement) renderer.domElement.style.cursor=(figHover||hovered)?'pointer':'default';
-      if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
+      if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } }
+    renderer.domElement.addEventListener('pointermove',function(e){ if(touchCoarse&&e.pointerType==='touch'&&mwPhase==='docked') return; hoverMove(e); });   // a dragging finger orbits; it doesn't sweep the hover across planets (taps preview via the click handler)
     // A click on nothing (empty canvas, empty page): the soft "release" thud from the UI sounds. Controls and planets have their own sounds.
     document.documentElement.addEventListener('mouseleave',function(){ mwHover=false; });   // the pointer left the window: drop the entry monogram's hover
     function emptyClick(){ if(window.MWAudio&&!window.__mwArcade&&!arcadeActive){ MWAudio.uiReady(); MWAudio.ui('release'); } }
@@ -10834,6 +10876,14 @@ f 2469//2469 2470//2470 2434//2434
     renderer.domElement.addEventListener('pointerdown',function(e){ if(e.button!==0||arcadeActive||mwPhase!=='entry'||!mwQuad||!mwQuad.visible) return; if(overMonogram(e)) startDock(); });
     renderer.domElement.addEventListener('click',function(){ if(dragMoved)return;
       if(arcadeActive) return;   // arcade: the battle's own capture-phase handler owns clicks (minikits, hero fire)
+      if(touchCoarse&&lastPT==='touch'&&mwPhase==='docked'&&!MWSub.active&&!(editMode&&meshSelectMode)){   // touch: the first tap previews (hover), the second opens
+        var _pH=hovered, _pF=figHover, _pB=boxHoverFace; hoverMove({clientX:0,clientY:0});
+        var _rt=window.__bricReticle, _lock=function(){ if(_rt&&_rt.touchLock) _rt.touchLock(tapX,tapY); };   // a preview shows the targeting reticle locked on the target, so the tap reads as answered
+        if(hovered&&hovered!==_pH){ _lock(); return; }   // new planet: previewed (label lit, planet scaled, zone shown, reticle locked); tap it again to open
+        if(!hovered&&figHover&&!_pF){ _lock(); return; }   // the figure, same
+        if(focused&&!focusedMoon&&boxHoverFace>=0&&_pB<0){ _lock(); return; }   // kit box face in a focus view: preview the VIEW CASE STUDY target first
+        if(_rt&&_rt.touchRelease) _rt.touchRelease();   // opening it, or a tap on nothing: the lock lets go
+      }
       if(mwPhase!=='docked'){   // entry gate / mid-dock: the only click target is the monogram itself
         var _onMono=false;
         if(mwPhase==='entry' && mwQuad && mwQuad.visible){ if(overMonogram()){ _onMono=true; startDock(); } }
@@ -11337,6 +11387,9 @@ f 2469//2469 2470//2470 2434//2434
     // (the entry gate's click counts) and plays under the whole site outside the arcade. The sound switch mutes it with everything else.
     (function(){ var done=false; function go(e){ if(done) return; done=true; ['pointerdown','keydown'].forEach(function(t){ document.removeEventListener(t,go,true); }); if(window.MWAudio&&!window.__mwArcade){ MWAudio.siteStart(); if(typeof BOOT_DONE!=='undefined'&&BOOT_DONE) MWAudio.idleStart(); else if(typeof mwPhase!=='undefined'&&mwPhase==='entry'&&!(e&&e.type==='pointerdown'&&typeof overMonogram==='function'&&typeof mwQuad!=='undefined'&&mwQuad&&mwQuad.visible&&overMonogram(e))) MWAudio.gateStart(); } }
       ['pointerdown','keydown'].forEach(function(t){ document.addEventListener(t,go,true); });
+      // iPadOS only unlocks audio on a touch RELEASE (touchend/click), not on the pointerdown go() runs on, so that first start can be refused: retry on the first few releases (siteStart / idleStart / gateStart are idempotent and ignore a context that is already running).
+      if(matchMedia('(pointer:coarse)').matches&&!window.__mwArcade){ var _re=0; var _retry=function(e){ if(window.MWAudio&&++_re<=6){ MWAudio.siteStart(); if(typeof BOOT_DONE!=='undefined'&&BOOT_DONE) MWAudio.idleStart(); else if(typeof mwPhase!=='undefined'&&mwPhase==='entry'&&!(typeof overMonogram==='function'&&typeof mwQuad!=='undefined'&&mwQuad&&mwQuad.visible&&overMonogram())) MWAudio.gateStart(); } if(_re>=6) ['touchend','click'].forEach(function(t){ document.removeEventListener(t,_retry,true); }); };
+        ['touchend','click'].forEach(function(t){ document.addEventListener(t,_retry,true); }); }
       if(window.MWAudio&&MWAudio.autoStart) MWAudio.autoStart().then(function(ok){ if(ok) go(); }); })();   // the browser allows sound with no gesture (a trusted Chrome visitor): start now, same as a first press elsewhere (the gate idle loop at the gate, ambience and hum on a deep link)
     // sound switches (.mw-sound-switch: the galaxy-view one and the arcade hero-select one) and the M key share one persisted setting (localStorage['mw_sound'])
     // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover

@@ -30,6 +30,7 @@ Decided by Jason on Nov 4 2026:
 - **It mounts instead of the galaxy.** `bootHolotable()` never runs. `mobile.js` removes the desktop DOM and inline styles, because their IDs and CSS collide with its own (`#ctMsg`, `.manual`), and keeps `#mw-seo`, the head and the loaded scripts.
 - **Content** comes from the same `BRICStore` copy the galaxy reads, after `reconcileServerContent()`, so CMS edits reach this layout. `site-data.js` only fills gaps.
 - **Routes** are the same real paths and slugs as the desktop site, so a shared link works on either.
+- **404:** `route()` in `mobile.js` checks the path against the same table as the galaxy's `routeKnown()` and, for an unknown one, shows the shared error card (`BRICError.show('404')`, `assets/bric-errors.js`) over the layout, with the CTA "Back to the index" and a `noindex` meta plus a "404 · Lost in the void" title (both set and undone by the template). Hosting still answers most unknown paths with the static `404.html` and a real 404 status; this view covers `/work/<unknown-slug>` and in-app navigation, which are 200s.
 - **Shaders and sound are the site's.** `mobile.js` carries copies of the holo shaders and `addFx`, and uses the real `audio.js`, `bric-wipe.js` and monogram bundle. If the desktop versions change, these copies do not follow.
 
 ## Decisions from prototype testing
@@ -51,13 +52,20 @@ Decided by Jason on Nov 4 2026:
 - **Cheap mitigation, in place:** the head script skips the mobile path when the user agent matches a common crawler or link-preview fetcher (`bot`, `crawl`, `spider`, `lighthouse`, `facebookexternalhit`, `slurp`), so those always get the galaxy path the SEO work was checked against. It is a user agent check, which the layout rule otherwise avoids on purpose, so it only lists bots and never decides between phone and desktop. Same URLs and content either way.
 - **Not covered:** fully server-rendered per-route head (all routes still share one HTML file); Google's real renderer behaviour; a Googlebot variant that does not say "bot" in its user agent.
 
+## Phone landscape
+
+One media query at the end of `mobile.css`, `(orientation:landscape) and (max-height:520px)`, so rotating reflows live and never swaps layouts (stages follow their box through a ResizeObserver, the gate sizes per frame). Index: the hologram and Change appearance are a sticky left column and the rows scroll on the right. Outfits and case studies: stage left, manual right. CV: heading and CTAs sticky left, cards right. HoloNet: a centered column. Console: dish screen beside the fields. Menu: a right-hand panel. The header drops to 44px. Not `position:fixed` for the hologram: the render loop skips hosts whose `offsetParent` is null, which fixed elements are.
+
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
 - The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/?mobile=1`.
 - **Open bug, not blocking:** tapping Arcade from the menu overlay still plays a placeholder-sounding beep on a real phone. Two extra `confirm` sounds were already removed (the link's own, and the one `activate()` played as `/arcade` loaded). A sound log then showed only the normal `press` and `release` from `mobile.js`, so the source is one of those or something outside `uiPlay`.
+
+  **How to capture it (one tap):** open `https://mundanework.shop/?mobile=1&sounddebug=1` on the phone (it needs a deploy that includes `assets/mobile/sounddebug.js`, so use the PR's Vercel preview URL). A green log panel pins to the bottom. It records every AudioContext, oscillator, buffer source, `HTMLAudioElement.play`, `ctx.resume/suspend`, `MWAudio.ui` kind and click, with the caller's stack, and keeps the log in `sessionStorage` so it survives the `/arcade` navigation (the panel reappears on the arcade page). Open the menu, tap Arcade, listen for the beep, then tap **copy** on the arcade page and paste it. `?sounddebug=0` turns it off. Inert without the flag.
+
+  **What the 393px desktop-browser run showed (not a phone):** a menu tap plays `press` (about 12 oscillators and buffer sources), `release` 70 ms later, then the page unloads and `audio.js` suspends the context on `visibilitychange`. No `HTMLAudioElement` and no oscillator outside `audio.js` appeared. `audio.js` is the only file with oscillators besides `tools/ui-sounds.html`. Not tested: the `/arcade` page's boot audio (the static test server had no `/arcade` rewrite) and iOS's suspended-context resume path, where `uiPlay` defers a sound with `ctx.resume().then(...)` and could play it late. Those are the two places to check in the first phone log.
+- Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
 - Run Search Console URL Inspection (live test) on a preview with the flag defaulted on, for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
-- Touch for the desktop galaxy on large iPads.
 - Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
-- Phone landscape layout outside the arcade (stage left, content right, from the plan).
-- An in-app 404: unknown paths show the index on this layout.
+- Phone landscape: checked in the app browser at 852x393 only, not on a real phone (notch safe areas, the keyboard over the console in landscape, and the gate's controls on very short screens are unverified).

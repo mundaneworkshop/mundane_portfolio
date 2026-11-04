@@ -792,8 +792,13 @@ function routeWiped(){ const k=viewKey(), change=k!==lastViewKey; lastViewKey=k;
   if(!change||!window.bricWipe||GT.on||bricWipe.active()){ route(); return; }
   if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); }
   bricWipe.play(null,route); }
+/* in-app 404: the shared error template (assets/bric-errors.js, same card as the galaxy and 404.html) over the layout. Same route table as the galaxy's routeKnown() */
+const known=parts=>{ const a=parts[0]; if(!a||a==='index.html'||a==='cv'||a==='arcade'||a==='holonet') return true; if(a==='about') return parts.length<=2; if(a!=='work') return false; return !parts[1]||!!BY_SLUG[parts[1]]; };
 function route(){
-  const parts=pathParts(), a=parts[0]||''; routeHead(parts);
+  const parts=pathParts(), a=parts[0]||'';
+  if(window.BRICError&&BRICError.isOpen()) BRICError.hide();   /* before routeHead, which sets the title hide() would restore over */
+  routeHead(parts);
+  if(!known(parts)&&window.BRICError){ ct.close(); BRICError.show('404',{ path:location.pathname, primary:{label:'Back to the index',href:'/'}, navigate:go }); syncMenuCurrent(); return; }
   if(a!=='holonet') ct.close();
   if(a==='about') renderOutfit(parts[1]||curOutfit);
   else if(a==='work'&&BY_SLUG[parts[1]]){ const c=BY_SLUG[parts[1]], k=parts[2]!=null?c.arts.findIndex((_,i)=>artSlug(c,i)===parts[2]):-1; renderCase(c,k+1); }
