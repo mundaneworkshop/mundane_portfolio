@@ -9,6 +9,7 @@ A separate phone layout for every view except the arcade. It is **off for everyo
 | `?mobile=1` | On, if the device qualifies (rule below) |
 | `?mobile=force` | On, on any device, for testing on a desktop |
 | `?mobile=0` | Off |
+| `&level=full\|stills\|static` | Forces a fallback level (see below), e.g. `?mobile=force&level=static`. Kept for the tab; `&level=auto` clears it |
 | `?perf=1` | Shows the FPS chip and its panel (pixel size, posterize levels, wipe speed, replay gate) |
 | `?gate=0` | Skips the entry gate |
 
@@ -21,7 +22,7 @@ Decided by Jason on Nov 4 2026:
 - **Touch as the primary pointer (`pointer: coarse`) and a screen whose shorter side is under 1024px:** the mobile layout. This covers phones and most tablets.
 - **Large iPads (shorter side 1024px or more) and anything with a mouse or trackpad as the primary pointer:** the desktop galaxy. Large iPads still need touch added there: pinch zoom, tap replacements for hover, and the audio unlock retry. That work is not done.
 - Chosen once on load, from the screen and not the window, so rotating or Split View never swaps layouts. No user agent checks: iPads report themselves as Macs.
-- No WebGL: falls through to the desktop path for now. The fallback levels in the plan are still to come.
+- No WebGL: the static level (below).
 
 ## How it is built
 
@@ -32,6 +33,20 @@ Decided by Jason on Nov 4 2026:
 - **Routes** are the same real paths and slugs as the desktop site, so a shared link works on either.
 - **404:** `route()` in `mobile.js` checks the path against the same table as the galaxy's `routeKnown()` and, for an unknown one, shows the shared error card (`BRICError.show('404')`, `assets/bric-errors.js`) over the layout, with the CTA "Back to the index" and a `noindex` meta plus a "404 · Lost in the void" title (both set and undone by the template). Hosting still answers most unknown paths with the static `404.html` and a real 404 status; this view covers `/work/<unknown-slug>` and in-app navigation, which are 200s.
 - **Shaders and sound are the site's.** `mobile.js` carries copies of the holo shaders and `addFx`, and uses the real `audio.js`, `bric-wipe.js` and monogram bundle. If the desktop versions change, these copies do not follow.
+
+## Fallback levels
+
+`assets/mobile/level.js` picks one before `mobile.js` loads (`bootMobile()` in `index.html` chains `site-data.js`, `level.js`, then the level's script). It sets `window.__mwLevel` and `html.mw-level-<level>`.
+
+| Level | When | What changes |
+|---|---|---|
+| `full` | Default | Live 3D everywhere |
+| `stills` | `navigator.connection.saveData`, or the probe fails | Rows are drawn once instead of spinning (the same path `prefers-reduced-motion` already uses, so no new images to make or ship), and the stage draws every other frame |
+| `static` | No WebGL (`window.__mwNoGL`, set by the head check) | `static.js` + `static.css` replace `mobile.js`: text rows to the case studies and socials, the About text cloned from `#mw-about`, and contact buttons. No 3D, sound, gate or wipes. `/cv` and `/holonet` scroll to their nearest section |
+
+The probe runs a heavy 512px shader three times per frame for 10 frames and reads a pixel back to sync, and watches the rAF interval. It fails on a software renderer (`failIfMajorPerformanceCaveat`), more than 24ms per synced frame, or a median frame gap over 45ms. The result is remembered 3 days in `localStorage['mw_m.level']`. If rAF stalls for 3s the boot continues (`stills` if the page is visible, `full` if hidden) and nothing is remembered. A forced level is never remembered. `?perf=1` shows the level and probe numbers.
+
+**The 24ms and 45ms limits are guesses.** They were only tried on a desktop GPU (2.7ms) and not on any phone, so expect to tune them on real devices.
 
 ## Decisions from prototype testing
 
@@ -67,5 +82,5 @@ One media query at the end of `mobile.css`, `(orientation:landscape) and (max-he
   **What the 393px desktop-browser run showed (not a phone):** a menu tap plays `press` (about 12 oscillators and buffer sources), `release` 70 ms later, then the page unloads and `audio.js` suspends the context on `visibilitychange`. No `HTMLAudioElement` and no oscillator outside `audio.js` appeared. `audio.js` is the only file with oscillators besides `tools/ui-sounds.html`. Not tested: the `/arcade` page's boot audio (the static test server had no `/arcade` rewrite) and iOS's suspended-context resume path, where `uiPlay` defers a sound with `ctx.resume().then(...)` and could play it late. Those are the two places to check in the first phone log.
 - Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
 - Run Search Console URL Inspection (live test) on a preview with the flag defaulted on, for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
-- Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
+- Fallback levels, calibration: tune the probe limits on real low-end phones, and decide whether the stage should also freeze under `stills`. The static level has no HoloNet form, no CV timeline and no case study pages of its own.
 - Phone landscape: checked in the app browser at 852x393 only, not on a real phone (notch safe areas, the keyboard over the console in landscape, and the gate's controls on very short screens are unverified).

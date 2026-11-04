@@ -1,0 +1,18 @@
+/* Static level of the mobile layout (static.js). Rows, header and tokens come from mobile.css. */
+html.mw-level-static{scroll-padding-top:var(--hdr)}
+html.mw-level-static #hdr{border-bottom:1px solid var(--bric-border-subtle)}
+.st-page{position:relative;z-index:1;padding:calc(var(--hdr) + 24px) 0 calc(48px + var(--sb))}
+.st-h{padding:0 var(--gx);font:600 32px/36px var(--f-d);letter-spacing:.01em;text-transform:uppercase}
+.st-lede{padding:8px var(--gx) 0;font:400 16px/24px var(--f-b);color:var(--bric-content-secondary)}
+.st-note{margin:16px var(--gx) 0;padding:12px;border:1px solid var(--bric-border-subtle);font:400 13px/18px var(--f-b);color:var(--bric-content-secondary)}
+.row.st{display:block;min-height:64px;padding:14px 0}
+.row.st:focus-visible{outline:2px solid var(--bric-interactive-outline-default)}
+#about{padding:24px var(--gx) 0}
+#about h2{font:500 11px/16px var(--f-b);letter-spacing:.16em;text-transform:uppercase;color:var(--bric-content-tertiary);padding-bottom:8px;border-bottom:1px solid var(--bric-border-subtle)}
+#about h3{margin-top:20px;font:600 16px/22px var(--f-d);letter-spacing:.01em;text-transform:uppercase}
+#about h4{margin-top:16px;font:600 14px/20px var(--f-b)}
+#about p,#about li{margin-top:8px;font:400 15px/22px var(--f-b);color:var(--bric-content-secondary)}
+#about ol{padding-left:20px}
+#about a{text-decoration:underline;text-underline-offset:2px}
+.st-ctas{display:flex;flex-direction:column;gap:8px;padding-top:16px}
+.st-ctas .bric-btn{width:100%;min-height:44px;justify-content:center}
