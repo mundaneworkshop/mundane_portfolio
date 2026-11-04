@@ -30,6 +30,7 @@ Decided by Jason on Nov 4 2026:
 - **It mounts instead of the galaxy.** `bootHolotable()` never runs. `mobile.js` removes the desktop DOM and inline styles, because their IDs and CSS collide with its own (`#ctMsg`, `.manual`), and keeps `#mw-seo`, the head and the loaded scripts.
 - **Content** comes from the same `BRICStore` copy the galaxy reads, after `reconcileServerContent()`, so CMS edits reach this layout. `site-data.js` only fills gaps.
 - **Routes** are the same real paths and slugs as the desktop site, so a shared link works on either.
+- **404:** `route()` in `mobile.js` checks the path against the same table as the galaxy's `routeKnown()` and, for an unknown one, shows the shared error card (`BRICError.show('404')`, `assets/bric-errors.js`) over the layout, with the CTA "Back to the index" and a `noindex` meta plus a "404 · Lost in the void" title (both set and undone by the template). Hosting still answers most unknown paths with the static `404.html` and a real 404 status; this view covers `/work/<unknown-slug>` and in-app navigation, which are 200s.
 - **Shaders and sound are the site's.** `mobile.js` carries copies of the holo shaders and `addFx`, and uses the real `audio.js`, `bric-wipe.js` and monogram bundle. If the desktop versions change, these copies do not follow.
 
 ## Decisions from prototype testing
@@ -53,4 +54,3 @@ Decided by Jason on Nov 4 2026:
 - Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
 - Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
 - Phone landscape layout outside the arcade (stage left, content right, from the plan).
-- An in-app 404: unknown paths show the index on this layout.
