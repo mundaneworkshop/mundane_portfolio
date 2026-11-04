@@ -22,6 +22,8 @@ var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html
   <link rel="preload" href="assets/mw-monogram/mw-monogram.js" as="script" />
 <!-- Screen wipe entry hold: when arriving with ?wipe=, paint the panel colour before first paint (assets/bric-wipe.js takes over, removes it). Keep the colour in sync with the panel. -->
 <script>(function(){try{if(/[?&]wipe=/.test(location.search)){var s=document.createElement('style');s.id='bric-wipe-hold';s.textContent='html::before{content:"";position:fixed;inset:0;z-index:2147483646;background:#070C0C}';document.head.appendChild(s);setTimeout(function(){var e=document.getElementById('bric-wipe-hold');if(e)e.remove()},6000)}}catch(e){}})()</script>
+<!-- Touch visits to /arcade: a flat cover keeps the desktop galaxy from showing until the hyperspace jump is up (openArcade lifts it). #mwLoad stays above it, so progress and asset failures still show. -->
+<script>(function(){try{if(!/^\/arcade\/?$/.test(location.pathname))return;var q=location.search;if(/[?&]touch=0\b/.test(q)||!(/[?&]touch=1\b/.test(q)||matchMedia('(pointer:coarse)').matches))return;var s=document.createElement('style');s.id='mw-arcade-hold';s.textContent='html::after{content:"";position:fixed;inset:0;z-index:2147483645;background:#070C0C}#mwLoad{z-index:2147483646}';document.head.appendChild(s);setTimeout(function(){var e=document.getElementById('mw-arcade-hold');if(e)e.remove()},20000)}catch(e){}})()</script>
 
 <!-- SITE METADATA — edit everything in this block to change how the site presents itself
      (browser tab, favicon, search/social previews). Not part of the in-page CMS — this is
@@ -11152,6 +11154,7 @@ f 2469//2469 2470//2470 2434//2434
         isOverMonogram:function(){ return false; }, onDone:finishArcadeExit });
       arcGalZoom=camZoom; if(MWBattle.getSelZoom){ arcEntryZoom=camZoom*MWBattle.getSelZoom(); arcReturn=true; }   // hero-select view: camera eases in so the hologram nearly fills the window height and the ship has room (battle.js P.selZoom)
       if(window.MWLightspeed&&!noJump){ MWLightspeed.start({ ready:function(){ return !arcadeActive||MWBattle.assetsReady(); }, onReveal:function(){ if(window.MWAudio) MWAudio.jumpReveal(); if(window.MWBattle&&MWBattle.isActive()) MWBattle.startIntro(); } }); } else MWBattle.startIntro();   // hyperspace-jump cover while the hero models load (assets/battle/lightspeed.js)
+      var _arcHold=document.getElementById('mw-arcade-hold'); if(_arcHold) _arcHold.remove();   // the jump (or the intro) is up: touch visits can see the page now
     }
     // The base star field is a small shell (radius 3–15). Arcade mode adds stars out to radius ~110 at the SAME density so zooming way out
     // or orbiting never finds the edge of the sky.
@@ -11311,7 +11314,8 @@ f 2469//2469 2470//2470 2434//2434
     // Back to the galaxy runs through the Star Wars screen wipe (assets/bric-wipe.js, random variant): the arcade tears down while the panel fully covers the page.
     // Play again skips it (hero select, not the galaxy). The wipe no-ops under reduced motion.
     function finishArcadeAfterOutro(noWipe){
-      var swap=function(){ var _toMobile=noWipe!==true&&arcTouch(); if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); if(_toMobile){ try{ sessionStorage.setItem('mw_gate_passed','1'); }catch(e){} location.replace('/?mobile=1'); return; } finishArcadeExit(noWipe===true); };   // phones leave the arcade for the mobile layout's index (PR #119), past its entry gate, not the desktop galaxy; drop ?mobile=1 once that layout is on by default
+      if(noWipe!==true&&arcTouch()){ try{ sessionStorage.setItem('mw_gate_passed','1'); }catch(e){} if(window.bricWipe) window.bricWipe.go('/?mobile=1',null,true); else location.replace('/?mobile=1'); return; }   // phones leave the arcade for the mobile layout's index (PR #119), past its entry gate. The panel stays up until the page changes, so the desktop galaxy never shows; drop ?mobile=1 once that layout is on by default
+      var swap=function(){ if(window.MWBattle&&MWBattle.isActive()) MWBattle.dispose(); finishArcadeExit(noWipe===true); };
       if(noWipe===true||!window.bricWipe) swap(); else window.bricWipe.play(null,swap);
     }
     function finishArcadeExit(again){

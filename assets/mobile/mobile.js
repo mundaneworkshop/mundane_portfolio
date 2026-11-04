@@ -805,7 +805,7 @@ function route(){
 }
 addEventListener('popstate',routeWiped);
 /* the game runs in the galaxy build, so it's a full page load under the wipe. Its Exit game comes back to /?mobile=1 */
-function goArcade(){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } if(window.bricWipe&&!GT.on) bricWipe.go('/arcade'); else location.href='/arcade'; }
+function goArcade(){ if(window.bricWipe&&!GT.on) bricWipe.go('/arcade'); else location.href='/arcade'; }
 function go(path){ if(path==='/arcade'){ goArcade(); return; } if(path!==location.pathname) history.pushState({},'',path); routeWiped(); }
 /* same-origin links route in place, so the wipe and the running 3D stay; everything else is a normal link */
 document.addEventListener('click',e=>{ const a=e.target.closest&&e.target.closest('a[href]'); if(!a||a.target||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button>0) return; let u; try{ u=new URL(a.href); }catch(err){ return; } if(u.origin!==location.origin) return; e.preventDefault(); go(u.pathname); });
