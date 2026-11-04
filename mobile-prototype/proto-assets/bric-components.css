@@ -1,0 +1,123 @@
+/* BRIC DS components — buttons, segmented toggle, tags, breadcrumb. Source of truth: Figma "BRIC DS" › Components 09–11, 14.
+ * Built only from the --bric-* tokens in assets/tokens/bric-tokens.css (dark default, light under body.light).
+ * Decision record and states table: docs/project-history/interactive-states.md
+ *
+ * Roles    default = tertiary (text) · --secondary (outline) · --primary (fill)
+ * Sizes    Large 40px (13/16) · --sm 24px (11/16)
+ * States   idle · hover · .is-active (fill + inset keyline; also the current menu item / breadcrumb page) · [aria-disabled="true"]
+ * Effects  hover glow + text bloom are emitted light: the tokens are transparent in light mode, so no mode check is needed.
+ *          Everything animates opacity on a pseudo-element only; prefers-reduced-motion removes it all.
+ * Decode   the Aurebesh → Latin hover decode lives in GFX (index.html); it targets .bric-btn.
+ */
+.bric-btn{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:var(--bric-space-stud);height:var(--bric-space-5-stud);padding:0 var(--bric-space-2-stud);margin:0;border:0;border-radius:var(--bric-corner-step);background:transparent;color:var(--bric-interactive-text-idle);cursor:pointer;white-space:nowrap;text-decoration:none;text-transform:uppercase;font:500 13px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;outline:none;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+.bric-btn--sm{height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);font-size:11px;letter-spacing:.12em}
+.bric-btn--block{display:flex;width:100%}
+.bric-btn--secondary{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
+.bric-btn--primary{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill)}
+
+/* hover glow: opacity-only pseudo-element. Amber since Oct 7 2026: the targeting reticle (assets/bric-reticle.js) locks onto the button in the
+   same amber, so approach, lock and hover read as one event. Light mode keeps its previous look (the amber glow tokens are transparent there). */
+.bric-btn::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity var(--bric-snap-duration-fast) linear;box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-stroke-near),0 0 24px 2px var(--bric-fx-glow-amber-stroke-far)}
+.bric-btn--primary::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-near),0 0 24px 2px var(--bric-fx-glow-amber-far)}
+
+/* hover (pointer devices only, so touch screens don't keep a stuck hover) */
+@media (hover:hover){
+  .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled)::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
+  .bric-btn:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled):not(.bric-btn--secondary):not(.bric-btn--primary){box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-hover)}
+  .bric-btn--secondary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover-tint);color:var(--bric-interactive-text-hover-accent);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-hover);text-shadow:none}
+  .bric-btn--primary:hover:not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover);color:var(--bric-interactive-text-on-fill-hover)}
+}
+
+/* active / current: solid fill + inset keyline (3px gap Large, 2px Small) — one appearance for every role */
+.bric-btn.is-active{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none;box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-default),inset 0 0 0 4px var(--bric-interactive-text-on-fill)}
+.bric-btn--sm.is-active{box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-default),inset 0 0 0 3px var(--bric-interactive-text-on-fill)}
+/* active + hover (Oct 7 2026): the current item answers the reticle too. Same amber as primary hover, keyline kept (label colour). */
+.bric-btn.is-active::after{box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-near),0 0 24px 2px var(--bric-fx-glow-amber-far)}
+/* the current page (breadcrumb last item, aria-current="page") wears the Active look but is a label, not a control: no hover, plain cursor, and the reticle
+   doesn't lock onto it (selector in the reticle init), so it never promises a click that does nothing */
+.bric-btn[aria-current="page"]:not([contenteditable="true"]){cursor:default}
+@media (hover:hover){
+  .bric-btn.is-active:hover:not([aria-current="page"]):not([aria-disabled="true"]):not(:disabled):not(.disabled)::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
+  .bric-btn.is-active:hover:not([aria-current="page"]):not([aria-disabled="true"]):not(:disabled):not(.disabled){background:var(--bric-interactive-fill-hover);color:var(--bric-interactive-text-on-fill-hover);box-shadow:inset 0 0 0 3px var(--bric-interactive-fill-hover),inset 0 0 0 4px var(--bric-interactive-text-on-fill-hover)}
+  .bric-btn--sm.is-active:hover:not([aria-current="page"]):not([aria-disabled="true"]):not(:disabled):not(.disabled){box-shadow:inset 0 0 0 2px var(--bric-interactive-fill-hover),inset 0 0 0 3px var(--bric-interactive-text-on-fill-hover)}
+}
+
+/* disabled */
+.bric-btn[aria-disabled="true"],.bric-btn:disabled,.bric-btn.disabled{background:transparent;box-shadow:none;color:var(--bric-interactive-text-disabled);text-shadow:none;cursor:not-allowed;pointer-events:none}
+.bric-btn--secondary[aria-disabled="true"],.bric-btn--secondary:disabled,.bric-btn--secondary.disabled{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled)}
+.bric-btn--primary[aria-disabled="true"],.bric-btn--primary:disabled,.bric-btn--primary.disabled{background:var(--bric-interactive-fill-disabled)}
+
+/* text bloom on non-filled labels (transparent in light mode) */
+.bric-btn:not(.bric-btn--primary):not(.is-active):not([aria-disabled="true"]):not(:disabled):not(.disabled){text-shadow:0 0 6px var(--bric-fx-bloom-text)}
+
+/* ignite flicker on click: stepped opacity pulse, added by a click listener in index.html */
+.bric-btn.is-ignite::after{animation:bric-ignite 220ms steps(1,end) both}
+@keyframes bric-ignite{0%{opacity:.15}25%{opacity:1}55%{opacity:.35}80%{opacity:1}100%{opacity:1}}
+
+/* focus: inset outline (keyboard only) */
+.bric-btn:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:-4px}
+
+/* hit area = the reticle's lock box. The targeting brackets sit --bric-ret-outset (4px) outside the button and the pointer disappears behind them, so a press anywhere
+   inside the brackets has to count. Invisible, all sides, and never smaller than --bric-hit-min (32px mouse, 44px touch; WCAG 2.5.8 asks 24): a short or narrow
+   control grows the extender until it gets there (top/bottom % = the button's height, left/right % = its width), so the 24px Small look keeps a 32 / 44px target.
+   A button that follows another one in a row doesn't reach back over it: the earlier button's extender already fills the gap, and a later sibling paints on top,
+   so its extender would cover the earlier button's edge (HoloNet E-mail / Schedule call sat 4px apart: pressing E-mail's right edge opened Schedule call). */
+:root{--bric-hit-min:32px}
+@media (pointer:coarse){ :root{--bric-hit-min:44px} }
+.bric-btn::before{content:'';position:absolute;
+  top:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2));bottom:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2));
+  left:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2));right:min(calc(var(--bric-ret-outset,4px)*-1),calc((100% - var(--bric-hit-min))/2))}
+.bric-btn+.bric-btn::before{left:min(0px,calc((100% - var(--bric-hit-min))/2))}
+
+/* glyph decode (GFX): scramble glyphs render at ~0.78em so the box never overflows (Aurebesh runs 25–40% wider than Latin). The toggle's options aren't clipped
+   during the decode either (it would clip their hit-extender), so they get the same size. */
+.bric-btn .gfx-u,.bric-seg__opt .gfx-u{font-size:.78em}
+/* The decode rewrites the label's inner HTML every tick, so a press that lands on a child span would be detached before release and the browser drops
+   the click (needed 2-3 taps during the ~400ms decode). Children never take pointer events: the button itself is always the press + release target. */
+.gfx-u,.bric-btn>span:only-child{pointer-events:none}
+
+/* segmented toggle (Figma › Components › 14 · Segmented Toggle): two or more options in one outlined track. role=radiogroup, each option role=radio.
+ * Track = the secondary button's 1px outline with an inset gap (3px Large, 2px Small, the active keyline's gap); the checked option is the Active fill.
+ * Hover (anywhere on the control): the track turns amber with the amber glow and the option a click would pick gets the amber tint, like the toggle switch. */
+.bric-seg{--bric-ret-arm:8px;--bric-ret-outset:4px;--bric-ret-label:none;position:relative;isolation:isolate;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;height:var(--bric-space-5-stud);padding:3px;box-sizing:border-box;border-radius:var(--bric-corner-step);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default);user-select:none;-webkit-tap-highlight-color:transparent}
+.bric-seg--sm{height:var(--bric-space-3-stud);padding:2px}
+.bric-seg::after{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity var(--bric-snap-duration-fast) linear;box-shadow:0 0 8px 0 var(--bric-fx-glow-amber-stroke-near),0 0 24px 2px var(--bric-fx-glow-amber-stroke-far)}
+.bric-seg__opt{position:relative;display:flex;align-items:center;justify-content:center;margin:0;border:0;padding:0 var(--bric-space-2-stud);border-radius:2px;background:transparent;color:var(--bric-interactive-text-idle);cursor:pointer;white-space:nowrap;text-transform:uppercase;font:500 13px/16px 'Space Grotesk',sans-serif;letter-spacing:.08em;text-shadow:0 0 6px var(--bric-fx-bloom-text);outline:none}
+.bric-seg--sm .bric-seg__opt{padding:0 var(--bric-space-stud);font-size:11px;letter-spacing:.12em}
+.bric-seg__opt[aria-checked="true"]{background:var(--bric-interactive-fill-default);color:var(--bric-interactive-text-on-fill);text-shadow:none;cursor:default}
+@media (hover:hover){
+  .bric-seg:not([aria-disabled="true"]):hover{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-hover)}
+  .bric-seg:not([aria-disabled="true"]):hover::after{opacity:1;transition-duration:var(--bric-snap-duration-instant)}
+  .bric-seg:not([aria-disabled="true"]):hover .bric-seg__opt[aria-checked="false"]{background:var(--bric-interactive-fill-hover-tint);color:var(--bric-interactive-text-hover-accent);text-shadow:none}
+}
+.bric-seg[aria-disabled="true"]{box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled);pointer-events:none}
+.bric-seg[aria-disabled="true"] .bric-seg__opt{color:var(--bric-interactive-text-disabled);text-shadow:none;cursor:not-allowed}
+.bric-seg[aria-disabled="true"] .bric-seg__opt[aria-checked="true"]{background:var(--bric-interactive-fill-disabled)}
+/* Appearance=Secondary (Figma 14, Oct 27): no track; only the checked option carries the 1px outline, label stays text/idle.
+   Hover tints the option a click would pick (the rule above), like the secondary button; no track outline or glow. */
+.bric-seg--secondary,.bric-seg--secondary:not([aria-disabled="true"]):hover,.bric-seg--secondary[aria-disabled="true"]{box-shadow:none}
+.bric-seg--secondary::after{display:none}
+.bric-seg--secondary .bric-seg__opt[aria-checked="true"]{background:transparent;color:var(--bric-interactive-text-idle);text-shadow:0 0 6px var(--bric-fx-bloom-text);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-default)}
+.bric-seg--secondary[aria-disabled="true"] .bric-seg__opt[aria-checked="true"]{background:transparent;color:var(--bric-interactive-text-disabled);text-shadow:none;box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-disabled)}
+.bric-seg__opt:focus-visible{outline:2px solid var(--bric-interactive-outline-default);outline-offset:1px}
+/* hit area: each option reaches the track's outer edge plus the reticle outset (padding 3 + 4 Large, 2 + 4 Small), and at least --bric-hit-min tall, so the Small
+   toggle (20px options) is a 32px target with a mouse and 44px on touch while it still looks 24px. Options meet edge to edge, so only the end ones grow sideways. */
+.bric-seg__opt::before{content:'';position:absolute;left:0;right:0;top:min(-7px,calc((100% - var(--bric-hit-min,32px))/2));bottom:min(-7px,calc((100% - var(--bric-hit-min,32px))/2))}
+.bric-seg__opt:first-child::before{left:-7px}
+.bric-seg__opt:last-child::before{right:-7px}
+.bric-seg--sm .bric-seg__opt::before{top:min(-6px,calc((100% - var(--bric-hit-min,32px))/2));bottom:min(-6px,calc((100% - var(--bric-hit-min,32px))/2))}
+.bric-seg--sm .bric-seg__opt:first-child::before{left:-6px}
+.bric-seg--sm .bric-seg__opt:last-child::before{right:-6px}
+
+/* tag: static label, never interactive — outline is deliberately dimmer than the label */
+.bric-tag{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);border-radius:var(--bric-corner-step);box-shadow:inset 0 0 0 1px var(--bric-interactive-outline-tag);box-sizing:border-box;color:var(--bric-interactive-text-idle);cursor:default;user-select:none;white-space:nowrap;text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em}
+
+/* breadcrumb: small tertiary buttons; the last item is the current page (active), separators are static dim text */
+.bric-crumb{display:flex;align-items:center;flex-wrap:wrap;gap:var(--bric-space-half-stud)}
+.bric-crumb__sep{color:var(--bric-content-secondary);font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;user-select:none}
+.bric-crumb__item{display:inline-flex;align-items:center;height:var(--bric-space-3-stud);padding:0 var(--bric-space-stud);box-sizing:border-box;color:var(--bric-content-secondary);text-transform:uppercase;font:500 11px/16px 'Space Grotesk',sans-serif;letter-spacing:.12em;white-space:nowrap}
+/* Large (desktop site nav): the items are Large buttons (.bric-btn without --sm, 40px), the separators and plain items take the Large type to match */
+.bric-crumb--lg .bric-crumb__sep{font-size:13px;letter-spacing:.08em}
+.bric-crumb--lg .bric-crumb__item{height:var(--bric-space-5-stud);padding:0 var(--bric-space-2-stud);font-size:13px;letter-spacing:.08em}
+
+@media (prefers-reduced-motion:reduce){.bric-seg::after{transition:none}.bric-btn::after{transition:none}.bric-btn.is-ignite::after{animation:none}}
