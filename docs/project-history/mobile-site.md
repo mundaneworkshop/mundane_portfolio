@@ -50,7 +50,7 @@ Decided by Jason on Nov 4 2026:
 - The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/?mobile=1`.
 - **Open bug, not blocking:** tapping Arcade from the menu overlay still plays a placeholder-sounding beep on a real phone. Two extra `confirm` sounds were already removed (the link's own, and the one `activate()` played as `/arcade` loaded). A sound log then showed only the normal `press` and `release` from `mobile.js`, so the source is one of those or something outside `uiPlay`.
 - The per-route JSON-LD from `syncRouteHead()` is not ported. Titles, descriptions and canonicals are. Check how crawlers that identify as phones see this layout before the flag defaults on.
-- Touch for the desktop galaxy on large iPads.
+- Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
 - Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
 - Phone landscape layout outside the arcade (stage left, content right, from the plan).
 - An in-app 404: unknown paths show the index on this layout.

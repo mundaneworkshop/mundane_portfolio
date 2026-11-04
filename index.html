@@ -10654,6 +10654,31 @@ f 2469//2469 2470//2470 2434//2434
     renderer.domElement.addEventListener('pointerdown',function(e){ arcReturn=false; if(arcadeActive&&arcadeStage==='play'&&e.button!==2) return;   // arcade play: left button fires, only right-drag pans the camera
       arcDragSign=Math.cos(arcPitchS)<0?-1:1; dragging=true; dragMoved=false; lastX=downX=e.clientX; lastY=downY=e.clientY; dragSlop=(e.pointerType&&e.pointerType!=='mouse')?12:6; });   // arcDragSign: the pitch drag is mirrored when the camera starts the drag flipped over the pole
     window.addEventListener('pointerup',function(){ dragging=false; setTimeout(function(){dragMoved=false;},30); });
+    // ── TOUCH ON THE DESKTOP GALAXY (large iPads, shorter side >= 1024px, which the mobile layout leaves here) ──
+    // Every handler below is gated on a coarse primary pointer AND e.pointerType==='touch', so mouse/trackpad behaviour is untouched.
+    // The canvas gets touch-action:none so the browser never takes a drag for a scroll/zoom (the page itself never scrolls: html,body overflow:hidden).
+    // Pinch = the wheel's zoom (same clamps). Tap = hover then click: the first tap on a planet / the figure / the kit box face PREVIEWS it
+    // (the hover state the mouse gets for free), the second tap on the same thing opens it. A tap on nothing clears the preview.
+    var touchCoarse=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches), touchPtrs={}, pinchD=0, lastPT='';
+    function touchCount(){ var n=0; for(var k in touchPtrs) n++; return n; }
+    function touchDist(){ var a=[]; for(var k in touchPtrs) a.push(touchPtrs[k]); return a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0; }
+    function zoomStep(dir,mag){   // the wheel handler's zoom (same clamps), `mag` wheel notches of it: +1 = a wheel down-scroll (out), -1 = up (in). Sub-scene orbits only take whole steps.
+      if(MWSub.active){ if(mag>=0.5) MWSub.active.orbit.zoom(dir); }
+      else if(focused){ params.focusZoom=clamp(params.focusZoom+dir*0.08*mag,0.5,2); setFocusCam(); setCtl('cZoom','vZoom',params.focusZoom.toFixed(1)); }
+      else { camZoom=clamp(camZoom+dir*0.06*mag,0.4,2.2); } }
+    if(touchCoarse){
+      renderer.domElement.style.touchAction='none';
+      renderer.domElement.addEventListener('pointerdown',function(e){ if(e.pointerType!=='touch') return; lastPT='touch';
+        mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;   // a tap fires no pointermove, so the click handler's raycast would use the last position of an earlier drag
+        touchPtrs[e.pointerId]={x:e.clientX,y:e.clientY};
+        if(touchCount()===2){ pinchD=touchDist(); dragging=false; dragMoved=true; } });   // two fingers: stop orbiting, and the lift is never a tap
+      window.addEventListener('pointermove',function(e){ var t=touchPtrs[e.pointerId]; if(!t||e.pointerType!=='touch') return; t.x=e.clientX; t.y=e.clientY;
+        if(touchCount()===2){ dragging=false; dragMoved=true; var d=touchDist(); if(pinchD>0&&d>0){ var r=d/pinchD;   // fingers apart = zoom in, like wheel-up
+          if(Math.abs(r-1)>0.01){ var mg=Math.min(2,Math.abs(r-1)/0.12); arcReturn=false; zoomStep(r>1?-1:1,mg); if(!MWSub.active||mg>=0.5) pinchD=d; } } } });   // 12% finger spread = one wheel notch
+      function touchEnd(e){ if(!touchPtrs[e.pointerId]) return; delete touchPtrs[e.pointerId]; pinchD=0;
+        if(touchCount()===1){ var k; for(k in touchPtrs){ lastX=touchPtrs[k].x; lastY=touchPtrs[k].y; } dragging=false; dragMoved=true; } }   // one finger left from a pinch: don't resume the orbit with a jump
+      window.addEventListener('pointerup',touchEnd); window.addEventListener('pointercancel',function(e){ touchEnd(e); dragging=false; setTimeout(function(){dragMoved=false;},30); });
+    }
     window.addEventListener('pointermove',function(e){ mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;
       if(dragging){ var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
         if(!dragMoved&&Math.hypot(e.clientX-downX,e.clientY-downY)>dragSlop)dragMoved=true; var sy=params.invertY?-1:1; var syF=params.invertYFocus?-1:1;   // focus pitch has its own invert. A click is a drag only once the pointer has travelled dragSlop from where it went down (6px mouse, 12px touch/pen). The old test (any single move event over 2px) turned a click with a little hand wobble, or a fast trackpad tap, into a drag, and the planet click was dropped
@@ -10793,7 +10818,7 @@ f 2469//2469 2470//2470 2434//2434
       if(window.__bricReticle&&window.__bricReticle.setTargets) window.__bricReticle.setTargets(targets);
     })();
     function setZone(id){ if(activeZone===id)return; activeZone=id; ZONES.forEach(function(z){ z.mesh.userData.target=(z.id===id?0.24:0.05); var _on=(z.id===id), _was=z.label.classList.contains('on'); z.label.classList.toggle('on',_on); if(_on&&!_was) GFX.decodeEl(z.label,'Zone',null,true); }); }
-    renderer.domElement.addEventListener('pointermove',function(e){
+    function hoverMove(e){
       if(arcadeActive){ renderer.domElement.style.cursor='default'; return; }   // arcade: no planet/zone hover
       if(mwPhase!=='docked'){   // entry gate / mid-dock: cursor affordance for the same target the click handler below checks
         var _wasMwHover=mwHover;
@@ -10824,7 +10849,8 @@ f 2469//2469 2470//2470 2434//2434
       if(_fOn&&!figHover&&window.MWAudio&&!window.__mwArcade) MWAudio.ui('hover');
       figHover=_fOn; setHovered(_fOn?null:grp);
       if(renderer&&renderer.domElement) renderer.domElement.style.cursor=(figHover||hovered)?'pointer':'default';
-      if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } });
+      if(!hovered){ var zh=ray.intersectObjects(zoneHits,false); setZone(zh.length?zh[0].object.userData.zone:null); } }
+    renderer.domElement.addEventListener('pointermove',function(e){ if(touchCoarse&&e.pointerType==='touch'&&mwPhase==='docked') return; hoverMove(e); });   // a dragging finger orbits; it doesn't sweep the hover across planets (taps preview via the click handler)
     // A click on nothing (empty canvas, empty page): the soft "release" thud from the UI sounds. Controls and planets have their own sounds.
     document.documentElement.addEventListener('mouseleave',function(){ mwHover=false; });   // the pointer left the window: drop the entry monogram's hover
     function emptyClick(){ if(window.MWAudio&&!window.__mwArcade&&!arcadeActive){ MWAudio.uiReady(); MWAudio.ui('release'); } }
@@ -10833,6 +10859,12 @@ f 2469//2469 2470//2470 2434//2434
     renderer.domElement.addEventListener('pointerdown',function(e){ if(e.button!==0||arcadeActive||mwPhase!=='entry'||!mwQuad||!mwQuad.visible) return; if(overMonogram(e)) startDock(); });
     renderer.domElement.addEventListener('click',function(){ if(dragMoved)return;
       if(arcadeActive) return;   // arcade: the battle's own capture-phase handler owns clicks (minikits, hero fire)
+      if(touchCoarse&&lastPT==='touch'&&mwPhase==='docked'&&!MWSub.active&&!(editMode&&meshSelectMode)){   // touch: the first tap previews (hover), the second opens
+        var _pH=hovered, _pF=figHover, _pB=boxHoverFace; hoverMove({clientX:0,clientY:0});
+        if(hovered&&hovered!==_pH) return;   // new planet: previewed (label lit, planet scaled, zone shown); tap it again to open
+        if(!hovered&&figHover&&!_pF) return;   // the figure, same
+        if(focused&&!focusedMoon&&boxHoverFace>=0&&_pB<0) return;   // kit box face in a focus view: preview the VIEW CASE STUDY target first
+      }
       if(mwPhase!=='docked'){   // entry gate / mid-dock: the only click target is the monogram itself
         var _onMono=false;
         if(mwPhase==='entry' && mwQuad && mwQuad.visible){ if(overMonogram()){ _onMono=true; startDock(); } }
@@ -11336,6 +11368,9 @@ f 2469//2469 2470//2470 2434//2434
     // (the entry gate's click counts) and plays under the whole site outside the arcade. The sound switch mutes it with everything else.
     (function(){ var done=false; function go(e){ if(done) return; done=true; ['pointerdown','keydown'].forEach(function(t){ document.removeEventListener(t,go,true); }); if(window.MWAudio&&!window.__mwArcade){ MWAudio.siteStart(); if(typeof BOOT_DONE!=='undefined'&&BOOT_DONE) MWAudio.idleStart(); else if(typeof mwPhase!=='undefined'&&mwPhase==='entry'&&!(e&&e.type==='pointerdown'&&typeof overMonogram==='function'&&typeof mwQuad!=='undefined'&&mwQuad&&mwQuad.visible&&overMonogram(e))) MWAudio.gateStart(); } }
       ['pointerdown','keydown'].forEach(function(t){ document.addEventListener(t,go,true); });
+      // iPadOS only unlocks audio on a touch RELEASE (touchend/click), not on the pointerdown go() runs on, so that first start can be refused: retry on the first few releases (siteStart / idleStart / gateStart are idempotent and ignore a context that is already running).
+      if(matchMedia('(pointer:coarse)').matches&&!window.__mwArcade){ var _re=0; var _retry=function(e){ if(window.MWAudio&&++_re<=6){ MWAudio.siteStart(); if(typeof BOOT_DONE!=='undefined'&&BOOT_DONE) MWAudio.idleStart(); else if(typeof mwPhase!=='undefined'&&mwPhase==='entry'&&!(typeof overMonogram==='function'&&typeof mwQuad!=='undefined'&&mwQuad&&mwQuad.visible&&overMonogram())) MWAudio.gateStart(); } if(_re>=6) ['touchend','click'].forEach(function(t){ document.removeEventListener(t,_retry,true); }); };
+        ['touchend','click'].forEach(function(t){ document.addEventListener(t,_retry,true); }); }
       if(window.MWAudio&&MWAudio.autoStart) MWAudio.autoStart().then(function(ok){ if(ok) go(); }); })();   // the browser allows sound with no gesture (a trusted Chrome visitor): start now, same as a first press elsewhere (the gate idle loop at the gate, ambience and hum on a deep link)
     // sound switches (.mw-sound-switch: the galaxy-view one and the arcade hero-select one) and the M key share one persisted setting (localStorage['mw_sound'])
     // tactile UI sounds, site-wide (assets/battle/audio.js → MWAudio.ui): every interactive element clicks down on press and up on release, ticks on hover
