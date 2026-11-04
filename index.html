@@ -10665,7 +10665,7 @@ f 2469//2469 2470//2470 2434//2434
     // The canvas gets touch-action:none so the browser never takes a drag for a scroll/zoom (the page itself never scrolls: html,body overflow:hidden).
     // Pinch = the wheel's zoom (same clamps). Tap = hover then click: the first tap on a planet / the figure / the kit box face PREVIEWS it
     // (the hover state the mouse gets for free), the second tap on the same thing opens it. A tap on nothing clears the preview.
-    var touchCoarse=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches), touchPtrs={}, pinchD=0, lastPT='';
+    var touchCoarse=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches), touchPtrs={}, pinchD=0, lastPT='', tapX=0, tapY=0;
     function touchCount(){ var n=0; for(var k in touchPtrs) n++; return n; }
     function touchDist(){ var a=[]; for(var k in touchPtrs) a.push(touchPtrs[k]); return a.length>1?Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y):0; }
     function zoomStep(dir,mag){   // the wheel handler's zoom (same clamps), `mag` wheel notches of it: +1 = a wheel down-scroll (out), -1 = up (in). Sub-scene orbits only take whole steps.
@@ -10674,10 +10674,12 @@ f 2469//2469 2470//2470 2434//2434
       else { camZoom=clamp(camZoom+dir*0.06*mag,0.4,2.2); } }
     if(touchCoarse){
       renderer.domElement.style.touchAction='none';
-      renderer.domElement.addEventListener('pointerdown',function(e){ if(e.pointerType!=='touch') return; lastPT='touch';
+      renderer.domElement.addEventListener('pointerdown',function(e){ if(e.pointerType!=='touch') return; lastPT='touch'; tapX=e.clientX; tapY=e.clientY;
         mouse.x=(e.clientX/W)*2-1; mouse.y=-(e.clientY/H)*2+1;   // a tap fires no pointermove, so the click handler's raycast would use the last position of an earlier drag
         touchPtrs[e.pointerId]={x:e.clientX,y:e.clientY};
         if(touchCount()===2){ pinchD=touchDist(); dragging=false; dragMoved=true; } });   // two fingers: stop orbiting, and the lift is never a tap
+      document.addEventListener('pointerdown',function(e){ if(e.pointerType!=='touch'||e.target===renderer.domElement) return;   // a touch on a panel / the nav: the previewed planet and its reticle lock let go
+        if(window.__bricReticle&&__bricReticle.touchRelease) __bricReticle.touchRelease(); if(hovered&&mwPhase==='docked'&&!focused) setHovered(null); },true);
       window.addEventListener('pointermove',function(e){ var t=touchPtrs[e.pointerId]; if(!t||e.pointerType!=='touch') return; t.x=e.clientX; t.y=e.clientY;
         if(touchCount()===2){ dragging=false; dragMoved=true; var d=touchDist(); if(pinchD>0&&d>0){ var r=d/pinchD;   // fingers apart = zoom in, like wheel-up
           if(Math.abs(r-1)>0.01){ var mg=Math.min(2,Math.abs(r-1)/0.12); arcReturn=false; zoomStep(r>1?-1:1,mg); if(!MWSub.active||mg>=0.5) pinchD=d; } } } });   // 12% finger spread = one wheel notch
@@ -10780,7 +10782,7 @@ f 2469//2469 2470//2470 2434//2434
       });
       var kbInitDone=false;
       setInterval(function(){   // once the site has docked and the figure is on show: the reticle starts on it
-        if(kbInitDone||mwPhase!=='docked'||focused||arcadeActive||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')||document.body.classList.contains('ui-hidden')) return;
+        if(kbInitDone||touchCoarse||mwPhase!=='docked'||focused||arcadeActive||editMode||MWSub.active||document.body.classList.contains('mw-altfocus')||document.body.classList.contains('ui-hidden')) return;
         var f=ocFigObj(), r=f&&rectOf(ocFigRectObj()); if(!r) return;
         kbInitDone=true; var m=outfitCur&&ocFind(outfitCur.id);
         kb={key:'figure', label:(m&&ocLocked(m))?'\u25B8 LOCKED':'\u25B8 ABOUT JASON', obj:f, open:ocClickFigure, init:performance.now()}; kbRetarget();
@@ -10867,9 +10869,11 @@ f 2469//2469 2470//2470 2434//2434
       if(arcadeActive) return;   // arcade: the battle's own capture-phase handler owns clicks (minikits, hero fire)
       if(touchCoarse&&lastPT==='touch'&&mwPhase==='docked'&&!MWSub.active&&!(editMode&&meshSelectMode)){   // touch: the first tap previews (hover), the second opens
         var _pH=hovered, _pF=figHover, _pB=boxHoverFace; hoverMove({clientX:0,clientY:0});
-        if(hovered&&hovered!==_pH) return;   // new planet: previewed (label lit, planet scaled, zone shown); tap it again to open
-        if(!hovered&&figHover&&!_pF) return;   // the figure, same
-        if(focused&&!focusedMoon&&boxHoverFace>=0&&_pB<0) return;   // kit box face in a focus view: preview the VIEW CASE STUDY target first
+        var _rt=window.__bricReticle, _lock=function(){ if(_rt&&_rt.touchLock) _rt.touchLock(tapX,tapY); };   // a preview shows the targeting reticle locked on the target, so the tap reads as answered
+        if(hovered&&hovered!==_pH){ _lock(); return; }   // new planet: previewed (label lit, planet scaled, zone shown, reticle locked); tap it again to open
+        if(!hovered&&figHover&&!_pF){ _lock(); return; }   // the figure, same
+        if(focused&&!focusedMoon&&boxHoverFace>=0&&_pB<0){ _lock(); return; }   // kit box face in a focus view: preview the VIEW CASE STUDY target first
+        if(_rt&&_rt.touchRelease) _rt.touchRelease();   // opening it, or a tap on nothing: the lock lets go
       }
       if(mwPhase!=='docked'){   // entry gate / mid-dock: the only click target is the monogram itself
         var _onMono=false;

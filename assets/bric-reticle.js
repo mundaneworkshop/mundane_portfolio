@@ -1,4 +1,4 @@
-/*! BRIC targeting reticle cursor, v1.6
+/*! BRIC targeting reticle cursor, v1.7
  *
  * ONE source file, used by both the Vercel site (<script src="assets/bric-reticle.js">) and Framer
  * (framer-code/sync-reticle.js in the bric-ds folder pastes this file verbatim into the ReticleCursor.tsx code component).
@@ -10,7 +10,8 @@
  * Difference from the lab: the four corners are positioned with transform (compositor only) instead of
  * left/top/width/height, which gives the same motion without layout work.
  *
- * Desktop mouse only. Touch, pen and keyboard are untouched. Honours prefers-reduced-motion (no easing, still shows).
+ * Desktop mouse only, plus one touch hook (v1.7): api.touchLock(x, y) locks onto whatever target is at that point (a tap that previews it) and
+ * api.touchRelease() lets go; a touch lock never leaves the idle pointer box behind. Pen and keyboard are untouched. Honours prefers-reduced-motion (no easing, still shows).
  *
  *   bricReticle({ scope: 'page' })   // returns { destroy(), refresh() }
  *
@@ -111,7 +112,7 @@ function bricReticle(options) {
   function syncMotion() { root.classList.toggle('rm', rmq.matches); }
   syncMotion();
 
-  var cur = null, lx = -999, ly = -999, scrollTimer = 0, raf = 0, syncRaf = 0, lastCheck = 0, lastFrame = '', below = false, geoKey = '';
+  var touchMode = false, cur = null, lx = -999, ly = -999, scrollTimer = 0, raf = 0, syncRaf = 0, lastCheck = 0, lastFrame = '', below = false, geoKey = '';
 
   function put(el, x, y) { el.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; }
   function place(b) {
@@ -230,7 +231,7 @@ function bricReticle(options) {
     cur = null;
     root.classList.remove('lock');
     idleGeo();
-    if (o.scope === 'page' && wasOn) { place(around(lx, ly)); return; }
+    if (o.scope === 'page' && wasOn && !touchMode) { place(around(lx, ly)); return; }
     if (wasOn) place(around(lx, ly)); // contracts to the pointer while it fades
     root.classList.remove('on');
     html.removeAttribute('data-bric-ret');
@@ -277,6 +278,7 @@ function bricReticle(options) {
   function onMove(e) {
     if (off) return;
     if (e.pointerType && e.pointerType !== 'mouse') return;
+    touchMode = false;
     lx = e.clientX; ly = e.clientY;
     update(e.target);
     // a virtual target's own hover state (a WebGL raycast) is usually updated by the page's listener after this one
@@ -329,6 +331,14 @@ function bricReticle(options) {
     refresh: function () { if (cur) { cur.g = geoOf(cur); applyGeo(cur.g); var b = frameOf(cur); if (b) jump(b); } },
     setTargets: function (fn) { o.targets = fn; },
     // off: drop the brackets and give the native cursor back until it is switched on again
+    // touch: a tap that only previews a target (first tap = hover) locks the brackets onto it; touchRelease lets go
+    touchLock: function (x, y) {
+      if (off) return;
+      touchMode = true; lx = x; ly = y;
+      var d = describe(document.elementFromPoint(x, y));
+      if (d) { if (!cur || d.key !== cur.key) enter(d); } else if (cur || root.classList.contains('on')) { leave(); hide(); }
+    },
+    touchRelease: function () { if (touchMode && (cur || root.classList.contains('on'))) { leave(); hide(); } },
     setEnabled: function (on) { off = !on; if (off) drop(); },
     // re-resolve the target without a pointer event (keyboard navigation moved the virtual target)
     retarget: function () { update(document.elementFromPoint(lx, ly)); },
