@@ -10,6 +10,12 @@ var touch=matchMedia('(pointer:coarse)').matches,side=Math.min(screen.width,scre
 var c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;
 window.__mwMobile=true;document.documentElement.classList.add('mw-mobile');var m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
 var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html.mw-mobile{background:#070C0C}html.mw-mobile body{visibility:hidden}';document.head.appendChild(st);}catch(e){}})();</script>
+<!-- LARGE IPAD VISIBLE HEIGHT: on some iPadOS browsers window.innerHeight (and the 100% html/body box) is the full screen height while the browser toolbars cover the bottom of it, so every bottom-anchored panel (case-study manual, CV, outfit selection) sat half under the toolbar. On a coarse pointer, when visualViewport is shorter than innerHeight (and the page isn't pinch-zoomed), innerHeight reports the visible height and html/body get that height in px. Desktop and phones never take this path. -->
+<script>(function(){try{var vv=window.visualViewport;if(!vv||!matchMedia('(pointer:coarse)').matches||window.__mwMobile)return;var d=Object.getOwnPropertyDescriptor(window,'innerHeight');if(!d||!d.get||!d.configurable)return;var real=function(){return d.get.call(window)};
+function vis(){var r=real();return(vv.scale<=1.01&&r-(vv.height+vv.offsetTop)>4)?Math.round(vv.height+vv.offsetTop):r}
+Object.defineProperty(window,'innerHeight',{configurable:true,enumerable:true,get:vis});
+function fit(){var h=vis(),s=document.documentElement.style;if(h!==real()){s.height=h+'px';if(document.body)document.body.style.height=h+'px'}else{s.height='';if(document.body)document.body.style.height=''}}
+vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListener('orientationchange',fit);document.addEventListener('DOMContentLoaded',fit);fit()}catch(e){}})()</script>
 <!-- ROUTING: pages now load at nested paths (/work/<slug>, /work/<slug>/<moon-slug>, /cv, /holonet) via the
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
      would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
