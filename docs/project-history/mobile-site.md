@@ -9,6 +9,7 @@ A separate phone layout for every view except the arcade. It is **off for everyo
 | `?mobile=1` | On, if the device qualifies (rule below) |
 | `?mobile=force` | On, on any device, for testing on a desktop |
 | `?mobile=0` | Off |
+| `&level=full\|stills\|static` | Forces a fallback level (see below), e.g. `?mobile=force&level=static`. Kept for the tab; `&level=auto` clears it |
 | `?perf=1` | Shows the FPS chip and its panel (pixel size, posterize levels, wipe speed, replay gate) |
 | `?gate=0` | Skips the entry gate |
 
@@ -21,7 +22,7 @@ Decided by Jason on Nov 4 2026:
 - **Touch as the primary pointer (`pointer: coarse`) and a screen whose shorter side is under 1024px:** the mobile layout. This covers phones and most tablets.
 - **Large iPads (shorter side 1024px or more) and anything with a mouse or trackpad as the primary pointer:** the desktop galaxy. Large iPads still need touch added there: pinch zoom, tap replacements for hover, and the audio unlock retry. That work is not done.
 - Chosen once on load, from the screen and not the window, so rotating or Split View never swaps layouts. No user agent checks: iPads report themselves as Macs.
-- No WebGL: falls through to the desktop path for now. The fallback levels in the plan are still to come.
+- No WebGL: the static level (below).
 
 ## How it is built
 
@@ -31,6 +32,20 @@ Decided by Jason on Nov 4 2026:
 - **Content** comes from the same `BRICStore` copy the galaxy reads, after `reconcileServerContent()`, so CMS edits reach this layout. `site-data.js` only fills gaps.
 - **Routes** are the same real paths and slugs as the desktop site, so a shared link works on either.
 - **Shaders and sound are the site's.** `mobile.js` carries copies of the holo shaders and `addFx`, and uses the real `audio.js`, `bric-wipe.js` and monogram bundle. If the desktop versions change, these copies do not follow.
+
+## Fallback levels
+
+`assets/mobile/level.js` picks one before `mobile.js` loads (`bootMobile()` in `index.html` chains `site-data.js`, `level.js`, then the level's script). It sets `window.__mwLevel` and `html.mw-level-<level>`.
+
+| Level | When | What changes |
+|---|---|---|
+| `full` | Default | Live 3D everywhere |
+| `stills` | `navigator.connection.saveData`, or the probe fails | Rows are drawn once instead of spinning (the same path `prefers-reduced-motion` already uses, so no new images to make or ship), and the stage draws every other frame |
+| `static` | No WebGL (`window.__mwNoGL`, set by the head check) | `static.js` + `static.css` replace `mobile.js`: text rows to the case studies and socials, the About text cloned from `#mw-about`, and contact buttons. No 3D, sound, gate or wipes. `/cv` and `/holonet` scroll to their nearest section |
+
+The probe runs a heavy 512px shader three times per frame for 10 frames and reads a pixel back to sync, and watches the rAF interval. It fails on a software renderer (`failIfMajorPerformanceCaveat`), more than 24ms per synced frame, or a median frame gap over 45ms. The result is remembered 3 days in `localStorage['mw_m.level']`. If rAF stalls for 3s the boot continues (`stills` if the page is visible, `full` if hidden) and nothing is remembered. A forced level is never remembered. `?perf=1` shows the level and probe numbers.
+
+**The 24ms and 45ms limits are guesses.** They were only tried on a desktop GPU (2.7ms) and not on any phone, so expect to tune them on real devices.
 
 ## Decisions from prototype testing
 
@@ -51,6 +66,6 @@ Decided by Jason on Nov 4 2026:
 - **Open bug, not blocking:** tapping Arcade from the menu overlay still plays a placeholder-sounding beep on a real phone. Two extra `confirm` sounds were already removed (the link's own, and the one `activate()` played as `/arcade` loaded). A sound log then showed only the normal `press` and `release` from `mobile.js`, so the source is one of those or something outside `uiPlay`.
 - The per-route JSON-LD from `syncRouteHead()` is not ported. Titles, descriptions and canonicals are. Check how crawlers that identify as phones see this layout before the flag defaults on.
 - Touch for the desktop galaxy on large iPads.
-- Fallback levels: stills in rows for phones that fail a frame probe or use `saveData`, and a static layout with no WebGL.
+- Fallback levels, calibration: tune the probe limits on real low-end phones, and decide whether the stage should also freeze under `stills`. The static level has no HoloNet form, no CV timeline and no case study pages of its own.
 - Phone landscape layout outside the arcade (stage left, content right, from the plan).
 - An in-app 404: unknown paths show the index on this layout.
