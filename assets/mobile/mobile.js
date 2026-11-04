@@ -277,18 +277,21 @@ function planetMat(id,lift){ const fx=(LIVE.planetfx&&LIVE.planetfx[id])||({arca
 /* the site's FX overlay for the head and outfit figures (addFx): tint, rim, scanlines, glitch band; holo=1 is the see-through head */
 const FX_LOGO={scan:{value:.7},fres:{value:1.8},scanFreq:{value:14},fxInt:{value:1},glitch:{value:.25},hot:{value:new THREE.Color('#71fdff')},tint:{value:new THREE.Color('#70fdff')},holo:{value:1}};
 const FX_OUTFIT=Object.assign({},FX_LOGO,{holo:{value:0}});
+const STACK_CLOSE=3.5;
 const FX_BOX={scan:{value:.7},fres:{value:1.8},scanFreq:{value:14},fxInt:{value:1},glitch:{value:.25},hot:{value:new THREE.Color('#71fdff')},tint:{value:new THREE.Color('#9e9e9e')},holo:{value:0}};
 const FX_MOON=Object.assign({},FX_BOX);
+/* uStack: from afar, depth precision lets the head's overlapping shells all draw, and their alpha stacks: that is the look on desktop and the index. Close up the pre-pass culls them to one thin layer with near-black scan bands, so the close-up view stacks on purpose */
+const ONE={value:1}; FX_LOGO.stack={value:1};
 function addFx(mat,fx,composite){
   mat.onBeforeCompile=shader=>{
-    Object.assign(shader.uniforms,{uTime:uTime,uScan:fx.scan,uFres:fx.fres,uGlitch:fx.glitch,uHot:fx.hot,uTint:fx.tint,uScanFreq:fx.scanFreq,uFxInt:fx.fxInt,uHolo:fx.holo,uOc:{value:1}});
+    Object.assign(shader.uniforms,{uStack:fx.stack||ONE,uTime:uTime,uScan:fx.scan,uFres:fx.fres,uGlitch:fx.glitch,uHot:fx.hot,uTint:fx.tint,uScanFreq:fx.scanFreq,uFxInt:fx.fxInt,uHolo:fx.holo,uOc:{value:1}});
     shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWP; varying vec3 vNN; varying vec3 vEY;')
       .replace('#include <begin_vertex>','#include <begin_vertex>\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*normal); vEY=normalize(cameraPosition-vWP);')
       .replace('#include <project_vertex>','#ifdef USE_SKINNING\n mat4 _skM=mat4(0.0); _skM+=skinWeight.x*boneMatX; _skM+=skinWeight.y*boneMatY; _skM+=skinWeight.z*boneMatZ; _skM+=skinWeight.w*boneMatW; _skM=bindMatrixInverse*_skM*bindMatrix; vec3 _skN=(_skM*vec4(normal,0.0)).xyz;\n vWP=(modelMatrix*vec4(transformed,1.0)).xyz; vNN=normalize(mat3(modelMatrix)*_skN); vEY=normalize(cameraPosition-vWP);\n#endif\n#include <project_vertex>');
     const lift=(fx===FX_LOGO)?'1.00':'2.60', mapInject=composite?'vec4 _t=texture2D(map,vUv); float _a=clamp(_t.a*'+lift+',0.0,1.0); diffuseColor.rgb=mix(diffuseColor.rgb,_t.rgb,_a);':'#include <map_fragment>';
-    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform float uTime; uniform float uScan; uniform float uFres; uniform float uGlitch; uniform vec3 uHot; uniform vec3 uTint; uniform float uScanFreq; uniform float uFxInt; uniform float uHolo; uniform float uOc; varying vec3 vWP; varying vec3 vNN; varying vec3 vEY;')
+    shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform float uTime; uniform float uScan; uniform float uFres; uniform float uGlitch; uniform vec3 uHot; uniform vec3 uTint; uniform float uScanFreq; uniform float uFxInt; uniform float uHolo; uniform float uOc; uniform float uStack; varying vec3 vWP; varying vec3 vNN; varying vec3 vEY;')
       .replace('#include <map_fragment>',mapInject+'\n {\n  diffuseColor.rgb *= uTint;\n  float fr=pow(1.0-abs(dot(normalize(vEY),normalize(vNN))),uFres);\n  float scan=pow(sin(vWP.y*uScanFreq-uTime*1.6)*0.5+0.5,2.4)*uScan;\n  float band=uGlitch*smoothstep(0.04,0.0,abs(vWP.y-(mod(uTime*0.5,3.2)-1.6)));\n  diffuseColor.rgb += (fr*0.22 + scan*0.18)*uFxInt*uHot;\n  diffuseColor.rgb = mix(diffuseColor.rgb, uHot, clamp(band*0.6*uFxInt,0.0,1.0));\n  diffuseColor.rgb = mix(diffuseColor.rgb, uHot, uHolo*fr*0.6);\n }')
-      .replace('#include <dithering_fragment>','#include <dithering_fragment>\n {\n  float frA=pow(1.0-abs(dot(normalize(vEY),normalize(vNN))),uFres);\n  float scA=pow(sin(vWP.y*uScanFreq-uTime*1.6)*0.5+0.5,2.4);\n  float holoA=clamp(frA*1.25 + scA*0.5 + 0.14, 0.0, 1.0);\n  gl_FragColor.a = mix(gl_FragColor.a, holoA*uOc, uHolo);\n }');
+      .replace('#include <dithering_fragment>','#include <dithering_fragment>\n {\n  float frA=pow(1.0-abs(dot(normalize(vEY),normalize(vNN))),uFres);\n  float scA=pow(sin(vWP.y*uScanFreq-uTime*1.6)*0.5+0.5,2.4);\n  float holoA=clamp(frA*1.25 + scA*0.5 + 0.14, 0.0, 1.0);\n  holoA=1.0-pow(1.0-holoA,uStack);\n  gl_FragColor.a = mix(gl_FragColor.a, holoA*uOc, uHolo);\n }');
   };
   mat.needsUpdate=true;
 }
@@ -1036,6 +1039,7 @@ function frame(now){
     s.pivot.rotation.set(s===holo?0:s.pitch,s.yaw+(s===holo?holo.auto+holo.gal:0),0);
     const f=s.obj;
     if(f&&f.userData.mixer&&!reduce&&!f.userData.ghost) f.userData.mixer.update(dt);
+    FX_LOGO.stack.value=s===holo?1:STACK_CLOSE;
     frameCamera(s);
     if(s===holo){ holoBase.rotation.y=holo.yaw+holo.gal; ring.rotation.y=reduce?0:(now/1000)*.048*-1;   /* t*0.12*spin*dir, the site's ring drift */
       const vB=bootVal(.08),vR=bootVal(.16),vH=bootVal(.24); beamU.beamBottom.value=.8*vB; beamU.beamTop.value=.2*vB; ring.visible=vR>.3; s.pivot.visible=vH>.3;
