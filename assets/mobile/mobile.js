@@ -825,7 +825,9 @@ function routeHead(parts){ const H=document.head, q=s=>H.querySelector(s); if(!r
   else if(p0==='arcade'){ t='Arcade · Mundane Workshop'; d='A tiny space-battle arcade game on the Mundane Workshop portfolio.'; }
   else if(p0==='work'&&BY_SLUG[parts[1]]){ const n=BY_SLUG[parts[1]].name; t=n+' · Jason Hsin · Product Designer'; d=n+': a case study by Jason Hsin, staff product designer.'; }
   document.title=t; const set=(s,a,v)=>{ const e=q(s); if(e) e.setAttribute(a,v); }; set('meta[name="description"]','content',d); set('meta[property="og:title"]','content',t); set('meta[property="og:description"]','content',d); set('meta[name="twitter:title"]','content',t); set('meta[name="twitter:description"]','content',d);
-  if(location.hostname==='www.mundanework.shop'){ const url='https://www.mundanework.shop'+(p0?'/'+(parts[0]==='about'?['cv']:parts).join('/'):'/'); set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); } }
+  if(location.hostname==='www.mundanework.shop'){ const url='https://www.mundanework.shop'+(p0?'/'+(parts[0]==='about'?['cv']:parts).join('/'):'/'); set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
+  /* JSON-LD: index.html's shared window.mwSetRouteLd, the same builder the galaxy uses */
+  if(window.mwSetRouteLd) window.mwSetRouteLd(p0==='cv'?'cv':(p0==='work'&&BY_SLUG[parts[1]]?'work':''),t,location.hostname==='www.mundanework.shop'?'https://www.mundanework.shop'+(p0?'/'+(parts[0]==='about'?['cv']:parts).join('/'):'/'):location.href.split('#')[0].split('?')[0]); }
 
 /* ═════════ a sent message: once the console has closed it slides in at the top of the list and its coordinates decode ═════════ */
 function netShoot(rec){ setTimeout(()=>netLand(rec),reduce?0:260); }

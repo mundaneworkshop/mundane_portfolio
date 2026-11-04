@@ -7,7 +7,7 @@
 <script>(function(){try{var q=new URLSearchParams(location.search).get("sounddebug"),S=sessionStorage;if(q==="0"){S.removeItem("mw_sounddebug");S.removeItem("mw_sounddebug_log")}else if(q==="1")S.setItem("mw_sounddebug","1");if(S.getItem("mw_sounddebug")){var s=document.createElement("script");s.src="/assets/mobile/sounddebug.js";document.head.appendChild(s)}}catch(e){}})();</script>
 <!-- MOBILE LAYOUT: off for everyone until launch. /arcade always boots the galaxy, which runs the game with touch controls; Exit game returns to this layout. ?mobile=1 turns it on for this tab on a touch device under the large-iPad size, ?mobile=force on any device, ?mobile=0 turns it off, &level=stills|static forces a fallback level.
      Decided once on load from the screen (not the window), so rotating never swaps layouts. Full story: docs/project-history/mobile-site.md -->
-<script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f||/^\/arcade\/?$/.test(location.pathname))return;
+<script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f||/^\/arcade\/?$/.test(location.pathname)||/bot\b|crawl|spider|lighthouse|googlebot|bingbot|facebookexternalhit|slurp/i.test(navigator.userAgent))return;   /* crawlers and link-preview fetchers always take the galaxy path, which the SEO work was checked against; same URLs, head and #mw-seo copy */
 var touch=matchMedia('(pointer:coarse)').matches,side=Math.min(screen.width,screen.height);if(f!=='force'&&!(touch&&side<1024))return;
 var c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))window.__mwNoGL=true;   /* no WebGL: the static level (assets/mobile/level.js) */
 window.__mwMobile=true;document.documentElement.classList.add('mw-mobile');var m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
@@ -98,6 +98,12 @@ vv.addEventListener('resize',fit);addEventListener('resize',fit);addEventListene
      (robots meta, robots.txt, sitemap.xml, manifest, twitter:title/description, WebSite JSON-LD: done, see PR for audit item 2) -->
 <!-- /SITE METADATA -->
 
+<!-- ROUTE JSON-LD: one builder for the per-route structured data. The galaxy's syncRouteHead() and the mobile layout's routeHead() (assets/mobile/mobile.js) both call it, so the two stay identical. kind: 'cv' | 'work' | anything else clears the block. -->
+<script>window.mwSetRouteLd=function(kind,t,pageUrl){try{var H=document.head,ld=document.getElementById('mw-route-ld'),person={'@type':'Person',name:'Jason Hsin',url:'https://www.mundanework.shop/'},graph=null;
+if(kind==='cv')graph={'@context':'https://schema.org','@type':'ProfilePage',name:t,url:pageUrl,mainEntity:Object.assign({},person,{jobTitle:'Staff Product Designer',alumniOf:{'@type':'CollegeOrUniversity',name:'Art Center College of Design'},sameAs:['https://www.linkedin.com/in/jason-hsin-00378837/','https://www.instagram.com/jas0n_0n_a_bike/']})};
+else if(kind==='work')graph={'@context':'https://schema.org','@graph':[{'@type':'CreativeWork',name:t.split(' · ')[0],url:pageUrl,author:person},{'@type':'BreadcrumbList',itemListElement:[{'@type':'ListItem',position:1,name:'Mundane Workshop',item:'https://www.mundanework.shop/'},{'@type':'ListItem',position:2,name:t.split(' · ')[0],item:pageUrl}]}]};
+if(!graph){if(ld)ld.remove();return;}
+if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id='mw-route-ld';H.appendChild(ld);}ld.textContent=JSON.stringify(graph);}catch(e){}};</script>
 <!-- VERCEL WEB ANALYTICS -->
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -10469,13 +10475,8 @@ f 2469//2469 2470//2470 2434//2434
       set('meta[name="twitter:title"]','content',t); set('meta[name="twitter:description"]','content',d);
       if(url){ set('link[rel="canonical"]','href',url); set('meta[property="og:url"]','content',url); }
       // structured data for the current route (replaces the previous route's block; the static Person/WebSite blocks in the head stay)
-      var ld=document.getElementById('mw-route-ld'), pageUrl=url||location.href.split('#')[0].split('?')[0], person={ '@type':'Person', name:'Jason Hsin', url:'https://www.mundanework.shop/' }, graph=null;
-      if(robots!=='noindex' && parts[0]===cvSlug) graph={ '@context':'https://schema.org', '@type':'ProfilePage', name:t, url:pageUrl, mainEntity:Object.assign({},person,{ jobTitle:'Staff Product Designer', alumniOf:{ '@type':'CollegeOrUniversity', name:'Art Center College of Design' }, sameAs:['https://www.linkedin.com/in/jason-hsin-00378837/','https://www.instagram.com/jas0n_0n_a_bike/'] }) };
-      else if(robots!=='noindex' && parts[0]==='work' && parts[1] && t!==_headDefault.title) graph={ '@context':'https://schema.org', '@graph':[
-        { '@type':'CreativeWork', name:t.split(' · ')[0], url:pageUrl, author:person },
-        { '@type':'BreadcrumbList', itemListElement:[ { '@type':'ListItem', position:1, name:'Mundane Workshop', item:'https://www.mundanework.shop/' }, { '@type':'ListItem', position:2, name:t.split(' · ')[0], item:pageUrl } ] } ] };
-      if(!graph){ if(ld) ld.remove(); }
-      else { if(!ld){ ld=document.createElement('script'); ld.type='application/ld+json'; ld.id='mw-route-ld'; H.appendChild(ld); } ld.textContent=JSON.stringify(graph); }
+      var pageUrl=url||location.href.split('#')[0].split('?')[0];   // route JSON-LD: shared builder in the head (window.mwSetRouteLd), also used by the mobile layout
+      window.mwSetRouteLd(robots==='noindex'?'':(parts[0]===cvSlug?'cv':(parts[0]==='work'&&parts[1]&&t!==_headDefault.title?'work':'')),t,pageUrl);
       var rb=q('meta[name="robots"]'); if(!rb&&robots){ rb=document.createElement('meta'); rb.name='robots'; H.appendChild(rb); } if(rb) rb.setAttribute('content',robots||'index, follow');
     }
     // every OTHER project's current slug (auto-assigning one to any project that doesn't have one yet, same rule applyData/edit uses) — used to keep a manually-typed slug unique
