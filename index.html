@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- MOBILE LAYOUT: off for everyone until launch. ?mobile=1 turns it on for this tab on a touch device under the large-iPad size, ?mobile=force on any device, ?mobile=0 turns it off.
+     Decided once on load from the screen (not the window), so rotating never swaps layouts. Full story: docs/project-history/mobile-site.md -->
+<script>(function(){try{var q=new URLSearchParams(location.search).get('mobile'),S=sessionStorage;if(q==='0')S.removeItem('mw_mobile');else if(q==='1'||q==='force')S.setItem('mw_mobile',q);var f=S.getItem('mw_mobile');if(!f)return;
+var touch=matchMedia('(pointer:coarse)').matches,side=Math.min(screen.width,screen.height);if(f!=='force'&&!(touch&&side<1024))return;
+var c=document.createElement('canvas');if(!(c.getContext('webgl2')||c.getContext('webgl')))return;
+window.__mwMobile=true;document.documentElement.classList.add('mw-mobile');var m=document.querySelector('meta[name=viewport]');if(m)m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');
+var st=document.createElement('style');st.id='bric-mw-hold';st.textContent='html.mw-mobile{background:#070C0C}html.mw-mobile body{visibility:hidden}';document.head.appendChild(st);}catch(e){}})();</script>
 <!-- ROUTING: pages now load at nested paths (/work/<slug>, /work/<slug>/<moon-slug>, /cv, /holonet) via the
      vercel.json SPA rewrite. Without this, the relative asset paths below (./three.min.js, assets/manifest.json)
      would resolve against the current URL's directory instead of the site root and 404 on any deep link. -->
@@ -1990,6 +1997,7 @@
     var NO_GATE=(function(){ try{ return location.pathname.replace(/^\/+|\/+$/g,'').length>0||!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return true; } })();
     window.__mwSeedReady = fetchRetry('assets/manifest.json',function(r){ return r.json(); })
       .then(function(manifest){
+        if(window.__mwMobile) return seedCopy(manifest.copySeed).then(reconcileServerContent);   // the mobile layout preloads its own models at its gate; only the copy is needed from here
         (manifest.models||[]).forEach(function(e){ addJob(e.key,[e.path],[e.bytes],function(){ return seedOne(e,false); }); });
         (manifest.images||[]).forEach(function(e){ addJob(e.key,[e.path],[e.bytes],function(){ return seedOne(e,true); }); });
         var byId={}; (manifest.boxtex||[]).forEach(function(e){ (byId[e.id]=byId[e.id]||[]).push(e); });
@@ -16236,7 +16244,10 @@ f 2469//2469 2470//2470 2434//2434
       var svgSrcs =['./vendor/SVGLoader.js',   CDN+'SVGLoader.js'];
       var gltfSrcs=['./vendor/GLTFLoader.js',  CDN+'GLTFLoader.js'];    // EDIT MODE: .glb upload support
       var dracoSrcs=['./vendor/DRACOLoader.js',CDN+'DRACOLoader.js'];   // MW SEED: pre-loaded portfolio .glb files are Draco-compressed
-      function boot(){ try{ bootHolotable(); }catch(err){ console.error('[holotable]',err); showError('3D scene error: '+err.message); } }
+      function boot(){ if(window.__mwMobile){ bootMobile(); return; } try{ bootHolotable(); }catch(err){ console.error('[holotable]',err); showError('3D scene error: '+err.message); } }
+      // the mobile layout runs instead of the galaxy. If its files can't load, fall back to the galaxy rather than a blank page
+      function bootMobile(){ var fail=function(){ window.__mwMobile=false; document.documentElement.classList.remove('mw-mobile'); var h=document.getElementById('bric-mw-hold'); if(h) h.remove(); boot(); };
+        var a=document.createElement('script'); a.src='assets/mobile/site-data.js'; a.onerror=fail; a.onload=function(){ var b=document.createElement('script'); b.src='assets/mobile/mobile.js'; b.onerror=fail; document.head.appendChild(b); }; document.head.appendChild(a); }
       // MW SEED: wait for the manifest-driven asset seed (assets/manifest.json → IndexedDB) to finish
       // before booting the scene, so first-time visitors never see an empty/placeholder flash. If the
       // seed script isn't present (e.g. local prototype without /assets), boot immediately as before.

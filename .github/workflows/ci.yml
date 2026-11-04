@@ -14,7 +14,7 @@ jobs:
       - name: Check JS syntax (assets, api, inline scripts in index.html)
         run: |
           set -e
-          for f in assets/*.js assets/battle/*.js api/*.js; do node --check "$f"; done
+          for f in assets/*.js assets/battle/*.js assets/mobile/*.js api/*.js; do node --check "$f"; done
           python3 - <<'PY'
           import re, subprocess, sys, tempfile, os
           s = open('index.html').read()

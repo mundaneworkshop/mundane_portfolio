@@ -57,6 +57,7 @@ This folder is a snapshot of the design/build decision log kept in the Cowork se
 - [spacing-decisions.md](spacing-decisions.md) — locked spacing tokens
 - [star-wars-visual-dna.md](star-wars-visual-dna.md) — Star Wars UI visual language analysis backing the aesthetic
 - [text-style-tokens-todo.md](text-style-tokens-todo.md) — todo for the real build: bind text to DS type tokens
+- [mobile-site.md](mobile-site.md) — Nov 2026: the flagged phone layout in `assets/mobile/`, who gets it, and what's left before launch
 - [url-slugs-routing.md](url-slugs-routing.md) — Aug 13 2026: editable URL slugs + client-side routing (most recent work)
 - [visual-language-direction.md](visual-language-direction.md) — locked cassette-futurism aesthetic, all core design rules
 - [workflow-html-verification.md](workflow-html-verification.md) — standing QA process for HTML prototype changes
