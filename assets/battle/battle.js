@@ -309,14 +309,13 @@ function pumpLoads(){
   }
 }
 
-/* ───────────────────────────── SPIKE: touch flight (A0, throwaway) ─────────────────────────────
-   Coarse-pointer devices, or ?touch=1: locked chase camera, always-forward flight, D-pad + Fire + Menu. ?density=.5 overrides the fleet, ?perf=0 hides the readout. */
+/* ───────────────────────────── touch flight ─────────────────────────────
+   Coarse-pointer devices, or ?touch=1 (?touch=0 turns it off): locked chase camera, always-forward flight, analog stick + Fire + Menu. */
 var TOUCH=/[?&]touch=1\b/.test(location.search)||(!/[?&]touch=0\b/.test(location.search)&&!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches));
-var baseFov=0, dpad={x:0,y:0}, steer={x:0,y:0}, padReset=null, invertY=false, touchEl=null, xhEl=null, lockEl=null, lockShown=null, perfEl=null, touchLock=null;
-var chase={on:false,k:0,dir:null,pos:null,look:null,up:null,out:null}, perf={t:0,n:0,fps:0,calls:0,tris:0};
-function tuneQ(k,d){ var m=new RegExp('[?&]'+k+'=([\\d.]+)').exec(location.search); return m?parseFloat(m[1]):d; }   // spike only: try values on a phone from the URL
-var TURN=tuneQ('turn',1.15), STEER_EASE=8, HERO_FWD=1.35, FIGHTER_TOUCH=tuneQ('fscale',1.75), ASSIST_RANGE=16, KIT_COS=Math.cos(10*Math.PI/180),
-    ASSIST_COS=Math.cos(tuneQ('assist',20)*Math.PI/180), ASSIST_KEEP=Math.cos(tuneQ('assist',20)*1.5*Math.PI/180), FOLLOW=tuneQ('follow',.95), RELOCK_WAIT=1.5;
+var baseFov=0, dpad={x:0,y:0}, steer={x:0,y:0}, padReset=null, invertY=false, touchEl=null, xhEl=null, lockEl=null, lockShown=null, touchLock=null;
+var chase={on:false,k:0,dir:null,pos:null,look:null,up:null,out:null};
+var TURN=1.15, STEER_EASE=8, HERO_FWD=1.35, FIGHTER_TOUCH=1.75, ASSIST_RANGE=16, KIT_COS=Math.cos(10*Math.PI/180),
+    ASSIST_COS=Math.cos(20*Math.PI/180), ASSIST_KEEP=Math.cos(30*Math.PI/180), FOLLOW=.95, RELOCK_WAIT=1.5;
 function lockHolds(s,o,mp){   // a fighter lock lasts until it dies, leaves the frame, gets behind the hero, or the stick moves the nose off it
   if(!o.alive||o.jump||o.leaving||!o.root.visible||!here(o)) return false;
   _v3.copy(o.pos).sub(mp); var d=_v3.length(), along=_v3.dot(s.dir);
@@ -387,12 +386,6 @@ function updChase(dt){   // world-space camera target for index.html (getChase)
   chase.pos.copy(hero.pos).addScaledVector(chase.dir,-back); chase.pos.y+=high; chase.look.copy(hero.pos).addScaledVector(chase.dir,ahead); chase.look.y-=drop;
   G.localToWorld(chase.pos); G.localToWorld(chase.look); chase.up.copy(_up).applyQuaternion(G.quaternion); chase.out.k=chase.k;
 }
-function updPerf(dt){
-  if(!perfEl||!ctx.renderer) return; var inf=ctx.renderer.info; perf.calls=inf.render.calls; perf.tris=inf.render.triangles; inf.reset();
-  perf.t+=dt; perf.n++; if(perf.t<.5) return; var fps=perf.n/perf.t; perf.t=0; perf.n=0;
-  var mem=(performance.memory&&performance.memory.usedJSHeapSize)?' · heap '+Math.round(performance.memory.usedJSHeapSize/1048576)+'MB':'';
-  perfEl.textContent=Math.round(fps)+' fps · '+perf.calls+' calls · '+Math.round(perf.tris/1000)+'k tris · ships '+fleetStats.drawn+'/'+fleetStats.ships+' · density '+P.density+mem+' · '+innerWidth+'x'+innerHeight;
-}
 function openTouchMenu(){ if(heroShip&&heroShip.burning) return; if(padReset) padReset(); fireHeld=false; if(window.MWAudio) MWAudio.heroFireUp(); changeHero(); }
 function buildTouchUi(){
   document.body.classList.add('mw-touch-arcade');
@@ -401,7 +394,6 @@ function buildTouchUi(){
   document.body.appendChild(touchEl);
   xhEl=document.createElement('div'); xhEl.id='bt-xh'; document.body.appendChild(xhEl);
   lockEl=document.createElement('div'); lockEl.id='bt-lock'; lockEl.innerHTML='<b><i></i><i></i><i></i><i></i></b>'; document.body.appendChild(lockEl);
-  if(!/[?&]perf=0\b/.test(location.search)){ perfEl=document.createElement('div'); perfEl.id='bt-perf'; document.body.appendChild(perfEl); if(ctx.renderer) ctx.renderer.info.autoReset=false; }
   var pad=touchEl.querySelector('.bt-stick'), knob=pad.querySelector('i'), pid=null, DEAD=.14;
   function read(e){   // analog: the knob follows the thumb inside the ring, and small moves make small turns (power curve)
     var r=pad.getBoundingClientRect(), trav=(r.width-knob.offsetWidth)/2, dx=(e.clientX-(r.left+r.width/2))/trav, dy=(e.clientY-(r.top+r.height/2))/trav, n=Math.hypot(dx,dy), m=Math.min(1,n);
@@ -420,20 +412,19 @@ function buildTouchUi(){
   on(document,'visibilitychange',function(){ if(document.hidden&&stage==='play') openTouchMenu(); });
   var tn=0; on(window,'touchend',function(){ if(tn++<4&&window.MWAudio&&MWAudio.unlock) MWAudio.unlock(); });   // touch: touchend is the activating gesture, pointerdown isn't
   var ex=document.createElement('div'); ex.className='bt-tmenu';
-  ex.innerHTML='<button type="button" class="bric-btn bric-btn--secondary bt-inv"></button><button type="button" class="bric-btn bric-btn--secondary bt-den"></button><button type="button" class="bric-btn bric-btn--secondary bt-exit">Exit game</button>';
+  ex.innerHTML='<button type="button" class="bric-btn bric-btn--secondary bt-inv"></button><button type="button" class="bric-btn bric-btn--secondary bt-exit">Exit game</button>';
   carUi.appendChild(ex);
-  var inv=ex.querySelector('.bt-inv'), den=ex.querySelector('.bt-den');
+  var inv=ex.querySelector('.bt-inv');
   try{ invertY=localStorage.getItem('mw_battle_invert')==='1'; }catch(_){}
-  function lab(){ inv.textContent='Inverted: '+(invertY?'On':'Off'); den.textContent='Fleet: '+Math.round(P.density*100)+'%'; } lab();
+  function lab(){ inv.textContent='Inverted: '+(invertY?'On':'Off'); } lab();
   on(inv,'click',function(e){ e.stopPropagation(); invertY=!invertY; try{ localStorage.setItem('mw_battle_invert',invertY?'1':'0'); }catch(_){} lab(); });
-  on(den,'click',function(e){ e.stopPropagation(); P.density=P.density>.9?.75:P.density>.6?.5:1; reconT=0; lab(); });   // spike only: lets a tester compare fleet sizes on the phone
   on(ex.querySelector('.bt-exit'),'click',function(e){ e.stopPropagation(); if(ctx.onExit) ctx.onExit(); });
 }
 function touchCss(){ return [
   'body.mw-touch-arcade{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}',
   'html:has(body.mw-touch-arcade){overflow:hidden;width:100%;height:100%}',   /* hidden site panels overflow the page: a phone browser then zooms out to fit and reports a window bigger than the screen */
   'body.mw-touch-arcade #bt-hints,body.mw-touch-arcade #arcadeExit{display:none!important}',
-  '#bt-touch,#bt-xh,#bt-perf,#bt-lock{display:none}',
+  '#bt-touch,#bt-xh,#bt-lock{display:none}',
   'body.mw-touch-arcade.bt-playing #bt-touch{display:block;position:fixed;inset:0;z-index:30;pointer-events:none}',
   'body.mw-touch-arcade.bt-playing .mw-sound-switch{visibility:hidden}',
   '#bt-touch .bt-menu{position:absolute;top:calc(12px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));pointer-events:auto;touch-action:manipulation}',
@@ -451,11 +442,10 @@ function touchCss(){ return [
   '#bt-lock i:nth-child(1){left:0;top:0;border-width:2px 0 0 2px}#bt-lock i:nth-child(2){right:0;top:0;border-width:2px 2px 0 0}#bt-lock i:nth-child(3){left:0;bottom:0;border-width:0 0 2px 2px}#bt-lock i:nth-child(4){right:0;bottom:0;border-width:0 2px 2px 0}',
   '@keyframes bt-lock-in{from{transform:scale(1.7);opacity:0}to{transform:scale(1);opacity:1}}',
   '@media (prefers-reduced-motion:reduce){#bt-lock b{animation:none}}',
-  'body.mw-touch-arcade #bt-perf{display:block;position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top));z-index:40;pointer-events:none;font:400 10px/14px var(--mono);color:var(--bric-content-secondary)}',
-  'body.mw-touch-arcade #bt-hud{left:calc(16px + env(safe-area-inset-left));right:auto;top:calc(36px + env(safe-area-inset-top));align-items:flex-start}',
+  'body.mw-touch-arcade #bt-hud{left:calc(16px + env(safe-area-inset-left));right:auto;top:calc(12px + env(safe-area-inset-top));align-items:flex-start}',
   'body.mw-touch-arcade #bt-hud .bt-hn{font-size:32px}body.mw-touch-arcade #bt-hud .bt-hull{margin-top:8px}body.mw-touch-arcade #bt-hud .bt-hbar{width:96px}',
   'body.mw-touch-arcade #bt-car{left:50%!important;top:auto!important;bottom:calc(16px + env(safe-area-inset-bottom));gap:8px;width:min(340px,calc(100vw - 32px))}body.mw-touch-arcade #bt-car .bt-row{margin-top:0}body.mw-touch-arcade #bt-car .bt-lb{margin-top:0;width:100%;justify-content:center}',
-  '#bt-car .bt-tmenu{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}#bt-car .bt-tmenu .bric-btn{justify-content:center;touch-action:manipulation;padding-left:8px;padding-right:8px;white-space:normal;text-align:center}#bt-car .bt-tmenu .bt-exit{grid-column:1/-1}',
+  '#bt-car .bt-tmenu{display:grid;grid-template-columns:1fr;gap:8px;width:100%}#bt-car .bt-tmenu .bric-btn{justify-content:center;touch-action:manipulation;padding-left:8px;padding-right:8px;white-space:normal;text-align:center}#bt-car .bt-tmenu .bt-exit{grid-column:1/-1}',
   '@media (orientation:landscape){body.mw-touch-arcade #bt-car{left:calc(75% - env(safe-area-inset-right)/2)!important;top:50%!important;bottom:auto;transform:translate(-50%,-50%);width:min(340px,calc(50vw - 32px - env(safe-area-inset-right)))}body.mw-touch-arcade #bt-car .bt-name,body.mw-touch-arcade #bt-car .bt-lock{position:absolute;left:calc(50% - 75vw);right:calc(50% + 25vw);width:fit-content;margin:0 auto}body.mw-touch-arcade #bt-car .bt-name{top:calc(50% + 50vh - 58px - env(safe-area-inset-bottom));top:calc(50% + 50dvh - 58px - env(safe-area-inset-bottom))}body.mw-touch-arcade #bt-car .bt-lock{top:calc(50% + 50vh - 38px - env(safe-area-inset-bottom));top:calc(50% + 50dvh - 38px - env(safe-area-inset-bottom))}}'   /* two columns: index.html slides the hologram into the left half, and the ship name and unlock text sit with it; the right half is buttons only */
 ].join(''); }
 
@@ -1798,7 +1788,7 @@ function update(t){
   }
   sepLarge(); updDebris(dt); updTimers(dt); updPlanet(dt); updCamAssist(dt);
   updKits(dt); updCarousel(dt); updBars(dt);
-  updBolts(dt); updSparks(dt); updFlashes(dt); syncBatches(); updChase(dt); updLockReticle(); updPerf(dt);
+  updBolts(dt); updSparks(dt); updFlashes(dt); syncBatches(); updChase(dt); updLockReticle();
   if(hyper){
     if(hyper.t===0) syncUi();
     hyper.t+=dt; var any=ships.some(function(s){ return s.alive; });
@@ -2017,7 +2007,7 @@ var MWBattle={
     (c.sceneLights||[]).forEach(function(l){ sceneBase.push({l:l,i:l.intensity}); }); buildEnv(); applyLook();
     kills=0; tally={fighter:0,support:0,capital:0}; session={played:false,hero:null,heroes:[],heroIds:[],t0:0,died:false,met0:snapshotMet()}; stage='select'; pickIntro(); carIdx=0; carGroup=carWrap=carModel=carModelId=null; wireCache={};
     camFar=c.camera.far; camNear=c.camera.near; c.camera.far=Math.max(450,(Math.max(PL.Pc.distanceTo(_v1.set(0,0,L))+PL.R,SUN_DIST+L+60)+20)*S*1.05); c.camera.near=1.2; c.camera.updateProjectionMatrix();   // far ships need the longer far plane, but depth precision ~ d²/near: a big near plane stops the hull layers z-fighting at distance   // far ships (and the far Death Star) vanished past the page's 100-unit draw distance
-    fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); baseFov=c.camera.fov; if(TOUCH){ var _dm=/[?&]density=([\d.]+)/.exec(location.search); if(_dm) P.density=parseFloat(_dm[1]); buildTouchUi(); } ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
+    fogBase=c.fog?c.fog.density:0; makeBolts(); makeSparks(); bindInput(); buildUi(); baseFov=c.camera.fov; if(TOUCH){ buildTouchUi(); } ensureCarousel(); loadPlanet(); applyLook(); updHud(); syncUi();
     active=true; kitTimer=5; if(c.onStage) c.onStage('select');
     audioRot0=c.getRot?c.getRot():0; if(window.MWAudio){ MWAudio.arcadeStart(); MWAudio.warm(); }
     window.MWBattle=MWBattle;
@@ -2033,7 +2023,7 @@ var MWBattle={
     if(envTex){ envTex.dispose(); envTex=null; }
     if(ctx.fog&&fogBase) ctx.fog.density=fogBase;
     if(ctx.camera){ ctx.camera.far=camFar; ctx.camera.near=camNear; ctx.camera.updateProjectionMatrix(); }
-    if(TOUCH){ document.body.classList.remove('mw-touch-arcade','bt-playing'); if(ctx.renderer) ctx.renderer.info.autoReset=true; if(baseFov&&ctx.camera){ ctx.camera.fov=baseFov; ctx.camera.updateProjectionMatrix(); } [touchEl,xhEl,lockEl,perfEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); }); touchEl=lockEl=lockShown=xhEl=perfEl=null; }
+    if(TOUCH){ document.body.classList.remove('mw-touch-arcade','bt-playing'); if(baseFov&&ctx.camera){ ctx.camera.fov=baseFov; ctx.camera.updateProjectionMatrix(); } [touchEl,xhEl,lockEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); }); touchEl=lockEl=lockShown=xhEl=null; }
     [carUi,noteEl,hintEl,hudEl,vigEl,barsEl,panelEl,styleEl].forEach(function(e){ if(e&&e.parentNode) e.parentNode.removeChild(e); });
     ships.length=0; bolts.length=0; kits.length=0; cache={}; matList=[]; heroShip=null; G=null; sess++;
   },
@@ -2041,7 +2031,7 @@ var MWBattle={
   _fleetStats:function(){ return fleetStats; }, _info:function(){ return ctx&&ctx.renderer?ctx.renderer.info:null; },
   _camState:function(){ return cam; }, _dbg:function(){ return {rf:_rf&&_rf.toArray(),hT:_hT.toArray(),ro:_ro.toArray(),rd:_rd.toArray(),ptr:[ptr.nx,ptr.ny,ptr.in],cen:[CX,CY,CZ]}; }, _killHero:function(){ if(heroShip&&!heroShip.burning) heroDeath(heroShip); },
   heroLabel:function(id){ var m=BYID[id]; return m&&m.label||null; },
-  getChase:function(){ return chase.on?chase.out:null; }, _touchInfo:function(){ return {target:touchLock,heroObj:heroShip,dpad:dpad,steer:steer,turn:TURN,fscale:FIGHTER_TOUCH,lock:touchLock?(touchLock.cls||'kit'):null,reticle:!!(lockEl&&lockEl.classList.contains('on')),followK:heroShip?heroShip.followK||0:0,lockTeamHero:!!(touchLock&&touchLock.team===HERO),heroDir:heroShip?heroShip.dir.toArray():null,stage:stage}; }, isTouch:function(){ return TOUCH; },
+  getChase:function(){ return chase.on?chase.out:null; }, isTouch:function(){ return TOUCH; },
   getSelZoom:function(){ return TOUCH&&window.innerWidth>window.innerHeight?.74:(P?P.selZoom:.62); },   // hero-select camera zoom factor (index.html applies it; <1 = closer)
   getCamAssist:function(){ return cam.out; },   // {zoom, yaw|null, fk, focus|null}: auto zoom multiplier, galaxy rotation to ease toward, and the death close-up pivot (WORLD)
   setInverted:function(v){ camInverted=!!v; },   // index.html: the arcade camera is upside down (rolled upright)
