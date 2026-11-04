@@ -407,7 +407,7 @@ var MWAudio={
     var list=SITE_EVENTS[name]; if(!list||!list.length) return false; if(!ensure()||muted) return true; o=o||{};   // returns true when the event has clips of its own (so a caller can fall back to a default sound when it returns false)
     var k=draw('site:'+name,list);
     var t0=now();   // anchor the delay to the event, not to when the clip finishes decoding (first use), or staggered cues play out of order
-    load(k).then(function(b){ if(b) oneShot(k,{gain:LEVEL.site*num(SITE_GAIN[name],1)*num(o.gain,1),rate:o.rate,delay:Math.max(0,num(o.delay,0)-(now()-t0))}); });
+    load(k).then(function(b){ if(!b) return; var h=oneShot(k,{gain:LEVEL.site*num(SITE_GAIN[name],1)*num(o.gain,1),rate:o.rate,delay:Math.max(0,num(o.delay,0)-(now()-t0))}); if(h&&o.stopAfter) setTimeout(function(){ try{ fade(h.gain,0,.18); }catch(e){} },o.stopAfter*1000); });   // stopAfter (s): end early, for the mobile console's shorter uplink
     return true;
   },
   /* decode a site event's clips ahead of time, so a cue that must land on a keystroke has no first-use lag */
