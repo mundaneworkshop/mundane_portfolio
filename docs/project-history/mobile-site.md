@@ -71,6 +71,10 @@ The probe runs a heavy 512px shader three times per frame for 10 frames and read
 
 One media query at the end of `mobile.css`, `(orientation:landscape) and (max-height:520px)`, so rotating reflows live and never swaps layouts (stages follow their box through a ResizeObserver, the gate sizes per frame). Index: the hologram and Change appearance are a sticky left column and the rows scroll on the right. Outfits and case studies: stage left, manual right. CV: heading and CTAs sticky left, cards right. HoloNet: a centered column. Console: dish screen beside the fields. Menu: a right-hand panel. The header drops to 44px. Not `position:fixed` for the hologram: the render loop skips hosts whose `offsetParent` is null, which fixed elements are.
 
+## Outfit unlocks
+
+`locked()` in `mobile.js` follows the same rules as the galaxy's `ocProg()`. Arcade progress is shared, because `/arcade` runs in the galaxy build and writes `mw_ark_stats` and `mw_kits_total`, which the layout reads fresh on each render. Site events stay in the layout's own `mw_m.events`, separate from the galaxy's `mw_oc_events`. Opening a case view counts as seeing that case study, as it does in the galaxy. A tap on any link to linkedin.com or instagram.com counts as a visit, also as in the galaxy. Those links open in a new tab, so the outfit view redraws when the tab becomes visible again if its lock changed.
+
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.

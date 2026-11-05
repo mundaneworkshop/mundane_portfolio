@@ -156,6 +156,8 @@ const NO_GATE=new URLSearchParams(location.search).get('gate')==='0';
 const hold=document.getElementById('bric-mw-hold'); if(hold) hold.remove();
 const $=(s,r)=>(r||document).querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* a saved link typed without a scheme (www.slate.auto) would resolve against this site: treat a bare domain as https */
+const extUrl=u=>{ u=String(u==null?'':u).trim(); return /^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#:]|$)/i.test(u)?'https://'+u:u; };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STILLS=window.__mwLevel==='stills'; let stillN=0;   // fallback level (assets/mobile/level.js): rows are drawn once and the stage draws every other frame
@@ -462,7 +464,25 @@ const ZONES=[
 const OUTFITS=[{id:'head',head:true,name:LIVE.head.name==='default'?'Default':(LIVE.head.name||'Default'),about:LIVE.head.about,unlock:{type:'free'}}].concat((await fetch('assets/outfits.json').then(r=>r.json())).outfits.filter(o=>o.enabled));
 let EV=store('events')||{cases:{}};
 function note(k,v){ if(k==='case') EV.cases[v]=1; else EV[k]=1; store('events',EV); }
-function locked(o){ if(SET.unlockAll||o===OUTFITS[0]) return false; const u=o.unlock||{}; if(u.type==='caseStudy') return !EV.cases[u.target||'w0']; if(u.type==='visitLinkedin'||u.type==='visitInstagram') return !EV[u.type]; return u.type!=='free'; }
+/* the same rules as the galaxy's ocProg(). Arcade progress is shared: /arcade runs in the galaxy build and writes these keys. Read fresh, so a run counts as soon as this page renders again */
+function arkStats(){ try{ return JSON.parse(localStorage.getItem('mw_ark_stats'))||{}; }catch(e){ return {}; } }
+function met(u){ const n=u.n|0, st=arkStats(); switch(u.type){
+  case 'free': return true;
+  case 'caseStudy': return !!EV.cases[u.target||'w0'];
+  case 'visitLinkedin': case 'visitInstagram': case 'visitCV': case 'holonet': return !!EV[u.type];
+  case 'destroy': { const k=st.kills||{}; return ((u.ships&&u.ships.length)?u.ships:['fighter','support','capital']).reduce((h,x)=>h+(k[x]|0),0)>=n; }
+  case 'ship': try{ return !!(window.MWBattle&&MWBattle.heroUnlocked&&MWBattle.heroUnlocked(u.id)); }catch(e){ return false; }
+  case 'hunters': return (st.hunters|0)>=n;
+  case 'planets': return (Array.isArray(st.planets)?st.planets.length:0)>=n;
+  case 'survive': return (st.bestSurvive|0)>=n;
+  case 'plays': return (st.plays|0)>=n;
+  case 'score': return (st.bestScore|0)>=n;
+  case 'rank': return (st.bestRank|0)>0&&(st.bestRank|0)<=n;
+  default: { let t=0; try{ t=parseInt(localStorage.getItem('mw_kits_total'),10)||0; }catch(e){} return t>=n; }   /* minikits */
+} }
+/* any link to LinkedIn or Instagram counts, wherever it is on the page, same as the galaxy's ocNoteUrl() */
+document.addEventListener('click',e=>{ const a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(!a) return; try{ const h=new URL(a.href,location.href).hostname; if(/(^|\.)linkedin\.com$/i.test(h)) note('visitLinkedin'); else if(/(^|\.)instagram\.com$/i.test(h)) note('visitInstagram'); }catch(x){} },true);
+function locked(o){ return !(SET.unlockAll||o===OUTFITS[0]||met(o.unlock||{})); }
 function lockLine(o){ const u=o.unlock||{}; if(u.type==='caseStudy') return 'See the '+(CASES[u.target]?CASES[u.target].name:'')+' case study to unlock'; if(u.type==='visitLinkedin') return 'Visit my LinkedIn to unlock'; if(u.type==='visitInstagram') return 'Visit my Instagram to unlock'; return 'Play the Space Arcade to unlock'; }
 let curOutfit=store('outfit'); if(!OUTFITS.some(o=>o.id===curOutfit)||locked(OUTFITS.find(o=>o.id===curOutfit))) curOutfit=OUTFITS[0].id;
 const outfitById=id=>OUTFITS.find(o=>o.id===id);
@@ -613,7 +633,7 @@ const ROWS=[];
     const sec=document.createElement('section'); sec.className='zone'; sec.innerHTML='<h2>'+esc(z.name)+'</h2>'; host.appendChild(sec);
     z.rows.forEach(r=>{
       const a=document.createElement('a'); a.className='row'; a.href=r.href; a.dataset.id=r.id;
-      if(r.ext){ a.target='_blank'; a.rel='noopener'; a.setAttribute('aria-label',r.t+', opens in a new tab'); a.addEventListener('click',()=>note(r.ext)); }
+      if(r.ext){ a.target='_blank'; a.rel='noopener'; a.setAttribute('aria-label',r.t+', opens in a new tab'); }
       const cv=document.createElement('canvas'); cv.width=ROW_BUF; cv.height=ROW_BUF; cv.setAttribute('aria-hidden','true');
       const lb=document.createElement('span'); lb.innerHTML='<span class="t">'+esc(r.t)+'</span><span class="s">'+esc(r.s)+'</span>';
       a.appendChild(cv); a.appendChild(lb); sec.appendChild(a);
@@ -662,9 +682,9 @@ function showView(el){
 }
 
 /* outfit focus */
-let oIdx=0;
+let oIdx=0,oLock=null;
 function renderOutfit(id){
-  const o=outfitById(id)||OUTFITS[0]; oIdx=OUTFITS.indexOf(o); const lock=locked(o), a=o.about||{};
+  const o=outfitById(id)||OUTFITS[0]; oIdx=OUTFITS.indexOf(o); const lock=oLock=locked(o), a=o.about||{};
   showView($('#v-outfit')); attach(sOutfit);
   $('#oName').innerHTML=esc(o.name)+'<small>'+(oIdx+1)+' / '+OUTFITS.length+(lock?' · locked':'')+'</small>';
   if(!lock){ curOutfit=o.id; store('outfit',o.id); }
@@ -678,19 +698,22 @@ function renderOutfit(id){
     if(caseT) href='/work/'+caseT.slug;
     else if(/mundanework\.shop\/arcade/.test(href)) href='/arcade';
     else if(a.ctaTarget==='new'||u.type==='visitInstagram'){ attrs=' target="_blank" rel="noopener"'; }
-    if(href) cta='<a class="bric-btn bric-btn--primary bric-btn--block" href="'+esc(href)+'"'+attrs+' data-note="'+esc(u.type==='visitLinkedin'||u.type==='visitInstagram'?u.type:'')+'">'+esc(a.ctaText)+'</a>';
+    if(href) cta='<a class="bric-btn bric-btn--primary bric-btn--block" href="'+esc(extUrl(href))+'"'+attrs+'>'+esc(a.ctaText)+'</a>';
   }
   const p=$('#oPane'); p.scrollTop=0;
-  const extra=(!lock&&(a.extraLinks||[]).length)?'<div class="o-extra">'+a.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'';
+  const extra=(!lock&&(a.extraLinks||[]).length)?'<div class="o-extra">'+a.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'';
   p.innerHTML='<div class="micro kick">'+esc(kick)+'</div><h2>'+esc(a.title||o.name)+'</h2><p class="body">'+esc(body)+'</p>'+cta+extra;
-  const c=p.querySelector('[data-note]'); if(c&&c.dataset.note) c.addEventListener('click',()=>note(c.dataset.note));
 }
 function stepOutfit(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=OUTFITS.length, o=OUTFITS[(oIdx+d+n)%n]; history.replaceState(null,'','/about/'+o.id); renderOutfit(o.id); }
+/* coming back from a new tab, or from the arcade or a case study through the back cache, leaves this view as it was: redraw if the lock changed meanwhile */
+const recheckLock=()=>{ if(oLock!==null&&!location.pathname.indexOf('/about')&&oLock!==locked(OUTFITS[oIdx])) route(); };
+window.addEventListener('pageshow',e=>{ if(e.persisted) recheckLock(); }); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) recheckLock(); });
 $('#oPrev').addEventListener('click',()=>stepOutfit(-1)); $('#oNext').addEventListener('click',()=>stepOutfit(1));
 
 /* case study */
 let cCase=null,cIdx=0;
 function renderCase(c,i){
+  note('case',c.id);   /* opening the case view counts as seeing it, same as the galaxy's MWOutfitEvent('caseStudy',id) */
   cCase=c; const items=1+c.arts.length; cIdx=clamp(i,0,items-1);
   showView($('#v-case')); attach(sCase);
   $('#cCount').textContent=(cIdx+1)+' / '+items;
@@ -701,7 +724,7 @@ function renderCase(c,i){
     h='<div class="micro kick">Case study</div><h2>'+esc(c.name)+'</h2><p class="body">'+esc(d.body)+'</p>'+
       '<div class="tags">'+d.tags.map(t=>'<span class="bric-tag">'+esc(t)+'</span>').join('')+'</div>'+
       '<dl class="snap">'+d.snapshot.map(r=>'<div><dt>'+esc(r.k)+'</dt><dd'+(r.amber?' class="amber"':'')+'>'+escBr(r.v)+'</dd></div>').join('')+'</dl>'+
-      (d.extraLinks.length?'<div class="links">'+d.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'');
+      (d.extraLinks.length?'<div class="links">'+d.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'');
   }else{
     const a=d.artifacts[cIdx-1];
     h='<div class="micro kick">Artifact from '+esc(c.name)+'</div><h2>'+esc(a.title)+'</h2><p class="body">'+esc(a.desc)+'</p>'+
@@ -709,9 +732,9 @@ function renderCase(c,i){
   }
   /* pinned to the bottom of the screen: the case study CTA on the kit box, an artifact's own links on an artifact */
   const links=cIdx?(d.artifacts[cIdx-1].links||[]):[], st=$('#cStick'), p=$('#cPane');
-  st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(c.url)+'">View case study</a>';
+  st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(c.url)+'">View case study</a>';
   p.scrollTop=0; p.innerHTML=h; p.style.paddingBottom=(st.offsetHeight+16)+'px';
-  const cta=$('#cCta'); if(cta) cta.addEventListener('click',e=>{ note('case',c.id); if(window.bricWipe){ e.preventDefault(); bricWipe.go(c.url); } });
+  const cta=$('#cCta'); if(cta) cta.addEventListener('click',e=>{ if(window.bricWipe){ e.preventDefault(); bricWipe.go(c.url); } });
 }
 function stepCase(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=1+cCase.arts.length, i=(cIdx+d+n)%n; history.replaceState(null,'','/work/'+cCase.slug+(i?'/'+artSlug(cCase,i-1):'')); renderCase(cCase,i); }
 $('#cPrev').addEventListener('click',()=>stepCase(-1)); $('#cNext').addEventListener('click',()=>stepCase(1));
@@ -721,7 +744,7 @@ $('#cvList').insertAdjacentHTML('beforeend',DATA.cv.slice().reverse().map(n=>{
   const sn=n.snapshot||[], when=(sn.find(r=>/service|length|date/i.test(r.k))||{}).v, rest=sn.filter(r=>r.v!==when);
   return '<article class="manual cv-i"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="micro">'+esc(n.kicker)+'</div><h3>'+esc(n.title)+'</h3><div class="sub">'+esc(n.sub)+'</div>'+(when?'<span class="mono when">'+esc(when)+'</span>':'')+'<p class="body">'+esc(n.body)+'</p>'+
     (rest.length?'<dl class="snap" style="margin:10px 0 0">'+rest.map(r=>'<div><dt>'+esc(r.k)+'</dt><dd>'+escBr(r.v)+'</dd></div>').join('')+'</dl>':'')+
-    ((n.links||[]).filter(l=>l.url&&l.url!=='#').length?'<div class="links">'+n.links.filter(l=>l.url&&l.url!=='#').map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'')+'</article>';
+    ((n.links||[]).filter(l=>l.url&&l.url!=='#').length?'<div class="links">'+n.links.filter(l=>l.url&&l.url!=='#').map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'')+'</article>';
 }).join(''));
 /* CV hero: the site's one-liner + CTAs (cvHeadLines, cvCtaRow) */
 const CV_HEAD=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
@@ -803,7 +826,7 @@ function route(){
   if(a!=='holonet') ct.close();
   if(a==='about') renderOutfit(parts[1]||curOutfit);
   else if(a==='work'&&BY_SLUG[parts[1]]){ const c=BY_SLUG[parts[1]], k=parts[2]!=null?c.arts.findIndex((_,i)=>artSlug(c,i)===parts[2]):-1; renderCase(c,k+1); }
-  else if(a==='cv') showView($('#v-cv'));
+  else if(a==='cv'){ note('visitCV'); note('case','cv'); showView($('#v-cv')); }
   else if(a==='holonet'){ showView($('#v-holonet')); ct.open(); }
   else {
     showView($('#v-index')); attach(holo);
@@ -879,7 +902,7 @@ $('#sheetBody').innerHTML='<div class="micro m-h">Work</div><div class="m-work">
   '<a class="m-l" href="/about" id="mJason" data-cur="about">Jason</a>'+
   '<a class="m-l" href="/holonet" data-cur="holonet">HoloNet</a>'+
   '<a class="m-l" href="/arcade" data-cur="arcade">Arcade</a>'+
-  '<div class="m-foot"><div class="m-soc"><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.li+'" target="_blank" rel="noopener" data-ext="visitLinkedin">LinkedIn</a><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.ig+'" target="_blank" rel="noopener" data-ext="visitInstagram">Instagram</a></div>'+
+  '<div class="m-foot"><div class="m-soc"><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.li+'" target="_blank" rel="noopener">LinkedIn</a><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.ig+'" target="_blank" rel="noopener">Instagram</a></div>'+
   '<div class="sw" id="swSound" role="switch" aria-checked="true" tabindex="0"><span class="tr"><span class="th"></span></span><span class="lb">Sound on</span></div></div>';
 function syncMenuCurrent(){ const h=location.pathname.replace(/^\/+|\/+$/g,''); sheet.querySelectorAll('[data-cur]').forEach(a=>{ const c=a.dataset.cur; if(h===c||h.indexOf(c+'/')===0) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); }); }
 let lastFocus=null;
@@ -887,7 +910,7 @@ function openMenu(){ wrapS.classList.add('open'); sheet.style.transform=''; docu
 function closeMenu(){ if(!wrapS.classList.contains('open')) return; wrapS.classList.remove('open'); sheet.classList.remove('drag'); sheet.style.transform=''; document.documentElement.classList.toggle('locked',false); $('#app').inert=false; $('#hdr').inert=false; menuBtn.setAttribute('aria-expanded','false'); if(lastFocus) lastFocus.focus({preventScroll:true}); }
 menuBtn.addEventListener('click',openMenu);
 $('#scrim').addEventListener('click',closeMenu);
-sheet.addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return; if(a.dataset.ext) note(a.dataset.ext); if(a.id==='mJason'){ e.preventDefault(); closeMenu(); go('/about/'+curOutfit); return; } closeMenu(); });
+sheet.addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return; if(a.id==='mJason'){ e.preventDefault(); closeMenu(); go('/about/'+curOutfit); return; } closeMenu(); });
 addEventListener('keydown',e=>{ if(!wrapS.classList.contains('open')) return;
   if(e.key==='Escape'){ closeMenu(); return; }
   if(e.key==='Tab'){ const f=[...sheet.querySelectorAll('a,button,[tabindex]')]; if(!f.length) return; const a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } } });

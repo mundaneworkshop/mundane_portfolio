@@ -12290,7 +12290,7 @@ f 2469//2469 2470//2470 2434//2434
         var sn=(m.snapshot||[]).filter(function(r){ return r&&(r.k||r.v); });
         if(sn.length){ var g=cvEl('div','snap-grid'); sn.forEach(function(r){ var c=cvEl('div','snap-cell'); c.appendChild(cvEl('div','snap-cell-k',r.k||'')); var v=cvEl('div','snap-cell-v'+(r.amber?' amber':'')); v.innerHTML=r.v||''; c.appendChild(v); g.appendChild(c); }); it.appendChild(g); }   // values are author HTML (<br>, entities), rendered as the manual does
         var ln=(m.links||[]).filter(function(l){ return l&&l.label; });
-        if(ln.length){ var lw=cvEl('div','manual-links'); ln.forEach(function(l){ var a=cvEl('a','manual-link bric-btn bric-btn--secondary bric-btn--sm'); a.appendChild(cvEl('span','ml-label',l.label)); if(l.url&&l.url!=='#'){ a.href=l.url; a.target='_blank'; a.rel='noopener'; } lw.appendChild(a); }); it.appendChild(lw); }
+        if(ln.length){ var lw=cvEl('div','manual-links'); ln.forEach(function(l){ var a=cvEl('a','manual-link bric-btn bric-btn--secondary bric-btn--sm'); a.appendChild(cvEl('span','ml-label',l.label)); if(l.url&&l.url!=='#'){ a.href=window.mwExtUrl(l.url); a.target='_blank'; a.rel='noopener'; } lw.appendChild(a); }); it.appendChild(lw); }
         it.addEventListener('click',function(e){ if(e.target.closest('a,button')||m.id===cvListFocusId) return; cvUi('confirm'); selectCV(m.id); });   // another card: bring it into focus
         it.addEventListener('pointerover',function(e){ if(e.pointerType!=='mouse'||m.id===cvListFocusId||it.contains(e.relatedTarget)||e.target.closest('a,button')) return; cvUi('hover'); });   // the site's hover tick (links/buttons inside tick on their own)
         track.appendChild(it);
@@ -15654,6 +15654,8 @@ f 2469//2469 2470//2470 2434//2434
       return true;
     }
     // mailto:/tel: hand off to the mail/phone app in place; window.open(...,'_blank') on them leaves a blank tab behind
+    // a saved link typed without a scheme (www.slate.auto) would resolve against this site: treat a bare domain as https. Same rule as extUrl() in assets/mobile/mobile.js
+    window.mwExtUrl=function(u){ u=String(u==null?'':u).trim(); return /^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#:]|$)/i.test(u)?'https://'+u:u; };
     window.mwOpen=function(url){
       if(/^mailto:/i.test(url)){ mwMail(url); return; }
       if(/^tel:/i.test(url)) location.href=url; else window.open(url,'_blank','noopener'); };
@@ -16506,7 +16508,7 @@ f 2469//2469 2470//2470 2434//2434
           var ul=document.createElement('div'); ul.className='manual-links';
           data.links.forEach(function(l,i){
             var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
-            if(!data.edit){ row.href=l.url||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
+            if(!data.edit){ row.href=window.mwExtUrl(l.url)||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
               sp.addEventListener('blur',function(){ if(data.onEditLink) data.onEditLink(i,sp.textContent.replace(/\s+$/,'')); });
@@ -16537,7 +16539,7 @@ f 2469//2469 2470//2470 2434//2434
           var exUl=document.createElement('div'); exUl.className='manual-links';
           data.extraLinks.forEach(function(l,i){
             var row=document.createElement(data.edit?'div':'a'); row.className='manual-link bric-btn bric-btn--secondary bric-btn--sm';
-            if(!data.edit){ row.href=l.url||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
+            if(!data.edit){ row.href=window.mwExtUrl(l.url)||'#'; if(!/^(mailto|tel):/i.test(l.url||'')){ row.target='_blank'; row.rel='noopener'; } }
             var sp=document.createElement('span'); sp.className='ml-label'; sp.textContent=l.label||'Link';
             if(data.edit){ sp.contentEditable='true'; sp.classList.add('inline-edit-on');
               sp.addEventListener('blur',function(){ if(data.onEditExtraLink) data.onEditExtraLink(i,sp.textContent.replace(/\s+$/,'')); });
