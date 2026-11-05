@@ -98,6 +98,10 @@ PR #134 also stopped the touch audio retry from starting the site ambience and h
 
 **To debug sound on a phone:** open `/?sounddebug=1` (`?sounddebug=0` turns it off). A green log panel records every AudioContext, oscillator, buffer source, `HTMLAudioElement.play`, `ctx.resume/suspend`, `MWAudio.ui` kind and click, with the caller's stack. The log lives in `sessionStorage`, so it survives page changes in the tab. Tap **copy** to get it. Oscillators that set their pitch with automation, such as `mBody`, log `f=440`, which is the default value and not a real 440 Hz tone.
 
+## Toasts
+
+`assets/mobile/toast.js` gives both the full and static levels `window.mwToast`. Styles are `#mToast` in `mobile.css`. It sits below the header, like the galaxy's toast sits below its top bar. Three events show one: an outfit unlocking, an e-mail link with no mail app to open (the address is copied), and a sent transmission. The galaxy's "new transmission received" has no mobile version, since this layout has no live message feed.
+
 ## Still to check
 
 - Real phones: memory during the gate preload, and the keyboard over the console.
