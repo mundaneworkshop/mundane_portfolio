@@ -437,7 +437,7 @@ async function glbModel(path,mat){ const g=await loadGLB(path), depth=new THREE.
 const escBr=v=>esc(v).replace(/&lt;br\s*\/?&gt;/gi,'<br>').replace(/&amp;(amp|nbsp|#\d+);/g,'&$1;');
 const CASES={
   w0:{id:'w0',slug:'meta-horizon-worlds',name:'Meta Horizon Worlds',dir:'assets/models/meta-horizon',arts:['assets/models/meta-horizon/duck-of-the-month-v2.glb','assets/models/meta-horizon/brickheadz-zuck-v2.glb'],url:'https://case.mundanework.shop/meta-horizon',line:'Shipping platform features to millions of users'},
-  w1:{id:'w1',slug:'slate-auto',name:'Slate Auto',dir:'assets/models/slate-auto',arts:['assets/models/slate-auto/blank-slate-v2.glb'],url:'https://case.mundanework.shop/slate-auto',line:'Securing 160,000+ paid reservations, $4B+ in order value'},
+  w1:{id:'w1',slug:'slate-auto',name:'Slate Auto',dir:'assets/models/slate-auto',arts:['assets/models/slate-auto/blank-slate-v2.glb'],url:'https://case.mundanework.shop/slate-auto',ctaOn:true,line:'Securing 160,000+ paid reservations, $4B+ in order value'},
   w2:{id:'w2',slug:'josh-ai',name:'Josh.ai',dir:'assets/models/josh-ai',arts:['assets/models/josh-ai/josh-micros.glb'],url:'https://case.mundanework.shop/josh-ai',ctaOn:true,line:'Building a startup to $10M+ ARR from scratch'}
 };
 /* same slugs as the galaxy (slugify), so a shared link opens the same thing on any device */
