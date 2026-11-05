@@ -218,6 +218,8 @@ window.SITE_DATA={
   },
   {
    "id": "c3",
+   "cta": "project overview",
+   "ctaUrl": "https://case.mundanework.shop/josh-ai",
    "title": "Josh.ai",
    "sub": "Founding Designer",
    "kicker": "System",
@@ -240,6 +242,8 @@ window.SITE_DATA={
   },
   {
    "id": "c4",
+   "cta": "view case study",
+   "ctaUrl": "https://case.mundanework.shop/meta-horizon",
    "title": "Meta Reality Labs",
    "sub": "Staff Product Designer",
    "kicker": "Recent system",
@@ -262,6 +266,8 @@ window.SITE_DATA={
   },
   {
    "id": "c5",
+   "cta": "view case study",
+   "ctaUrl": "https://case.mundanework.shop/slate-auto",
    "title": "Slate Auto",
    "sub": "UX Designer",
    "kicker": "Current system",

@@ -1825,6 +1825,13 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     var DB='bric_overrides', STORE='ovr', ver=1, dbp=null;
     var CTA_OLD={'OPEN ARTIFACT \u2192':'OPEN ARTIFACT','VIEW CASE STUDY \u2192':'VIEW CASE STUDY','OPEN LINK \u2197':'OPEN LINK','OPEN INSTAGRAM \u2197':'OPEN INSTAGRAM','OPEN LINKEDIN \u2197':'OPEN LINKEDIN','open overview \u2192':'project overview','open overview':'project overview','Jun - Nov 2025':'Q2 2025 \u2014 Q1 2026','Q2 2025 \u2013 Q1 2026':'Q2 2025 \u2014 Q1 2026','Sep 2009 - Apr 2015':'Sep 2009 \u2014 Apr 2015','Feb 2011 - Jan 2015':'Feb 2011 \u2014 Jan 2015','Jun 2014 - Sep 2015':'Jun 2014 \u2014 Sep 2015','May 2015 - Sep 2022':'May 2015 \u2014 Sep 2022','Oct 2022 - Feb 2025':'Oct 2022 \u2014 Feb 2025','Jan 2026 - Present':'Jan 2026 \u2014 Present','Q1 2023 - Q1 2025':'Q1 2023 \u2014 Q1 2025','2015 - 2022':'2015 \u2014 2022','March 2012 - Present':'March 2012 \u2014 Present'};   // also CV and case-study timelines (em dash, Slate's new dates): the server copy keeps the old values until the next SAVE
     window.mwCtaClean=function(o){ if(typeof o==='string') return CTA_OLD.hasOwnProperty(o)?CTA_OLD[o]:o; if(o&&typeof o==='object'){ for(var k in o) if(Object.prototype.hasOwnProperty.call(o,k)) o[k]=window.mwCtaClean(o[k]); } return o; };   // old default CTA labels carried glyphs; drop them, keep anything typed
+    // CV nodes with a case study: their CTA links to the Framer page instead of the CV PDF. Applied at read time, like CTA_OLD, so it
+    // reaches the live copy (content_overrides) without a desktop SAVE. Only a node still on the default label and the PDF (or no link)
+    // changes, so a CTA typed in Edit Mode is kept. The galaxy (immersive + list) and the mobile layout both read copy through getCopy.
+    var CV_CASE_CTA={c3:[/josh/i,'project overview','https://case.mundanework.shop/josh-ai'],c4:[/meta/i,'view case study','https://case.mundanework.shop/meta-horizon'],c5:[/slate/i,'view case study','https://case.mundanework.shop/slate-auto']};
+    window.mwCvCaseCta=function(o){ var r=o&&o.cvRoute; if(Array.isArray(r)) r.forEach(function(n){ var c=n&&CV_CASE_CTA[n.id]; if(!c||!c[0].test(n.title||'')) return;
+      if((n.cta==null||n.cta==='Download CV (PDF)')&&(!n.ctaUrl||n.ctaUrl==='#'||/drive\.google\.com/i.test(n.ctaUrl))){ n.cta=c[1]; n.ctaUrl=c[2]; } }); return o; };
+    window.mwIsCaseUrl=function(u){ return /^https?:\/\/case\.mundanework\.shop\//i.test(u||''); };
     function openDb(){ if(dbp) return dbp; dbp=new Promise(function(res,rej){
       var r=indexedDB.open(DB,ver);
       r.onupgradeneeded=function(){ var db=r.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE); };
@@ -1837,7 +1844,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
         get:function(key){ return tx('readonly').then(function(os){ return new Promise(function(res,rej){ var r=os.get(key); r.onsuccess=function(){res(r.result);}; r.onerror=function(){rej(r.error);}; }); }); },
         del:function(key){ return tx('readwrite').then(function(os){ return new Promise(function(res,rej){ var r=os.delete(key); r.onsuccess=function(){res(true);}; r.onerror=function(){rej(r.error);}; }); }); },
         keys:function(){ return tx('readonly').then(function(os){ return new Promise(function(res,rej){ var r=os.getAllKeys(); r.onsuccess=function(){res(r.result||[]);}; r.onerror=function(){rej(r.error);}; }); }); },
-        getCopy:function(){ try{ return window.mwCtaClean(JSON.parse(localStorage.getItem('bric_copy')||'{}')); }catch(e){ return {}; } },
+        getCopy:function(){ try{ return window.mwCvCaseCta(window.mwCtaClean(JSON.parse(localStorage.getItem('bric_copy')||'{}'))); }catch(e){ return {}; } },
         setCopy:function(obj){ try{ localStorage.setItem('bric_copy',JSON.stringify(obj)); return true; }catch(e){ console.warn('copy save failed',e); return false; } }
       };
     }
@@ -12071,7 +12078,7 @@ f 2469//2469 2470//2470 2434//2434
       var em=(typeof editMode!=='undefined')&&editMode;
       return { artifact:false, kind:'util', kicker:m.kicker, title:m.title, subtitle:m.sub, framing:m.body,
         snapshot:(m.snapshot||[]), tags:cvTagArr(m), cta:(m.cta==null?'Download CV (PDF)':m.cta), ctaUrl:(m.ctaUrl==null?'#':m.ctaUrl), ctaHidden:!!m.ctaHidden, ctaActive:(m.ctaActive==null?true:!!m.ctaActive), external:true, edit:em,   // external:true → CTA runs onCta (download), not the case-study takeover
-        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#') window.mwOpen(m.ctaUrl); else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },
+        onCta:function(){ if(m.ctaUrl && m.ctaUrl!=='#'){ if(window.mwIsCaseUrl(m.ctaUrl)&&window.bricWipe) window.bricWipe.go(m.ctaUrl); else window.mwOpen(m.ctaUrl); } else if(typeof toast==='function') toast('Add a CV link in Edit Mode'); },   // a case study opens in this tab through the screen wipe, like the galaxy's case CTAs; the CV PDF opens a new tab
         onSubtitle:function(v){ m.sub=v; cvPersist(); cvRefreshNodeLabel(id); },
         onEditTag:function(i,v){ var t=cvTagArr(m); if(t[i]!=null){ t[i]=v; m.tags=t.join(' · '); cvPersist(); } },
         onAddTag:function(){ var t=cvTagArr(m); t.push('New tag'); m.tags=t.join(' · '); cvPersist(); cvShowBooklet(id); },
@@ -12195,7 +12202,8 @@ f 2469//2469 2470//2470 2434//2434
     function cvTlStart(){ if(cvReduced()){ cvDrawTimeline(null); return; } if(!_cvTlLoop) _cvTlLoop=requestAnimationFrame(cvTlTick); }   // static under reduced motion (no pulse)
     // the CV download, after the one-liner and again at the end: the newest stop's CTA when it links somewhere, else the first one that does
     function cvCtaSrc(edit){
-      var latest=cvNodeById(cvLatestId()), cands=cvData.filter(function(m){ return !m.ctaHidden; });
+      var latest=cvNodeById(cvLatestId()), cands=cvData.filter(function(m){ return !m.ctaHidden&&!window.mwIsCaseUrl(m.ctaUrl); });   // a node whose CTA is a case study never feeds the hero's Download CV button
+      if(latest&&window.mwIsCaseUrl(latest.ctaUrl)) latest=cands[cands.length-1]||null;
       var real=function(m){ return m&&!m.ctaHidden&&m.ctaUrl&&m.ctaUrl!=='#'; };
       return real(latest)?latest:(cands.filter(real)[0]||(latest&&!latest.ctaHidden?latest:cands[0])||(edit?latest:null)); }
     function cvCtaBtn(kind){ kind=kind||'primary';
@@ -12288,8 +12296,10 @@ f 2469//2469 2470//2470 2434//2434
         var tg=cvTagArr(m); if(tg.length){ var tw=cvEl('div','manual-tags'); tg.forEach(function(t){ tw.appendChild(cvEl('div','manual-tag bric-tag',t)); }); it.appendChild(tw); }
         var sn=(m.snapshot||[]).filter(function(r){ return r&&(r.k||r.v); });
         if(sn.length){ var g=cvEl('div','snap-grid'); sn.forEach(function(r){ var c=cvEl('div','snap-cell'); c.appendChild(cvEl('div','snap-cell-k',r.k||'')); var v=cvEl('div','snap-cell-v'+(r.amber?' amber':'')); v.innerHTML=r.v||''; c.appendChild(v); g.appendChild(c); }); it.appendChild(g); }   // values are author HTML (<br>, entities), rendered as the manual does
-        var ln=(m.links||[]).filter(function(l){ return l&&l.label; });
-        if(ln.length){ var lw=cvEl('div','manual-links'); ln.forEach(function(l){ var a=cvEl('a','manual-link bric-btn bric-btn--secondary bric-btn--sm'); a.appendChild(cvEl('span','ml-label',l.label)); if(l.url&&l.url!=='#'){ a.href=window.mwExtUrl(l.url); a.target='_blank'; a.rel='noopener'; } lw.appendChild(a); }); it.appendChild(lw); }
+        var ln=(m.links||[]).filter(function(l){ return l&&l.label; }), cs=(!m.ctaHidden&&m.ctaActive!==false&&window.mwIsCaseUrl(m.ctaUrl))?m:null;   // a node with a case study shows its CTA on the card (the CV PDF stays in the hero row)
+        if(cs||ln.length){ var lw=cvEl('div','manual-links');
+          if(cs){ var ca=cvEl('a','bric-btn bric-btn--primary bric-btn--sm',cs.cta||'view case study'); ca.href=cs.ctaUrl; ca.addEventListener('click',function(e){ if(window.bricWipe){ e.preventDefault(); window.bricWipe.go(cs.ctaUrl); } }); lw.appendChild(ca); }   // one row with the links, so the spacing matches
+          ln.forEach(function(l){ var a=cvEl('a','manual-link bric-btn bric-btn--secondary bric-btn--sm'); a.appendChild(cvEl('span','ml-label',l.label)); if(l.url&&l.url!=='#'){ a.href=window.mwExtUrl(l.url); a.target='_blank'; a.rel='noopener'; } lw.appendChild(a); }); it.appendChild(lw); }
         it.addEventListener('click',function(e){ if(e.target.closest('a,button')||m.id===cvListFocusId) return; cvUi('confirm'); selectCV(m.id); });   // another card: bring it into focus
         it.addEventListener('pointerover',function(e){ if(e.pointerType!=='mouse'||m.id===cvListFocusId||it.contains(e.relatedTarget)||e.target.closest('a,button')) return; cvUi('hover'); });   // the site's hover tick (links/buttons inside tick on their own)
         track.appendChild(it);
@@ -16385,7 +16395,7 @@ f 2469//2469 2470//2470 2434//2434
       del:function(key){ return tx('readwrite').then(function(os){ return new Promise(function(res,rej){ var r=os.delete(key); r.onsuccess=function(){res(true);}; r.onerror=function(){rej(r.error);}; }); }); },
       keys:function(){ return tx('readonly').then(function(os){ return new Promise(function(res,rej){ var r=os.getAllKeys(); r.onsuccess=function(){res(r.result||[]);}; r.onerror=function(){rej(r.error);}; }); }); },
       // copy overrides (small) — localStorage
-      getCopy:function(){ try{ return window.mwCtaClean(JSON.parse(localStorage.getItem('bric_copy')||'{}')); }catch(e){ return {}; } },
+      getCopy:function(){ try{ return window.mwCvCaseCta(window.mwCtaClean(JSON.parse(localStorage.getItem('bric_copy')||'{}'))); }catch(e){ return {}; } },
       setCopy:function(obj){ try{ localStorage.setItem('bric_copy',JSON.stringify(obj)); return true; }catch(e){ console.warn('copy save failed',e); return false; } }
     };
   })();

@@ -186,7 +186,7 @@ Promise.resolve(Object.keys(COPY).map(key=>({key,value:COPY[key]}))).then(rows=>
   if(Array.isArray(COPY.cvRoute)&&COPY.cvRoute.length) DATA.cv=COPY.cvRoute.filter(n=>!n.disabled&&!n.hidden).map(n=>Object.assign({snapshot:[],links:[]},n));
   rows.forEach(r=>{ const k=r.key, v=r.value, m=k.match(/^artmeta:moon:(w\d):(\d+)$/), q=k.match(/^case:(w\d):marquee$/);
     if(k==='planetfx') LIVE.planetfx=v; else if(k==='marqueeEn') LIVE.marqueeEn=v; else if(k==='cvHero') LIVE.cvHero=v;
-    else if(k==='cvRoute'&&Array.isArray(v)){ const n=v.slice().reverse().find(x=>!x.ctaHidden&&x.ctaUrl&&x.ctaUrl!=='#'); LIVE.cvUrl=n?n.ctaUrl:''; LIVE.cvOff=!!n&&n.ctaActive===false; if(n&&n.cta) LIVE.cvLabel=n.cta; }
+    else if(k==='cvRoute'&&Array.isArray(v)){ const n=v.slice().reverse().find(x=>!x.ctaHidden&&x.ctaUrl&&x.ctaUrl!=='#'&&!(window.mwIsCaseUrl&&mwIsCaseUrl(x.ctaUrl)));   /* a case study CTA stays on its card */ LIVE.cvUrl=n?n.ctaUrl:''; LIVE.cvOff=!!n&&n.ctaActive===false; if(n&&n.cta) LIVE.cvLabel=n.cta; }
     else if(k==='outfitMeta'&&v&&v.meta&&v.meta.head&&v.meta.head.about) LIVE.head.about=v.meta.head.about;
     else if(q&&v&&v.text) LIVE.marq[q[1]]=v.text;
     else if(m){ const a=(DATA.cases[m[1]].artifacts||[])[+m[2]]; if(a&&v){ a.title=v.title||a.title; a.desc=v.desc||a.desc; a.links=(v.links||[]).filter(l=>l.url&&l.url!=='#'); } } });
@@ -751,8 +751,10 @@ $('#cvList').insertAdjacentHTML('beforeend',DATA.cv.slice().reverse().map(n=>{
   const sn=n.snapshot||[], when=(sn.find(r=>/service|length|date/i.test(r.k))||{}).v, rest=sn.filter(r=>r.v!==when);
   return '<article class="manual cv-i"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><h3>'+esc(n.title)+'</h3><div class="sub">'+esc(n.sub)+'</div>'+(when?'<span class="mono when">'+esc(when)+'</span>':'')+'<p class="body">'+esc(n.body)+'</p>'+
     (rest.length?'<dl class="snap" style="margin:10px 0 0">'+rest.map(r=>'<div><dt>'+esc(r.k)+'</dt><dd>'+escBr(r.v)+'</dd></div>').join('')+'</dl>':'')+
+    (!n.ctaHidden&&n.ctaActive!==false&&window.mwIsCaseUrl&&mwIsCaseUrl(n.ctaUrl)?'<div class="links"><a class="bric-btn bric-btn--primary bric-btn--block cv-case" href="'+esc(n.ctaUrl)+'">'+esc(n.cta||'view case study')+'</a></div>':'')+
     ((n.links||[]).filter(l=>l.url&&l.url!=='#').length?'<div class="links">'+n.links.filter(l=>l.url&&l.url!=='#').map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'')+'</article>';
 }).join(''));
+$('#cvList').addEventListener('click',e=>{ const a=e.target.closest('a.cv-case'); if(a&&window.bricWipe){ e.preventDefault(); bricWipe.go(a.getAttribute('href')); } });   /* case study: same tab through the wipe, like the case pages' CTA */
 /* CV hero: the site's one-liner + CTAs (cvHeadLines, cvCtaRow) */
 const CV_HEAD=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
 function cvCtas(){ const o=LIVE.cvHero||{}, lines=o.lines||[]; return '<div class="cvl-ctas">'+(o.chatHidden?'':'<a class="bric-btn bric-btn--primary" href="'+esc(o.chatUrl||'https://calendly.com/jason-mundanework/30min')+'" target="_blank" rel="noopener">'+esc(o.chatLabel||'Start a chat')+'</a>')+
