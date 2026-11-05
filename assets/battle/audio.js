@@ -613,6 +613,11 @@ var MWAudio={
 /* the first real gesture anywhere unlocks audio (browsers keep the context suspended until then) */
 function gesture(){ if(wired) return; wired=true; window.removeEventListener('pointerdown',gesture,true); window.removeEventListener('keydown',gesture,true); if(window.__mwArcade||MWAudio._want) MWAudio.unlock(); }
 window.addEventListener('pointerdown',gesture,true); window.addEventListener('keydown',gesture,true);
-document.addEventListener('visibilitychange',function(){ if(!ctx) return; if(document.hidden) ctx.suspend(); else if(window.__mwArcade) ctx.resume(); });
+/* leaving the page: fade the output first, then suspend. Suspending at full level cuts the sound mid-buffer, the suspected cause of a beep on iPhone when a page with running audio closes */
+var quietT=0;
+function quiet(){ if(!ctx||ctx.state!=='running') return; var t=now(); master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(0,t,.008); clearTimeout(quietT); quietT=setTimeout(function(){ if(document.hidden&&ctx.state==='running') ctx.suspend(); },60); }
+function unquiet(){ clearTimeout(quietT); if(!ctx) return; var t=now(); master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(muted?0:1,t); }
+window.addEventListener('pagehide',quiet); window.addEventListener('pageshow',function(e){ if(e.persisted) unquiet(); });
+document.addEventListener('visibilitychange',function(){ if(!ctx) return; if(document.hidden) quiet(); else { unquiet(); if(window.__mwArcade) ctx.resume(); } });
 window.MWAudio=MWAudio;
 })();
