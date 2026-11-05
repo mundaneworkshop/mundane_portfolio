@@ -268,6 +268,8 @@ function bricReticle(options) {
   }
   function update(target) {
     if (off) return;
+    // an iframe owns the pointer from here: this page gets no more moves, so don't leave the reticle parked over it
+    if (target && target.tagName === 'IFRAME') { drop(); return; }
     var d = describe(target);
     if (!d && cur && inFrame(cur, lx, ly)) return; // in the outset band around the target: still locked
     if (d) { if (!cur || d.key !== cur.key) enter(d); }
@@ -302,7 +304,7 @@ function bricReticle(options) {
   function onDrag(e) {
     if (html.getAttribute('data-bric-ret') === 'hot' && e.target && e.target.closest && e.target.closest(o.selector)) e.preventDefault();
   }
-  function onOut(e) { if (!e.relatedTarget) { if (cur || root.classList.contains('on')) { leave(); hide(); } } }
+  function onOut(e) { if (!e.relatedTarget || e.relatedTarget.tagName === 'IFRAME') { if (cur || root.classList.contains('on')) { leave(); hide(); } } }
   function onScroll() {
     probeEl = null;
     if (cur) { cur.g = geoOf(cur); applyGeo(cur.g); }
