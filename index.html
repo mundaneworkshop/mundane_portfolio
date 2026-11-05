@@ -1824,7 +1824,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   <script>
   (function(){
     var DB='bric_overrides', STORE='ovr', ver=1, dbp=null;
-    var CTA_OLD={'OPEN ARTIFACT \u2192':'OPEN ARTIFACT','VIEW CASE STUDY \u2192':'VIEW CASE STUDY','OPEN LINK \u2197':'OPEN LINK','OPEN INSTAGRAM \u2197':'OPEN INSTAGRAM','OPEN LINKEDIN \u2197':'OPEN LINKEDIN','open overview \u2192':'project overview','open overview':'project overview'};
+    var CTA_OLD={'OPEN ARTIFACT \u2192':'OPEN ARTIFACT','VIEW CASE STUDY \u2192':'VIEW CASE STUDY','OPEN LINK \u2197':'OPEN LINK','OPEN INSTAGRAM \u2197':'OPEN INSTAGRAM','OPEN LINKEDIN \u2197':'OPEN LINKEDIN','open overview \u2192':'project overview','open overview':'project overview','Jun - Nov 2025':'Q2 2025 \u2014 Q1 2026'};   // also the Slate CV timeline: the server copy keeps the old value until the next SAVE
     window.mwCtaClean=function(o){ if(typeof o==='string') return CTA_OLD.hasOwnProperty(o)?CTA_OLD[o]:o; if(o&&typeof o==='object'){ for(var k in o) if(Object.prototype.hasOwnProperty.call(o,k)) o[k]=window.mwCtaClean(o[k]); } return o; };   // old default CTA labels carried glyphs; drop them, keep anything typed
     function openDb(){ if(dbp) return dbp; dbp=new Promise(function(res,rej){
       var r=indexedDB.open(DB,ver);

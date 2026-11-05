@@ -269,7 +269,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Jun - Nov 2025"
+     "v": "Q2 2025 — Q1 2026"
     },
     {
      "k": "teams",
