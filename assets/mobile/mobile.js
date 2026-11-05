@@ -156,6 +156,8 @@ const NO_GATE=new URLSearchParams(location.search).get('gate')==='0';
 const hold=document.getElementById('bric-mw-hold'); if(hold) hold.remove();
 const $=(s,r)=>(r||document).querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* a saved link typed without a scheme (www.slate.auto) would resolve against this site: treat a bare domain as https */
+const extUrl=u=>{ u=String(u==null?'':u).trim(); return /^[a-z0-9-]+(\.[a-z0-9-]+)+([/?#:]|$)/i.test(u)?'https://'+u:u; };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STILLS=window.__mwLevel==='stills'; let stillN=0;   // fallback level (assets/mobile/level.js): rows are drawn once and the stage draws every other frame
@@ -696,10 +698,10 @@ function renderOutfit(id){
     if(caseT) href='/work/'+caseT.slug;
     else if(/mundanework\.shop\/arcade/.test(href)) href='/arcade';
     else if(a.ctaTarget==='new'||u.type==='visitInstagram'){ attrs=' target="_blank" rel="noopener"'; }
-    if(href) cta='<a class="bric-btn bric-btn--primary bric-btn--block" href="'+esc(href)+'"'+attrs+'>'+esc(a.ctaText)+'</a>';
+    if(href) cta='<a class="bric-btn bric-btn--primary bric-btn--block" href="'+esc(extUrl(href))+'"'+attrs+'>'+esc(a.ctaText)+'</a>';
   }
   const p=$('#oPane'); p.scrollTop=0;
-  const extra=(!lock&&(a.extraLinks||[]).length)?'<div class="o-extra">'+a.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'';
+  const extra=(!lock&&(a.extraLinks||[]).length)?'<div class="o-extra">'+a.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'';
   p.innerHTML='<div class="micro kick">'+esc(kick)+'</div><h2>'+esc(a.title||o.name)+'</h2><p class="body">'+esc(body)+'</p>'+cta+extra;
 }
 function stepOutfit(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=OUTFITS.length, o=OUTFITS[(oIdx+d+n)%n]; history.replaceState(null,'','/about/'+o.id); renderOutfit(o.id); }
@@ -722,7 +724,7 @@ function renderCase(c,i){
     h='<div class="micro kick">Case study</div><h2>'+esc(c.name)+'</h2><p class="body">'+esc(d.body)+'</p>'+
       '<div class="tags">'+d.tags.map(t=>'<span class="bric-tag">'+esc(t)+'</span>').join('')+'</div>'+
       '<dl class="snap">'+d.snapshot.map(r=>'<div><dt>'+esc(r.k)+'</dt><dd'+(r.amber?' class="amber"':'')+'>'+escBr(r.v)+'</dd></div>').join('')+'</dl>'+
-      (d.extraLinks.length?'<div class="links">'+d.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'');
+      (d.extraLinks.length?'<div class="links">'+d.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'');
   }else{
     const a=d.artifacts[cIdx-1];
     h='<div class="micro kick">Artifact from '+esc(c.name)+'</div><h2>'+esc(a.title)+'</h2><p class="body">'+esc(a.desc)+'</p>'+
@@ -730,7 +732,7 @@ function renderCase(c,i){
   }
   /* pinned to the bottom of the screen: the case study CTA on the kit box, an artifact's own links on an artifact */
   const links=cIdx?(d.artifacts[cIdx-1].links||[]):[], st=$('#cStick'), p=$('#cPane');
-  st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(c.url)+'">View case study</a>';
+  st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(c.url)+'">View case study</a>';
   p.scrollTop=0; p.innerHTML=h; p.style.paddingBottom=(st.offsetHeight+16)+'px';
   const cta=$('#cCta'); if(cta) cta.addEventListener('click',e=>{ if(window.bricWipe){ e.preventDefault(); bricWipe.go(c.url); } });
 }
@@ -742,7 +744,7 @@ $('#cvList').insertAdjacentHTML('beforeend',DATA.cv.slice().reverse().map(n=>{
   const sn=n.snapshot||[], when=(sn.find(r=>/service|length|date/i.test(r.k))||{}).v, rest=sn.filter(r=>r.v!==when);
   return '<article class="manual cv-i"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="micro">'+esc(n.kicker)+'</div><h3>'+esc(n.title)+'</h3><div class="sub">'+esc(n.sub)+'</div>'+(when?'<span class="mono when">'+esc(when)+'</span>':'')+'<p class="body">'+esc(n.body)+'</p>'+
     (rest.length?'<dl class="snap" style="margin:10px 0 0">'+rest.map(r=>'<div><dt>'+esc(r.k)+'</dt><dd>'+escBr(r.v)+'</dd></div>').join('')+'</dl>':'')+
-    ((n.links||[]).filter(l=>l.url&&l.url!=='#').length?'<div class="links">'+n.links.filter(l=>l.url&&l.url!=='#').map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'')+'</article>';
+    ((n.links||[]).filter(l=>l.url&&l.url!=='#').length?'<div class="links">'+n.links.filter(l=>l.url&&l.url!=='#').map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'')+'</article>';
 }).join(''));
 /* CV hero: the site's one-liner + CTAs (cvHeadLines, cvCtaRow) */
 const CV_HEAD=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
