@@ -6,7 +6,7 @@ var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ 
 var lk=function(h,t,s,x){ if(!h) return '<div class="row st"><span><span class="t">'+esc(t)+'</span><span class="s">'+esc(s)+'</span></span></div>'; return '<a class="row st" href="'+esc(h)+'"'+(x?' target="_blank" rel="noopener"':'')+'><span><span class="t">'+esc(t)+'</span><span class="s">'+esc(s)+'</span></span></a>'; };
 /* the one-line summaries and case study links are copies of CASES in mobile.js */
 /* a case study link only shows when its CTA is active on the desktop manual: same copy keys and defaults as caseCta() in mobile.js */
-var caseOn=function(id){ var c={}; try{ c=JSON.parse(localStorage.getItem('bric_copy'))||{}; }catch(e){} if(c['case:'+id+':ctaHidden']) return false; var a=c['case:'+id+':ctaActive']; return a!=null?!!a:id==='w2'; };
+var caseOn=function(id){ var c={}; try{ c=JSON.parse(localStorage.getItem('bric_copy'))||{}; }catch(e){} if(c['case:'+id+':ctaHidden']) return false; var a=c['case:'+id+':ctaActive']; return a!=null?!!a:(id==='w2'||id==='w1'); };
 var ZONES=[
   ['Work',[['Meta Horizon Worlds','Shipping platform features to millions of users','https://case.mundanework.shop/meta-horizon',0,'w0'],['Slate Auto','Securing 160,000+ paid reservations, $4B+ in order value','https://case.mundanework.shop/slate-auto',0,'w1'],['Josh.ai','Building a startup to $10M+ ARR from scratch','https://case.mundanework.shop/josh-ai',0,'w2']]],
   ['Socials',[['LinkedIn','Connect with Jason','https://www.linkedin.com/in/jason-hsin-00378837/',1],['Instagram','@Jas0n_0n_a_Bike','https://www.instagram.com/jas0n_0n_a_bike/',1]]]
