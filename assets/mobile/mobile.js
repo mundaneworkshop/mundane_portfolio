@@ -1,4 +1,4 @@
-/* Mobile site. Runs instead of the galaxy when the mobile layout is on (the check at the top of index.html, flag: ?mobile=1). See docs/project-history/mobile-site.md */
+/* Mobile site. Runs instead of the galaxy when the mobile layout is on (the check at the top of index.html, on by default for touch devices under the large-iPad size). See docs/project-history/mobile-site.md */
 const MARKUP=`<div id="sky" aria-hidden="true"></div>
 
 <div id="gate" hidden>
@@ -813,7 +813,7 @@ function route(){
   syncMenuCurrent();
 }
 addEventListener('popstate',routeWiped);
-/* the game runs in the galaxy build, so it's a full page load under the wipe. Its Exit game comes back to /?mobile=1 */
+/* the game runs in the galaxy build, so it's a full page load under the wipe. Its Exit game comes back to / */
 function goArcade(){ if(window.bricWipe&&!GT.on) bricWipe.go('/arcade'); else location.href='/arcade'; }
 function go(path){ if(path==='/arcade'){ goArcade(); return; } if(path!==location.pathname) history.pushState({},'',path); routeWiped(); }
 /* same-origin links route in place, so the wipe and the running 3D stay; everything else is a normal link */
