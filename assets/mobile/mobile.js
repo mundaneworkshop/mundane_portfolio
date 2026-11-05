@@ -462,7 +462,23 @@ const ZONES=[
 const OUTFITS=[{id:'head',head:true,name:LIVE.head.name==='default'?'Default':(LIVE.head.name||'Default'),about:LIVE.head.about,unlock:{type:'free'}}].concat((await fetch('assets/outfits.json').then(r=>r.json())).outfits.filter(o=>o.enabled));
 let EV=store('events')||{cases:{}};
 function note(k,v){ if(k==='case') EV.cases[v]=1; else EV[k]=1; store('events',EV); }
-function locked(o){ if(SET.unlockAll||o===OUTFITS[0]) return false; const u=o.unlock||{}; if(u.type==='caseStudy') return !EV.cases[u.target||'w0']; if(u.type==='visitLinkedin'||u.type==='visitInstagram') return !EV[u.type]; return u.type!=='free'; }
+/* the same rules as the galaxy's ocProg(). Arcade progress is shared: /arcade runs in the galaxy build and writes these keys. Read fresh, so a run counts as soon as this page renders again */
+function arkStats(){ try{ return JSON.parse(localStorage.getItem('mw_ark_stats'))||{}; }catch(e){ return {}; } }
+function met(u){ const n=u.n|0, st=arkStats(); switch(u.type){
+  case 'free': return true;
+  case 'caseStudy': return !!EV.cases[u.target||'w0'];
+  case 'visitLinkedin': case 'visitInstagram': case 'visitCV': case 'holonet': return !!EV[u.type];
+  case 'destroy': { const k=st.kills||{}; return ((u.ships&&u.ships.length)?u.ships:['fighter','support','capital']).reduce((h,x)=>h+(k[x]|0),0)>=n; }
+  case 'ship': try{ return !!(window.MWBattle&&MWBattle.heroUnlocked&&MWBattle.heroUnlocked(u.id)); }catch(e){ return false; }
+  case 'hunters': return (st.hunters|0)>=n;
+  case 'planets': return (Array.isArray(st.planets)?st.planets.length:0)>=n;
+  case 'survive': return (st.bestSurvive|0)>=n;
+  case 'plays': return (st.plays|0)>=n;
+  case 'score': return (st.bestScore|0)>=n;
+  case 'rank': return (st.bestRank|0)>0&&(st.bestRank|0)<=n;
+  default: { let t=0; try{ t=parseInt(localStorage.getItem('mw_kits_total'),10)||0; }catch(e){} return t>=n; }   /* minikits */
+} }
+function locked(o){ return !(SET.unlockAll||o===OUTFITS[0]||met(o.unlock||{})); }
 function lockLine(o){ const u=o.unlock||{}; if(u.type==='caseStudy') return 'See the '+(CASES[u.target]?CASES[u.target].name:'')+' case study to unlock'; if(u.type==='visitLinkedin') return 'Visit my LinkedIn to unlock'; if(u.type==='visitInstagram') return 'Visit my Instagram to unlock'; return 'Play the Space Arcade to unlock'; }
 let curOutfit=store('outfit'); if(!OUTFITS.some(o=>o.id===curOutfit)||locked(OUTFITS.find(o=>o.id===curOutfit))) curOutfit=OUTFITS[0].id;
 const outfitById=id=>OUTFITS.find(o=>o.id===id);
@@ -686,11 +702,13 @@ function renderOutfit(id){
   const c=p.querySelector('[data-note]'); if(c&&c.dataset.note) c.addEventListener('click',()=>note(c.dataset.note));
 }
 function stepOutfit(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=OUTFITS.length, o=OUTFITS[(oIdx+d+n)%n]; history.replaceState(null,'','/about/'+o.id); renderOutfit(o.id); }
+window.addEventListener('pageshow',e=>{ if(e.persisted&&!location.pathname.indexOf('/about')) route(); });   /* back from the arcade or a case study can restore this page as it was, with the old lock state */
 $('#oPrev').addEventListener('click',()=>stepOutfit(-1)); $('#oNext').addEventListener('click',()=>stepOutfit(1));
 
 /* case study */
 let cCase=null,cIdx=0;
 function renderCase(c,i){
+  note('case',c.id);   /* opening the case view counts as seeing it, same as the galaxy's MWOutfitEvent('caseStudy',id) */
   cCase=c; const items=1+c.arts.length; cIdx=clamp(i,0,items-1);
   showView($('#v-case')); attach(sCase);
   $('#cCount').textContent=(cIdx+1)+' / '+items;
@@ -711,7 +729,7 @@ function renderCase(c,i){
   const links=cIdx?(d.artifacts[cIdx-1].links||[]):[], st=$('#cStick'), p=$('#cPane');
   st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(c.url)+'">View case study</a>';
   p.scrollTop=0; p.innerHTML=h; p.style.paddingBottom=(st.offsetHeight+16)+'px';
-  const cta=$('#cCta'); if(cta) cta.addEventListener('click',e=>{ note('case',c.id); if(window.bricWipe){ e.preventDefault(); bricWipe.go(c.url); } });
+  const cta=$('#cCta'); if(cta) cta.addEventListener('click',e=>{ if(window.bricWipe){ e.preventDefault(); bricWipe.go(c.url); } });
 }
 function stepCase(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=1+cCase.arts.length, i=(cIdx+d+n)%n; history.replaceState(null,'','/work/'+cCase.slug+(i?'/'+artSlug(cCase,i-1):'')); renderCase(cCase,i); }
 $('#cPrev').addEventListener('click',()=>stepCase(-1)); $('#cNext').addEventListener('click',()=>stepCase(1));
@@ -803,7 +821,7 @@ function route(){
   if(a!=='holonet') ct.close();
   if(a==='about') renderOutfit(parts[1]||curOutfit);
   else if(a==='work'&&BY_SLUG[parts[1]]){ const c=BY_SLUG[parts[1]], k=parts[2]!=null?c.arts.findIndex((_,i)=>artSlug(c,i)===parts[2]):-1; renderCase(c,k+1); }
-  else if(a==='cv') showView($('#v-cv'));
+  else if(a==='cv'){ note('visitCV'); note('case','cv'); showView($('#v-cv')); }
   else if(a==='holonet'){ showView($('#v-holonet')); ct.open(); }
   else {
     showView($('#v-index')); attach(holo);
