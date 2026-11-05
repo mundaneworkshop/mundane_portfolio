@@ -1,14 +1,14 @@
 # Mobile site (Nov 2026)
 
-A separate phone layout for every view except the arcade. It is **off for everyone** until the arcade is solved, which is the launch rule in the mobile plan.
+A separate phone layout for every view except the arcade. It is **on by default** for the devices listed under "Who gets it". Everything else gets the galaxy.
 
-## Turning it on
+## Overriding it
 
 | URL | Effect, for this tab |
 |---|---|
-| `?mobile=1` | On, if the device qualifies (rule below) |
+| `?mobile=1` | Back to the default: on, if the device qualifies (rule below) |
 | `?mobile=force` | On, on any device, for testing on a desktop |
-| `?mobile=0` | Off |
+| `?mobile=0` | Off, on any device |
 | `&level=full\|stills\|static` | Forces a fallback level (see below), e.g. `?mobile=force&level=static`. Kept for the tab; `&level=auto` clears it |
 | `?perf=1` | Shows the FPS chip and its panel (pixel size, posterize levels, wipe speed, replay gate) |
 | `?gate=0` | Skips the entry gate |
@@ -26,7 +26,7 @@ Decided by Jason on Nov 4 2026:
 
 ## How it is built
 
-- **`index.html` changes are small and only run when the layout is on:** the check at the top of `<head>`, `bootMobile()` next to `boot()`, and one line that skips the binary IndexedDB seed. With the flag off, none of the mobile files are requested.
+- **`index.html` changes are small and only run when the layout is on:** the check at the top of `<head>`, `bootMobile()` next to `boot()`, and one line that skips the binary IndexedDB seed. When the layout is off, none of the mobile files are requested.
 - **`assets/mobile/`** holds the layout: `mobile.js` (views, markup, shaders), `mobile.css`, and `site-data.js` (fallback copy).
 - **It mounts instead of the galaxy.** `bootHolotable()` never runs. `mobile.js` removes the desktop DOM and inline styles, because their IDs and CSS collide with its own (`#ctMsg`, `.manual`), and keeps `#mw-seo`, the head and the loaded scripts.
 - **Content** comes from the same `BRICStore` copy the galaxy reads, after `reconcileServerContent()`, so CMS edits reach this layout. `site-data.js` only fills gaps.
@@ -78,7 +78,7 @@ One media query at the end of `mobile.css`, `(orientation:landscape) and (max-he
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
-- The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/?mobile=1`.
+- The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/`.
 - **Open bug, not blocking:** tapping Arcade from the menu overlay still plays a placeholder-sounding beep on a real phone. Two extra `confirm` sounds were already removed (the link's own, and the one `activate()` played as `/arcade` loaded). A sound log then showed only the normal `press` and `release` from `mobile.js`, so the source is one of those or something outside `uiPlay`.
 
   **Nov 5 2026, from a real iPhone (Chrome):** the beep also plays leaving the arcade, both with Exit game and with the browser's back, which taps no site button. Each page closed with audio running (`pagehide`, then `ctx.suspend()` from running), so PR #134 fades the output before suspending. The log can't record output glitches, so this cause is unconfirmed until the beep is retested on a phone. Also seen in that log: on `/arcade` before the first tap, the jump and arrival clips queue on the suspended context and all start together when the tap resumes it. Left as is, because other first-gesture sounds rely on that queueing.
@@ -87,6 +87,6 @@ One media query at the end of `mobile.css`, `(orientation:landscape) and (max-he
 
   **What the 393px desktop-browser run showed (not a phone):** a menu tap plays `press` (about 12 oscillators and buffer sources), `release` 70 ms later, then the page unloads and `audio.js` suspends the context on `visibilitychange`. No `HTMLAudioElement` and no oscillator outside `audio.js` appeared. `audio.js` is the only file with oscillators besides `tools/ui-sounds.html`. Not tested: the `/arcade` page's boot audio (the static test server had no `/arcade` rewrite) and iOS's suspended-context resume path, where `uiPlay` defers a sound with `ctx.resume().then(...)` and could play it late. Those are the two places to check in the first phone log.
 - Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
-- Run Search Console URL Inspection (live test) on a preview with the flag defaulted on, for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
+- Run Search Console URL Inspection (live test) on the preview of PR #132 (layout on by default), for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
 - Fallback levels, calibration: tune the probe limits on real low-end phones, and decide whether the stage should also freeze under `stills`. The static level has no HoloNet form, no CV timeline and no case study pages of its own.
 - Phone landscape: checked in the app browser at 852x393 only, not on a real phone (notch safe areas, the keyboard over the console in landscape, and the gate's controls on very short screens are unverified).
