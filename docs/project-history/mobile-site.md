@@ -22,6 +22,7 @@ Decided by Jason on Nov 4 2026:
 - **Touch as the primary pointer (`pointer: coarse`) and a screen whose shorter side is under 1024px:** the mobile layout. This covers phones and most tablets.
 - **Large iPads (shorter side 1024px or more) and anything with a mouse or trackpad as the primary pointer:** the desktop galaxy. Touch for large iPads is covered under "Still to check".
 - Chosen once on load, from the screen and not the window, so rotating or Split View never swaps layouts. No user agent checks: iPads report themselves as Macs.
+- Leaving the arcade follows the same decision, kept in `window.__mwMobileHome` (set on `/arcade` too, though the layout doesn't boot there). Devices on the mobile layout reload `/` past its gate. Large iPads return to the galaxy in place, like a desktop, because reloading `/` there lands on the galaxy's entry gate, which doesn't read `mw_gate_passed`.
 - No WebGL: the static level (below).
 
 ## How it is built
