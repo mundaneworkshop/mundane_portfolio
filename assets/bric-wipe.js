@@ -132,6 +132,7 @@
       if (reduced() || !supported()) { nav(url); return; }
       var v = pick(variant);
       build(v, false);
+      if (window.MWAudio && MWAudio.leave) MWAudio.leave(cfg.outMs / 1000);
       run(cfg.outMs, function () { nav(withParam(url, v)); });
     },
     // mid (optional) runs once the page is fully covered: swap the view underneath it. Reduced motion / no mask support: mid runs at once, no wipe.
