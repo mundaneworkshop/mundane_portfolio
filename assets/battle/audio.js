@@ -449,6 +449,8 @@ var MWAudio={
   /* site-wide ambient background. siteStart needs a user gesture (browsers keep audio locked until one): index.html calls it on the first press or key anywhere,
      and again when the arcade closes; siteStop fades it out as the arcade opens. Both are safe to call repeatedly; the sound switch mutes it with everything else. */
   siteStart:function(){ if(!ensure()) return; started=true; try{ if(ctx.state==='suspended') ctx.resume(); }catch(e){} startSite(); if(idleWanted) startIdle(); },
+  /* a page change is coming (the screen wipe): ease the output down under the wipe, so the page closes already quiet. pageshow restores it if this page comes back */
+  leave:function(sec){ if(!ctx||ctx.state!=='running') return; var t=now(); master.gain.cancelScheduledValues(t); master.gain.setTargetAtTime(0,t,Math.max(.01,(sec||.2)/4)); },
   siteStop:function(){ stopGroup('site'); stopGroup('idle'); stopGroup('gate'); },
   /* the entry gate: the first press (not on the monogram itself) or key at the gate unlocks audio, so the monogram's idle loop starts;
      the dock click fades the loop out (gateStop). Browsers keep audio locked until that first gesture, so a visitor who goes straight for the monogram never hears the idle loop. */
