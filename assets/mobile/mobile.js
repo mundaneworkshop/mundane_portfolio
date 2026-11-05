@@ -186,7 +186,7 @@ Promise.resolve(Object.keys(COPY).map(key=>({key,value:COPY[key]}))).then(rows=>
   if(Array.isArray(COPY.cvRoute)&&COPY.cvRoute.length) DATA.cv=COPY.cvRoute.filter(n=>!n.disabled&&!n.hidden).map(n=>Object.assign({snapshot:[],links:[]},n));
   rows.forEach(r=>{ const k=r.key, v=r.value, m=k.match(/^artmeta:moon:(w\d):(\d+)$/), q=k.match(/^case:(w\d):marquee$/);
     if(k==='planetfx') LIVE.planetfx=v; else if(k==='marqueeEn') LIVE.marqueeEn=v; else if(k==='cvHero') LIVE.cvHero=v;
-    else if(k==='cvRoute'&&Array.isArray(v)){ const n=v.slice().reverse().find(x=>x.ctaUrl&&x.ctaUrl!=='#'); if(n) LIVE.cvUrl=n.ctaUrl; }
+    else if(k==='cvRoute'&&Array.isArray(v)){ const n=v.slice().reverse().find(x=>!x.ctaHidden&&x.ctaUrl&&x.ctaUrl!=='#'); LIVE.cvUrl=n?n.ctaUrl:''; LIVE.cvOff=!!n&&n.ctaActive===false; if(n&&n.cta) LIVE.cvLabel=n.cta; }
     else if(k==='outfitMeta'&&v&&v.meta&&v.meta.head&&v.meta.head.about) LIVE.head.about=v.meta.head.about;
     else if(q&&v&&v.text) LIVE.marq[q[1]]=v.text;
     else if(m){ const a=(DATA.cases[m[1]].artifacts||[])[+m[2]]; if(a&&v){ a.title=v.title||a.title; a.desc=v.desc||a.desc; a.links=(v.links||[]).filter(l=>l.url&&l.url!=='#'); } } });
@@ -438,12 +438,14 @@ const escBr=v=>esc(v).replace(/&lt;br\s*\/?&gt;/gi,'<br>').replace(/&amp;(amp|nb
 const CASES={
   w0:{id:'w0',slug:'meta-horizon-worlds',name:'Meta Horizon Worlds',dir:'assets/models/meta-horizon',arts:['assets/models/meta-horizon/duck-of-the-month-v2.glb','assets/models/meta-horizon/brickheadz-zuck-v2.glb'],url:'https://case.mundanework.shop/meta-horizon',line:'Shipping platform features to millions of users'},
   w1:{id:'w1',slug:'slate-auto',name:'Slate Auto',dir:'assets/models/slate-auto',arts:['assets/models/slate-auto/blank-slate-v2.glb'],url:'https://case.mundanework.shop/slate-auto',line:'Securing 160,000+ paid reservations, $4B+ in order value'},
-  w2:{id:'w2',slug:'josh-ai',name:'Josh.ai',dir:'assets/models/josh-ai',arts:['assets/models/josh-ai/josh-micros.glb'],url:'https://case.mundanework.shop/josh-ai',line:'Building a startup to $10M+ ARR from scratch'}
+  w2:{id:'w2',slug:'josh-ai',name:'Josh.ai',dir:'assets/models/josh-ai',arts:['assets/models/josh-ai/josh-micros.glb'],url:'https://case.mundanework.shop/josh-ai',ctaOn:true,line:'Building a startup to $10M+ ARR from scratch'}
 };
 /* same slugs as the galaxy (slugify), so a shared link opens the same thing on any device */
 const slugify=s=>(s||'').toString().toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
 const artSlug=(c,i)=>{ const m=COPY['artmeta:moon:'+c.id+':'+i]; return (m&&m.slug)||slugify((c.data.artifacts[i]||{}).title)||String(i); };
 Object.values(CASES).forEach(c=>{ const s=COPY['case:'+c.id+':slug'], u=COPY['case:'+c.id+':ctaUrl']; if(s) c.slug=s; if(u&&u!=='#') c.url=u; });
+/* the case study CTA follows what's set on the desktop manual: same copy keys and defaults as the galaxy's CASES (only Josh.ai starts active) */
+const caseCta=c=>{ const o=k=>COPY['case:'+c.id+':'+k], a=o('ctaActive'), on=a!=null?!!a:!!c.ctaOn, u=o('ctaUrl'); return {hidden:!!o('ctaHidden'),on,label:o('cta')||(on?'VIEW CASE STUDY':'Case study coming soon'),url:u&&u!=='#'?extUrl(u):c.url}; };
 const BY_SLUG={}; Object.values(CASES).forEach(c=>{ BY_SLUG[c.slug]=c; Object.assign(c,{data:DATA.cases[c.id]}); });
 const LINKS={li:'https://linkedin.com/in/jason-hsin-00378837',ig:'https://www.instagram.com/jas0n_0n_a_bike/'};
 const ZONES=[
@@ -731,10 +733,10 @@ function renderCase(c,i){
       '';
   }
   /* pinned to the bottom of the screen: the case study CTA on the kit box, an artifact's own links on an artifact */
-  const links=cIdx?(d.artifacts[cIdx-1].links||[]):[], st=$('#cStick'), p=$('#cPane');
-  st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(c.url)+'">View case study</a>';
+  const links=cIdx?(d.artifacts[cIdx-1].links||[]):[], st=$('#cStick'), p=$('#cPane'), cta=caseCta(c);
+  st.innerHTML=cIdx?links.map((l,i)=>'<a class="bric-btn '+(i?'bric-btn--secondary':'bric-btn--primary')+' bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join(''):(cta.hidden?'':cta.on?'<a class="bric-btn bric-btn--primary bric-btn--block" id="cCta" href="'+esc(cta.url)+'">'+esc(cta.label)+'</a>':'<button type="button" class="bric-btn bric-btn--primary bric-btn--block" disabled>'+esc(cta.label)+'</button>');
   p.scrollTop=0; p.innerHTML=h; p.style.paddingBottom=(st.offsetHeight+16)+'px';
-  const cta=$('#cCta'); if(cta) cta.addEventListener('click',e=>{ if(window.bricWipe){ e.preventDefault(); bricWipe.go(c.url); } });
+  const ctaA=$('#cCta'); if(ctaA) ctaA.addEventListener('click',e=>{ if(window.bricWipe){ e.preventDefault(); bricWipe.go(cta.url); } });
 }
 function stepCase(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=1+cCase.arts.length, i=(cIdx+d+n)%n; history.replaceState(null,'','/work/'+cCase.slug+(i?'/'+artSlug(cCase,i-1):'')); renderCase(cCase,i); }
 $('#cPrev').addEventListener('click',()=>stepCase(-1)); $('#cNext').addEventListener('click',()=>stepCase(1));
@@ -749,7 +751,7 @@ $('#cvList').insertAdjacentHTML('beforeend',DATA.cv.slice().reverse().map(n=>{
 /* CV hero: the site's one-liner + CTAs (cvHeadLines, cvCtaRow) */
 const CV_HEAD=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
 function cvCtas(){ const o=LIVE.cvHero||{}, lines=o.lines||[]; return '<div class="cvl-ctas">'+(o.chatHidden?'':'<a class="bric-btn bric-btn--primary" href="'+esc(o.chatUrl||'https://calendly.com/jason-mundanework/30min')+'" target="_blank" rel="noopener">'+esc(o.chatLabel||'Start a chat')+'</a>')+
-  '<a class="bric-btn bric-btn--secondary" href="'+esc(LIVE.cvUrl)+'" target="_blank" rel="noopener">Download CV (PDF)</a>'+
+  (LIVE.cvUrl?(LIVE.cvOff?'<button type="button" class="bric-btn bric-btn--secondary" disabled>'+esc(LIVE.cvLabel||'Download CV (PDF)')+'</button>':'<a class="bric-btn bric-btn--secondary" href="'+esc(extUrl(LIVE.cvUrl))+'" target="_blank" rel="noopener">'+esc(LIVE.cvLabel||'Download CV (PDF)')+'</a>'):'')+
   (o.mailHidden?'':'<div class="t"><a class="bric-btn" href="'+esc(o.mailUrl||'mailto:jason@mundanework.shop')+'">'+esc(o.mailLabel||'e-mail jason')+'</a></div>')+'</div>'; }
 $('#cvHero').innerHTML='<h1 class="cv-head">'+esc(CV_HEAD.map((d,i)=>((LIVE.cvHero||{}).lines||[])[i]||d).join(' '))+'</h1>'+cvCtas();
 $('#cvEnd').innerHTML=cvCtas();

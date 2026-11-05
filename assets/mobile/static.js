@@ -3,10 +3,12 @@
 (function(){
 'use strict';
 var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
-var lk=function(h,t,s,x){ return '<a class="row st" href="'+esc(h)+'"'+(x?' target="_blank" rel="noopener"':'')+'><span><span class="t">'+esc(t)+'</span><span class="s">'+esc(s)+'</span></span></a>'; };
+var lk=function(h,t,s,x){ if(!h) return '<div class="row st"><span><span class="t">'+esc(t)+'</span><span class="s">'+esc(s)+'</span></span></div>'; return '<a class="row st" href="'+esc(h)+'"'+(x?' target="_blank" rel="noopener"':'')+'><span><span class="t">'+esc(t)+'</span><span class="s">'+esc(s)+'</span></span></a>'; };
 /* the one-line summaries and case study links are copies of CASES in mobile.js */
+/* a case study link only shows when its CTA is active on the desktop manual: same copy keys and defaults as caseCta() in mobile.js */
+var caseOn=function(id){ var c={}; try{ c=JSON.parse(localStorage.getItem('bric_copy'))||{}; }catch(e){} if(c['case:'+id+':ctaHidden']) return false; var a=c['case:'+id+':ctaActive']; return a!=null?!!a:id==='w2'; };
 var ZONES=[
-  ['Work',[['Meta Horizon Worlds','Shipping platform features to millions of users','https://case.mundanework.shop/meta-horizon'],['Slate Auto','Securing 160,000+ paid reservations, $4B+ in order value','https://case.mundanework.shop/slate-auto'],['Josh.ai','Building a startup to $10M+ ARR from scratch','https://case.mundanework.shop/josh-ai']]],
+  ['Work',[['Meta Horizon Worlds','Shipping platform features to millions of users','https://case.mundanework.shop/meta-horizon',0,'w0'],['Slate Auto','Securing 160,000+ paid reservations, $4B+ in order value','https://case.mundanework.shop/slate-auto',0,'w1'],['Josh.ai','Building a startup to $10M+ ARR from scratch','https://case.mundanework.shop/josh-ai',0,'w2']]],
   ['Socials',[['LinkedIn','Connect with Jason','https://www.linkedin.com/in/jason-hsin-00378837/',1],['Instagram','@Jas0n_0n_a_Bike','https://www.instagram.com/jas0n_0n_a_bike/',1]]]
 ];
 function mount(){
@@ -18,7 +20,7 @@ function mount(){
   var h='<header id="hdr"><a id="wm" href="/">Mundane Workshop</a></header><main id="app" class="st-page"><div class="wrap">'+
     '<h1 class="st-h">Jason Hsin</h1><p class="st-lede">Staff product designer building delightful consumer experiences.</p>'+
     '<p class="st-note">This is the plain version of the site, without the 3D scene.</p><div id="rows">';
-  ZONES.forEach(function(z){ h+='<section class="zone"><h2>'+z[0]+'</h2>'+z[1].map(function(r){ return lk(r[2],r[0],r[1],r[3]); }).join('')+'</section>'; });
+  ZONES.forEach(function(z){ h+='<section class="zone"><h2>'+z[0]+'</h2>'+z[1].map(function(r){ return lk(r[4]&&!caseOn(r[4])?'':r[2],r[0],r[1],r[3]); }).join('')+'</section>'; });
   h+='</div><div id="aboutHost"></div><section class="zone" id="contact"><h2>Contact</h2><div class="st-ctas"><a class="bric-btn bric-btn--primary" href="https://calendly.com/jason-mundanework/30min" target="_blank" rel="noopener">Schedule call</a><a class="bric-btn bric-btn--secondary" href="mailto:jason@mundanework.shop">E-mail Jason</a></div></section></div></main>';
   seo.insertAdjacentHTML('beforebegin',h);
   if(ab) document.getElementById('aboutHost').appendChild(ab);

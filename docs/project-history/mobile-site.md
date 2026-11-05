@@ -75,6 +75,10 @@ One media query at the end of `mobile.css`, `(orientation:landscape) and (max-he
 
 `locked()` in `mobile.js` follows the same rules as the galaxy's `ocProg()`. Arcade progress is shared, because `/arcade` runs in the galaxy build and writes `mw_ark_stats` and `mw_kits_total`, which the layout reads fresh on each render. Site events stay in the layout's own `mw_m.events`, separate from the galaxy's `mw_oc_events`. Opening a case view counts as seeing that case study, as it does in the galaxy. A tap on any link to linkedin.com or instagram.com counts as a visit, also as in the galaxy. Those links open in a new tab, so the outfit view redraws when the tab becomes visible again if its lock changed.
 
+## Buttons follow the desktop settings
+
+The case study button reads the same saved keys as the desktop manual (`case:<id>:ctaActive`, `ctaHidden`, `cta`, `ctaUrl`) with the same defaults, so only Josh.ai starts active. Disabled shows a disabled button with no link, and hidden shows nothing. The CV download reads the same stop's `ctaHidden`, `ctaActive` and `cta`. The static level drops the link from its row when a case study button is disabled or hidden.
+
 ## Still to do before launch
 
 - Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
