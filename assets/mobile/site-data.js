@@ -19,7 +19,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "Q1 2023 - Q1 2025",
+     "v": "Q1 2023 — Q1 2025",
      "amber": false
     },
     {
@@ -68,7 +68,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "July - November 2025",
+     "v": "Q2 2025 — Q1 2026",
      "amber": false
     },
     {
@@ -119,7 +119,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "2015 - 2022",
+     "v": "2015 — 2022",
      "amber": false
     },
     {
@@ -157,7 +157,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Sep 2009 - Apr 2015"
+     "v": "Sep 2009 — Apr 2015"
     },
     {
      "k": "majors",
@@ -179,7 +179,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Feb 2011 - Jan 2015"
+     "v": "Feb 2011 — Jan 2015"
     }
    ],
    "links": [
@@ -202,7 +202,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Jun 2014 - Sep 2015"
+     "v": "Jun 2014 — Sep 2015"
     },
     {
      "k": "team",
@@ -225,7 +225,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "May 2015 - Sep 2022"
+     "v": "May 2015 — Sep 2022"
     },
     {
      "k": "team",
@@ -247,7 +247,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Oct 2022 - Feb 2025"
+     "v": "Oct 2022 — Feb 2025"
     },
     {
      "k": "teams",
@@ -291,7 +291,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Jan 2026 - Present"
+     "v": "Jan 2026 — Present"
     }
    ],
    "links": null
