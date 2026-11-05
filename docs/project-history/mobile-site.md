@@ -20,7 +20,7 @@ The setting lives in `sessionStorage['mw_mobile']`, so it survives reloads and t
 Decided by Jason on Nov 4 2026:
 
 - **Touch as the primary pointer (`pointer: coarse`) and a screen whose shorter side is under 1024px:** the mobile layout. This covers phones and most tablets.
-- **Large iPads (shorter side 1024px or more) and anything with a mouse or trackpad as the primary pointer:** the desktop galaxy. Large iPads still need touch added there: pinch zoom, tap replacements for hover, and the audio unlock retry. That work is not done.
+- **Large iPads (shorter side 1024px or more) and anything with a mouse or trackpad as the primary pointer:** the desktop galaxy. Touch for large iPads is covered under "Still to check".
 - Chosen once on load, from the screen and not the window, so rotating or Split View never swaps layouts. No user agent checks: iPads report themselves as Macs.
 - No WebGL: the static level (below).
 
@@ -79,18 +79,29 @@ One media query at the end of `mobile.css`, `(orientation:landscape) and (max-he
 
 The case study button reads the same saved keys as the desktop manual (`case:<id>:ctaActive`, `ctaHidden`, `cta`, `ctaUrl`) with the same defaults, so only Josh.ai starts active. Disabled shows a disabled button with no link, and hidden shows nothing. The CV download reads the same stop's `ctaHidden`, `ctaActive` and `cta`. The static level drops the link from its row when a case study button is disabled or hidden.
 
-## Still to do before launch
+## Launch (Nov 5 2026)
 
-- Test on real phones: touch, audio unlock, memory during the gate preload, and the keyboard over the console.
-- The arcade on phones: `/arcade` skips this layout and loads the galaxy build, which runs the game with touch controls. Its Exit game returns to `/`.
-- **Open bug, not blocking:** tapping Arcade from the menu overlay still plays a placeholder-sounding beep on a real phone. Two extra `confirm` sounds were already removed (the link's own, and the one `activate()` played as `/arcade` loaded). A sound log then showed only the normal `press` and `release` from `mobile.js`, so the source is one of those or something outside `uiPlay`.
+PR #132 turned the layout on by default for the devices under "Who gets it". Checked on Jason's iPhone (Chrome): the layout loads with no flag, outfits unlock, and buttons follow the desktop settings.
 
-  **Nov 5 2026, from a real iPhone (Chrome):** the beep also plays leaving the arcade, both with Exit game and with the browser's back, which taps no site button. Each page closed with audio running (`pagehide`, then `ctx.suspend()` from running), so PR #134 fades the output before suspending. The log can't record output glitches, so this cause is unconfirmed until the beep is retested on a phone. Also seen in that log: on `/arcade` before the first tap, the jump and arrival clips queue on the suspended context and all start together when the tap resumes it. Left as is, because other first-gesture sounds rely on that queueing.
+## Sound on page changes
 
-  **How to capture it (one tap):** open `https://mundanework.shop/?mobile=1&sounddebug=1` on the phone (it needs a deploy that includes `assets/mobile/sounddebug.js`, so use the PR's Vercel preview URL). A green log panel pins to the bottom. It records every AudioContext, oscillator, buffer source, `HTMLAudioElement.play`, `ctx.resume/suspend`, `MWAudio.ui` kind and click, with the caller's stack, and keeps the log in `sessionStorage` so it survives the `/arcade` navigation (the panel reappears on the arcade page). Open the menu, tap Arcade, listen for the beep, then tap **copy** on the arcade page and paste it. `?sounddebug=0` turns it off. Inert without the flag.
+**The beep is fixed.** A short beep played on real phones when going to the Arcade and when leaving it, including with the browser's back, which taps no site button. Each page closed with audio still running and was suspended at full level. The sound log couldn't record the beep itself, so the cause was narrowed down by retesting on the iPhone. PR #134 fixed it in two steps, each retested on the phone:
 
-  **What the 393px desktop-browser run showed (not a phone):** a menu tap plays `press` (about 12 oscillators and buffer sources), `release` 70 ms later, then the page unloads and `audio.js` suspends the context on `visibilitychange`. No `HTMLAudioElement` and no oscillator outside `audio.js` appeared. `audio.js` is the only file with oscillators besides `tools/ui-sounds.html`. Not tested: the `/arcade` page's boot audio (the static test server had no `/arcade` rewrite) and iOS's suspended-context resume path, where `uiPlay` defers a sound with `ctx.resume().then(...)` and could play it late. Those are the two places to check in the first phone log.
+- Fading the output before suspending, on `visibilitychange` and `pagehide`, stopped the beep on exit. Going to the Arcade still played a split second of it.
+- `MWAudio.leave()` eases the output down from the start of the screen wipe, in `bricWipe.go()`. That stopped the rest.
+
+PR #134 also stopped the touch audio retry from starting the site ambience and hum inside the arcade.
+
+**`/arcade` needs a first tap for sound.** iPhone browsers won't start audio on a newly loaded page until it's tapped, and the tap that got there belonged to the previous page. Jason chose to keep this rather than run the arcade inside the same page, which would be a large change with a memory risk. The hyperspace jump is silent on phones as a result.
+
+**Known and left alone:** on `/arcade` before the first tap, the jump and arrival clips queue on the suspended context and all start together when the tap resumes it. Other first-gesture sounds rely on that queueing.
+
+**To debug sound on a phone:** open `/?sounddebug=1` (`?sounddebug=0` turns it off). A green log panel records every AudioContext, oscillator, buffer source, `HTMLAudioElement.play`, `ctx.resume/suspend`, `MWAudio.ui` kind and click, with the caller's stack. The log lives in `sessionStorage`, so it survives page changes in the tab. Tap **copy** to get it. Oscillators that set their pitch with automation, such as `mBody`, log `f=440`, which is the default value and not a real 440 Hz tone.
+
+## Still to check
+
+- Real phones: memory during the gate preload, and the keyboard over the console.
+- Run Search Console URL Inspection (live test) on production for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
 - Touch for the desktop galaxy on large iPads is built (PR below) but **not tested on a real iPad**. In `index.html`, all gated on a coarse pointer and `pointerType==='touch'`: pinch zoom (the wheel's zoom and clamps), one-finger orbit (canvas `touch-action:none`; the page never scrolls), first tap previews a planet, the figure or the kit box face and the second tap opens it, and an audio-unlock retry on the first six touch releases. Checked only with synthetic pointer events at 1180x820 in the app browser, with the coarse check forced on. Still unchecked: real iPadOS gesture conflicts (edge swipes, Safari back), pinch feel, and the audio unlock.
-- Run Search Console URL Inspection (live test) on the preview of PR #132 (layout on by default), for `/cv` and a `/work/` page, and confirm the rendered head and JSON-LD.
 - Fallback levels, calibration: tune the probe limits on real low-end phones, and decide whether the stage should also freeze under `stills`. The static level has no HoloNet form, no CV timeline and no case study pages of its own.
 - Phone landscape: checked in the app browser at 852x393 only, not on a real phone (notch safe areas, the keyboard over the console in landscape, and the gate's controls on very short screens are unverified).
