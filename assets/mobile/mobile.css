@@ -128,8 +128,7 @@
   .cv-end{padding:32px var(--gx) 0}
   .cv-cards{display:grid;gap:16px;padding:0 var(--gx)}
   .manual.cv-i{margin:0;padding:16px}
-  .cv-i .micro{color:var(--bric-content-brand)}
-  .cv-i h3{font:600 18px/22px var(--f-d);text-transform:uppercase;margin:4px 0 2px}
+  .cv-i h3{font:600 18px/22px var(--f-d);text-transform:uppercase;margin:0 0 2px}
   .cv-i .sub{font:400 13px/18px var(--f-b);color:var(--bric-content-primary);margin-bottom:6px}
   .cv-i .when{display:block;color:var(--bric-content-tertiary);margin:6px 0}
   .cv-i .links{margin:10px 0 0}

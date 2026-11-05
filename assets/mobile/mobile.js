@@ -744,7 +744,7 @@ $('#cPrev').addEventListener('click',()=>stepCase(-1)); $('#cNext').addEventList
 /* static lists */
 $('#cvList').insertAdjacentHTML('beforeend',DATA.cv.slice().reverse().map(n=>{
   const sn=n.snapshot||[], when=(sn.find(r=>/service|length|date/i.test(r.k))||{}).v, rest=sn.filter(r=>r.v!==when);
-  return '<article class="manual cv-i"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><div class="micro">'+esc(n.kicker)+'</div><h3>'+esc(n.title)+'</h3><div class="sub">'+esc(n.sub)+'</div>'+(when?'<span class="mono when">'+esc(when)+'</span>':'')+'<p class="body">'+esc(n.body)+'</p>'+
+  return '<article class="manual cv-i"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><h3>'+esc(n.title)+'</h3><div class="sub">'+esc(n.sub)+'</div>'+(when?'<span class="mono when">'+esc(when)+'</span>':'')+'<p class="body">'+esc(n.body)+'</p>'+
     (rest.length?'<dl class="snap" style="margin:10px 0 0">'+rest.map(r=>'<div><dt>'+esc(r.k)+'</dt><dd>'+escBr(r.v)+'</dd></div>').join('')+'</dl>':'')+
     ((n.links||[]).filter(l=>l.url&&l.url!=='#').length?'<div class="links">'+n.links.filter(l=>l.url&&l.url!=='#').map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(extUrl(l.url))+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'')+'</article>';
 }).join(''));
