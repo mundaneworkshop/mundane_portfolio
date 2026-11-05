@@ -16328,7 +16328,7 @@ f 2469//2469 2470//2470 2434//2434
       // the mobile layout runs instead of the galaxy. If its files can't load, fall back to the galaxy rather than a blank page
       function bootMobile(){ var fail=function(){ window.__mwMobile=false; document.documentElement.classList.remove('mw-mobile'); var h=document.getElementById('bric-mw-hold'); if(h) h.remove(); boot(); };
         var ld=function(src,ok){ var e=document.createElement('script'); e.src=src; e.onerror=fail; if(ok) e.onload=ok; document.head.appendChild(e); };
-        ld('assets/mobile/site-data.js',function(){ ld('assets/mobile/level.js',function(){ MWLevel.pick(function(l){ ld(l==='static'?'assets/mobile/static.js':'assets/mobile/mobile.js'); }); }); }); }   // level.js picks full / stills / static: ?mobile=force&level=stills|static
+        ld('assets/mobile/site-data.js',function(){ ld('assets/mobile/toast.js',function(){ ld('assets/mobile/level.js',function(){ MWLevel.pick(function(l){ ld(l==='static'?'assets/mobile/static.js':'assets/mobile/mobile.js'); }); }); }); }); }   // level.js picks full / stills / static: ?mobile=force&level=stills|static
       // MW SEED: wait for the manifest-driven asset seed (assets/manifest.json → IndexedDB) to finish
       // before booting the scene, so first-time visitors never see an empty/placeholder flash. If the
       // seed script isn't present (e.g. local prototype without /assets), boot immediately as before.
