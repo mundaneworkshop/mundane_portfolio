@@ -710,7 +710,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   /* Entry gate text is no longer DOM: two 3D marquee bands float around the monogram cube (see "Entry gate bands" in the monogram script). */
 
   /* ── TOAST ── */
-  #toast{position:fixed;bottom:54px;left:50%;transform:translateX(-50%) translateY(20px);z-index:2147483600;opacity:0;pointer-events:none;background:var(--bric-interactive-fill-default);border:1px solid var(--bric-interactive-fill-default);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--bric-interactive-text-on-fill);transition:.35s}   /* same light-fill / dark-text pair as the primary button: reads against the dark scene */
+  #toast{position:fixed;top:calc(72px + env(safe-area-inset-top));left:50%;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;transform:translateX(-50%) translateY(-20px);z-index:2147483600;opacity:0;pointer-events:none;background:var(--bric-interactive-fill-default);border:1px solid var(--bric-interactive-fill-default);border-radius:0;padding:9px 16px;font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--bric-interactive-text-on-fill);transition:opacity .35s,transform .35s}   /* same light-fill / dark-text pair as the primary button: reads against the dark scene */
 
   /* ══════ CV + Contact bespoke focus views (not kit boxes) ══════ */
   .altfocus{position:absolute;inset:0;z-index:18;display:none;align-items:center;justify-content:center;pointer-events:none}
@@ -944,10 +944,9 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   .mm-del:hover{border-color:var(--bric-danger-edge);background:rgba(226,113,111,.1)}
   body.editing .mm-del{display:block}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  /* in the arcade the bottom of the screen belongs to the controls: toasts come down from the top instead */
-  body.mw-arcade #toast{top:calc(16px + env(safe-area-inset-top));bottom:auto;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;text-align:center;transform:translateX(-50%) translateY(-20px)}
-  body.mw-arcade #toast.show{transform:translateX(-50%) translateY(0)}
-  @media (prefers-reduced-motion:reduce){ body.mw-arcade #toast{transition:opacity .35s;transform:translateX(-50%)} }
+  /* toasts come down from the top on every page, below the top bar; the arcade has no top bar to clear */
+  body.mw-arcade #toast{top:calc(16px + env(safe-area-inset-top))}
+  @media (prefers-reduced-motion:reduce){ #toast,#toast.show{transition:opacity .35s;transform:translateX(-50%)} }
 
   #status{position:absolute;bottom:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;padding:12px 22px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);pointer-events:none}
   /* First-visit asset loader (PR #106). Without the gate (deep links, reduced motion) it covers the page until every model is in. On the gate the
