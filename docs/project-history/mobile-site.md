@@ -73,7 +73,7 @@ One media query at the end of `mobile.css`, `(orientation:landscape) and (max-he
 
 ## Outfit unlocks
 
-`locked()` in `mobile.js` follows the same rules as the galaxy's `ocProg()`. Arcade progress is shared, because `/arcade` runs in the galaxy build and writes `mw_ark_stats` and `mw_kits_total`, which the layout reads fresh on each render. Site events stay in the layout's own `mw_m.events`, separate from the galaxy's `mw_oc_events`. Opening a case view counts as seeing that case study, as it does in the galaxy.
+`locked()` in `mobile.js` follows the same rules as the galaxy's `ocProg()`. Arcade progress is shared, because `/arcade` runs in the galaxy build and writes `mw_ark_stats` and `mw_kits_total`, which the layout reads fresh on each render. Site events stay in the layout's own `mw_m.events`, separate from the galaxy's `mw_oc_events`. Opening a case view counts as seeing that case study, as it does in the galaxy. A tap on any link to linkedin.com or instagram.com counts as a visit, also as in the galaxy. Those links open in a new tab, so the outfit view redraws when the tab becomes visible again if its lock changed.
 
 ## Still to do before launch
 

@@ -478,6 +478,8 @@ function met(u){ const n=u.n|0, st=arkStats(); switch(u.type){
   case 'rank': return (st.bestRank|0)>0&&(st.bestRank|0)<=n;
   default: { let t=0; try{ t=parseInt(localStorage.getItem('mw_kits_total'),10)||0; }catch(e){} return t>=n; }   /* minikits */
 } }
+/* any link to LinkedIn or Instagram counts, wherever it is on the page, same as the galaxy's ocNoteUrl() */
+document.addEventListener('click',e=>{ const a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(!a) return; try{ const h=new URL(a.href,location.href).hostname; if(/(^|\.)linkedin\.com$/i.test(h)) note('visitLinkedin'); else if(/(^|\.)instagram\.com$/i.test(h)) note('visitInstagram'); }catch(x){} },true);
 function locked(o){ return !(SET.unlockAll||o===OUTFITS[0]||met(o.unlock||{})); }
 function lockLine(o){ const u=o.unlock||{}; if(u.type==='caseStudy') return 'See the '+(CASES[u.target]?CASES[u.target].name:'')+' case study to unlock'; if(u.type==='visitLinkedin') return 'Visit my LinkedIn to unlock'; if(u.type==='visitInstagram') return 'Visit my Instagram to unlock'; return 'Play the Space Arcade to unlock'; }
 let curOutfit=store('outfit'); if(!OUTFITS.some(o=>o.id===curOutfit)||locked(OUTFITS.find(o=>o.id===curOutfit))) curOutfit=OUTFITS[0].id;
@@ -629,7 +631,7 @@ const ROWS=[];
     const sec=document.createElement('section'); sec.className='zone'; sec.innerHTML='<h2>'+esc(z.name)+'</h2>'; host.appendChild(sec);
     z.rows.forEach(r=>{
       const a=document.createElement('a'); a.className='row'; a.href=r.href; a.dataset.id=r.id;
-      if(r.ext){ a.target='_blank'; a.rel='noopener'; a.setAttribute('aria-label',r.t+', opens in a new tab'); a.addEventListener('click',()=>note(r.ext)); }
+      if(r.ext){ a.target='_blank'; a.rel='noopener'; a.setAttribute('aria-label',r.t+', opens in a new tab'); }
       const cv=document.createElement('canvas'); cv.width=ROW_BUF; cv.height=ROW_BUF; cv.setAttribute('aria-hidden','true');
       const lb=document.createElement('span'); lb.innerHTML='<span class="t">'+esc(r.t)+'</span><span class="s">'+esc(r.s)+'</span>';
       a.appendChild(cv); a.appendChild(lb); sec.appendChild(a);
@@ -678,9 +680,9 @@ function showView(el){
 }
 
 /* outfit focus */
-let oIdx=0;
+let oIdx=0,oLock=null;
 function renderOutfit(id){
-  const o=outfitById(id)||OUTFITS[0]; oIdx=OUTFITS.indexOf(o); const lock=locked(o), a=o.about||{};
+  const o=outfitById(id)||OUTFITS[0]; oIdx=OUTFITS.indexOf(o); const lock=oLock=locked(o), a=o.about||{};
   showView($('#v-outfit')); attach(sOutfit);
   $('#oName').innerHTML=esc(o.name)+'<small>'+(oIdx+1)+' / '+OUTFITS.length+(lock?' · locked':'')+'</small>';
   if(!lock){ curOutfit=o.id; store('outfit',o.id); }
@@ -694,15 +696,16 @@ function renderOutfit(id){
     if(caseT) href='/work/'+caseT.slug;
     else if(/mundanework\.shop\/arcade/.test(href)) href='/arcade';
     else if(a.ctaTarget==='new'||u.type==='visitInstagram'){ attrs=' target="_blank" rel="noopener"'; }
-    if(href) cta='<a class="bric-btn bric-btn--primary bric-btn--block" href="'+esc(href)+'"'+attrs+' data-note="'+esc(u.type==='visitLinkedin'||u.type==='visitInstagram'?u.type:'')+'">'+esc(a.ctaText)+'</a>';
+    if(href) cta='<a class="bric-btn bric-btn--primary bric-btn--block" href="'+esc(href)+'"'+attrs+'>'+esc(a.ctaText)+'</a>';
   }
   const p=$('#oPane'); p.scrollTop=0;
   const extra=(!lock&&(a.extraLinks||[]).length)?'<div class="o-extra">'+a.extraLinks.map(l=>'<a class="bric-btn bric-btn--secondary bric-btn--block" href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.label)+'</a>').join('')+'</div>':'';
   p.innerHTML='<div class="micro kick">'+esc(kick)+'</div><h2>'+esc(a.title||o.name)+'</h2><p class="body">'+esc(body)+'</p>'+cta+extra;
-  const c=p.querySelector('[data-note]'); if(c&&c.dataset.note) c.addEventListener('click',()=>note(c.dataset.note));
 }
 function stepOutfit(d){ if(window.MWAudio){ MWAudio.uiReady(); MWAudio.ui('confirm'); } const n=OUTFITS.length, o=OUTFITS[(oIdx+d+n)%n]; history.replaceState(null,'','/about/'+o.id); renderOutfit(o.id); }
-window.addEventListener('pageshow',e=>{ if(e.persisted&&!location.pathname.indexOf('/about')) route(); });   /* back from the arcade or a case study can restore this page as it was, with the old lock state */
+/* coming back from a new tab, or from the arcade or a case study through the back cache, leaves this view as it was: redraw if the lock changed meanwhile */
+const recheckLock=()=>{ if(oLock!==null&&!location.pathname.indexOf('/about')&&oLock!==locked(OUTFITS[oIdx])) route(); };
+window.addEventListener('pageshow',e=>{ if(e.persisted) recheckLock(); }); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) recheckLock(); });
 $('#oPrev').addEventListener('click',()=>stepOutfit(-1)); $('#oNext').addEventListener('click',()=>stepOutfit(1));
 
 /* case study */
@@ -897,7 +900,7 @@ $('#sheetBody').innerHTML='<div class="micro m-h">Work</div><div class="m-work">
   '<a class="m-l" href="/about" id="mJason" data-cur="about">Jason</a>'+
   '<a class="m-l" href="/holonet" data-cur="holonet">HoloNet</a>'+
   '<a class="m-l" href="/arcade" data-cur="arcade">Arcade</a>'+
-  '<div class="m-foot"><div class="m-soc"><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.li+'" target="_blank" rel="noopener" data-ext="visitLinkedin">LinkedIn</a><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.ig+'" target="_blank" rel="noopener" data-ext="visitInstagram">Instagram</a></div>'+
+  '<div class="m-foot"><div class="m-soc"><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.li+'" target="_blank" rel="noopener">LinkedIn</a><a class="bric-btn bric-btn--secondary bric-btn--sm" href="'+LINKS.ig+'" target="_blank" rel="noopener">Instagram</a></div>'+
   '<div class="sw" id="swSound" role="switch" aria-checked="true" tabindex="0"><span class="tr"><span class="th"></span></span><span class="lb">Sound on</span></div></div>';
 function syncMenuCurrent(){ const h=location.pathname.replace(/^\/+|\/+$/g,''); sheet.querySelectorAll('[data-cur]').forEach(a=>{ const c=a.dataset.cur; if(h===c||h.indexOf(c+'/')===0) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); }); }
 let lastFocus=null;
@@ -905,7 +908,7 @@ function openMenu(){ wrapS.classList.add('open'); sheet.style.transform=''; docu
 function closeMenu(){ if(!wrapS.classList.contains('open')) return; wrapS.classList.remove('open'); sheet.classList.remove('drag'); sheet.style.transform=''; document.documentElement.classList.toggle('locked',false); $('#app').inert=false; $('#hdr').inert=false; menuBtn.setAttribute('aria-expanded','false'); if(lastFocus) lastFocus.focus({preventScroll:true}); }
 menuBtn.addEventListener('click',openMenu);
 $('#scrim').addEventListener('click',closeMenu);
-sheet.addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return; if(a.dataset.ext) note(a.dataset.ext); if(a.id==='mJason'){ e.preventDefault(); closeMenu(); go('/about/'+curOutfit); return; } closeMenu(); });
+sheet.addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return; if(a.id==='mJason'){ e.preventDefault(); closeMenu(); go('/about/'+curOutfit); return; } closeMenu(); });
 addEventListener('keydown',e=>{ if(!wrapS.classList.contains('open')) return;
   if(e.key==='Escape'){ closeMenu(); return; }
   if(e.key==='Tab'){ const f=[...sheet.querySelectorAll('a,button,[tabindex]')]; if(!f.length) return; const a=f[0],z=f[f.length-1]; if(e.shiftKey&&document.activeElement===a){ e.preventDefault(); z.focus(); } else if(!e.shiftKey&&document.activeElement===z){ e.preventDefault(); a.focus(); } } });
