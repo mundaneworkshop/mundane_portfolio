@@ -161,6 +161,8 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
      must not show at all: without this the breadcrumb, the bottom hint and the status line painted for the first ~0.5 s and then faded out under the gate. */
   body.mw-preboot #breadcrumb, body.mw-preboot #hint, body.mw-preboot #status{opacity:0!important;transition:none!important;pointer-events:none!important}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
+  /* Author/debug toolbar: lifted out of the bar's flex row (it used to share it with the nav, squeezing the nav so the social logos wrapped to a second row, and kept doing so after Hide UI because opacity:0 keeps the width). It now floats under the sound switch, top-right, and never affects the nav or the sound switch. */
+  body.author-mode #topright{position:absolute;top:64px;right:22px;z-index:19;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 44px)}
   /* ARCADE mode: the exit button takes the breadcrumb's place, with the ESC hint right beside it */
   #arcadeExit{display:none;flex-direction:row;align-items:center;gap:8px;pointer-events:auto;transition:opacity .25s ease}
   body.mw-arcade #arcadeExit{display:flex}
@@ -719,8 +721,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   /* ── Hide UI mode (H key / button) ── */
   /* breadcrumb nav stays put through "hide UI" — it's viewer navigation, not admin chrome; only the
      admin-only topright cluster (wordmark + save/edit/debug/hide-ui) fades out */
-  body.ui-hidden #topright{opacity:0;pointer-events:none;transition:opacity .3s ease}
-  body.ui-hidden #soundToggle{opacity:0;pointer-events:none;transition:opacity .3s ease}
+  body.ui-hidden #topright{opacity:0;pointer-events:none;transition:opacity .3s ease}   /* (the author toolbar is out of the bar's flow — see body.author-mode #topright — so hiding it never reflows the nav) */
   body.ui-hidden #status{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #debug{opacity:0;pointer-events:none;transition:opacity .3s ease}
   body.ui-hidden #hint{opacity:1;letter-spacing:3px}
