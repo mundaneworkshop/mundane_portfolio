@@ -2026,7 +2026,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     // The gate route downloads the models only once the monogram cube is up (mwLoad calls MWAssets.start()), so the cube
     // isn't competing with 7 MB of models for the connection; the timer is a backstop. Deep links and reduced-motion visits
     // never show the gate, so they start straight away.
-    var NO_GATE=(function(){ try{ return location.pathname.replace(/^\/+|\/+$/g,'').length>0||!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return true; } })();
+    var NO_GATE=(function(){ try{ return location.pathname.replace(/^\/+|\/+$/g,'').length>0||new URLSearchParams(location.search).get('gate')==='0'||!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){ return true; } })();
     window.__mwSeedReady = fetchRetry('assets/manifest.json',function(r){ return r.json(); })
       .then(function(manifest){
         if(window.__mwMobile) return seedCopy(manifest.copySeed).then(reconcileServerContent);   // the mobile layout preloads its own models at its gate; only the copy is needed from here
@@ -2205,7 +2205,8 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
       // NOTE: author-mode (?edit=1) used to also skip the gate — removed. The debug panel's entry/dock
       // tuning sliders are only useful if an author can actually watch the sequence they're tuning; the
       // topbar (and debug panel) now stay reachable through the entry gate (see the CSS rule) instead.
-      if(_hasRoute||_reducedMotion) mwPhase='docked';
+      var _noGateParam=new URLSearchParams(location.search).get('gate')==='0';   // /?gate=0 — skip the gate (the phone layout already honours it)
+      if(_hasRoute||_reducedMotion||_noGateParam) mwPhase='docked';
     }catch(e){ mwPhase='docked'; }
     if(mwPhase==='docked') mwDockT=1;   // landed on a deep link (/arcade, /cv …) with no dock animation: the monogram must start at its docked resting place, not mid-air at the entry spot
 
