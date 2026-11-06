@@ -1256,7 +1256,10 @@ function condDone(c){
     case 'score': return 'Scored '+n;
   } return '';
 }
-function heroLocked(id){ if(P&&P.unlockAll) return false; var c=heroCond(id); return !!c&&!condMet(c); }
+// DEBUG per-ship override (Debug > Minikits · hero > "Ship locks"): auto / locked / unlocked for each hero ship; per tab session, never saved
+function heroForceGet(){ try{ return JSON.parse(sessionStorage.getItem('mw_hero_force')||'{}')||{}; }catch(e){ return {}; } }
+function heroForceSet(id,v){ var f=heroForceGet(); if(v==='auto') delete f[id]; else f[id]=v; try{ sessionStorage.setItem('mw_hero_force',JSON.stringify(f)); }catch(e){} }
+function heroLocked(id){ var fv=heroForceGet()[id]; if(fv) return fv==='locked'; if(P&&P.unlockAll) return false; var c=heroCond(id); return !!c&&!condMet(c); }
 function snapshotMet(){ var o={}; HEROES.forEach(function(id){ var c=heroCond(id); o[id]=!c||condMet(c); }); return o; }
 function checkUnlocks(){   // call after any stat changes: banners (top centre) any ship that just became available
   HEROES.forEach(function(id){ var c=heroCond(id), ok=!c||condMet(c); if(ok&&metMap[id]===false) noteShow('Ship unlocked · '+shipName(id)); metMap[id]=ok; });
@@ -1967,6 +1970,16 @@ function buildPanel(){
   slider(kd,'Hero-select camera zoom (smaller = closer)',function(){ return P.selZoom; },function(x){ P.selZoom=x; try{ window.dispatchEvent(new CustomEvent('mw:arcselzoom')); }catch(e){} },.35,1.1,.01,2);
   slider(kd,'Locked ship outline detail (drop edges shorter than this fraction of the ship)',function(){ return P.wireMin; },function(x){ P.wireMin=x; wireCache={}; if(carModel&&carModel.userData.holoWireObj){ carModel.remove(carModel.userData.holoWireObj); carModel.userData.holoWireObj=null; } if(carLocked) carLockUi(HEROES[carIdx]); },0,.15,.005,3);
   check(kd,'Unlock every ship (this session only; never saved)',function(){ return !!P.unlockAll; },function(x){ P.unlockAll=!!x; if(carUi) carLockUi(HEROES[carIdx]); });
+  var sl=document.createElement('div'); sl.className='ctl'; sl.innerHTML='<label>Ship locks (debug, per ship)</label>'; kd.appendChild(sl);
+  HEROES.forEach(function(id){
+    var row=document.createElement('div'); row.className='ctl tight'; var cur=heroForceGet()[id]||'auto';
+    row.innerHTML='<label></label><div class="seg">'+['auto','locked','unlocked'].map(function(v){ return '<button data-hero-force="'+v+'"'+(v===cur?' class="on"':'')+'>'+v.charAt(0).toUpperCase()+v.slice(1)+'</button>'; }).join('')+'</div>';
+    row.firstChild.textContent=shipName(id);
+    row.querySelectorAll('button').forEach(function(b){ b.addEventListener('click',function(){
+      heroForceSet(id,b.getAttribute('data-hero-force'));
+      row.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on',x===b); });
+      if(carUi) carLockUi(HEROES[carIdx]); }); });
+    kd.appendChild(row); });
   slider(kd,'Minikits at once',function(){ return P.kitMax; },function(x){ P.kitMax=x; },0,8,1,0);
   slider(kd,'Minikit size',function(){ return P.scaleKit; },function(x){ P.scaleKit=x; },.4,4,.05,2);
   var b=document.createElement('button'); b.className='resetbtn bric-btn bric-btn--sm bric-btn--secondary'; b.textContent='↺ Reset battle sliders';
