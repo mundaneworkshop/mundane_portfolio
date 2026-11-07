@@ -12217,7 +12217,7 @@ f 2469//2469 2470//2470 2434//2434
       return b;
     }
     // the pitch: one line in the list's hero, three stacked lines (one per sentence) over the immersive overview
-    var CV_HEAD_DEFAULT=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
+    var CV_HEAD_DEFAULT=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in order value.'];
     // The one-liner and the "Start a chat" CTA are editable copy (copyOvr['cvHero']: lines[], chatLabel/chatUrl/chatHidden). The Download CV button is the node CTA (cvCtaSrc), edited in place on the same source node.
     function cvHeroOvr(){ return (typeof copyOvr!=='undefined'&&copyOvr['cvHero'])||{}; }
     function cvHeroSet(k,v){ var o=copyOvr['cvHero']=copyOvr['cvHero']||{}; o[k]=v; if(typeof persistCopy==='function') persistCopy(); }
