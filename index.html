@@ -165,7 +165,11 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   #breadcrumb{pointer-events:auto;transition:opacity .5s ease}
   body.mw-entrygate #breadcrumb{opacity:0;pointer-events:none}   /* the entry gate shows no nav: it comes in once the dock completes and mw-entrygate is removed */
   /* Before boot has decided gate vs no gate (body.mw-preboot, in the markup and removed in bootHolotable where mw-entrygate is set), the galaxy chrome
-     must not show at all: without this the breadcrumb, the bottom hint and the status line painted for the first ~0.5 s and then faded out under the gate. */
+     must not show at all: without this the breadcrumb, the bottom hint and the status line painted for the first ~0.5 s and then faded out under the gate.
+     #labels and the HoloNet layers too: bootHolotable builds the planet/zone labels before the first animate() projects them, so they painted at full
+     opacity at their unpositioned spot and then visibly slid into place while mw-entrygate's .5 s fade took them out. Hiding them here with no transition
+     means the swap to mw-entrygate goes 0 → 0 and nothing shows. */
+  body.mw-preboot #labels, body.mw-preboot #msgStars, body.mw-preboot #msgCanvas,
   body.mw-preboot #breadcrumb, body.mw-preboot #hint, body.mw-preboot #status{opacity:0!important;transition:none!important;pointer-events:none!important}
   #topright{display:flex;align-items:center;gap:8px;pointer-events:auto}
   /* Author/debug toolbar: lifted out of the bar's flex row (it used to share it with the nav, squeezing the nav so the social logos wrapped to a second row, and kept doing so after Hide UI because opacity:0 keeps the width). It now floats under the sound switch, top-right, and never affects the nav or the sound switch. */
