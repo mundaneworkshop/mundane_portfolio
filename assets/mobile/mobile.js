@@ -756,7 +756,7 @@ $('#cvList').insertAdjacentHTML('beforeend',DATA.cv.slice().reverse().map(n=>{
 }).join(''));
 $('#cvList').addEventListener('click',e=>{ const a=e.target.closest('a.cv-case'); if(a&&window.bricWipe){ e.preventDefault(); bricWipe.go(a.getAttribute('href')); } });   /* case study: same tab through the wipe, like the case pages' CTA */
 /* CV hero: the site's one-liner + CTAs (cvHeadLines, cvCtaRow) */
-const CV_HEAD=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in potential orders.'];
+const CV_HEAD=['Shipped to millions.','Built systems for the world’s most exclusive properties.','Designed funnels behind $4B+ in order value.'];
 function cvCtas(){ const o=LIVE.cvHero||{}, lines=o.lines||[]; return '<div class="cvl-ctas">'+(o.chatHidden?'':'<a class="bric-btn bric-btn--primary" href="'+esc(o.chatUrl||'https://calendly.com/jason-mundanework/30min')+'" target="_blank" rel="noopener">'+esc(o.chatLabel||'Start a chat')+'</a>')+
   (LIVE.cvUrl?(LIVE.cvOff?'<button type="button" class="bric-btn bric-btn--secondary" disabled>'+esc(LIVE.cvLabel||'Download CV (PDF)')+'</button>':'<a class="bric-btn bric-btn--secondary" href="'+esc(extUrl(LIVE.cvUrl))+'" target="_blank" rel="noopener">'+esc(LIVE.cvLabel||'Download CV (PDF)')+'</a>'):'')+
   (o.mailHidden?'':'<div class="t"><a class="bric-btn" href="'+esc(o.mailUrl||'mailto:jason@mundanework.shop')+'">'+esc(o.mailLabel||'e-mail jason')+'</a></div>')+'</div>'; }
