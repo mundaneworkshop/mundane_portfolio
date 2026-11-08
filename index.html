@@ -11755,10 +11755,12 @@ f 2469//2469 2470//2470 2434//2434
       if(!cvShipNodeId){ cvShipNodeId=cvLatestId(); }   // ship starts at the latest node in the chain
       var cvRouteGroup=cvScene.ensureGroup();
       if(!cvLaneGroup){   // contents built once; cvLaneGroup is the "already built" marker
-        var pts=[]; for(var i=0;i<700;i++){ pts.push((Math.random()-0.5)*80,(Math.random()-0.5)*50,(Math.random()-0.5)*80); }
-        var sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-        // the galaxy's fixed star size (starPx), so CV stars sit on the same 2-3 art-pixel grid instead of shrinking below one art pixel
-        var cvSky=new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fe6df,size:params.starSize*75,sizeAttenuation:false,transparent:true,opacity:0.7,depthWrite:false,fog:false})); starTwinkle(cvSky,23); cvRouteGroup.add(cvSky);
+        var pts=[], scol=[]; for(var i=0;i<700;i++){ var sx=(Math.random()-0.5)*80, sy=(Math.random()-0.5)*50, sz=(Math.random()-0.5)*80; pts.push(sx,sy,sz);
+          // the galaxy's brightness range (buildStars): a random base, most dim and a few bright, times a falloff toward the edge of the box
+          var sb=(0.22+0.78*Math.pow(Math.random(),1.7))*(1-0.55*Math.min(1,Math.sqrt((sx*sx+sz*sz)/1600+sy*sy/625)/Math.SQRT2)); scol.push(sb,sb,sb); }
+        var sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3)); sg.setAttribute('color',new THREE.Float32BufferAttribute(scol,3));
+        // the galaxy's star material: fixed starPx size (2-3 art px, not perspective-shrunk below one), per-star brightness, opacity 0.8
+        var cvSky=new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fe6df,vertexColors:true,size:params.starSize*75,sizeAttenuation:false,transparent:true,opacity:0.8,depthWrite:false,fog:false})); starTwinkle(cvSky,23); cvRouteGroup.add(cvSky);
         cvLaneGroup=new THREE.Group(); cvRouteGroup.add(cvLaneGroup);
         cvShipGroup=new THREE.Group(); cvRouteGroup.add(cvShipGroup);   // persistent (survives lane rebuilds) so an async-loaded GLB isn't disposed
         // Ship-local lights — travel with the group so the model is always well-lit against space
@@ -12189,10 +12191,10 @@ f 2469//2469 2470//2470 2434//2434
     }
     function cvEl(tag,cls,txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
     function cvReduced(){ return !!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches); }
-    // The list's parallax sky: the immersive CV route's own starfield (buildCVRoute: one star colour at 0.7 opacity, every star the same
-    // brightness, scattered evenly) split into three drifting canvas layers. Drawn at 1/params.pixel and scaled up nearest-neighbour,
-    // alpha posterized to params.levels. Each layer is tall enough for its whole drift, so nothing tiles or repeats. (Oct 27: the galaxy's
-    // dim-to-bright curve left a haze of faint specks that read as far denser than the immersive view, at the same count of visible stars.)
+    // The list's parallax sky: the immersive CV route's own starfield (buildCVRoute: one star colour, the galaxy's dim-to-bright brightness
+    // range since Nov 8, scattered evenly) split into three drifting canvas layers. Drawn at 1/params.pixel and scaled up nearest-neighbour,
+    // alpha posterized to params.levels. Each layer is tall enough for its whole drift, so nothing tiles or repeats. (Oct 27 the curve was dropped:
+    // at 1 art px it left a haze of faint specks. Nov 8 it came back, owner's call, now that stars are 2-3 art px like the galaxy's.)
     var CV_SKY=[{f:0.06,d:0.04,big:0},{f:0.16,d:0.025,big:0.2},{f:0.32,d:0.015,big:0.5}];   // drift rate, stars per 1000px², share drawn 3 art px instead of 2 (the galaxy's starPx renders 2-3 art px). ~0.08 in all: at or just under the immersive overview's ~0.1 visible
     function cvRng(seed){ return function(){ seed|=0; seed=seed+0x6D2B79F5|0; var t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
     function cvTokColor(host,k){ var p=document.createElement('i'); p.style.color='var('+k+')'; host.appendChild(p); var c=getComputedStyle(p).color; p.remove(); return c; }   // a token as rgb(), so a canvas can use it
@@ -12210,8 +12212,11 @@ f 2469//2469 2470//2470 2434//2434
         // only), each on its own random period and phase, so dips land on scattered stars at different moments, never the whole sky
         for(k=0;k<2;k++){ var tc=document.createElement('canvas'); tc.className='cvl-stars cvl-twk'; tc.width=c.width; tc.height=c.height; tc.style.width=c.style.width; tc.style.height=c.style.height;
           var dur=3+r()*5; tc.style.animationDuration=dur.toFixed(2)+'s'; tc.style.animationDelay=(-r()*dur).toFixed(2)+'s'; cs.push(tc); }
-        gs=cs.map(function(x){ var g=x.getContext('2d'); g.globalAlpha=Math.round(0.7*L)/L; g.fillStyle=star; return g; });   // the route's PointsMaterial opacity, posterized
-        for(k=0;k<n;k++){ var s=r()<t.big?3:2, x=Math.floor(r()*c.width), y=Math.floor(r()*c.height), q=r(); gs[q<0.25?1:q<0.5?2:0].fillRect(x,y,s,s); }
+        gs=cs.map(function(x){ var g=x.getContext('2d'); g.fillStyle=star; return g; });
+        // the galaxy's brightness range (buildStars): opacity 0.8 x a random base (most dim, a few bright) x a depth falloff, the slowest (farthest) layer dimmest; posterized
+        var fall=1-0.55*(1-li/(CV_SKY.length-1));
+        for(k=0;k<n;k++){ var s=r()<t.big?3:2, x=Math.floor(r()*c.width), y=Math.floor(r()*c.height), q=r(), g=gs[q<0.25?1:q<0.5?2:0];
+          g.globalAlpha=Math.max(1,Math.round(0.8*(0.22+0.78*Math.pow(r(),1.7))*fall*L))/L; g.fillRect(x,y,s,s); }
         cs.forEach(function(x){ x._f=t.f; sky.appendChild(x); });
       });
     }
