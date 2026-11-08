@@ -665,8 +665,15 @@ function drawSky(){
   const H=Math.max(innerHeight,screen.height||0)+120, P=px(), L=SET.levels, sky=$('#sky'), col=css.getPropertyValue('--bric-register-teal-text').trim(); sky.textContent=''; skyEls=[];
   SKY.forEach((t,li)=>{ const lh=Math.ceil(H+9000*t.f)+8, c=document.createElement('canvas'); c.width=Math.ceil(W/P); c.height=Math.ceil(lh/P); c.style.width=(c.width*P)+'px'; c.style.height=(c.height*P)+'px';
     const g=c.getContext('2d'); let a=7+li*101; const r=()=>{ a|=0; a=a+0x6D2B79F5|0; let q=Math.imul(a^a>>>15,1|a); q=q+Math.imul(q^q>>>7,61|q)^q; return ((q^q>>>14)>>>0)/4294967296; };
-    g.globalAlpha=Math.round(.7*L)/L; g.fillStyle=col; const n=Math.round(W*lh/1000*t.d); for(let k=0;k<n;k++){ const s=r()<t.big?2:1; g.fillRect(Math.floor(r()*c.width),Math.floor(r()*c.height),s,s); }
-    c._f=t.f; sky.appendChild(c); skyEls.push(c); });
+    /* twinkle (same as the site's cvDrawSky): half the stars on two extra canvases whose opacity dips on their own random period/phase (CSS skyTwinkle) */
+    const cs=[c]; for(let k=0;k<2;k++){ const tc=document.createElement('canvas'); tc.className='twk'; tc.width=c.width; tc.height=c.height; tc.style.width=c.style.width; tc.style.height=c.style.height;
+      const dur=3+r()*5; tc.style.animationDuration=dur.toFixed(2)+'s'; tc.style.animationDelay=(-r()*dur).toFixed(2)+'s'; cs.push(tc); }
+    const gs=cs.map(x=>{ const q=x===c?g:x.getContext('2d'); q.fillStyle=col; return q; });
+    /* the galaxy's stars (index.html buildStars, as the site's CV sky): 2-3 art px, opacity .8 x a random base (most dim, a few bright) x a depth falloff, the slowest layer dimmest; posterized */
+    const fall=1-.55*(1-li/(SKY.length-1));
+    const n=Math.round(W*lh/1000*t.d); for(let k=0;k<n;k++){ const s=r()<t.big?3:2, x=Math.floor(r()*c.width), y=Math.floor(r()*c.height), q=r(), gq=gs[q<.25?1:q<.5?2:0];
+      gq.globalAlpha=Math.max(1,Math.round(.8*(.22+.78*Math.pow(r(),1.7))*fall*L))/L; gq.fillRect(x,y,s,s); }
+    cs.forEach(x=>{ x._f=t.f; sky.appendChild(x); skyEls.push(x); }); });
   skyScroll();
 }
 function skyScroll(){ const y=window.scrollY; skyEls.forEach(c=>{ c.style.transform='translate3d(0,'+(-Math.round(y*c._f))+'px,0)'; }); }

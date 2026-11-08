@@ -20,6 +20,10 @@
   /* the kept starfield: a fixed DOM canvas, behind everything */
   #sky{position:fixed;left:0;top:0;width:100%;height:100vh;height:100lvh;overflow:hidden;pointer-events:none;z-index:0}
   #sky canvas{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;will-change:transform}
+  /* star twinkle (drawSky): the .twk layers hold half the stars; each dips on its own period/phase (set inline). Static under reduced motion */
+  @keyframes skyTwinkle{0%,40%,100%{opacity:1}70%{opacity:.15}}
+  #sky canvas.twk{animation:skyTwinkle 7s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){ #sky canvas.twk{animation:none} }
   html.gating #hdr,html.gating #app,html.gating #perfChip{visibility:hidden}
   html.gating{overflow:hidden}
   /* entry gate: the site's monogram + marquee bands, centered and resized. The canvas is transparent over the DOM sky */

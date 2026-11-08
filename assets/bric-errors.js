@@ -63,12 +63,14 @@
       st.b = 0.22 + 0.78 * Math.pow(Math.random(), 1.7);          // base brightness, as in the galaxy
       st.s = 0.5 + 2.2 * Math.pow(Math.random(), 3);              // base radius px: mostly pin-pricks, a few large
       st.t = Math.random() < 0.12;                                // a few warm stars (brand token)
+      st.wp = Math.random() * 6.2832; st.ws = 0.6 + Math.random() * 1.4;   // twinkle phase (rad) and speed (rad/s), as in index.html starTwinkle
     }
     for (var i = 0; i < N; i++) { var st = {}; seed(st, true); stars.push(st); }
     function colors() { var cs = getComputedStyle(box); ink = cs.getPropertyValue('--bric-content-primary').trim() || ink; tint = cs.getPropertyValue('--bric-content-brand').trim() || tint; }
     function size() { W = Math.ceil(box.clientWidth / P); H = Math.ceil(box.clientHeight / P); cv.width = W; cv.height = H; cv.style.width = '100%'; cv.style.height = '100%'; colors(); }   // low-res backing store, scaled up with image-rendering: pixelated
-    function draw(dt) {
+    function draw(dt, now) {
       ctx.clearRect(0, 0, W, H);
+      var tt = (now || 0) / 1000, TW = now == null ? 0 : 0.8;   // twinkle depth: a dip in brightness now and then, per star; none when static (reduced motion)
       var cx = W / 2, cy = H / 2, f = Math.max(W, H) * 0.55;
       for (var i = 0; i < N; i++) {
         var st = stars[i]; st.z -= SPEED * dt;
@@ -76,13 +78,15 @@
         var px = Math.round(cx + st.x / st.z * f * 0.5), py = Math.round(cy + st.y / st.z * f * 0.5);
         if (px < -4 || px > W + 4 || py < -4 || py > H + 4) { if (st.z < 0.3) seed(st, false); continue; }
         var near = 1 - st.z;
-        ctx.globalAlpha = Math.round(Math.min(1, st.b * 1.5 * (0.6 + 0.8 * near)) * (LEVELS - 1)) / (LEVELS - 1);   // posterized brightness
+        var tw = TW ? Math.sin(tt * st.ws + st.wp) * 0.6 + Math.sin(tt * st.ws * 2.31 + st.wp * 1.7) * 0.4 : 0;
+        tw = 1 - TW * Math.min(1, Math.max(0, (tw - 0.05) / 0.8));
+        ctx.globalAlpha = Math.round(Math.min(1, st.b * 1.5 * (0.6 + 0.8 * near)) * tw * (LEVELS - 1)) / (LEVELS - 1);   // posterized brightness
         ctx.fillStyle = st.t ? tint : ink;
         var r = Math.max(1, Math.round(st.s * (0.35 + 1.3 * near) / P * 2));   // whole pixels: a square 'pixel star', 1px minimum
         ctx.fillRect(px - (r >> 1), py - (r >> 1), r, r);
       }
     }
-    function tick(t) { raf = requestAnimationFrame(tick); var dt = Math.min(0.1, (t - last) / 1000 || 0); last = t; draw(dt); }
+    function tick(t) { raf = requestAnimationFrame(tick); var dt = Math.min(0.1, (t - last) / 1000 || 0); last = t; draw(dt, t); }
     function start() { cancelAnimationFrame(raf); if (reduced()) { draw(0); return; } last = performance.now(); raf = requestAnimationFrame(tick); }
     var onResize = function () { size(); if (reduced()) draw(0); };
     size(); window.addEventListener('resize', onResize); start();
