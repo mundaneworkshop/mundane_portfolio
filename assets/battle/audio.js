@@ -86,6 +86,8 @@ var SITE_EVENTS={
    Filled from the Site Sound Review's "Game over" card (Oct 22 2026: four Squadrons soundtrack bites, trimmed and faded). */
 var GAMEOVER_DUCK=.12;   // how far everything else drops under the sting (1 = no duck)
 var GAME_OVER=['game-over-1','game-over-2','game-over-3','game-over-4'];
+/* ambient loops switched off (Nov 8 2026): the files, keys and start code stay, so re-enabling one is flipping its flag back to false */
+var LOOP_OFF={ ambSite:true, gateIdle:true, holoIdle:true };
 /* per-event trim on top of LEVEL.site, to balance the boot: the beam clip is a long, loud sweep (peaks 0 dBFS) that buried the short planet pings (peak -6 dBFS) */
 var IDLE_HOLD=4, IDLE_SETTLE=4;   // idle hum: seconds at full level after it starts, then seconds to ease down to LEVEL.holoIdleRest
 var SITE_GAIN={ bootBeam:.2, planetLoad:1.4, gateHover:.5, gateClick:.6 };
@@ -258,12 +260,14 @@ function startPlay(){
 }
 /* site-wide ambience: one muted loop under the entry gate, the galaxy view and everything opened from it. The arcade has its own beds, so it steps aside there. */
 function startSite(){
+  if(LOOP_OFF.ambSite) return;
   if(amb.site) return;
   var bus=gainNode(1); bus.connect(duck);
   amb.site={ bus:bus, h:loopSource('ambSite',bus,LEVEL.ambSite,3) };
 }
 /* hologram idle hum: a seamless loop under the galaxy view once the boot has started (index.html → MWAudio.idleStart). Steps aside with the site ambience in the arcade. */
 function startIdle(){
+  if(LOOP_OFF.holoIdle) return;
   if(amb.idle) return;
   var bus=gainNode(1); bus.connect(duck);
   var h=loopSource('holoIdle',bus,LEVEL.holoIdle,2.5);
@@ -273,6 +277,7 @@ function startIdle(){
 }
 /* entry-gate idle loop: under the waiting monogram until the dock click fades it out (index.html → MWAudio.gateStart / gateStop) */
 function startGate(){
+  if(LOOP_OFF.gateIdle) return;
   if(amb.gate) return;
   var bus=gainNode(1); bus.connect(duck);
   amb.gate={ bus:bus, h:loopSource('gateIdle',bus,LEVEL.gateIdle,2.5) };
