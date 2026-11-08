@@ -147,7 +147,7 @@
   /* HoloNet transmission console, the site's .ct-* styles as a full-height sheet */
   #ctSheet{position:fixed;left:0;right:0;top:0;height:100vh;height:100dvh;z-index:45;display:flex;flex-direction:column;background:var(--bric-surface-base);background-image:radial-gradient(circle,var(--bric-border-subtle) 1px,transparent 1px);background-size:16px 16px;transform:translateY(100%);visibility:hidden;transition:transform 300ms cubic-bezier(.34,1.06,.64,1),visibility 0s linear 300ms}
   #ctSheet.open{transform:none;visibility:visible;transition-delay:0s}
-  .ct-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(var(--st) + 16px) calc(var(--gx) + var(--sr)) calc(var(--sb) + 16px) calc(var(--gx) + var(--sl));display:flex;flex-direction:column}
+  .ct-scroll{flex:1;min-height:0;overflow:hidden auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(var(--st) + 16px) calc(var(--gx) + var(--sr)) calc(var(--sb) + 16px) calc(var(--gx) + var(--sl));display:flex;flex-direction:column}
   .ct-title{font:700 24px/1.2 var(--f-d);text-transform:uppercase}
   .ct-head{display:flex;align-items:center;gap:10px;font:400 12px/16px var(--f-b);letter-spacing:1px;color:var(--bric-content-secondary);text-transform:uppercase;margin:6px 0 12px;min-height:32px}
   .ct-head .ct-hint{flex:1;min-width:0}
@@ -183,7 +183,7 @@
   .ct-go{position:relative}
   .ct-go .ct-send{width:100%;height:56px;font-size:16px;line-height:20px;letter-spacing:.18em}
   .ct-ring{position:absolute;inset:0;border:2px solid var(--bric-holonet-hot);border-radius:var(--bric-corner-step,2px);opacity:0;pointer-events:none}
-  .ct-go.fire .ct-ring{animation:ctRing .6s steps(6,end) both}
+  .ct-go.fire .ct-ring{animation:ctRing .6s steps(6,end) backwards}   /* backwards: a finished ring snaps back to scale(1) instead of overhanging .ct-scroll until .fire comes off. .ct-scroll hides x because the full-width button's 1.35x burst overhangs the gutter */
   .ct-go.fire .ct-ring+.ct-ring{animation-delay:.14s}
   .ct-go.fire .ct-send{animation:ctPop .36s steps(4,end)}
   @keyframes ctRing{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.35,2)}}

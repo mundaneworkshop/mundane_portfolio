@@ -880,7 +880,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   /* HoloNet panel = the manual container: surface, dot grid, shadow and corner marks come from the shared #manual-book/.ct-panel and .mb-corner rules above;
      the padded content box is .manual-page (+ .ct-scroll, which owns the scrolling so the corner marks stay pinned to the panel). */
   .ct-panel{max-height:92vh;display:flex;flex-direction:column;font-family:var(--grotesk)}
-  .ct-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:var(--teal-dim) transparent;padding:30px 34px 28px}
+  .ct-scroll{flex:1;min-height:0;overflow:hidden auto;scrollbar-width:thin;scrollbar-color:var(--teal-dim) transparent;padding:30px 34px 28px}   /* x hidden: the console never scrolls sideways; only the Transmit ring burst overhangs (it scales with the button, so a full-width button on narrow screens overhangs the 18px gutter) and auto x would flash a scrollbar for it */
   .ct-title{margin-bottom:6px}
   @media (max-width:520px){ .ct-scroll{padding:20px 18px 18px} .ct-title{font-size:22px} }
   .ct-head{display:flex;align-items:center;gap:10px;font-family:var(--f-b);font-weight:400;font-size:12px;line-height:16px;letter-spacing:1px;color:var(--c-dim);text-transform:uppercase;margin:0 0 16px;min-height:32px}   /* manual-subtitle type */
@@ -924,7 +924,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   .ct-go{position:relative;flex:none;margin-left:auto}
   .ct-go .ct-send{height:56px;min-width:208px;padding:0 36px;font-size:16px;line-height:20px;letter-spacing:.18em}
   .ct-ring{position:absolute;inset:0;border:2px solid var(--bric-holonet-hot);border-radius:var(--bric-corner-step);opacity:0;pointer-events:none}
-  .ct-go.fire .ct-ring{animation:ctRing .6s steps(6,end) both}
+  .ct-go.fire .ct-ring{animation:ctRing .6s steps(6,end) backwards}   /* backwards, not both: a finished ring snaps back to scale(1). Held at its last frame (invisible, scale 1.35x2) it poked past .ct-scroll until .fire came off at 800 ms and flashed a horizontal scrollbar while typing */
   .ct-go.fire .ct-ring+.ct-ring{animation-delay:.14s}
   .ct-go.fire .ct-send{animation:ctPop .36s steps(4,end)}
   .ct-go.armed .ct-send::after{opacity:1;animation:ctBreathe 1.8s steps(6,end) infinite alternate}
