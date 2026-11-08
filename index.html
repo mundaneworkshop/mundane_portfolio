@@ -769,6 +769,10 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
      different rates as the page scrolls (transform only; still under reduced motion) */
   #cvList .cvl-sky{position:fixed;inset:0;overflow:hidden;pointer-events:none}
   #cvList .cvl-stars{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;will-change:transform}
+  /* star twinkle (cvDrawSky): the .cvl-twk layers hold ~1/3 of the stars; each dips on its own period/phase (set inline). Static under reduced motion */
+  @keyframes cvlTwinkle{0%,55%,100%{opacity:1}78%{opacity:.4}}
+  #cvList .cvl-twk{animation:cvlTwinkle 7s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){ #cvList .cvl-twk{animation:none} }
   /* the timeline (rail, nodes, the focus pulse) is drawn on a low-res canvas behind the cards: pixelated + posterized like the scene */
   #cvList .cvl-tl{position:fixed;left:0;top:0;pointer-events:none;image-rendering:pixelated;image-rendering:crisp-edges;filter:url(#ig-posterize)}
   #cvList .cvl-wrap{position:relative;max-width:820px;margin:0 auto;padding:128px 24px 50vh}
@@ -1363,6 +1367,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     <div class="ctl"><label>Posterize <b id="vLevels">24</b></label><input type="range" id="cLevels" min="4" max="24" step="1" value="24"></div>
     <div class="ctl"><label>Star density <b id="vStars">600</b></label><input type="range" id="cStars" min="50" max="3000" step="50" value="600"></div>
     <div class="ctl"><label>Star size <b id="vStarSize">0.03</b></label><input type="range" id="cStarSize" min="0.02" max="0.16" step="0.01" value="0.03"></div>
+    <div class="ctl"><label>Star twinkle <b id="vStarTwinkle">0.45</b></label><input type="range" id="cStarTwinkle" min="0" max="1" step="0.05" value="0.45"></div>
     <div class="ctl"><label>Spin speed <b id="vSpin">0.4</b></label><input type="range" id="cSpin" min="0" max="3" step="0.1" value="0.4"></div>
     <div class="ctl"><label class="chk"><input type="checkbox" id="cCamRotDir"> Reverse camera rotation</label></div>
     <div class="menudiv"></div>
@@ -2352,6 +2357,22 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     function arcTablet(){ return arcTouch()&&Math.min(window.innerWidth,window.innerHeight)>=600; }   // a large touch screen (iPad): the desktop's chunky pixels, and a star count halfway between phone and desktop
     function arcTouch(){ return !!(window.MWBattle&&MWBattle.isTouch&&MWBattle.isTouch()); }   // phones and tablets flying the arcade: fewer stars so fighters show through, finer pixels (rtPixel)
     function starPx(){ return params.starSize*((typeof arcadeActive!=='undefined'&&arcadeActive)?40:75); }   // fixed pixel size: a bit larger in the (nearer) galaxy view
+    // Star twinkle, shared by every three.js sky (galaxy + arcade: buildStars; CV route: buildCVRoute). Per-vertex random phase + speed
+    // (attribute aTwk) and one time uniform, so there is no per-frame loop over stars. Opacity only: each star mostly sits at full
+    // brightness and now and then dips by up to params.starTwinkle (two incommensurate sines, so the dips never fall into a rhythm).
+    // Static under prefers-reduced-motion (amplitude 0, re-checked every frame so the OS toggle applies live).
+    var _twRM=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
+    function starTwinkle(pts,seed){
+      var g=pts.geometry, n=g.attributes.position.count, tw=new Float32Array(n*2), r=mulberry32(seed||11), U={t:{value:0},a:{value:0}};
+      for(var i=0;i<n;i++){ tw[i*2]=r()*6.2832; tw[i*2+1]=0.35+r()*0.9; }   // phase (rad), speed (rad/s): a dip every ~5-18 s per star
+      g.setAttribute('aTwk',new THREE.BufferAttribute(tw,2));
+      pts.material.onBeforeCompile=function(sh){
+        sh.uniforms.uTwT=U.t; sh.uniforms.uTwA=U.a;
+        sh.vertexShader='attribute vec2 aTwk;\nuniform float uTwT;\nuniform float uTwA;\nvarying float vTwk;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n  float twS=sin(uTwT*aTwk.y+aTwk.x)*0.6+sin(uTwT*aTwk.y*2.31+aTwk.x*1.7)*0.4;\n  vTwk=1.0-uTwA*pow(max(twS,0.0),2.0);');
+        sh.fragmentShader='varying float vTwk;\n'+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n  diffuseColor.a*=vTwk;');
+      };
+      pts.onBeforeRender=function(){ U.a.value=(_twRM&&_twRM.matches)?0:(params.starTwinkle!=null?params.starTwinkle:0.45); U.t.value=performance.now()/1000; };
+    }
     function buildStars(){
       if(starPoints){ galaxy.remove(starPoints); starPoints.geometry.dispose(); var idx=fadables.indexOf(starPoints.userData.fad); if(idx>=0)fadables.splice(idx,1); }
       // The middle of the scene is empty: stars exist only BEYOND the playable area (an ellipsoid ~ the arcade's play volume, centred on the
@@ -2364,7 +2385,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
         var b=(0.22+0.78*Math.pow(r2(),1.7))*(1-0.55*(r-rin)/Math.max(1e-3,R1-rin)); col[i*3]=col[i*3+1]=col[i*3+2]=b; }
       var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); g.setAttribute('color',new THREE.BufferAttribute(col,3));
       var m=new THREE.PointsMaterial({vertexColors:true,size:starPx(),sizeAttenuation:false,fog:false,color:(dark?DARK:LIGHT).star,transparent:true,opacity:0.8,depthWrite:false});   // distant stars: fixed pixel size (attenuated, they'd vanish)
-      starPoints=new THREE.Points(g,m); var f={mat:m,base:0.8,owner:null}; fadables.push(f); starPoints.userData.fad=f;
+      starPoints=new THREE.Points(g,m); starTwinkle(starPoints,7); var f={mat:m,base:0.8,owner:null}; fadables.push(f); starPoints.userData.fad=f;
       galaxy.add(starPoints);
     }
 
@@ -11736,7 +11757,7 @@ f 2469//2469 2470//2470 2434//2434
       if(!cvLaneGroup){   // contents built once; cvLaneGroup is the "already built" marker
         var pts=[]; for(var i=0;i<700;i++){ pts.push((Math.random()-0.5)*80,(Math.random()-0.5)*50,(Math.random()-0.5)*80); }
         var sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-        cvRouteGroup.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fe6df,size:0.06,transparent:true,opacity:0.7,depthWrite:false,fog:false})));
+        var cvSky=new THREE.Points(sg,new THREE.PointsMaterial({color:0x8fe6df,size:0.06,transparent:true,opacity:0.7,depthWrite:false,fog:false})); starTwinkle(cvSky,23); cvRouteGroup.add(cvSky);
         cvLaneGroup=new THREE.Group(); cvRouteGroup.add(cvLaneGroup);
         cvShipGroup=new THREE.Group(); cvRouteGroup.add(cvShipGroup);   // persistent (survives lane rebuilds) so an async-loaded GLB isn't disposed
         // Ship-local lights — travel with the group so the model is always well-lit against space
@@ -12183,10 +12204,14 @@ f 2469//2469 2470//2470 2434//2434
       CV_SKY.forEach(function(t,li){
         var lh=Math.ceil(h+travel*t.f)+8, c=document.createElement('canvas'); c.className='cvl-stars';
         c.width=Math.ceil(w/P); c.height=Math.ceil(lh/P); c.style.width=(c.width*P)+'px'; c.style.height=(c.height*P)+'px';
-        var g=c.getContext('2d'), r=cvRng(7+li*101), n=Math.round(w*lh/1000*t.d), k;
-        g.globalAlpha=Math.round(0.7*L)/L; g.fillStyle=star;   // the route's PointsMaterial opacity, posterized
-        for(k=0;k<n;k++){ var s=r()<t.big?2:1; g.fillRect(Math.floor(r()*c.width),Math.floor(r()*c.height),s,s); }
-        c._f=t.f; sky.appendChild(c);
+        var r=cvRng(7+li*101), n=Math.round(w*lh/1000*t.d), k, cs=[c], gs;
+        // twinkle: about a third of the stars go on two extra canvases whose opacity dips now and then (CSS cvlTwinkle, transform/opacity
+        // only), each on its own random period and phase, so dips land on scattered stars at different moments, never the whole sky
+        for(k=0;k<2;k++){ var tc=document.createElement('canvas'); tc.className='cvl-stars cvl-twk'; tc.width=c.width; tc.height=c.height; tc.style.width=c.style.width; tc.style.height=c.style.height;
+          var dur=5+r()*7; tc.style.animationDuration=dur.toFixed(2)+'s'; tc.style.animationDelay=(-r()*dur).toFixed(2)+'s'; cs.push(tc); }
+        gs=cs.map(function(x){ var g=x.getContext('2d'); g.globalAlpha=Math.round(0.7*L)/L; g.fillStyle=star; return g; });   // the route's PointsMaterial opacity, posterized
+        for(k=0;k<n;k++){ var s=r()<t.big?2:1, x=Math.floor(r()*c.width), y=Math.floor(r()*c.height), q=r(); gs[q<0.17?1:q<0.34?2:0].fillRect(x,y,s,s); }
+        cs.forEach(function(x){ x._f=t.f; sky.appendChild(x); });
       });
     }
     // The timeline on its own low-res canvas: a dim rail between the first and last node, lit from the newest stop down to the card in
@@ -13160,6 +13185,7 @@ f 2469//2469 2470//2470 2434//2434
     bind('cLevels','vLevels',function(v){ params.levels=v; postMat.uniforms.levels.value=v; if(typeof igSetPosterizeLevels==='function') igSetPosterizeLevels(v); });
     bind('cStars','vStars',function(v){ params.starCount=v; buildStars(); });
     bind('cStarSize','vStarSize',function(v){ params.starSize=v; if(starPoints)starPoints.material.size=starPx(); },2);
+    bind('cStarTwinkle','vStarTwinkle',function(v){ params.starTwinkle=v; },2);   // read live by starTwinkle()'s onBeforeRender
     bind('cSpin','vSpin',function(v){ params.spin=v; },1);
     bind('cStud','vStud',function(v){ params.studSize=v; drawStuds(); },2);
     bind('cGap','vGap',function(v){ params.studGap=v; drawStuds(); },2);
@@ -15799,7 +15825,7 @@ f 2469//2469 2470//2470 2434//2434
       setCtl('cBootStageDur','vBootStageDur',(params.bootStageDur!=null?params.bootStageDur:0.21).toFixed(2));
       setCtl('cBootPlanetStagger','vBootPlanetStagger',(params.bootPlanetStagger!=null?params.bootPlanetStagger:0.03).toFixed(3));
       setCtl('cPixel','vPixel',params.pixel); setCtl('cLevels','vLevels',params.levels); setCtl('cStars','vStars',params.starCount);
-      setCtl('cStarSize','vStarSize',params.starSize.toFixed(2)); setCtl('cSpin','vSpin',params.spin.toFixed(1));
+      setCtl('cStarSize','vStarSize',params.starSize.toFixed(2)); setCtl('cStarTwinkle','vStarTwinkle',(params.starTwinkle!=null?params.starTwinkle:0.45).toFixed(2)); setCtl('cSpin','vSpin',params.spin.toFixed(1));
       setCtl('cStud','vStud',params.studSize.toFixed(2)); setCtl('cGap','vGap',params.studGap.toFixed(2)); setCtl('cBeamBottom','vBeamBottom',(params.beamBottom!=null?params.beamBottom:0.80).toFixed(2)); setCtl('cBeamTop','vBeamTop',(params.beamTop!=null?params.beamTop:0.20).toFixed(2));
       setCtl('cBeamCurve','vBeamCurve',(params.beamCurve!=null?params.beamCurve:0.4).toFixed(2)); beamHoloPer.beamCurve.value=(params.beamCurve!=null?params.beamCurve:0.4);
       setCtl('cBeamFocusMul','vBeamFocusMul',(params.beamFocusMul!=null?params.beamFocusMul:0.4).toFixed(2));
