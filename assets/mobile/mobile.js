@@ -668,8 +668,11 @@ function drawSky(){
     /* twinkle (same as the site's cvDrawSky): half the stars on two extra canvases whose opacity dips on their own random period/phase (CSS skyTwinkle) */
     const cs=[c]; for(let k=0;k<2;k++){ const tc=document.createElement('canvas'); tc.className='twk'; tc.width=c.width; tc.height=c.height; tc.style.width=c.style.width; tc.style.height=c.style.height;
       const dur=3+r()*5; tc.style.animationDuration=dur.toFixed(2)+'s'; tc.style.animationDelay=(-r()*dur).toFixed(2)+'s'; cs.push(tc); }
-    const gs=cs.map(x=>{ const q=x===c?g:x.getContext('2d'); q.globalAlpha=Math.round(.7*L)/L; q.fillStyle=col; return q; });
-    const n=Math.round(W*lh/1000*t.d); for(let k=0;k<n;k++){ const s=r()<t.big?2:1, x=Math.floor(r()*c.width), y=Math.floor(r()*c.height), q=r(); gs[q<.25?1:q<.5?2:0].fillRect(x,y,s,s); }
+    const gs=cs.map(x=>{ const q=x===c?g:x.getContext('2d'); q.fillStyle=col; return q; });
+    /* the galaxy's stars (index.html buildStars, as the site's CV sky): 2-3 art px, opacity .8 x a random base (most dim, a few bright) x a depth falloff, the slowest layer dimmest; posterized */
+    const fall=1-.55*(1-li/(SKY.length-1));
+    const n=Math.round(W*lh/1000*t.d); for(let k=0;k<n;k++){ const s=r()<t.big?3:2, x=Math.floor(r()*c.width), y=Math.floor(r()*c.height), q=r(), gq=gs[q<.25?1:q<.5?2:0];
+      gq.globalAlpha=Math.max(1,Math.round(.8*(.22+.78*Math.pow(r(),1.7))*fall*L))/L; gq.fillRect(x,y,s,s); }
     cs.forEach(x=>{ x._f=t.f; sky.appendChild(x); skyEls.push(x); }); });
   skyScroll();
 }
