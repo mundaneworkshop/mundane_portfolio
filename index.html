@@ -1849,6 +1849,23 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     window.mwCvCaseCta=function(o){ var r=o&&o.cvRoute; if(Array.isArray(r)) r.forEach(function(n){ var c=n&&CV_CASE_CTA[n.id]; if(!c||!c[0].test(n.title||'')) return;
       if((n.cta==null||n.cta==='Download CV (PDF)')&&(!n.ctaUrl||n.ctaUrl==='#'||/drive\.google\.com/i.test(n.ctaUrl))){ n.cta=c[1]; n.ctaUrl=c[2]; } }); return o; };
     window.mwIsCaseUrl=function(u){ return /^https?:\/\/case\.mundanework\.shop\//i.test(u||''); };
+    // Outfit unlocks: a link to a Framer case study (case.mundanework.shop/<slug>) counts as seeing that project, like its focus view. Returns w0 / w1 / w2, or null.
+    // Slugs are the Framer pages' (meta-horizon is not the planet's title slug). The galaxy also matches a planet's own ctaUrl / title slug (ocNoteUrl).
+    var CASE_SLUG={'meta-horizon':'w0','meta-horizon-worlds':'w0','slate-auto':'w1','josh-ai':'w2'};
+    window.mwCaseIdOf=function(u){ try{ if(!window.mwIsCaseUrl(u)) return null; var s=new URL(u).pathname.split('/').filter(Boolean)[0]; return (s&&CASE_SLUG[s.toLowerCase()])||null; }catch(e){ return null; } };
+    // "Outfit unlocked" toasts, galaxy and mobile layout. Queued in localStorage ('mw_oc_toast', outfit names) and only dropped once a toast has been on screen while the
+    // visitor could see it: an unlock made right before the page leaves (a case study link, same tab), under the screen wipe, behind the entry gate or in a hidden tab
+    // (a link opened a new one) shows when it can, on this visit or the next.
+    function tq(){ try{ var q=JSON.parse(localStorage.getItem('mw_oc_toast')||'[]'); return Array.isArray(q)?q:[]; }catch(e){ return []; } }
+    function tqSet(q){ try{ if(q.length) localStorage.setItem('mw_oc_toast',JSON.stringify(q)); else localStorage.removeItem('mw_oc_toast'); }catch(e){} }
+    var tqShowing=false;
+    function tqHold(){ var b=document.body, w=window.bricWipe; return document.hidden||!b||!window.mwToast||document.documentElement.classList.contains('gating')||b.classList.contains('mw-entrygate')||!!(w&&w.active&&w.active()); }
+    function tqFlush(){ if(tqShowing) return; var q=tq(); if(!q.length||tqHold()) return; tqShowing=true;
+      window.mwToast('Outfit unlocked: '+q.join(', '));
+      setTimeout(function(){ tqShowing=false; if(tqHold()) return; tqSet(tq().filter(function(n){ return q.indexOf(n)<0; })); },1600); }   // still visible after most of its 2.2 s: seen
+    window.mwUnlockToast=function(names){ var q=tq(); (names||[]).forEach(function(n){ if(n&&q.indexOf(n)<0) q.push(n); }); tqSet(q); tqFlush(); };
+    setInterval(function(){ if(!document.hidden&&!tqShowing) tqFlush(); },700);
+    document.addEventListener('visibilitychange',tqFlush); window.addEventListener('bric:wipe-done',function(){ setTimeout(tqFlush,50); });
     function openDb(){ if(dbp) return dbp; dbp=new Promise(function(res,rej){
       var r=indexedDB.open(DB,ver);
       r.onupgradeneeded=function(){ var db=r.result; if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE); };
@@ -15387,6 +15404,7 @@ f 2469//2469 2470//2470 2434//2434
       ocLoadDrafts();
       fetch(OUTFITS_JSON,{cache:'no-cache'}).then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; }).then(function(j){
         outfitRepo=(j&&Array.isArray(j.outfits))?j.outfits.filter(function(o){ return o&&o.id&&Array.isArray(o.parts); }):[];
+        ocListReady=true; ocUnlToast();   // before the HUD's quiet re-baseline: announces what an event before the list loaded (a /work deep link) or the last visit unlocked unseen
         var l=ocCycleList(); if(l.length) ocShow(l[0].id,true);
       });
     })();
@@ -15546,13 +15564,20 @@ f 2469//2469 2470//2470 2434//2434
       else { had=!!e[type]; if(!had) e[type]=Date.now(); }
       if(had) return;
       try{ localStorage.setItem('mw_oc_events',JSON.stringify(e)); }catch(x){}
+      ocUnlToast();   // now, not in a timeout: a link that leaves the site may unload the page before one runs; the queued toast then shows on the next visit
       setTimeout(ocAfterArcadeEvent,0);   // after the click's own work (it may be mid-transition); same path as the arcade's events
     }
     window.MWOutfitEvent=ocNote;
     // Any visit counts, however the visitor got there: the planet, an About button, an ordinary link, window.open.
-    function ocNoteUrl(u){ try{ var h=new URL(String(u),location.href).hostname; if(/(^|\.)linkedin\.com$/i.test(h)) ocNote('visitLinkedin'); else if(/(^|\.)instagram\.com$/i.test(h)) ocNote('visitInstagram'); }catch(e){} }
+    // A case study link (case.mundanework.shop/<slug>) leaves for another origin, so the click itself is the visit: it counts like the project's focus view (openCase),
+    // matched by the Framer slug (mwCaseIdOf), a planet's own case-study link, or a planet's title slug. CV buttons, the CV copy's inline links, About buttons, wipes, new tabs.
+    function ocNoteUrl(u){ try{ var url=new URL(String(u),location.href), h=url.hostname; if(/(^|\.)linkedin\.com$/i.test(h)) ocNote('visitLinkedin'); else if(/(^|\.)instagram\.com$/i.test(h)) ocNote('visitInstagram');
+      else if(window.mwIsCaseUrl(url.href)){ var seg=url.pathname.split('/').filter(Boolean)[0]||'', cid=window.mwCaseIdOf(url.href); if(cid) ocNote('caseStudy',cid);
+        if(seg) Object.keys(CASES).forEach(function(k){ var c=CASES[k], cu=c&&c.ctaUrl&&window.mwIsCaseUrl(c.ctaUrl)?new URL(c.ctaUrl).pathname.split('/').filter(Boolean)[0]:''; if(c&&(cu===seg||(c.title&&slugify(c.title)===seg))) ocNote('caseStudy',k); }); } }catch(e){} }
     (function(){ var wo=window.open; window.open=function(u){ try{ ocNoteUrl(u); }catch(e){} return wo.apply(window,arguments); };
-      document.addEventListener('click',function(e){ var a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(a) ocNoteUrl(a.href); },true); })();
+      document.addEventListener('click',function(e){ var a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(a) ocNoteUrl(a.href); },true);
+      function wrapWipe(){ var w=window.bricWipe; if(!w||!w.go||w.go.__oc) return; var g=w.go; w.go=function(u){ try{ ocNoteUrl(u); }catch(e){} return g.apply(w,arguments); }; w.go.__oc=1; }   // the CV / project CTAs leave through bricWipe.go, not a link
+      wrapWipe(); window.addEventListener('load',wrapWipe); setTimeout(wrapWipe,0); })();
     function ocProg(o){   // {have,need}; met when have>=need
       var c=o.unlock||{type:'free'}, n=c.n|0, st, ev;
       switch(c.type){
@@ -15629,16 +15654,22 @@ f 2469//2469 2470//2470 2434//2434
     function ocMarkSeen(id){ var a=ocNewList(), i=a.indexOf(id); var o=ocFind(id); if(i>=0&&o&&!ocLocked(o)){ a.splice(i,1); ocSetNew(a); } }
     function ocRelock(){ if(!outfitCur||!outfitCur.group) return; var o=ocFind(outfitCur.id); if(!o) return; ocGhostSet(outfitCur.group,ocLocked(o)); outfitCur.group.userData.ocCap=1; outfitCur.group.userData.ocA=null; }
     // 'mw_outfits_unl' = the outfits last seen unlocked; an outfit that newly appears there (after an arcade event) is "new" + toasts. `quiet` = just re-baseline (seeds on first run; never swallows a fresh unlock).
+    var ocListReady=false;   // the repo list is in: before that, a snapshot would miss its outfits and the next one would announce them all again
     function ocUnlSnap(quiet){
+      if(!ocListReady) return [];
       var raw=null; try{ raw=localStorage.getItem('mw_outfits_unl'); }catch(e){} var had=raw!=null, prev=[]; try{ prev=JSON.parse(raw||'[]')||[]; }catch(e){}
       var now=ocAll().filter(function(o){ return o.enabled&&!ocIsDefault(o)&&!ocLocked(o); });
       try{ localStorage.setItem('mw_outfits_unl',JSON.stringify(now.map(function(o){ return o.id; }))); }catch(e){}
       return (had&&!quiet)?now.filter(function(o){ return prev.indexOf(o.id)<0; }):[];
     }
-    function ocAfterArcadeEvent(){
+    // newly unlocked outfits: marked "new" and queued for the toast (mwUnlockToast: shown once the visitor can see it, this visit or the next)
+    function ocUnlToast(){
       var fresh=ocUnlSnap(false);
       if(fresh.length){ var nw=ocNewList(); fresh.forEach(function(o){ if(nw.indexOf(o.id)<0) nw.push(o.id); }); ocSetNew(nw);
-        if(typeof toast==='function') toast('Outfit unlocked: '+fresh.map(function(o){ return o.name; }).join(', ')); }
+        if(window.mwUnlockToast) window.mwUnlockToast(fresh.map(function(o){ return o.name; })); else if(typeof toast==='function') toast('Outfit unlocked: '+fresh.map(function(o){ return o.name; }).join(', ')); }
+    }
+    function ocAfterArcadeEvent(){
+      ocUnlToast();
       ocRelock(); ocHudUpdate(); if(focused===aboutGrp) ocRefreshAbout(); if(document.body.classList.contains('oc-open')) ocRender();
     }
     window.addEventListener('mw:minikit',function(e){   // the arcade fires this per minikit opened (assets/battle/battle.js)
@@ -15735,11 +15766,8 @@ f 2469//2469 2470//2470 2434//2434
     function ocOpenCtaUrl(url,target,o){
       try{ var u=new URL(url,location.href); if((u.hostname===location.hostname||/(^|\.)mundanework\.shop$/i.test(u.hostname))&&u.pathname.replace(/\/+$/,'')==='/arcade'){ ocGoArcade(); return; } }catch(e){}
       if(ocGoCase(o)) return;
-      ocNoteUrl(url);
-      // A case study button leaves for the case-study site (case.mundanework.shop/<slug>), another origin: there is no way to see the visit from here, so the click itself is the
-      // visit. It counts for the outfit's own case study, and for whichever planet's slug the link ends in.
-      try{ if(o&&o.unlock&&o.unlock.type==='caseStudy') ocNote('caseStudy',o.unlock.target||'w0');
-        var seg=new URL(url,location.href).pathname.split('/').filter(Boolean).pop(); if(seg) Object.keys(CASES).forEach(function(k){ var c=CASES[k]; if(c&&c.title&&slugify(c.title)===seg) ocNote('caseStudy',k); }); }catch(e){}
+      ocNoteUrl(url);   // linkedin / instagram / a case study link (any planet's) count as visits
+      try{ if(o&&o.unlock&&o.unlock.type==='caseStudy') ocNote('caseStudy',o.unlock.target||'w0'); }catch(e){}   // and the outfit's own case study
       if(target==='same'){ if(window.bricWipe&&window.bricWipe.go) window.bricWipe.go(url); else location.href=url; } else window.mwOpen(url);
     }
     function ocAboutLinks(id){ var o=ocFind(id); return ((o&&o.about&&o.about.extraLinks)||[]).slice(); }   // current links (a render's `a` goes stale as edits land)

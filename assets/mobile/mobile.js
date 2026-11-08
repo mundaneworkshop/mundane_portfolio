@@ -482,12 +482,13 @@ function met(u){ const n=u.n|0, st=arkStats(); switch(u.type){
   case 'rank': return (st.bestRank|0)>0&&(st.bestRank|0)<=n;
   default: { let t=0; try{ t=parseInt(localStorage.getItem('mw_kits_total'),10)||0; }catch(e){} return t>=n; }   /* minikits */
 } }
-/* any link to LinkedIn or Instagram counts, wherever it is on the page, same as the galaxy's ocNoteUrl() */
-document.addEventListener('click',e=>{ const a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(!a) return; try{ const h=new URL(a.href,location.href).hostname; if(/(^|\.)linkedin\.com$/i.test(h)) note('visitLinkedin'); else if(/(^|\.)instagram\.com$/i.test(h)) note('visitInstagram'); }catch(x){} },true);
+/* any link to LinkedIn or Instagram counts, wherever it is on the page, same as the galaxy's ocNoteUrl(); so does a link to a Framer case study (the CV cards' buttons, the case view's CTA): it counts like opening that project's case view */
+document.addEventListener('click',e=>{ const a=e.target&&e.target.closest&&e.target.closest('a[href]'); if(!a) return; try{ const h=new URL(a.href,location.href).hostname; if(/(^|\.)linkedin\.com$/i.test(h)) note('visitLinkedin'); else if(/(^|\.)instagram\.com$/i.test(h)) note('visitInstagram');
+  else { const cid=window.mwCaseIdOf&&mwCaseIdOf(a.href); if(cid) note('case',cid); } }catch(x){} },true);
 /* "Outfit unlocked" toast: compares against the outfits last seen unlocked. The first run only sets the baseline. An outfit the arcade already announced (the galaxy's mw_outfits_unl) isn't announced again */
 function unlockToast(){ const seen=store('outfitsUnl'), now=OUTFITS.filter(o=>o!==OUTFITS[0]&&met(o.unlock||{})); store('outfitsUnl',now.map(o=>o.id)); if(!seen) return;
   let gal=[]; try{ gal=JSON.parse(localStorage.getItem('mw_outfits_unl'))||[]; }catch(e){}
-  const fresh=now.filter(o=>seen.indexOf(o.id)<0&&gal.indexOf(o.id)<0); if(fresh.length) window.mwToast('Outfit unlocked: '+fresh.map(o=>o.name).join(', ')); }
+  const fresh=now.filter(o=>seen.indexOf(o.id)<0&&gal.indexOf(o.id)<0); if(fresh.length){ const n=fresh.map(o=>o.name); if(window.mwUnlockToast) mwUnlockToast(n); else window.mwToast('Outfit unlocked: '+n.join(', ')); } }   /* queued until seen (index.html): a case study link leaves the page right after */
 unlockToast(); window.addEventListener('pageshow',e=>{ if(e.persisted) unlockToast(); }); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) unlockToast(); });
 function locked(o){ return !(SET.unlockAll||o===OUTFITS[0]||met(o.unlock||{})); }
 function lockLine(o){ const u=o.unlock||{}; if(u.type==='caseStudy') return 'See the '+(CASES[u.target]?CASES[u.target].name:'')+' case study to unlock'; if(u.type==='visitLinkedin') return 'Visit my LinkedIn to unlock'; if(u.type==='visitInstagram') return 'Visit my Instagram to unlock'; return 'Play the Space Arcade to unlock'; }
