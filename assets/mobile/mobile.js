@@ -598,7 +598,7 @@ function bootVal(delay){ if(BOOT_T0==null) return 1; const u=(performance.now()/
 gesture(holo.host,{
   lockPx:10,
   start(){ holo.yawV=0; },
-  drag(dx,dy,axis){ if(axis==='h'){ holo.yaw+=dx*.012; holo.yawV=dx*.012*60; } }
+  drag(dx,dy,axis){ if(axis==='h'){ holo.userTurned=true; holo.yaw+=dx*.012; holo.yawV=dx*.012*60; } }
 });
 
 /* outfit + case stages own every gesture on their surface (touch-action:none in CSS) */
@@ -1084,7 +1084,7 @@ function frame(now){
   if(s.host.offsetParent!==null&&(s!==holo||holo.inView)){   // only the showing surface, and the hologram only while on screen
     if(s.yawV&&!(s.hold>now)){ s.yaw+=s.yawV*dt; s.yawV*=Math.pow(.03,dt); if(Math.abs(s.yawV)<.01) s.yawV=0; }
     if(s.opt.spin&&!reduce&&now>s.hold) s.yaw+=s.opt.spin*dt;
-    if(s===holo&&!reduce){ holo.auto+=.14*dt; holo.gal-=.0264*dt; }
+    if(s===holo&&!reduce){ holo.auto+=.14*dt; if(!holo.userTurned) holo.gal-=.0264*dt; }   // once the visitor turns the hologram themselves, its galaxy drift stops for this page load (the figure's own spin keeps going), as on desktop
     s.pivot.rotation.set(s===holo?0:s.pitch,s.yaw+(s===holo?holo.auto+holo.gal:0),0);
     const f=s.obj;
     if(f&&f.userData.mixer&&!reduce&&!f.userData.ghost) f.userData.mixer.update(dt);
