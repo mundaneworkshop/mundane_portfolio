@@ -15681,16 +15681,22 @@ f 2469//2469 2470//2470 2434//2434
     window.mwOpen=function(url){
       if(/^mailto:/i.test(url)){ mwMail(url); return; }
       if(/^tel:/i.test(url)) location.href=url; else window.open(url,'_blank','noopener'); };
-    // mailto: with no mail app set up does nothing at all. A mail app taking over blurs the page / hides the tab within a moment; if that never happens, copy the address instead and say so.
-    function mwMail(url){
-      var addr=decodeURIComponent(url.replace(/^mailto:/i,'').split('?')[0]), left=false;
-      function gone(){ left=true; }
-      window.addEventListener('blur',gone); document.addEventListener('visibilitychange',gone);
-      location.href=url;
-      setTimeout(function(){ window.removeEventListener('blur',gone); document.removeEventListener('visibilitychange',gone);
-        if(left||!addr) return;
-        var done=function(){ if(window.mwToast) window.mwToast('Email address copied: '+addr); };
-        try{ navigator.clipboard.writeText(addr).then(done,function(){ if(window.mwToast) window.mwToast(addr); }); }catch(e){ if(window.mwToast) window.mwToast(addr); } },900); }
+    // Every e-mail button copies the address and shows a toast, then hands off to the mail app. The copy happens synchronously inside the click, before
+    // the mailto: navigation: on Windows, Chrome's "Open <app>?" prompt or the Windows app picker blurs the page, and a blurred page makes Chrome reject
+    // a later navigator.clipboard.writeText ("Document is not focused"). Same rule as assets/mobile/toast.js.
+    var mwMailT=0;
+    window.mwMailCopy=function(url){
+      var addr=decodeURIComponent(String(url||'').replace(/^mailto:/i,'').split('?')[0]); if(!addr) return;
+      var now=Date.now(); if(now-mwMailT<600) return; mwMailT=now;   // one click can reach this twice (the capture listener below, then a button's own handler)
+      var say=function(ok){ if(window.mwToast) window.mwToast(ok?'Email address copied: '+addr:addr); }, ok=false;
+      try{ var ae=document.activeElement, ta=document.createElement('textarea'); ta.value=addr; ta.setAttribute('readonly','');
+        ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+        document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,addr.length); ok=document.execCommand('copy'); ta.remove(); if(ae&&ae.focus) ae.focus({preventScroll:true}); }catch(e){}
+      if(ok){ say(true); return; }
+      try{ navigator.clipboard.writeText(addr).then(function(){ say(true); },function(){ say(false); }); }catch(e){ say(false); } };
+    function mwMail(url){ window.mwMailCopy(url); location.href=url; }
+    // plain mailto: links (contact view, booklet link rows): copy in the capture phase, then let the link do its own navigation
+    document.addEventListener('click',function(e){ var a=e.target&&e.target.closest&&e.target.closest('a[href^="mailto:" i]'); if(a&&!a.isContentEditable) window.mwMailCopy(a.getAttribute('href')); },true);
     function ocOpenCtaUrl(url,target,o){
       try{ var u=new URL(url,location.href); if((u.hostname===location.hostname||/(^|\.)mundanework\.shop$/i.test(u.hostname))&&u.pathname.replace(/\/+$/,'')==='/arcade'){ ocGoArcade(); return; } }catch(e){}
       if(ocGoCase(o)) return;
@@ -16600,7 +16606,7 @@ f 2469//2469 2470//2470 2434//2434
         if(locked){ ctaBtn.onclick=null; }
         else if(data.artifact || data.external){ ctaBtn.onclick=function(){ if(!data.edit && data.onCta) data.onCta(); }; }
         else { ctaBtn.onclick=function(){ if(data.edit) return;
-            if(data.ctaUrl && data.ctaUrl!=='#'){ if(/^(mailto|tel):/i.test(data.ctaUrl)) location.href=data.ctaUrl; else if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.mwOpen(data.ctaUrl); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
+            if(data.ctaUrl && data.ctaUrl!=='#'){ if(/^(mailto|tel):/i.test(data.ctaUrl)) window.mwOpen(data.ctaUrl); else if(window.bricWipe) window.bricWipe.go(data.ctaUrl); else window.mwOpen(data.ctaUrl); }   // an explicit URL overrides the internal case-study takeover; same-tab screen wipe (assets/bric-wipe.js) hands off to the Framer case study
             else if(window.csOpenCaseStudy) window.csOpenCaseStudy();   // chapter ring
             else if(window.enterCaseStudy) window.enterCaseStudy(); }; }
         ctaBtn.contentEditable=data.edit?'true':'false'; ctaBtn.classList.toggle('inline-edit-on',!!data.edit);
