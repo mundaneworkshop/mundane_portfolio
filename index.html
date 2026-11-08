@@ -10430,8 +10430,11 @@ f 2469//2469 2470//2470 2434//2434
         var unit=Math.max(1,cx.measureText(T).width), n=Math.max(1,Math.round(cv.width/unit)), step=cv.width/n;
         if(dec && dec.T===T && dec.out.length){   // decoding: per-glyph so unresolved chars can use the Aurebesh face
           var adv=unit/dec.out.length, sz=(params.marqFontSize||58), mono="700 "+sz+"px "+fontFamily, aurF=GFX.aur()?("700 "+sz+"px 'Aurebesh', "+fontFamily):mono; cx.textAlign='center';
+          // 'middle' centres each face's own (very different) font box, so Aurebesh sat ~25% lower than Latin. Draw on the
+          // alphabetic baseline instead, at exactly where the Latin face's baseline falls under 'middle' at y=72.
+          cx.font=mono; var baseY=72+cx.measureText('H').actualBoundingBoxDescent; cx.textBaseline='alphabetic';
           for(var i=0;i<n;i++){ cx.save(); cx.translate(i*step,0); cx.scale(step/unit,1);
-            for(var k=0;k<dec.out.length;k++){ var g=dec.out[k]; cx.font=g.r?mono:aurF; cx.fillText(g.c,k*adv+adv/2,72); } cx.restore(); }
+            for(var k=0;k<dec.out.length;k++){ var g=dec.out[k]; cx.font=g.r?mono:aurF; cx.fillText(g.c,k*adv+adv/2,baseY); } cx.restore(); }
         } else {
           for(var i=0;i<n;i++){ cx.save(); cx.translate(i*step,0); cx.scale(step/unit,1); cx.fillText(T,0,72); cx.restore(); } }
         tex.needsUpdate=true; }
