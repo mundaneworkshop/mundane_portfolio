@@ -1848,10 +1848,10 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     var CV_CASE_CTA={c3:[/josh/i,'project overview','https://case.mundanework.shop/josh-ai'],c4:[/meta/i,'view case study','https://case.mundanework.shop/meta-horizon'],c5:[/slate/i,'view case study','https://case.mundanework.shop/slate-auto']};
     window.mwCvCaseCta=function(o){ var r=o&&o.cvRoute; if(Array.isArray(r)) r.forEach(function(n){ var c=n&&CV_CASE_CTA[n.id]; if(!c||!c[0].test(n.title||'')) return;
       if((n.cta==null||n.cta==='Download CV (PDF)')&&(!n.ctaUrl||n.ctaUrl==='#'||/drive\.google\.com/i.test(n.ctaUrl))){ n.cta=c[1]; n.ctaUrl=c[2]; } });
-      // CV PDF swapped Nov 10 2026: a CTA still on an old CV file now downloads the current one (applied at read time, so the live copy needs no SAVE).
+      // CV PDF swapped Nov 10 2026: a CTA still on an old CV file now opens the current one (applied at read time, so the live copy needs no SAVE).
       if(Array.isArray(r)) r.forEach(function(n){ if(n&&CV_PDF_OLD.test(n.ctaUrl||'')) n.ctaUrl=window.MW_CV_PDF; }); return o; };
     var CV_PDF_OLD=/1jP8VGkQoMkT4ID2klvWhhPnDFy3ih9xo/;
-    window.MW_CV_PDF='https://drive.google.com/uc?export=download&id=1GesFYYN7fV4rRDD-amZ3WdUxutHsEryn';   // direct download (Jason_Hsin_Resume.pdf), not the Drive viewer
+    window.MW_CV_PDF='https://drive.google.com/file/d/1GesFYYN7fV4rRDD-amZ3WdUxutHsEryn/view?usp=sharing';   // Drive viewer, not a direct download: no surprise download dialog
     window.mwIsCaseUrl=function(u){ return /^https?:\/\/case\.mundanework\.shop\//i.test(u||''); };
     // Outfit unlocks: a link to a Framer case study (case.mundanework.shop/<slug>) counts as seeing that project, like its focus view. Returns w0 / w1 / w2, or null.
     // Slugs are the Framer pages' (meta-horizon is not the planet's title slug). The galaxy also matches a planet's own ctaUrl / title slug (ocNoteUrl).
