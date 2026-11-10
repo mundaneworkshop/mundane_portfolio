@@ -176,7 +176,7 @@ function px(){ const d=window.devicePixelRatio||1; return Math.max(1,Math.floor(
 const SB='https://ynfkjppwpcnxuvjqmsun.supabase.co/rest/v1/', SB_KEY='sb_publishable_F-J3YhAcVl62xre8rW94HQ_QuddWwQF';
 const sbGet=(q,ms)=>{ const c=new AbortController(), t=setTimeout(()=>c.abort(),ms||4000); return fetch(SB+q,{signal:c.signal,headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY}}).then(r=>{ clearTimeout(t); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }); };
 const LIVE={planetfx:{ig:{hot:'#ff8ab1',tint:'#e1306c'},li:{hot:'#66c9ff',tint:'#0077B5'},w0:{hot:'#70baff',tint:'#0081FB'},w1:{hot:'#FFA47C',tint:'#FF4F00'},w2:{hot:'#ffffff',tint:'#ffffff'}},
-  marqueeEn:'MUNDANE WORKSHOP \u00b7 DELIGHTFUL CONSUMER EXPERIENCES BY JASON HSIN \u00b7 ',cvHero:{chatLabel:'schedule a meeting'},cvUrl:'https://drive.google.com/file/d/1jP8VGkQoMkT4ID2klvWhhPnDFy3ih9xo/view?usp=sharing',
+  marqueeEn:'MUNDANE WORKSHOP \u00b7 DELIGHTFUL CONSUMER EXPERIENCES BY JASON HSIN \u00b7 ',cvHero:{chatLabel:'schedule a meeting'},cvUrl:'https://drive.google.com/file/d/1GesFYYN7fV4rRDD-amZ3WdUxutHsEryn/view?usp=sharing',
   head:{name:'Default',about:{title:'Big Head Mode',body:'I woke up like this. Learn more about me by unlocking different appearances through exploring the site!',ctaShow:true,ctaText:'e-mail jason',ctaUrl:'mailto:jason@mundanework.shop',extraLinks:[{url:'https://calendly.com/jason-mundanework/30min',label:'schedule a call'}]}},
   marq:{w0:'META HORIZON WORLDS ',w1:'SLATE AUTO: SLATEMAKER ',w2:'JOSH.AI LUXURY HOME AUTOMATION '},marqStyle:{bg:'#0C2B28',fg:'#AAF5EE',speed:.12}};
 /* live content: the same seeded + server-reconciled copy the galaxy reads (BRICStore), so CMS edits reach this layout too */
