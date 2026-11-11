@@ -68,7 +68,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "Q2 2025 — Q1 2026",
+     "v": "Jun 2025 — Nov 2025",
      "amber": false
     },
     {
@@ -95,7 +95,7 @@ window.SITE_DATA={
      "links": [
       {
        "label": "Image Gallery",
-       "url": "https://www.linkedin.com/posts/jason-hsin-00378837_thank-you-to-everyone-who-saw-my-last-post-activity-7361088380312449024-082h?utm_source=share&utm_medium=member_desktop&rcm=ACoAAAfEggMB64x-AbuvwOEK64tqvrje7o88fj8"
+       "url": "https://www.linkedin.com/posts/jason-hsin-design_thank-you-to-everyone-who-saw-my-last-post-activity-7361088380312449024-S4X3"
       }
      ]
     }
@@ -119,7 +119,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "2015 — 2022",
+     "v": "May 2015 — Sep 2022",
      "amber": false
     },
     {
@@ -275,7 +275,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Q2 2025 — Q1 2026"
+     "v": "Jun 2025 — Nov 2025"
     },
     {
      "k": "teams",
