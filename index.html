@@ -1259,6 +1259,9 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   <div id="labels"></div>
 
   <!-- EDIT MODE: shared hidden file input + active-mode banner -->
+  <!-- AUTHOR-ONLY UI lives in <template class="mw-author-tpl"> blocks so the served HTML carries no editor/debug text for crawlers (SEO).
+       The first inline script in body inflates every one in place before any other script runs, so the DOM the code sees is unchanged. -->
+  <template class="mw-author-tpl">
   <input type="file" id="editFile" accept=".obj,.glb,.gltf,.svg,.stp,.step,image/*" style="display:none">
   <div id="editBanner" style="display:none;position:fixed;top:62px;left:50%;transform:translateX(-50%);z-index:40;max-width:min(620px,90vw);text-align:center;box-sizing:border-box">✎ edit mode — click an object to select · edit it in the panel</div>
   <!-- Save the current focus framing as this project/artifact's default view (Edit Mode, in focus). Drag + scroll to frame, then Set. -->
@@ -1319,14 +1322,17 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     <div class="mq-ctl"><label>Diameter <b id="vMarqDiamEn">2.40</b><input type="range" id="cMarqDiamEn" min="0.8" max="6.0" step="0.1" value="2.4"></label></div>
     <div class="mq-ctl"><label>Height <b id="vMarqHeightEn">4.10</b><input type="range" id="cMarqHeightEn" min="0.5" max="10.0" step="0.1" value="4.1"></label></div>
   </div>
+  </template>
 
   <!-- PROJECTS MANAGER: zones + planets as plain form controls (Edit Mode). Body is generated from galaxyModel by pmRender(). -->
+  <template class="mw-author-tpl">
   <div id="projMgr" role="dialog" aria-label="Projects Manager">
     <div class="pm-head"><span class="pm-title">Projects Manager</span><button type="button" class="pm-close" id="pmClose" aria-label="Close Projects Manager">✕</button></div>
     <div class="pm-tools"><button type="button" class="pm-newzone" id="pmNewZone" data-pm="new-zone">＋ New zone</button><span class="pm-note">changes apply live<br>SAVE to sync</span></div>
     <div class="pm-body" id="pmBody"></div>
     <div class="pm-foot" id="pmFoot" role="status" aria-live="polite"></div>
   </div>
+  </template>
 
   <!-- OUTFIT CAROUSEL HUD: shown under the hologram while an outfit is on it (see the OUTFITS block in the script) -->
   <div id="outfitHud" role="group" aria-label="Outfit carousel">
@@ -1336,18 +1342,21 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   </div>
 
   <!-- OUTFITS MANAGER: upload/manage minifigure outfits (each = one or more GLBs). See docs/project-history/outfits.md. -->
+  <template class="mw-author-tpl">
   <div id="outfitMgr" role="dialog" aria-label="Outfits Manager">
     <div class="pm-head"><span class="pm-title">Outfits</span><button type="button" class="pm-close" id="ocClose" aria-label="Close Outfits Manager">✕</button></div>
     <div class="pm-tools"><button type="button" class="pm-btn pm-newzone" data-oc="new">＋ New outfit</button><button type="button" class="pm-btn" data-oc="export" title="Download assets/outfits.json + the draft GLBs as a zip to unzip at the repo root">⇩ Export bundle</button></div>
     <div class="pm-body" id="ocBody"></div>
     <div class="pm-foot" id="ocFoot" role="status" aria-live="polite"></div>
   </div>
+  </template>
 
   <div id="topbar">
     <div id="arcadeExit" role="group" aria-label="Exit the arcade"><button type="button" class="bric-btn bric-btn--sm" id="arcadeExitBtn">◄ Exit arcade</button><button type="button" class="bric-btn bric-btn--sm bric-btn--secondary ax-esc" id="arcadeEscBtn" aria-label="Exit the arcade (ESC key)" title="Press ESC to exit">ESC</button></div>
     <nav id="mwNav" aria-label="Site"><span class="home bric-btn bric-btn--sm" id="homeBtn" role="button" tabindex="0">Mundane Workshop</span><ul class="mw-nav__main" id="mwNavMain"></ul><div id="mwCvSlot"></div><ul class="mw-nav__social" id="mwNavSocial"></ul></nav>
     <div id="breadcrumb" class="bric-crumb mw-crumb-off" aria-label="Location"><span id="crumbpath" class="bric-crumb"></span></div>
     <div id="topright">
+      <template class="mw-author-tpl">
       <button class="tbtn admin-only" id="saveBtn">⬇ save</button>
       <button class="tbtn admin-only" id="exportBtn" title="Download a JSON diff of tuned params vs. what's currently in source, ready to promote">⇩ export cfg</button>
       <button class="tbtn admin-only" id="editBtn">✎ edit</button>
@@ -1356,10 +1365,12 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
       <button class="tbtn admin-only" id="ocBtn" title="Upload and manage minifigure outfits (each one or more GLBs)">☺ outfits</button>
       <button class="tbtn admin-only" id="debugBtn">⚙ debug</button>
       <button class="tbtn admin-only" id="hideUIBtn">⊘ hide ui</button>
+      </template>
       <div id="wordmark">Mundane Workshop</div>
     </div>
   </div>
 
+  <template class="mw-author-tpl">
   <div id="debug">
     <h3>Debug · shader & motion</h3>
     <!-- ── Always visible: post-FX & scene ── -->
@@ -1605,12 +1616,13 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     <!-- EDIT MODE replaces per-project mesh/box authoring: use ✎ edit in the topbar,
          then click any object (planet / logo / focused box) to upload. -->
   </div>
+  </template>
 
   <div id="casepanel">
-    <div class="kicker" id="cpKicker">Case file 01</div>
-    <h3 id="cpTitle">Project Aurora</h3>
-    <div class="thumb">3D / Spline embed slot</div>
-    <p id="cpBody">Placeholder.</p>
+    <div class="kicker" id="cpKicker"></div>
+    <h3 id="cpTitle"></h3>
+    <div class="thumb"></div>
+    <p id="cpBody"></p>
     <div class="moons" id="cpMoons"></div>
     <!-- MERGE Stage 2: per-project mesh + box-texture authoring relocated into #debug (booklet is now the focus panel) -->
     <div class="cp-actions">
@@ -1651,7 +1663,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
       <button type="button" class="bric-seg__opt" role="radio" data-cv-view="immersive" aria-checked="true" tabindex="0">Immersive</button>
       <button type="button" class="bric-seg__opt" role="radio" data-cv-view="list" aria-checked="false" tabindex="-1">List</button>
     </div>
-    <label class="cvr-pill glb-up" id="cvShipUp" data-bric-target data-bric-label="">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label>
+    <template class="mw-author-tpl"><label class="cvr-pill glb-up" id="cvShipUp" data-bric-target data-bric-label="">⬆ Ship .glb<input type="file" id="cvShipInput" accept=".glb,.gltf" hidden></label></template>
   </div>
   <div id="cvHero" class="bric-dark"></div>
   <div id="cvListBar"></div>
@@ -1725,7 +1737,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
   </div></div>
 
   <!-- Author-only: flip the project manual between layouts while a project is focused (same setting as Debug → Instruction manual). -->
-  <div id="ml-switch"><span>Manual layout</span><div class="seg"><button data-ml-pref="auto">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="drawer">Drawer</button></div><span class="ml-now"></span></div>
+  <template class="mw-author-tpl"><div id="ml-switch"><span>Manual layout</span><div class="seg"><button data-ml-pref="auto">Auto</button><button data-ml-pref="dock">Dock</button><button data-ml-pref="drawer">Drawer</button></div><span class="ml-now"></span></div></template>
 
   <!-- MERGE Stage 2: case-study DOM layer — kit box + instruction booklet (focus panel) -->
   <div id="cs-root" class="bric-dark">
@@ -1739,26 +1751,14 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
         <div class="mb-corner tl"></div><div class="mb-corner tr"></div><div class="mb-corner bl"></div><div class="mb-corner br"></div>
 
         <div class="manual-page">
-          <div class="manual-title"><!--CMS:title-->Design System Rebuild</div>
+          <div class="manual-title"><!--CMS:title--></div>
           <div class="manual-subtitle"><!--CMS:subtitle--></div>
           <div class="manual-slug"><!--CMS:slug (editable permalink)--><span class="manual-slug-prefix"></span><span class="manual-slug-val"></span></div>
-          <div class="manual-framing"><!--CMS:framing-->Consolidating five product surfaces onto a single token architecture, shipped in 9 months without a feature freeze.</div>
-          <div class="manual-tags"><!--CMS:tags[] -->
-            <div class="manual-tag bric-tag">Product Design</div>
-            <div class="manual-tag bric-tag">Design Systems</div>
-            <div class="manual-tag bric-tag">Scale</div>
-            <div class="manual-tag bric-tag">0→1</div>
-          </div>
-          <div class="snap-grid"><!--CMS:snapshot[] (key/value pairs)-->
-            <div class="snap-cell"><div class="snap-cell-k">Role</div><div class="snap-cell-v">Senior Designer<br>System Lead</div></div>
-            <div class="snap-cell"><div class="snap-cell-k">Timeline</div><div class="snap-cell-v">Jan–Sep 2024<br>9 months</div></div>
-            <div class="snap-cell"><div class="snap-cell-k">Outcome</div><div class="snap-cell-v amber">↑ 60%</div></div>
-            <div class="snap-cell"><div class="snap-cell-k">Impact on</div><div class="snap-cell-v">Eng velocity</div></div>
-            <div class="snap-cell"><div class="snap-cell-k">Platforms</div><div class="snap-cell-v">Web · iOS<br>Android</div></div>
-            <div class="snap-cell"><div class="snap-cell-k">Libraries</div><div class="snap-cell-v">5 → 1</div></div>
-          </div>
+          <div class="manual-framing"><!--CMS:framing--></div>
+          <div class="manual-tags"><!--CMS:tags[] --></div>
+          <div class="snap-grid"><!--CMS:snapshot[] (key/value pairs)--></div>
           <div class="manual-cta">
-            <span role="button" tabindex="0" class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel-->Case study coming soon</span>
+            <span role="button" tabindex="0" class="manual-cta-btn bric-btn bric-btn--primary" onclick="(window.csOpenCaseStudy||window.enterCaseStudy||function(){})()"><!--CMS:ctaLabel--></span>
           </div>
           <div class="manual-extralinks"></div><!-- external links below the CTA (case-study projects + CV nodes) -->
         </div>
@@ -1770,9 +1770,9 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     <div id="cascade"></div>
     <div id="page-takeover">
       <div class="pt-inner">
-        <div class="pt-kicker">Kit 42 · Case Study</div>
-        <div class="pt-title">Design System Rebuild</div>
-        <div class="pt-sub">Consolidating five product surfaces onto a single token architecture, shipped in 9 months without a feature freeze.</div>
+        <div class="pt-kicker"></div>
+        <div class="pt-title"></div>
+        <div class="pt-sub"></div>
         <div class="pt-nav">
           <div class="pt-step active">1</div><div class="pt-step">2</div><div class="pt-step">3</div>
           <div class="pt-step">4</div><div class="pt-step">5</div><div class="pt-step">6</div>
@@ -1803,7 +1803,7 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
     </div>
   </div>
   <div id="hint">drag to rotate · click a planet to travel</div>
-  <div id="status"><span id="statusL">scan: 3 worlds charted · sector 2 locked</span><span id="statusR">webgl · single canvas</span></div>
+  <div id="status"><span id="statusL"></span><span id="statusR"></span></div>
   <div id="soundToggle" class="sw mw-sound-switch on" role="switch" aria-checked="true" tabindex="0" title="Interface sounds on or off"><span class="sw-track"><span class="sw-thumb"></span></span><span class="sw-lbl">Sound on</span></div>
 
   <!-- HANDOFF: authoring-mode bootstrap. Runs synchronously (before the 3D engine loads) so the
@@ -1812,6 +1812,17 @@ if(!ld){ld=document.createElement('script');ld.type='application/ld+json';ld.id=
        ?admintoken=YOUR_TOKEN similarly persists the HoloNet admin-delete token for this browser —
        same value you put in Vercel as HOLONET_ADMIN_TOKEN. Visit once, never appears in the URL again. -->
   <script>
+  // Inflate the author-only <template class="mw-author-tpl"> blocks above (see the AUTHOR-ONLY UI note). Must stay the
+  // first script in <body>: every later script expects these nodes in the DOM. data-nosnippet keeps their text out of
+  // search snippets for crawlers that render JS.
+  (function(){
+    var t=document.querySelectorAll('template.mw-author-tpl');
+    for(var i=0;i<t.length;i++){
+      var c=t[i].content;
+      for(var k=c.firstElementChild;k;k=k.nextElementSibling) k.setAttribute('data-nosnippet','');
+      t[i].replaceWith(document.importNode(c,true));
+    }
+  })();
   (function(){
     try{
       var qp=new URLSearchParams(location.search);
