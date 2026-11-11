@@ -68,7 +68,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "Q2 2025 — Q1 2026",
+     "v": "Jun 2025 — Nov 2025",
      "amber": false
     },
     {
@@ -119,7 +119,7 @@ window.SITE_DATA={
     },
     {
      "k": "Timeline",
-     "v": "2015 — 2022",
+     "v": "May 2015 — Sep 2022",
      "amber": false
     },
     {
@@ -275,7 +275,7 @@ window.SITE_DATA={
    "snapshot": [
     {
      "k": "service length",
-     "v": "Q2 2025 — Q1 2026"
+     "v": "Jun 2025 — Nov 2025"
     },
     {
      "k": "teams",

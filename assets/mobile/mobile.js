@@ -447,7 +447,7 @@ Object.values(CASES).forEach(c=>{ const s=COPY['case:'+c.id+':slug'], u=COPY['ca
 /* the case study CTA follows what's set on the desktop manual: same copy keys and defaults as the galaxy's CASES (only Josh.ai starts active) */
 const caseCta=c=>{ const o=k=>COPY['case:'+c.id+':'+k], a=o('ctaActive'), on=a!=null?!!a:!!c.ctaOn, u=o('ctaUrl'); return {hidden:!!o('ctaHidden'),on,label:o('cta')||(on?'VIEW CASE STUDY':'Case study coming soon'),url:u&&u!=='#'?extUrl(u):c.url}; };
 const BY_SLUG={}; Object.values(CASES).forEach(c=>{ BY_SLUG[c.slug]=c; Object.assign(c,{data:DATA.cases[c.id]}); });
-const LINKS={li:'https://linkedin.com/in/jason-hsin-00378837',ig:'https://www.instagram.com/jas0n_0n_a_bike/'};
+const LINKS={li:'https://linkedin.com/in/jason-hsin-design',ig:'https://www.instagram.com/jas0n_0n_a_bike/'};
 const ZONES=[
   {name:'Work',rows:[
     {id:'w0',t:'Meta Horizon Worlds',s:CASES.w0.line,href:'/work/meta-horizon-worlds',make:()=>svgModel(BASE+'assets/models/meta-horizon/meta-logo.svg',planetMat('w0'))},

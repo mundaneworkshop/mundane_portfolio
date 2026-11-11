@@ -9,7 +9,7 @@ var lk=function(h,t,s,x){ if(!h) return '<div class="row st"><span><span class="
 var caseOn=function(id){ var c={}; try{ c=JSON.parse(localStorage.getItem('bric_copy'))||{}; }catch(e){} if(c['case:'+id+':ctaHidden']) return false; var a=c['case:'+id+':ctaActive']; return a!=null?!!a:(id==='w2'||id==='w1'); };
 var ZONES=[
   ['Work',[['Meta Horizon Worlds','Shipping platform features to millions of users','https://case.mundanework.shop/meta-horizon',0,'w0'],['Slate Auto','Securing 160,000+ paid reservations, $4B+ in order value','https://case.mundanework.shop/slate-auto',0,'w1'],['Josh.ai','Building a startup to $10M+ ARR from scratch','https://case.mundanework.shop/josh-ai',0,'w2']]],
-  ['Socials',[['LinkedIn','Connect with Jason','https://www.linkedin.com/in/jason-hsin-00378837/',1],['Instagram','@Jas0n_0n_a_Bike','https://www.instagram.com/jas0n_0n_a_bike/',1]]]
+  ['Socials',[['LinkedIn','Connect with Jason','https://www.linkedin.com/in/jason-hsin-design/',1],['Instagram','@Jas0n_0n_a_Bike','https://www.instagram.com/jas0n_0n_a_bike/',1]]]
 ];
 function mount(){
   [].slice.call(document.querySelectorAll('style')).forEach(function(s){ if(!/^bric-/.test(s.id||'')) s.remove(); });
